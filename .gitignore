@@ -1,0 +1,11 @@
+obj
+bin
+build
+packages
+
+*.suo
+*.user
+*.sln.cache
+*.nupkg
+*.testsettings
+*.vsmdi
