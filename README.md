@@ -37,7 +37,6 @@ var dog = repository.Query<Dog>("select Age = @Age, Id = @Id", new { Age = (int?
 ```
 
 也可以使用强类型的Repository仓储对象。
--------------------------------------------------------
 
 ```csharp
 var guid = Guid.NewGuid();
