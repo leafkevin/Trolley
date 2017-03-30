@@ -6,8 +6,6 @@
 
 
 首先在系统中要注册OrmProvider，只需要注册一次
-------------------------------------------------------------
-
 通常一个连接串对应一个OrmProvider
 
 ```csharp
@@ -15,9 +13,7 @@ var connString = "Server=.;initial catalog=Coin;user id=sa;password=angangyur;Co
 OrmProviderFactory.RegisterProvider(connString, new SqlServerProvider(), true);
 
 ```
-其次，要创建Repository对象。
-Example usage:
-
+创建Repository对象,就可以使用了。
 ```csharp
 public class Dog
 {
