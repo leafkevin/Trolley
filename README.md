@@ -1,5 +1,4 @@
 # Trolley - 一个轻量级高性能的.NET ORM框架
-========================================
 一款轻量级高性能的ORM，可以写SQL语句，支持动态SQL语句，分页，多种数据库终端支持，性能与dapper相当。
 
 特点
@@ -43,6 +42,7 @@ var guid = Guid.NewGuid();
 var repository = new Repository<Dog>();
 var dog = repository.Query("select Age = @Age, Id = @Id", new { Age = (int?)null, Id = guid });
 ```
+
 待续。。。
 
 欢迎大家使用
