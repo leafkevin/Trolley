@@ -27,17 +27,16 @@ namespace ConsoleTest
 
             var builder = new SqlBuilder();
             builder.RawSql("UPDATE Coin_User SET UserName=@UserName")
-                   .AddField(user.Sex.HasValue, "Sex=@Sex")
-                   .AddSql("WHERE Id=@UniqueId")
-                   .Where(beginDate.HasValue, "UpdatedAt>@UpdatedAt");
+                    .AddField(user.Sex.HasValue, "Sex=@Sex")
+                    .AddSql("WHERE Id=@UniqueId")
+                    .Where(beginDate.HasValue, "UpdatedAt>@UpdatedAt");
             repository.Update(builder.BuildSql(), user);
-
 
             var count = repository.Update(f => f.RawSql("UPDATE Coin_User SET UserName=@UserName")
                     .AddField(user.Sex.HasValue, "Sex=@Sex")
                     .AddSql("WHERE Id=@UniqueId")
                     .Where(beginDate.HasValue, "UpdatedAt>@UpdatedAt"), user);
-
+            
             var list = repository.Query(f => f.RawSql("SELECT * FROM Coin_User")
                     .Where(user.Sex.HasValue, "Sex=@Sex")
                     .Where(beginDate.HasValue, "UpdatedAt>@UpdatedAt")

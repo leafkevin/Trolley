@@ -238,6 +238,49 @@ repositoryDept.Update(f => f.PersonTotal, new Dept { UniqueId = deptInfo.DeptId,
 context.Commit();
 
 ```
+对于枚举类型做了特殊支持
+------------------------------------------------------------
+枚举属性对应的数据库栏位可为数字类型或是字符串类型。
+如果字符串类型需要在枚举类型的属性上增加[Column(typeof(string))]特性，标注数据库栏位类型。
+
+
+```csharp
+CREATE TABLE Coin_User(
+	Id int NOT NULL,
+	UserName nvarchar(50) NULL,
+	Sex nvarchar(50) NULL,
+	UID uniqueidentifier NULL,
+	UpdatedAt datetime NULL,
+	Age int NULL,
+	CONSTRAINT PK_Coin_User PRIMARY KEY CLUSTERED 
+	(
+		Id ASC
+	)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON PRIMARY
+) ON PRIMARY
+
+GO
+
+public class User
+{
+    [PrimaryKey("Id")]
+    public int UniqueId { get; set; }
+    public string UserName { get; set; }
+    [Column(typeof(string))]
+    public Sex? Sex { get; set; }
+    public Guid? CardId { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+}
+
+var repository = new Repository<User>();
+
+var user = repository.Get(new User { UniqueId = 1 });
+user = await repository.GetAsync(new User { UniqueId = 1 });
+
+repository.Update(f => f.Sex, user);
+await repository.UpdateAsync(f => f.Sex, user);
+
+```
+
 支持的DDD仓储操作
 ------------------------------------------------------------
 
@@ -280,8 +323,8 @@ public class User
 ```csharp
 var repository = new Repository<User>();
 
-var user = repository.Create(new User { UniqueId = 1 });
-user = await repository.CreateAsync(new User { UniqueId = 1 });
+var user = repository.Create(new User { UniqueId = 1, UserName = "Keivn" });
+user = await repository.CreateAsync(new User { UniqueId = 1, UserName = "Keivn" });
 ```
 
 Delete方法，根据数据库主键删除数据
