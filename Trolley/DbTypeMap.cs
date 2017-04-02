@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Reflection;
 
 namespace Trolley
 {
@@ -51,16 +52,16 @@ namespace Trolley
         internal static bool ContainsKey(Type type)
         {
             var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
-            if (underlyingType.IsEnum()) return true;
+            if (underlyingType.GetTypeInfo().IsEnum) return true;
             return typeMap.ContainsKey(underlyingType);
         }
         internal static DbType LookupDbType(Type type)
         {
             DbType dbType;
             var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
-            if (underlyingType.IsEnum())
+            if (underlyingType.GetTypeInfo().IsEnum)
             {
-                underlyingType = Enum.GetUnderlyingType(type);
+                underlyingType = Enum.GetUnderlyingType(underlyingType);
             }
             if (typeMap.TryGetValue(underlyingType, out dbType))
             {

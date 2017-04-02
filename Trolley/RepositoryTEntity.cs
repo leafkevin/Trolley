@@ -120,6 +120,7 @@ namespace Trolley
         #endregion
 
         #region 异步方法
+#if ASYNC
         public async Task<TEntity> GetAsync(TEntity key)
         {
             int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, "GET");
@@ -186,6 +187,7 @@ namespace Trolley
             int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
             return await this.ExecSqlImplAsync(cacheKey, sql, cmdType, objParameter);
         }
+#endif
         #endregion
 
         #region 实现IDisposable
@@ -472,6 +474,7 @@ namespace Trolley
             }
             return result;
         }
+#if ASYNC
         private async Task<TTarget> QueryFirstImplAsync<TTarget>(int hashKey, Type targetType, string sql, CommandType cmdType, TEntity objParameter = null, bool isPk = false)
         {
             DbCommand command = null;
@@ -690,6 +693,7 @@ namespace Trolley
             }
             return result;
         }
+#endif
         private static string BuildCreateSql(EntityMapper mapper, IOrmProvider provider)
         {
             StringBuilder insertBuilder = new StringBuilder();

@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
+#if ASYNC
 using System.Threading.Tasks;
-
+#endif
 namespace Trolley
 {
     public interface IRepository<TEntity> : IDisposable where TEntity : class, new()
@@ -22,7 +23,7 @@ namespace Trolley
         PagedList<TEntity> QueryPage(string sql, int pageIndex, int pageSize, string orderBy = null, TEntity objParameter = null, CommandType cmdType = CommandType.Text);
         PagedList<TTarget> QueryPage<TTarget>(string sql, int pageIndex, int pageSize, string orderBy = null, TEntity objParameter = null, CommandType cmdType = CommandType.Text);
         int ExecSql(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text);
-
+#if ASYNC
         Task<TEntity> GetAsync(TEntity key);
         Task<int> CreateAsync(TEntity entity);
         Task<int> DeleteAsync(TEntity key);
@@ -35,5 +36,6 @@ namespace Trolley
         Task<PagedList<TEntity>> QueryPageAsync(string sql, int pageIndex, int pageSize, string orderBy = null, TEntity objParameter = null, CommandType cmdType = CommandType.Text);
         Task<PagedList<TTarget>> QueryPageAsync<TTarget>(string sql, int pageIndex, int pageSize, string orderBy = null, TEntity objParameter = null, CommandType cmdType = CommandType.Text);
         Task<int> ExecSqlAsync(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text);
+#endif
     }
 }

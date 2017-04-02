@@ -21,6 +21,8 @@ namespace Trolley
         private static MethodInfo StringGetItemByIndex = typeof(string).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                         .Where(p => p.GetIndexParameters().Any() && p.GetIndexParameters()[0].ParameterType == typeof(int))
                         .Select(p => p.GetGetMethod()).First();
+        private static ConcurrentDictionary<Type, Dictionary<int, string>> enumNameDict = new ConcurrentDictionary<Type, Dictionary<int, string>>();
+
         private static ConcurrentDictionary<int, Action<IDbCommand, object>> ActionCache = new ConcurrentDictionary<int, Action<IDbCommand, object>>();
         private static ConcurrentDictionary<int, Func<DbDataReader, object>> ReaderCache = new ConcurrentDictionary<int, Func<DbDataReader, object>>();
         private static ConcurrentDictionary<int, string> PagingCache = new ConcurrentDictionary<int, string>();
@@ -65,12 +67,29 @@ namespace Trolley
             }
             return result;
         }
+        public static object GetEnumName(object enumValue, Type enumType)
+        {
+            if (!enumNameDict.ContainsKey(enumType))
+            {
+                Dictionary<int, string> enumDict = new Dictionary<int, string>();
+                var valueList = Enum.GetValues(enumType);
+                foreach (var value in valueList)
+                {
+                    enumDict.Add(Convert.ToInt32(value), Enum.GetName(enumType, value));
+                }
+                enumNameDict.TryAdd(enumType, enumDict);
+            }
+            if (enumValue == null) return DBNull.Value;
+            int iEnumValue = Convert.ToInt32(enumValue);
+            if (!enumNameDict[enumType].ContainsKey(iEnumValue)) return DBNull.Value;
+            return enumNameDict[enumType][iEnumValue];
+        }
         private static Func<DbDataReader, object> CreateValueReaderHandler(Type valueType, int index)
         {
             var underlyingType = Nullable.GetUnderlyingType(valueType);
             if (underlyingType != null)
             {
-                if (underlyingType.IsEnum())
+                if (underlyingType.GetTypeInfo().IsEnum)
                 {
                     return f =>
                     {
@@ -100,7 +119,7 @@ namespace Trolley
 #if !COREFX
             bool supportInitialize = false;
 #endif
-            if (entityType.IsValueType())
+            if (entityType.GetTypeInfo().IsValueType)
             {
                 il.Emit(OpCodes.Ldloca_S, (byte)0);
                 il.Emit(OpCodes.Initobj, entityType);
@@ -184,7 +203,7 @@ namespace Trolley
                     {
                         var propTypeCode = TypeExtensions.GetTypeCode(underlyingType);
                         var colTypeCode = TypeExtensions.GetTypeCode(colType);
-                        if (underlyingType.IsEnum())
+                        if (underlyingType.GetTypeInfo().IsEnum)
                         {
                             propTypeCode = TypeExtensions.GetTypeCode(Enum.GetUnderlyingType(underlyingType));
                             if (propTypeCode != colTypeCode)
@@ -220,7 +239,7 @@ namespace Trolley
                 }
 
                 // stack is now [target][target][typed-value]
-                il.Emit(entityType.IsValueType() ? OpCodes.Call : OpCodes.Callvirt, entityType.GetProperty(propName).GetSetMethod());
+                il.Emit(entityType.GetTypeInfo().IsValueType ? OpCodes.Call : OpCodes.Callvirt, entityType.GetProperty(propName).GetSetMethod());
 
                 var endLabel = il.DefineLabel();
                 il.Emit(OpCodes.Br_S, endLabel);
@@ -231,13 +250,13 @@ namespace Trolley
                 il.Emit(OpCodes.Pop);
                 il.MarkLabel(endLabel);
             }
-            if (entityType.IsValueType()) il.Emit(OpCodes.Pop);
+            if (entityType.GetTypeInfo().IsValueType) il.Emit(OpCodes.Pop);
             else il.Emit(OpCodes.Stloc_0);
 #if !COREFX
             if (supportInitialize) il.EmitCall(OpCodes.Callvirt, typeof(ISupportInitialize).GetMethod(nameof(ISupportInitialize.EndInit)), null);
 #endif
             il.Emit(OpCodes.Ldloc_0);
-            if (entityType.IsValueType()) il.Emit(OpCodes.Box, entityType);
+            if (entityType.GetTypeInfo().IsValueType) il.Emit(OpCodes.Box, entityType);
             il.Emit(OpCodes.Ret);
             return (Func<DbDataReader, object>)dm.CreateDelegate(typeof(Func<DbDataReader, object>));
         }
@@ -322,7 +341,7 @@ namespace Trolley
             il.Emit(OpCodes.Ldarg_0);
             il.EmitCall(OpCodes.Callvirt, typeof(IDbCommand).GetMethod(nameof(IDbCommand.CreateParameter), Type.EmptyTypes), null);
 
-            // stack is now [parameters][parameters][parameter]                
+            // stack is now [parameters][parameters][parameter]
             il.Emit(OpCodes.Dup);
             il.Emit(OpCodes.Ldstr, paramPrefix + colMapper.MemberName);
             il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.ParameterName)).GetSetMethod(), null);
@@ -339,39 +358,68 @@ namespace Trolley
             il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Direction)).GetSetMethod(), null);
 
             il.Emit(OpCodes.Dup);
-            if (colMapper.IsEnum && colMapper.IsString)
-            {
-                il.Emit(OpCodes.Ldtoken, colMapper.MemberType);
-                il.EmitCall(OpCodes.Call, typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle)), null);
-            }
             if (isTyped) il.Emit(OpCodes.Ldarg_1);
             else il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Callvirt, colMapper.GetMethodInfo);
-            if (colMapper.IsEnum && colMapper.IsString)
-            {
-                il.Emit(OpCodes.Box, colMapper.MemberType);
-                il.Emit(OpCodes.Callvirt, typeof(Type).GetMethod(nameof(Type.GetEnumName)));
-            }
 
+            il.Emit(OpCodes.Callvirt, colMapper.GetMethodInfo);
             // stack is now [parameters][parameters][parameter][parameter][value]
             if (colMapper.IsValueType)
             {
-                il.Emit(OpCodes.Box, colMapper.BoxType);
-                // stack is now [parameters][parameters][parameter][parameter][object-value]                
-                if (colMapper.IsNullable)
+                il.Emit(OpCodes.Box, colMapper.MemberType);
+                if (colMapper.IsEnum && colMapper.IsString)
                 {
-                    Label allDoneLabel = il.DefineLabel();
-                    // stack is now [parameters][parameters][parameter][parameter][value][value]isNullable
-                    il.Emit(OpCodes.Dup);
-                    il.Emit(OpCodes.Brtrue_S, allDoneLabel);
-                    il.Emit(OpCodes.Pop); // stack is now [parameters][parameters][parameter][parameter]
-                    il.Emit(OpCodes.Ldsfld, typeof(DBNull).GetField(nameof(DBNull.Value)));
-                    il.MarkLabel(allDoneLabel);
-                    // stack is now [parameters][parameters][parameter][parameter][value]
+                    // stack is now [parameters][parameters][parameter][parameter][int-value][enum-type]
+                    il.Emit(OpCodes.Ldtoken, colMapper.UnderlyingType);
+                    il.EmitCall(OpCodes.Call, typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle)), null);
+                    // stack is now [parameters][parameters][parameter][parameter][int-value][enum-type]
+                    il.EmitCall(OpCodes.Call, typeof(RepositoryHelper).GetMethod(nameof(RepositoryHelper.GetEnumName), BindingFlags.Static | BindingFlags.Public), null);
+
+                    il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
+
+                    //// stack is now [parameters][parameters][parameter][parameter][string or dbNull]
+                    //il.Emit(OpCodes.Dup);
+                    //il.Emit(OpCodes.Isinst, typeof(DBNull));
+                    //// stack is now [target][target][value][DBNull or null]
+                    //Label dbNullLabel = il.DefineLabel();
+                    //il.Emit(OpCodes.Brtrue_S, dbNullLabel);
+
+                    ////非空字符串
+                    //var iLocIndex = il.DeclareLocal(typeof(string)).LocalIndex;
+                    //il.Emit(OpCodes.Dup);
+                    //il.Emit(OpCodes.Castclass, typeof(string));
+                    //il.Emit(OpCodes.Stloc, iLocIndex);
+                    //il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
+                    //// stack is now [parameters][parameters][parameter]
+
+                    ////设置长度
+                    //il.Emit(OpCodes.Dup);
+                    //il.Emit(OpCodes.Ldloc, iLocIndex);
+                    //il.EmitCall(OpCodes.Callvirt, typeof(string).GetProperty(nameof(string.Length)).GetGetMethod(), null);
+                    //// stack is now [parameters][parameters][parameter][string-length]
+                    //il.EmitCall(OpCodes.Callvirt, typeof(IDbDataParameter).GetProperty(nameof(IDbDataParameter.Size)).GetSetMethod(), null);
+
+                    //Label allDoneLabel = il.DefineLabel();
+                    //il.Emit(OpCodes.Br_S, allDoneLabel);
+
+                    //il.MarkLabel(dbNullLabel);
+                    //il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
+                    //il.MarkLabel(allDoneLabel);
                 }
-                // stack is now [parameters][parameters][parameter][parameter][object-value]
-                il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
-                // stack is now [parameters][parameters][parameter]
+                else
+                {
+                    if (colMapper.IsNullable)
+                    {
+                        il.Emit(OpCodes.Dup);
+                        Label notNullLabel = il.DefineLabel();
+                        il.Emit(OpCodes.Brtrue_S, notNullLabel);
+                        // stack is now [parameters][parameters][parameter]
+                        il.Emit(OpCodes.Pop);
+                        il.Emit(OpCodes.Ldsfld, typeof(DBNull).GetField(nameof(DBNull.Value)));
+                        il.MarkLabel(notNullLabel);
+                    }
+                    // stack is now [parameters][parameters][parameter][parameter][object-value]
+                    il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
+                }
             }
             else
             {

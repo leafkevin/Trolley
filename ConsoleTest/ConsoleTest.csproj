@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{24D2AD05-7DDA-4519-869C-4C24AD620236}</ProjectGuid>
+    <ProjectGuid>{09F44F10-E7C8-4CAE-8651-984AA92AB7B8}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <RootNamespace>ConsoleTest</RootNamespace>
     <AssemblyName>ConsoleTest</AssemblyName>
@@ -50,7 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Trolley\Trolley.csproj">
-      <Project>{a1dae341-64e9-4dea-a430-74c00fabdd20}</Project>
+      <Project>{80fc8005-083a-4de7-b0d7-9fa4fc5404b1}</Project>
       <Name>Trolley</Name>
     </ProjectReference>
   </ItemGroup>

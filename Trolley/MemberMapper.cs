@@ -8,7 +8,7 @@ namespace Trolley
     {
         public string MemberName { get; set; }
         public Type MemberType { get; set; }
-        public Type BoxType { get; set; }
+        public Type UnderlyingType { get; set; }
         public bool IsValueType { get; set; }
         public bool IsNullable { get; set; }
         public bool IsString { get; set; }

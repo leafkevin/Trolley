@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
+#if ASYNC
 using System.Threading.Tasks;
+#endif
 
 namespace Trolley
 {
@@ -64,6 +66,7 @@ namespace Trolley
         #endregion
 
         #region 异步方法
+#if ASYNC
         public async Task<TEntity> QueryFirstAsync<TEntity>(string sql, object objParameter = null, CommandType cmdType = CommandType.Text)
         {
             int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
@@ -84,6 +87,7 @@ namespace Trolley
             int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
             return await this.ExecSqlImplAsync(cacheKey, sql, cmdType, objParameter);
         }
+#endif
         #endregion
 
         #region 实现IDisposable
@@ -318,6 +322,7 @@ namespace Trolley
             }
             return result;
         }
+#if ASYNC
         private async Task<TEntity> QueryFirstImplAsync<TEntity>(int hashKey, Type entityType, string sql, CommandType cmdType, object objParameter = null)
         {
             DbCommand command = null;
@@ -536,6 +541,7 @@ namespace Trolley
             }
             return result;
         }
+#endif
         #endregion
     }
 }
