@@ -2,14 +2,14 @@
 
 namespace Trolley.Providers
 {
-    public class SqlLiteProvider : BaseOrmProvider
+    public class SqLiteProvider : BaseOrmProvider
     {
-        public SqlLiteProvider()
+        public SqLiteProvider()
         {
         }
         public override DbConnection CreateConnection(string connString)
         {
-            var factory = OrmProviderFactory.GetFactory("System.Data.SQLite.SQLiteFactory, System.Data.SQLite, Culture=neutral, PublicKeyToken=db937bc2d44ff139");
+            var factory = OrmProviderFactory.SQLiteFactory();
             var result = factory.CreateConnection();
             result.ConnectionString = connString;
             return result;

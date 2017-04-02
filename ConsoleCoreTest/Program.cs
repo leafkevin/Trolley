@@ -1,17 +1,16 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Trolley;
 using Trolley.Attributes;
 using Trolley.Providers;
 
-namespace ConsoleTest
+namespace ConsoleCoreTest
 {
     class Program
     {
         static void Main(string[] args)
         {
-            var connString = "Server=.;initial catalog=Coin;user id=sa;password=angangyur;Connect Timeout=30";
+            var connString = "Server=.;initial catalog=Coin;user id=sa;password=test;Connect Timeout=30";
             OrmProviderFactory.RegisterProvider(connString, new SqlServerProvider(), true);
             Test();
             Console.ReadLine();
@@ -59,11 +58,14 @@ namespace ConsoleTest
             repositoryUser.Delete(new User { UniqueId = 1 });
             repositoryDept.Update(f => f.PersonTotal, new Dept { UniqueId = deptInfo.DeptId, PersonTotal = deptInfo.PersonTotal });
             context.Commit();
+
+            int dsfdf = 0;
         }
         public static async Task TestAsync()
         {
             var repository = new Repository<User>();
             var user = await repository.GetAsync(new User { UniqueId = 1 });
+            int sdfds = 0;
         }
         public class UserInfo
         {
@@ -71,7 +73,6 @@ namespace ConsoleTest
             public string UserName { get; set; }
             public Sex Sex { get; set; }
         }
-        [Table("Coin_User")]
         public class User
         {
             [PrimaryKey("Id")]
