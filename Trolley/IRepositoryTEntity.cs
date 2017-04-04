@@ -9,8 +9,6 @@ namespace Trolley
 {
     public interface IRepository<TEntity> : IDisposable where TEntity : class, new()
     {
-        string ConnString { get; }
-        IOrmProvider Provider { get; }
         TEntity Get(TEntity key);
         int Create(TEntity entity);
         int Delete(TEntity key);

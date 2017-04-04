@@ -9,8 +9,6 @@ namespace Trolley
 {
     public interface IRepository : IDisposable
     {
-        string ConnString { get; }
-        IOrmProvider Provider { get; }
         TEntity QueryFirst<TEntity>(string sql, object objParameter = null, CommandType cmdType = CommandType.Text);
         List<TEntity> Query<TEntity>(string sql, object objParameter = null, CommandType cmdType = CommandType.Text);
         PagedList<TEntity> QueryPage<TEntity>(string sql, int pageIndex, int pageSize, string orderBy = null, object objParameter = null, CommandType cmdType = CommandType.Text);

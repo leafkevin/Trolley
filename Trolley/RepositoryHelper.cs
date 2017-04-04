@@ -39,18 +39,22 @@ namespace Trolley
             }
             return result;
         }
-        internal static Func<DbDataReader, object> GetReader(int hashKey, Type targetType, DbDataReader reader)
+        internal static Func<DbDataReader, object> GetReader(int hashKey, Type targetType, DbDataReader reader, bool isIgnoreCase)
         {
             int readerKey = GetReaderKey(targetType, hashKey);
             if (!ReaderCache.ContainsKey(readerKey))
             {
                 string propName = null;
+                PropertyInfo propInfo = null;
+                var bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+                if (isIgnoreCase) bindingFlags |= BindingFlags.IgnoreCase;
                 List<string> propNameList = new List<string>();
                 for (int i = 0; i < reader.FieldCount; i++)
                 {
                     propName = reader.GetName(i);
-                    if (targetType.GetProperty(propName) == null) continue;
-                    propNameList.Add(propName);
+                    propInfo = targetType.GetProperty(propName, bindingFlags);
+                    if (propInfo == null) continue;
+                    propNameList.Add(propInfo.Name);
                 }
                 var readerHandler = DbTypeMap.ContainsKey(targetType) ? CreateValueReaderHandler(targetType, reader.GetOrdinal(propName)) : CreateTypeReaderHandler(targetType, propNameList, reader);
                 ReaderCache.TryAdd(readerKey, readerHandler);
@@ -201,11 +205,11 @@ namespace Trolley
                     }
                     else
                     {
-                        var propTypeCode = TypeExtensions.GetTypeCode(underlyingType);
-                        var colTypeCode = TypeExtensions.GetTypeCode(colType);
+                        var propTypeCode = Type.GetTypeCode(underlyingType);
+                        var colTypeCode = Type.GetTypeCode(colType);
                         if (underlyingType.GetTypeInfo().IsEnum)
                         {
-                            propTypeCode = TypeExtensions.GetTypeCode(Enum.GetUnderlyingType(underlyingType));
+                            propTypeCode = Type.GetTypeCode(Enum.GetUnderlyingType(underlyingType));
                             if (propTypeCode != colTypeCode)
                             {
                                 if (colType == typeof(string))
@@ -309,6 +313,20 @@ namespace Trolley
             }
             return hashCode;
         }
+        internal static int GetHashKey(string connString, string sqlKey, Type paramterType)
+        {
+            int hashCode = 23;
+            unchecked
+            {
+                hashCode = hashCode * 17 + connString.GetHashCode();
+                hashCode = hashCode * 17 + sqlKey.GetHashCode();
+                if (paramterType != null)
+                {
+                    hashCode = hashCode * 17 + paramterType.GetHashCode();
+                }
+            }
+            return hashCode;
+        }
         internal static void LoadInt32(ILGenerator il, int value)
         {
             switch (value)
@@ -373,9 +391,14 @@ namespace Trolley
                     il.EmitCall(OpCodes.Call, typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle)), null);
                     // stack is now [parameters][parameters][parameter][parameter][int-value][enum-type]
                     il.EmitCall(OpCodes.Call, typeof(RepositoryHelper).GetMethod(nameof(RepositoryHelper.GetEnumName), BindingFlags.Static | BindingFlags.Public), null);
-
                     il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
 
+                    //直接设置长度为100，枚举值都不会超过100个字符，避免了做类似下面的复杂逻辑操作
+                    il.Emit(OpCodes.Dup);
+                    LoadInt32(il, 100);
+                    il.EmitCall(OpCodes.Callvirt, typeof(IDbDataParameter).GetProperty(nameof(IDbDataParameter.Size)).GetSetMethod(), null);
+
+                    #region 获取字符串长度，设置长度
                     //// stack is now [parameters][parameters][parameter][parameter][string or dbNull]
                     //il.Emit(OpCodes.Dup);
                     //il.Emit(OpCodes.Isinst, typeof(DBNull));
@@ -404,6 +427,7 @@ namespace Trolley
                     //il.MarkLabel(dbNullLabel);
                     //il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
                     //il.MarkLabel(allDoneLabel);
+                    #endregion
                 }
                 else
                 {

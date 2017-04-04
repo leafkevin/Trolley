@@ -8,23 +8,26 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
+#if ASYNC
 using System.Threading.Tasks;
+#endif
 
 namespace Trolley
 {
     public class Repository<TEntity> : IRepository<TEntity> where TEntity : class, new()
     {
         #region 私有变量
-        private static ConcurrentDictionary<int, Action<IDbCommand, TEntity>> ActionCache = new ConcurrentDictionary<int, Action<IDbCommand, TEntity>>();
-        private static ConcurrentDictionary<int, string> SqlCache = new ConcurrentDictionary<int, string>();
+        private static ConcurrentDictionary<int, Action<IDbCommand, TEntity>> actionCache = new ConcurrentDictionary<int, Action<IDbCommand, TEntity>>();
+        private static ConcurrentDictionary<int, string> sqlCache = new ConcurrentDictionary<int, string>();
         #endregion
 
         #region 属性
         protected DbConnection Connection { get; private set; }
-        protected DbTransaction Transaction { get; private set; }
         protected static EntityMapper Mapper { get; private set; } = new EntityMapper(typeof(TEntity));
+        protected IOrmProvider Provider { get; private set; }
+        protected IRepositoryContext DbContext { get; private set; }
+        protected DbTransaction Transaction { get { return this.DbContext.Transaction; } }
         public string ConnString { get; private set; }
-        public IOrmProvider Provider { get; private set; }
         #endregion
 
         #region 构造方法
@@ -38,15 +41,12 @@ namespace Trolley
             this.ConnString = connString;
             this.Provider = OrmProviderFactory.GetProvider(connString);
         }
-        public Repository(string connString, DbTransaction transaction)
+        public Repository(string connString, IRepositoryContext dbContext)
         {
             this.ConnString = connString;
+            this.DbContext = dbContext;
+            this.Connection = dbContext.Connection;
             this.Provider = OrmProviderFactory.GetProvider(connString);
-            if (transaction != null)
-            {
-                this.Transaction = transaction;
-                this.Connection = transaction.Connection;
-            }
         }
         #endregion
 
@@ -199,10 +199,10 @@ namespace Trolley
         #endregion
 
         #region 私有方法
-        private void Open()
+        private void Open(DbConnection conn)
         {
-            if (this.Connection.State == ConnectionState.Broken) this.Connection.Close();
-            if (this.Connection.State == ConnectionState.Closed) this.Connection.Open();
+            if (conn.State == ConnectionState.Broken) conn.Close();
+            if (conn.State == ConnectionState.Closed) conn.Open();
         }
         private static string GetSqlCache(int hashKey, string connString, string sqlKey, IOrmProvider provider)
         {
@@ -210,32 +210,32 @@ namespace Trolley
             switch (sqlKey)
             {
                 case "GET":
-                    if (!SqlCache.TryGetValue(hashKey, out result))
+                    if (!sqlCache.TryGetValue(hashKey, out result))
                     {
                         result = BuildGetSql(Mapper, provider);
-                        SqlCache.TryAdd(hashKey, result);
+                        sqlCache.TryAdd(hashKey, result);
                     }
                     break;
                 case "CREATE":
-                    if (!SqlCache.TryGetValue(hashKey, out result))
+                    if (!sqlCache.TryGetValue(hashKey, out result))
                     {
                         result = BuildCreateSql(Mapper, provider);
-                        SqlCache.TryAdd(hashKey, result);
+                        sqlCache.TryAdd(hashKey, result);
                     }
                     break;
                 case "DELETE":
-                    if (!SqlCache.TryGetValue(hashKey, out result))
+                    if (!sqlCache.TryGetValue(hashKey, out result))
                     {
                         result = BuildDeleteSql(Mapper, provider);
-                        SqlCache.TryAdd(hashKey, result);
+                        sqlCache.TryAdd(hashKey, result);
                     }
                     break;
                 case "UPDATE":
-                    if (!SqlCache.TryGetValue(hashKey, out result))
+                    if (!sqlCache.TryGetValue(hashKey, out result))
                     {
                         var list = Mapper.MemberMappers.Keys.Where(f => (!Mapper.PrimaryKeys.Select(m => m.MemberName).Contains(f))).ToArray();
                         result = BuildUpdateSql(Mapper, provider, list);
-                        SqlCache.TryAdd(hashKey, result);
+                        sqlCache.TryAdd(hashKey, result);
                     }
                     break;
             }
@@ -244,7 +244,7 @@ namespace Trolley
         private static Action<IDbCommand, TEntity> GetActionCache(int hashKey, string sql, IOrmProvider provider, bool isPk)
         {
             Action<IDbCommand, TEntity> result;
-            if (!ActionCache.TryGetValue(hashKey, out result))
+            if (!actionCache.TryGetValue(hashKey, out result))
             {
                 if (isPk) result = RepositoryHelper.CreateParametersHandler<TEntity>(provider.ParamPrefix, typeof(TEntity), Mapper.PrimaryKeys);
                 else
@@ -252,452 +252,275 @@ namespace Trolley
                     var colMappers = Mapper.MemberMappers.Values.Where(p => Regex.IsMatch(sql, @"[?@:]" + p.MemberName + "([^a-z0-9_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant));
                     result = RepositoryHelper.CreateParametersHandler<TEntity>(provider.ParamPrefix, typeof(TEntity), colMappers);
                 }
-                ActionCache.TryAdd(hashKey, result);
+                actionCache.TryAdd(hashKey, result);
             }
             return result;
         }
         private TTarget QueryFirstImpl<TTarget>(int hashKey, Type targetType, string sql, CommandType cmdType, TEntity objParameter = null, bool isPk = false)
         {
-            DbCommand command = null;
-            string propName = String.Empty;
-            DbDataReader reader = null;
             TTarget result = default(TTarget);
+            var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             if (this.Connection == null)
             {
                 using (var conn = this.Provider.CreateConnection(this.ConnString))
                 {
-                    command = conn.CreateCommand();
-                    command.CommandText = sql;
-                    command.CommandType = cmdType;
-                    if (objParameter != null)
+                    behavior = CommandBehavior.CloseConnection | behavior;
+                    this.QueryImplInternal<TTarget>(hashKey, targetType, sql, conn, null, cmdType, behavior, objResult =>
                     {
-                        var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
-                        paramAction(command, objParameter);
-                    }
-                    conn.Open();
-                    reader = command.ExecuteReader(CommandBehavior.CloseConnection | CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-                    var func = RepositoryHelper.GetReader(hashKey, targetType, reader);
-                    while (reader.Read())
-                    {
-                        object funcResult = func?.Invoke(reader);
-                        if (funcResult == null || funcResult is TTarget) result = (TTarget)funcResult;
-                        else result = (TTarget)Convert.ChangeType(funcResult, targetType, CultureInfo.InvariantCulture);
-                    }
-                    while (reader.NextResult()) { }
+                        if (objResult == null || objResult is TTarget) result = (TTarget)objResult;
+                        else result = (TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture);
+                    }, objParameter, isPk);
                     conn.Close();
-                    reader.Dispose();
-                    reader = null;
                 }
             }
-            else
+            else this.QueryImplInternal<TTarget>(hashKey, targetType, sql, this.Connection, this.Transaction, cmdType, behavior, objResult =>
             {
-                command = this.Connection.CreateCommand();
-                command.CommandText = sql;
-                command.CommandType = CommandType.Text;
-                if (this.Transaction != null) command.Transaction = this.Transaction;
-                if (objParameter != null)
-                {
-                    var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
-                    paramAction(command, objParameter);
-                }
-                this.Open();
-                reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-                var func = RepositoryHelper.GetReader(hashKey, targetType, reader);
-                while (reader.Read())
-                {
-                    object funcResult = func?.Invoke(reader);
-                    if (funcResult == null || funcResult is TTarget) result = (TTarget)funcResult;
-                    else result = (TTarget)Convert.ChangeType(funcResult, targetType, CultureInfo.InvariantCulture);
-                }
-                while (reader.NextResult()) { }
-                reader.Dispose();
-                reader = null;
-            }
+                if (objResult == null || objResult is TTarget) result = (TTarget)objResult;
+                else result = (TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture);
+            }, objParameter, isPk);
             return result;
         }
         private List<TTarget> QueryImpl<TTarget>(int hashKey, Type targetType, string sql, CommandType cmdType, TEntity objParameter = null, bool isPk = false)
         {
-            DbCommand command = null;
-            string propName = String.Empty;
-            DbDataReader reader = null;
             List<TTarget> result = new List<TTarget>();
+            var behavior = CommandBehavior.SequentialAccess;
             if (this.Connection == null)
             {
                 using (var conn = this.Provider.CreateConnection(this.ConnString))
                 {
-                    command = conn.CreateCommand();
-                    command.CommandText = sql;
-                    command.CommandType = cmdType;
-                    if (objParameter != null)
+                    behavior = CommandBehavior.CloseConnection | behavior;
+                    this.QueryImplInternal<TTarget>(hashKey, targetType, sql, conn, null, cmdType, behavior, objResult =>
                     {
-                        var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
-                        paramAction(command, objParameter);
-                    }
-                    conn.Open();
-                    reader = command.ExecuteReader(CommandBehavior.CloseConnection | CommandBehavior.SequentialAccess);
-                    var func = RepositoryHelper.GetReader(hashKey, targetType, reader);
-                    while (reader.Read())
-                    {
-                        object funcResult = func?.Invoke(reader);
-                        if (funcResult == null) continue;
-                        if (funcResult is TTarget) result.Add((TTarget)funcResult);
-                        else result.Add((TTarget)Convert.ChangeType(funcResult, targetType, CultureInfo.InvariantCulture));
-                    }
-                    while (reader.NextResult()) { }
+                        if (objResult == null) return;
+                        if (objResult is TTarget) result.Add((TTarget)objResult);
+                        else result.Add((TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
+                    }, objParameter, isPk);
                     conn.Close();
-                    reader.Dispose();
-                    reader = null;
                 }
             }
-            else
+            else this.QueryImplInternal<TTarget>(hashKey, targetType, sql, this.Connection, this.Transaction, cmdType, behavior, objResult =>
             {
-                command = this.Connection.CreateCommand();
-                command.CommandText = sql;
-                command.CommandType = CommandType.Text;
-                if (this.Transaction != null) command.Transaction = this.Transaction;
-                if (objParameter != null)
-                {
-                    var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
-                    paramAction(command, objParameter);
-                }
-                this.Open();
-                reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-                var func = RepositoryHelper.GetReader(hashKey, targetType, reader);
-                while (reader.Read())
-                {
-                    object funcResult = func?.Invoke(reader);
-                    if (funcResult == null) continue;
-                    if (funcResult is TTarget) result.Add((TTarget)funcResult);
-                    else result.Add((TTarget)Convert.ChangeType(funcResult, targetType, CultureInfo.InvariantCulture));
-                }
-                while (reader.NextResult()) { }
-                reader.Dispose();
-                reader = null;
-            }
+                if (objResult == null) return;
+                if (objResult is TTarget) result.Add((TTarget)objResult);
+                else result.Add((TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
+            }, objParameter, isPk);
             return result;
         }
         private PagedList<TTarget> QueryPageImpl<TTarget>(int hashKey, Type targetType, string sql, CommandType cmdType, TEntity objParameter = null, bool isPk = false)
         {
-            DbCommand command = null;
-            string propName = String.Empty;
-            DbDataReader reader = null;
             PagedList<TTarget> result = new PagedList<TTarget>();
+            var behavior = CommandBehavior.SequentialAccess;
             if (this.Connection == null)
             {
                 using (var conn = this.Provider.CreateConnection(this.ConnString))
                 {
-                    command = conn.CreateCommand();
-                    command.CommandText = sql;
-                    command.CommandType = cmdType;
-                    if (objParameter != null)
+                    behavior = CommandBehavior.CloseConnection | behavior;
+                    this.QueryImplInternal<TTarget>(hashKey, targetType, sql, conn, null, cmdType, behavior, objResult =>
                     {
-                        var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
-                        paramAction(command, objParameter);
-                    }
-                    conn.Open();
-                    reader = command.ExecuteReader(CommandBehavior.CloseConnection | CommandBehavior.SequentialAccess);
-                    var func = RepositoryHelper.GetReader(hashKey, targetType, reader);
-                    while (reader.Read())
-                    {
-                        object funcResult = func?.Invoke(reader);
-                        if (funcResult == null) continue;
-                        if (funcResult is TTarget) result.Add((TTarget)funcResult);
-                        else result.Add((TTarget)Convert.ChangeType(funcResult, targetType, CultureInfo.InvariantCulture));
-                    }
-                    while (reader.NextResult()) { }
+                        if (objResult == null) return;
+                        if (objResult is TTarget) result.Add((TTarget)objResult);
+                        else result.Add((TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
+                    }, objParameter, isPk);
                     conn.Close();
-                    reader.Dispose();
-                    reader = null;
                 }
             }
-            else
+            else this.QueryImplInternal<TTarget>(hashKey, targetType, sql, this.Connection, this.Transaction, cmdType, behavior, objResult =>
             {
-                command = this.Connection.CreateCommand();
-                command.CommandText = sql;
-                command.CommandType = CommandType.Text;
-                if (this.Transaction != null) command.Transaction = this.Transaction;
-                if (objParameter != null)
-                {
-                    var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
-                    paramAction(command, objParameter);
-                }
-                this.Open();
-                reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-                var func = RepositoryHelper.GetReader(hashKey, targetType, reader);
-                while (reader.Read())
-                {
-                    object funcResult = func?.Invoke(reader);
-                    if (funcResult == null) continue;
-                    if (funcResult is TTarget) result.Add((TTarget)funcResult);
-                    else result.Add((TTarget)Convert.ChangeType(funcResult, targetType, CultureInfo.InvariantCulture));
-                }
-                while (reader.NextResult()) { }
-                reader.Dispose();
-                reader = null;
-            }
+                if (objResult == null) return;
+                if (objResult is TTarget) result.Add((TTarget)objResult);
+                else result.Add((TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
+            }, objParameter, isPk);
             return result;
         }
         private int ExecSqlImpl(int hashKey, string sql, CommandType cmdType = CommandType.Text, TEntity objParameter = null, bool isPk = false)
         {
-            DbCommand command = null;
             int result = 0;
             if (this.Connection == null)
             {
                 using (var conn = this.Provider.CreateConnection(this.ConnString))
                 {
-                    command = conn.CreateCommand();
-                    command.CommandText = sql;
-                    command.CommandType = cmdType;
-                    if (objParameter != null)
-                    {
-                        var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
-                        paramAction(command, objParameter);
-                    }
-                    conn.Open();
-                    result = command.ExecuteNonQuery();
+                    result = this.ExecSqlImplInternal(hashKey, sql, conn, null, cmdType, objParameter, isPk);
                     conn.Close();
                 }
             }
-            else
-            {
-                command = this.Connection.CreateCommand();
-                command.CommandText = sql;
-                command.CommandType = cmdType;
-                if (this.Transaction != null) command.Transaction = this.Transaction;
-                if (objParameter != null)
-                {
-                    var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
-                    paramAction(command, objParameter);
-                }
-                this.Open();
-                result = command.ExecuteNonQuery();
-            }
+            else result = this.ExecSqlImplInternal(hashKey, sql, this.Connection, this.Transaction, cmdType, objParameter, isPk);
             return result;
+        }
+        private void QueryImplInternal<TTarget>(int hashKey, Type targetType, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior, Action<object> resultHandler, TEntity objParameter, bool isPk)
+        {
+            DbCommand command = conn.CreateCommand();
+            command.CommandText = sql;
+            command.CommandType = cmdType;
+            command.Transaction = trans;
+            if (objParameter != null)
+            {
+                var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
+                paramAction(command, objParameter);
+            }
+            this.Open(conn);
+            DbDataReader reader = command.ExecuteReader(behavior);
+            var func = RepositoryHelper.GetReader(hashKey, targetType, reader, this.Provider.IsMappingIgnoreCase);
+            while (reader.Read())
+            {
+                resultHandler(func?.Invoke(reader));
+            }
+            while (reader.NextResult()) { }
+#if COREFX
+            try { command.Cancel(); } catch { }
+#else
+            reader.Close();
+#endif
+            reader.Dispose();
+            reader = null;
+        }
+        private int ExecSqlImplInternal(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, TEntity objParameter, bool isPk)
+        {
+            DbCommand command = conn.CreateCommand();
+            command.CommandText = sql;
+            command.CommandType = cmdType;
+            command.Transaction = trans;
+            if (objParameter != null)
+            {
+                var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
+                paramAction(command, objParameter);
+            }
+            this.Open(conn);
+            return command.ExecuteNonQuery();
         }
 #if ASYNC
         private async Task<TTarget> QueryFirstImplAsync<TTarget>(int hashKey, Type targetType, string sql, CommandType cmdType, TEntity objParameter = null, bool isPk = false)
         {
-            DbCommand command = null;
-            string propName = String.Empty;
-            DbDataReader reader = null;
             TTarget result = default(TTarget);
+            var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             if (this.Connection == null)
             {
                 using (var conn = this.Provider.CreateConnection(this.ConnString))
                 {
-                    command = conn.CreateCommand();
-                    command.CommandText = sql;
-                    command.CommandType = cmdType;
-                    if (objParameter != null)
+                    behavior = CommandBehavior.CloseConnection | behavior;
+                    await this.QueryImplInternalAsync<TTarget>(hashKey, targetType, sql, conn, null, cmdType, behavior, objResult =>
                     {
-                        var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
-                        paramAction(command, objParameter);
-                    }
-                    conn.Open();
-                    reader = await command.ExecuteReaderAsync(CommandBehavior.CloseConnection | CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-                    var func = RepositoryHelper.GetReader(hashKey, targetType, reader);
-                    while (reader.Read())
-                    {
-                        object funcResult = func?.Invoke(reader);
-                        if (funcResult == null || funcResult is TTarget) result = (TTarget)funcResult;
-                        else result = (TTarget)Convert.ChangeType(funcResult, targetType, CultureInfo.InvariantCulture);
-                    }
-                    while (reader.NextResult()) { }
-                    conn.Close();
-                    reader.Dispose();
-                    reader = null;
+                        if (objResult == null || objResult is TTarget) result = (TTarget)objResult;
+                        else result = (TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture);
+                    }, objParameter, isPk);
                 }
             }
-            else
+            else await this.QueryImplInternalAsync<TTarget>(hashKey, targetType, sql, this.Connection, this.Transaction, cmdType, behavior, objResult =>
             {
-                command = this.Connection.CreateCommand();
-                command.CommandText = sql;
-                command.CommandType = CommandType.Text;
-                if (this.Transaction != null) command.Transaction = this.Transaction;
-                if (objParameter != null)
-                {
-                    var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
-                    paramAction(command, objParameter);
-                }
-                this.Open();
-                reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow);
-                var func = RepositoryHelper.GetReader(hashKey, targetType, reader);
-                while (reader.Read())
-                {
-                    object funcResult = func?.Invoke(reader);
-                    if (funcResult == null || funcResult is TTarget) result = (TTarget)funcResult;
-                    else result = (TTarget)Convert.ChangeType(funcResult, targetType, CultureInfo.InvariantCulture);
-                }
-                while (reader.NextResult()) { }
-                reader.Dispose();
-                reader = null;
-            }
+                if (objResult == null || objResult is TTarget) result = (TTarget)objResult;
+                else result = (TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture);
+            }, objParameter, isPk);
             return result;
         }
         private async Task<List<TTarget>> QueryImplAsync<TTarget>(int hashKey, Type targetType, string sql, CommandType cmdType, TEntity objParameter = null, bool isPk = false)
         {
-            DbCommand command = null;
-            string propName = String.Empty;
-            DbDataReader reader = null;
             List<TTarget> result = new List<TTarget>();
+            var behavior = CommandBehavior.SequentialAccess;
             if (this.Connection == null)
             {
                 using (var conn = this.Provider.CreateConnection(this.ConnString))
                 {
-                    command = conn.CreateCommand();
-                    command.CommandText = sql;
-                    command.CommandType = cmdType;
-                    if (objParameter != null)
+                    behavior = CommandBehavior.CloseConnection | behavior;
+                    await this.QueryImplInternalAsync<TTarget>(hashKey, targetType, sql, conn, null, cmdType, behavior, objResult =>
                     {
-                        var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
-                        paramAction(command, objParameter);
-                    }
-                    conn.Open();
-                    reader = await command.ExecuteReaderAsync(CommandBehavior.CloseConnection | CommandBehavior.SequentialAccess);
-                    var func = RepositoryHelper.GetReader(hashKey, targetType, reader);
-                    while (reader.Read())
-                    {
-                        object funcResult = func?.Invoke(reader);
-                        if (funcResult == null) continue;
-                        if (funcResult is TTarget) result.Add((TTarget)funcResult);
-                        else result.Add((TTarget)Convert.ChangeType(funcResult, targetType, CultureInfo.InvariantCulture));
-                    }
-                    while (reader.NextResult()) { }
-                    conn.Close();
-                    reader.Dispose();
-                    reader = null;
+                        if (objResult == null) return;
+                        if (objResult is TTarget) result.Add((TTarget)objResult);
+                        else result.Add((TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
+                    }, objParameter, isPk);
                 }
             }
-            else
+            else await this.QueryImplInternalAsync<TTarget>(hashKey, targetType, sql, this.Connection, this.Transaction, cmdType, behavior, objResult =>
             {
-                command = this.Connection.CreateCommand();
-                command.CommandText = sql;
-                command.CommandType = CommandType.Text;
-                if (this.Transaction != null) command.Transaction = this.Transaction;
-                if (objParameter != null)
-                {
-                    var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
-                    paramAction(command, objParameter);
-                }
-                this.Open();
-                reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess);
-                var func = RepositoryHelper.GetReader(hashKey, targetType, reader);
-                while (reader.Read())
-                {
-                    object funcResult = func?.Invoke(reader);
-                    if (funcResult == null) continue;
-                    if (funcResult is TTarget) result.Add((TTarget)funcResult);
-                    else result.Add((TTarget)Convert.ChangeType(funcResult, targetType, CultureInfo.InvariantCulture));
-                }
-                while (reader.NextResult()) { }
-                reader.Dispose();
-                reader = null;
-            }
+                if (objResult == null) return;
+                if (objResult is TTarget) result.Add((TTarget)objResult);
+                else result.Add((TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
+            }, objParameter, isPk);
             return result;
         }
         private async Task<PagedList<TTarget>> QueryPageImplAsync<TTarget>(int hashKey, Type targetType, string sql, CommandType cmdType, TEntity objParameter = null, bool isPk = false)
         {
-            DbCommand command = null;
-            string propName = String.Empty;
-            DbDataReader reader = null;
             PagedList<TTarget> result = new PagedList<TTarget>();
+            var behavior = CommandBehavior.SequentialAccess;
             if (this.Connection == null)
             {
                 using (var conn = this.Provider.CreateConnection(this.ConnString))
                 {
-                    command = conn.CreateCommand();
-                    command.CommandText = sql;
-                    command.CommandType = cmdType;
-                    if (objParameter != null)
+                    behavior = CommandBehavior.CloseConnection | behavior;
+                    await this.QueryImplInternalAsync<TTarget>(hashKey, targetType, sql, conn, null, cmdType, behavior, objResult =>
                     {
-                        var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
-                        paramAction(command, objParameter);
-                    }
-                    conn.Open();
-                    reader = await command.ExecuteReaderAsync(CommandBehavior.CloseConnection | CommandBehavior.SequentialAccess);
-                    var func = RepositoryHelper.GetReader(hashKey, targetType, reader);
-                    while (reader.Read())
-                    {
-                        object funcResult = func?.Invoke(reader);
-                        if (funcResult == null) continue;
-                        if (funcResult is TTarget) result.Add((TTarget)funcResult);
-                        else result.Add((TTarget)Convert.ChangeType(funcResult, targetType, CultureInfo.InvariantCulture));
-                    }
-                    while (reader.NextResult()) { }
-                    conn.Close();
-                    reader.Dispose();
-                    reader = null;
+                        if (objResult == null) return;
+                        if (objResult is TTarget) result.Add((TTarget)objResult);
+                        else result.Add((TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
+                    }, objParameter, isPk);
                 }
             }
-            else
+            else await this.QueryImplInternalAsync<TTarget>(hashKey, targetType, sql, this.Connection, this.Transaction, cmdType, behavior, objResult =>
             {
-                command = this.Connection.CreateCommand();
-                command.CommandText = sql;
-                command.CommandType = CommandType.Text;
-                if (this.Transaction != null) command.Transaction = this.Transaction;
-                if (objParameter != null)
-                {
-                    var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
-                    paramAction(command, objParameter);
-                }
-                this.Open();
-                reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess);
-                var func = RepositoryHelper.GetReader(hashKey, targetType, reader);
-                while (reader.Read())
-                {
-                    object funcResult = func?.Invoke(reader);
-                    if (funcResult == null) continue;
-                    if (funcResult is TTarget) result.Add((TTarget)funcResult);
-                    else result.Add((TTarget)Convert.ChangeType(funcResult, targetType, CultureInfo.InvariantCulture));
-                }
-                while (reader.NextResult()) { }
-                reader.Dispose();
-                reader = null;
-            }
+                if (objResult == null) return;
+                if (objResult is TTarget) result.Add((TTarget)objResult);
+                else result.Add((TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
+            }, objParameter, isPk);
             return result;
         }
         private async Task<int> ExecSqlImplAsync(int hashKey, string sql, CommandType cmdType = CommandType.Text, TEntity objParameter = null, bool isPk = false)
         {
-            DbCommand command = null;
             int result = 0;
             if (this.Connection == null)
             {
                 using (var conn = this.Provider.CreateConnection(this.ConnString))
                 {
-                    command = conn.CreateCommand();
-                    command.CommandText = sql;
-                    command.CommandType = cmdType;
-                    if (objParameter != null)
-                    {
-                        var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
-                        paramAction(command, objParameter);
-                    }
-                    conn.Open();
-                    result = await command.ExecuteNonQueryAsync();
+                    result = await this.ExecSqlImplInternalAsync(hashKey, sql, conn, null, cmdType, objParameter, isPk);
                     conn.Close();
                 }
             }
-            else
-            {
-                command = this.Connection.CreateCommand();
-                command.CommandText = sql;
-                command.CommandType = cmdType;
-                if (this.Transaction != null) command.Transaction = this.Transaction;
-                if (objParameter != null)
-                {
-                    var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
-                    paramAction(command, objParameter);
-                }
-                this.Open();
-                result = await command.ExecuteNonQueryAsync();
-            }
+            else result = await this.ExecSqlImplInternalAsync(hashKey, sql, this.Connection, this.Transaction, cmdType, objParameter, isPk);
             return result;
+        }
+        private async Task QueryImplInternalAsync<TTarget>(int hashKey, Type targetType, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior, Action<object> resultHandler, TEntity objParameter, bool isPk)
+        {
+            DbCommand command = conn.CreateCommand();
+            command.CommandText = sql;
+            command.CommandType = cmdType;
+            command.Transaction = trans;
+            if (objParameter != null)
+            {
+                var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
+                paramAction(command, objParameter);
+            }
+            this.Open(conn);
+            DbDataReader reader = await command.ExecuteReaderAsync(behavior);
+            var func = RepositoryHelper.GetReader(hashKey, targetType, reader, this.Provider.IsMappingIgnoreCase);
+            while (reader.Read())
+            {
+                resultHandler(func?.Invoke(reader));
+            }
+            while (reader.NextResult()) { }
+#if COREFX
+            try { command.Cancel(); } catch { }
+#else
+            reader.Close();
+#endif
+            reader.Dispose();
+            reader = null;
+        }
+        private async Task<int> ExecSqlImplInternalAsync(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, TEntity objParameter, bool isPk)
+        {
+            DbCommand command = conn.CreateCommand();
+            command.CommandText = sql;
+            command.CommandType = cmdType;
+            command.Transaction = trans;
+            if (objParameter != null)
+            {
+                var paramAction = GetActionCache(hashKey, sql, this.Provider, isPk);
+                paramAction(command, objParameter);
+            }
+            this.Open(conn);
+            return await command.ExecuteNonQueryAsync();
         }
 #endif
         private static string BuildCreateSql(EntityMapper mapper, IOrmProvider provider)
         {
             StringBuilder insertBuilder = new StringBuilder();
-            insertBuilder.Append("INSERT INTO " + provider.GetQuotedTableName(mapper.TableName) + " (");
+            insertBuilder.Append("INSERT INTO " + provider.GetTableName(mapper.TableName) + " (");
             StringBuilder valueBuilder = new StringBuilder();
             valueBuilder.Append(") VALUES(");
             int i = 0;
@@ -706,7 +529,7 @@ namespace Trolley
                 if (colMapper.IsAutoIncrement) continue;
                 if (i > 0) insertBuilder.Append(",");
                 if (i > 0) valueBuilder.Append(",");
-                insertBuilder.Append(provider.GetQuotedColumnName(colMapper.FieldName));
+                insertBuilder.Append(provider.GetColumnName(colMapper.FieldName));
                 valueBuilder.Append(provider.ParamPrefix + colMapper.MemberName);
                 i++;
             }
@@ -731,13 +554,13 @@ namespace Trolley
                 sqlBuilder.Append(GetAliasParameterSql(provider, colMapper));
                 i++;
             }
-            sqlBuilder.Append(" FROM " + provider.GetQuotedTableName(mapper.TableName));
+            sqlBuilder.Append(" FROM " + provider.GetTableName(mapper.TableName));
             return sqlBuilder.ToString() + whereBuilder.ToString();
         }
         private static string BuildDeleteSql(EntityMapper mapper, IOrmProvider provider)
         {
             StringBuilder builder = new StringBuilder();
-            builder.Append("DELETE FROM " + provider.GetQuotedTableName(mapper.TableName) + " WHERE ");
+            builder.Append("DELETE FROM " + provider.GetTableName(mapper.TableName) + " WHERE ");
             int i = 0;
             foreach (var colMapper in mapper.PrimaryKeys)
             {
@@ -749,7 +572,7 @@ namespace Trolley
         }
         private static string BuildUpdateSql(EntityMapper mapper, IOrmProvider provider, string[] updateParameters)
         {
-            var builder = new StringBuilder("UPDATE " + provider.GetQuotedTableName(mapper.TableName) + " SET ");
+            var builder = new StringBuilder("UPDATE " + provider.GetTableName(mapper.TableName) + " SET ");
             int index = 0;
             foreach (var propName in updateParameters)
             {
@@ -769,7 +592,7 @@ namespace Trolley
         }
         private static string GetUpdateFieldsSql<TFields>(Expression<Func<TEntity, TFields>> fieldsExpression, IOrmProvider provider)
         {
-            var builder = new StringBuilder("UPDATE " + Mapper.TableName + " SET ");
+            var builder = new StringBuilder("UPDATE " + provider.GetTableName(Mapper.TableName) + " SET ");
             var expression = ((LambdaExpression)fieldsExpression).Body;
             if (expression.NodeType == ExpressionType.New)
             {
@@ -802,11 +625,11 @@ namespace Trolley
         }
         private static string GetSetParameterSql(IOrmProvider provider, MemberMapper colMapper)
         {
-            return provider.GetQuotedColumnName(colMapper.FieldName) + "=" + provider.ParamPrefix + colMapper.MemberName;
+            return provider.GetColumnName(colMapper.FieldName) + "=" + provider.ParamPrefix + colMapper.MemberName;
         }
         private static string GetAliasParameterSql(IOrmProvider provider, MemberMapper colMapper)
         {
-            return provider.GetQuotedColumnName(colMapper.FieldName) + (colMapper.MemberName == colMapper.FieldName ? String.Empty : " AS " + colMapper.MemberName);
+            return provider.GetColumnName(colMapper.FieldName) + " AS " + provider.GetPropertyName(colMapper.MemberName);
         }
         #endregion
     }

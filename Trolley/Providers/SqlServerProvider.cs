@@ -8,18 +8,27 @@ namespace Trolley.Providers
     {
         public override DbConnection CreateConnection(string connString)
         {
-            var factory = OrmProviderFactory.SqlServerFactory();
+            var factory =
+#if COREFX
+              OrmProviderFactory.GetFactory("System.Data.SqlClient.SqlClientFactory, System.Data.SqlClient, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a");
+#else
+              OrmProviderFactory.GetFactory("System.Data.SqlClient.SqlClientFactory, System.Data, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089");
+#endif
             var result = factory.CreateConnection();
             result.ConnectionString = connString;
             return result;
         }
-        public override string GetQuotedColumnName(string columnName)
+        public override string GetPropertyName(string propertyName)
         {
-            return "[" + columnName + "]";
+            return "[" + propertyName + "]";
         }
-        public override string GetQuotedTableName(string tableName)
+        public override string GetTableName(string entityName)
         {
-            return "[" + tableName + "]";
+            return "[" + entityName + "]";
+        }
+        public override string GetColumnName(string propertyName)
+        {
+            return "[" + propertyName + "]";
         }
         public override string GetPagingExpression(string sql, int skip, int? limit, string orderBy = null)
         {

@@ -27,7 +27,7 @@ namespace Trolley
                 if (!String.IsNullOrEmpty(tableAttr.TableName)) this.TableName = tableAttr.TableName;
                 this.FieldPrefix = tableAttr.FieldPrefix;
             }
-            var properties = entityType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Where(p => p.GetIndexParameters().Length == 0 && p.GetSetMethod(true) != null);
+            var properties = entityType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Where(p => p.GetIndexParameters().Length == 0);
             foreach (var prop in properties)
             {
                 MemberMapper colMapper = new MemberMapper();

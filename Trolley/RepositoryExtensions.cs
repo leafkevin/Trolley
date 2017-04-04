@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+#if ASYNC
 using System.Threading.Tasks;
-
+#endif
 namespace Trolley
 {
     public static class RepositoryExtensions
@@ -32,6 +33,7 @@ namespace Trolley
             builder.Invoke(sqlBuilder);
             return repository.ExecSql(sqlBuilder.BuildSql(), objParameter);
         }
+#if ASYNC
         public static async Task<TEntity> QueryFirstAsync<TEntity>(this IRepository repository, Action<SqlBuilder> builder, object objParameter = null)
         {
             SqlBuilder sqlBuilder = new SqlBuilder();
@@ -56,6 +58,7 @@ namespace Trolley
             builder.Invoke(sqlBuilder);
             return await repository.ExecSqlAsync(sqlBuilder.BuildSql(), objParameter);
         }
+#endif
         #endregion
 
         #region IRepository<TEntity>扩展
@@ -107,6 +110,7 @@ namespace Trolley
             builder.Invoke(sqlBuilder);
             return repository.ExecSql(sqlBuilder.BuildSql(), objParameter);
         }
+#if ASYNC
         public static async Task<int> UpdateAsync<TEntity>(this IRepository<TEntity> repository, Action<SqlBuilder> builder, TEntity entity = null) where TEntity : class, new()
         {
             SqlBuilder sqlBuilder = new SqlBuilder();
@@ -155,6 +159,7 @@ namespace Trolley
             builder.Invoke(sqlBuilder);
             return await repository.ExecSqlAsync(sqlBuilder.BuildSql(), objParameter);
         }
+#endif
         #endregion
     }
 }

@@ -5,10 +5,10 @@
 框架特点
 ------------------------------------------------------------
 支持分页，可以不用写SQL,也支持动态SQL，强类型的DDD仓促操作,也支持无类型的SQL操作,支持多种数据库终端。
-目前支持.NET Standard1.3,.NET Framework 4.5+,.NET Core 1.0+ 等平台。
+目前支持.NET Standard1.5,.NET Framework 4.5+,.NET Core 1.0+ 等平台。
 支持：MySql,Oracle,PostgreSql,Sql Sever 2012+,SqlLite
 性能与dapper相当，使用强类型仓储使用sql比dapper快。
-数据库支持：除Sql Server 2012，其他暂未测试。
+数据库支持：Sql Server 2012，Postgresql，测试通过。（Oracle，Mysql暂时还不支持.NET Core跨平台）
 
 首先在系统中要注册OrmProvider，只需要注册一次
 ------------------------------------------------------------

@@ -5,9 +5,9 @@ namespace Trolley
 {
     public class RepositoryContext : IRepositoryContext
     {
-        protected DbConnection Connection { get; set; }
-        protected DbTransaction Transaction { get; set; }
-        public string ConnString { get; set; }
+        protected string ConnString { get; private set; }
+        public DbConnection Connection { get; private set; }
+        public DbTransaction Transaction { get; private set; }
         public RepositoryContext()
         {
             this.ConnString = OrmProviderFactory.DefaultConnString;
@@ -38,7 +38,7 @@ namespace Trolley
         /// <returns></returns>
         public virtual IRepository RepositoryFor()
         {
-            return new Repository(this.ConnString, this.Transaction);
+            return new Repository(this.ConnString, this);
         }
         /// <summary>
         /// 获取强类型Repository对象，支持IOC重载
@@ -47,7 +47,7 @@ namespace Trolley
         /// <returns></returns>
         public virtual IRepository<TEntity> RepositoryFor<TEntity>() where TEntity : class, new()
         {
-            return new Repository<TEntity>(this.ConnString, this.Transaction);
+            return new Repository<TEntity>(this.ConnString, this);
         }
         public void Rollback()
         {
