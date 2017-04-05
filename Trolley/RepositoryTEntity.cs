@@ -112,6 +112,15 @@ namespace Trolley
             sql = RepositoryHelper.GetPagingCache(cacheKey, this.ConnString, sql, pageIndex, pageSize, orderBy, this.Provider);
             return this.QueryPageImpl<TTarget>(cacheKey, typeof(TTarget), sql, cmdType, objParameter);
         }
+        public QueryReader QueryMultiple(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
+        {
+            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
+            if (this.Connection == null)
+            {
+                return this.QueryMultipleImpl(cacheKey, sql, this.Provider.CreateConnection(this.ConnString), null, cmdType, CommandBehavior.SequentialAccess, objParameter, true);
+            }
+            else return this.QueryMultipleImpl(cacheKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, false);
+        }
         public int ExecSql(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
         {
             int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
@@ -180,7 +189,16 @@ namespace Trolley
         {
             int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql + orderBy ?? "");
             sql = RepositoryHelper.GetPagingCache(cacheKey, this.ConnString, sql, pageIndex, pageSize, orderBy, this.Provider);
-            return await this.QueryPageImplAsync<TTarget>(cacheKey, Mapper.EntityType, sql, cmdType, objParameter);
+            return await this.QueryPageImplAsync<TTarget>(cacheKey, typeof(TTarget), sql, cmdType, objParameter);
+        }
+        public async Task<QueryReader> QueryMultipleAsync(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
+        {
+            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
+            if (this.Connection == null)
+            {
+                return await this.QueryMultipleImplAsync(cacheKey, sql, this.Provider.CreateConnection(this.ConnString), null, cmdType, CommandBehavior.SequentialAccess, objParameter, true);
+            }
+            else return await this.QueryMultipleImplAsync(cacheKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, false);
         }
         public async Task<int> ExecSqlAsync(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
         {
@@ -332,6 +350,21 @@ namespace Trolley
             }, objParameter, isPk);
             return result;
         }
+        private QueryReader QueryMultipleImpl(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior, TEntity objParameter, bool isCloseConnection)
+        {
+            DbCommand command = conn.CreateCommand();
+            command.CommandText = sql;
+            command.CommandType = cmdType;
+            command.Transaction = trans;
+            if (objParameter != null)
+            {
+                var paramAction = GetActionCache(hashKey, sql, this.Provider, false);
+                paramAction(command, objParameter);
+            }
+            this.Open(conn);
+            DbDataReader reader = command.ExecuteReader(behavior);
+            return new QueryReader(hashKey, command, reader, this.Provider.IsMappingIgnoreCase, isCloseConnection);
+        }
         private int ExecSqlImpl(int hashKey, string sql, CommandType cmdType = CommandType.Text, TEntity objParameter = null, bool isPk = false)
         {
             int result = 0;
@@ -387,6 +420,7 @@ namespace Trolley
             this.Open(conn);
             return command.ExecuteNonQuery();
         }
+
 #if ASYNC
         private async Task<TTarget> QueryFirstImplAsync<TTarget>(int hashKey, Type targetType, string sql, CommandType cmdType, TEntity objParameter = null, bool isPk = false)
         {
@@ -460,6 +494,21 @@ namespace Trolley
                 else result.Add((TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
             }, objParameter, isPk);
             return result;
+        }
+        private async Task<QueryReader> QueryMultipleImplAsync(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior, TEntity objParameter, bool isCloseConnection)
+        {
+            DbCommand command = conn.CreateCommand();
+            command.CommandText = sql;
+            command.CommandType = cmdType;
+            command.Transaction = trans;
+            if (objParameter != null)
+            {
+                var paramAction = GetActionCache(hashKey, sql, this.Provider, false);
+                paramAction(command, objParameter);
+            }
+            this.Open(conn);
+            DbDataReader reader = await command.ExecuteReaderAsync(behavior);
+            return new QueryReader(hashKey, command, reader, this.Provider.IsMappingIgnoreCase, isCloseConnection);
         }
         private async Task<int> ExecSqlImplAsync(int hashKey, string sql, CommandType cmdType = CommandType.Text, TEntity objParameter = null, bool isPk = false)
         {

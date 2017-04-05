@@ -27,10 +27,7 @@ namespace Trolley
         }
         public void Commit()
         {
-            if (this.Transaction != null)
-            {
-                this.Transaction.Commit();
-            }
+            if (this.Transaction != null) this.Transaction.Commit();
         }
         /// <summary>
         /// 获取无类型Repository对象，支持IOC重载
@@ -51,32 +48,17 @@ namespace Trolley
         }
         public void Rollback()
         {
-            if (this.Transaction != null)
-            {
-                this.Transaction.Rollback();
-            }
+            if (this.Transaction != null) this.Transaction.Rollback();
         }
         public void Dispose()
         {
-            if (this.Transaction != null)
-            {
-                this.Transaction.Dispose();
-            }
-            if (this.Connection != null)
-            {
-                this.Connection.Dispose();
-            }
+            if (this.Transaction != null) this.Transaction.Dispose();
+            if (this.Connection != null) this.Connection.Dispose();
         }
         private void Open()
         {
-            if (this.Connection.State == ConnectionState.Broken)
-            {
-                this.Connection.Close();
-            }
-            if (this.Connection.State == ConnectionState.Closed)
-            {
-                this.Connection.Open();
-            }
+            if (this.Connection.State == ConnectionState.Broken) this.Connection.Close();
+            if (this.Connection.State == ConnectionState.Closed) this.Connection.Open();
         }
         public void Close()
         {

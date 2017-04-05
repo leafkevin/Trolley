@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net45;net451;net46;net461;net462;netstandard1.5</TargetFrameworks>
-    <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Authors>leaf kevin</Authors>
     <PackageProjectUrl>https://github.com/leafkevin/Trolley</PackageProjectUrl>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
@@ -9,9 +9,12 @@
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
     <AssemblyVersion>1.0.1.0</AssemblyVersion>
     <FileVersion>1.0.1.0</FileVersion>
+    <Version>1.0.1.0</Version>
+    <PackageReleaseNotes>支持.NET Standard 1.5, .NET Framework 4.5+, .NET Core 1.0+等平台</PackageReleaseNotes>
+    <Description>一款轻量级高性能的ORM，可以不用写SQL语句，也支持动态SQL语句，分页，事务，多种数据库终端支持，支持同步/异步，性能与dapper相当。</Description>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' == 'net45'">
-    <DefineConstants>ASYNC</DefineConstants>
+    <DefineConstants>ASYNC;NET45</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' == 'net451'">
     <DefineConstants>ASYNC</DefineConstants>
@@ -52,6 +55,9 @@
   </ItemGroup>
   <PropertyGroup Condition="'$(TargetFramework)' == 'netstandard1.5'">
     <DefineConstants>$(DefineConstants);ASYNC;COREFX</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net45|AnyCPU'">
+    <Optimize>True</Optimize>
   </PropertyGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
     <PackageReference Include="System.Data.Common" Version="4.3.0" />

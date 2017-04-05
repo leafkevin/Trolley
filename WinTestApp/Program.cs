@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Data;
+using System.Data.SqlClient;
 using Trolley;
 using Trolley.Providers;
 
@@ -14,10 +16,31 @@ namespace WinTestApp
             OrmProviderFactory.RegisterProvider(sqlConnString, new SqlServerProvider());
             OrmProviderFactory.RegisterProvider(npgsqlConnString, new NpgsqlProvider());
             OrmProviderFactory.RegisterProvider(mysqlConnString, new MySqlProvider());
-            TestHelper.Test(sqlConnString);
-            TestHelper.Test(npgsqlConnString);
+
+            string sql = @"SELECT DeptId FROM Coin_User WHERE Id=1;SELECT DeptName FROM Coin_Dept WHERE Id=1";
+            SqlConnection conn = new SqlConnection(sqlConnString);
+            SqlCommand cmd = new SqlCommand(sql, conn);
+            conn.Open();
+            var reader = cmd.ExecuteReader(CommandBehavior.SequentialAccess);
+            do
+            {
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        var name = reader.GetName(0);
+                        var value = reader.GetValue(0);
+                        Console.WriteLine();
+                    }
+                }
+            } while (reader.NextResult());
+            conn.Close();
+            //TestHelper.Test(sqlConnString);
+            TestHelper.TestAsync(sqlConnString).Wait();
+            //TestHelper.Test(npgsqlConnString);
             //TestHelper.Test(mysqlConnString);
             Console.ReadLine();
         }
+
     }
 }

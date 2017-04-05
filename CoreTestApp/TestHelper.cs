@@ -22,8 +22,8 @@ namespace CoreTestApp
             count = repository.Create(user);
             count = repository.Create(user1);
 
-            //获取          
-            //user = repository.QueryFirst("SELECT \"Id\" UniqueId,\"UserName\",\"Sex\" FROM \"Coin_User\" WHERE \"Id\"=@UniqueId", user);
+            //获取
+            user = repository.QueryFirst("SELECT Id UniqueId,UserName,Sex FROM Coin_User WHERE Id=@UniqueId", user);
             user = repository.Get(user);
 
             //更新
@@ -71,6 +71,13 @@ namespace CoreTestApp
             {
                 context.Rollback();
             }
+            var reader = repository.QueryMultiple("SELECT * FROM Coin_User;SELECT * FROM Coin_Dept", user);
+            var userList = reader.ReadList<User>();
+            var deptList = reader.ReadPageList<Dept>();
+            count = repository.Create(user);
+            user.UserName = "Kevin-Test";
+            user.Sex = Sex.Female;
+            count = repository.Update(f => f.Sex, user);
         }
         public static async Task TestAsync(string connString)
         {
@@ -80,8 +87,12 @@ namespace CoreTestApp
             var repository = new Repository<User>(connString);
 
             //删除
-            count = repository.Delete(user);
-            count = repository.Delete(user1);
+            count = await repository.DeleteAsync(user);
+            count = await repository.DeleteAsync(user1);
+
+            //创建
+            count = await repository.CreateAsync(user);
+            count = await repository.CreateAsync(user1);
 
             //获取          
             user = await repository.QueryFirstAsync("SELECT Id UniqueId,UserName,Sex FROM Coin_User WHERE Id=@UniqueId", user);
@@ -116,7 +127,7 @@ namespace CoreTestApp
             var userInfoList = await repository.QueryPageAsync<UserInfo>("SELECT Id UniqueId,UserName,Sex FROM Coin_User WHERE Id>@UniqueId", 0, 10, "ORDER BY Id", user);
 
             //事务
-            var context = new RepositoryContext();
+            var context = new RepositoryContext(connString);
             try
             {
                 var repository1 = context.RepositoryFor();
@@ -132,6 +143,14 @@ namespace CoreTestApp
             {
                 context.Rollback();
             }
+            //多结果集
+            var reader = await repository.QueryMultipleAsync("SELECT * FROM Coin_User;SELECT * FROM Coin_Dept", user);
+            var userList = await reader.ReadListAsync<User>();
+            var deptList = await reader.ReadPageListAsync<Dept>();
+            count = await repository.CreateAsync(user);
+            user.UserName = "Kevin-Test";
+            user.Sex = Sex.Female;
+            count = await repository.UpdateAsync(f => f.Sex, user);
         }
         public class UserInfo
         {

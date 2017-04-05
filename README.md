@@ -602,6 +602,21 @@ userInfoList = await repository.QueryPageAsync<UserInfo>("SELECT Id,UserName,Sex
 
 ```
 
+IOrmProvider接口中的IsMappingIgnoreCase，表示数据库中的字段映射到实体中，是否忽略大小写，有时候很有用，比如Postgresql的大小写问题。
+
+
+QueryMultiple方法，获取多个结果集，返回一个QueryReader对象。
+再根据Read<T>()，ReadList<T>，ReadPageList<T>三个方法进一步获取强类型对象。
+```csharp
+var reader = await repository.QueryMultipleAsync("SELECT * FROM Coin_User;SELECT * FROM Coin_Dept", user);
+var userList = await reader.ReadListAsync<User>();
+var deptList = await reader.ReadPageListAsync<Dept>();
+```
+
+
+
+
+
 待续。。。
 
 欢迎大家使用
