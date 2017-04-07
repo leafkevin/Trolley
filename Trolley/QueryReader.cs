@@ -10,11 +10,11 @@ namespace Trolley
 {
     public class QueryReader : IDisposable
     {
-        private bool isMappingIgnoreCase = false;
-        private bool isCloseConnection = true;
-        private int hashKey;
-        private DbDataReader reader;
-        private DbCommand command;
+        protected bool isMappingIgnoreCase = false;
+        protected bool isCloseConnection = true;
+        protected int hashKey;
+        protected DbDataReader reader;
+        protected DbCommand command;
 
         public QueryReader(int hashKey, DbCommand command, DbDataReader reader, bool isMappingIgnoreCase, bool isCloseConnection)
         {
@@ -68,7 +68,7 @@ namespace Trolley
             this.ReadNextResult();
             return result;
         }
-        private void ReadNextResult()
+        protected void ReadNextResult()
         {
             if (!this.reader.NextResult())
             {
@@ -89,73 +89,6 @@ namespace Trolley
                 }
             }
         }
-#if ASYNC
-        public async Task<T> ReadAsync<T>()
-        {
-            Type targetType = typeof(T);
-            T result = default(T);
-            var func = RepositoryHelper.GetReader(this.hashKey, targetType, this.reader, this.isMappingIgnoreCase);
-            while (await reader.ReadAsync())
-            {
-                var objResult = func?.Invoke(reader);
-                if (objResult == null || objResult is T) result = (T)objResult;
-                else result = (T)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture);
-            }
-            await this.ReadNextResultAsync();
-            return result;
-        }
-        public async Task<List<T>> ReadListAsync<T>()
-        {
-            Type targetType = typeof(T);
-            List<T> result = new List<T>();
-            var func = RepositoryHelper.GetReader(this.hashKey, targetType, this.reader, this.isMappingIgnoreCase);
-            while (await reader.ReadAsync())
-            {
-                var objResult = func?.Invoke(reader);
-                if (objResult == null) continue;
-                if (objResult is T) result.Add((T)objResult);
-                else result.Add((T)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
-            }
-            await this.ReadNextResultAsync();
-            return result;
-        }
-        public async Task<PagedList<T>> ReadPageListAsync<T>()
-        {
-            Type targetType = typeof(T);
-            PagedList<T> result = new PagedList<T>();
-            var func = RepositoryHelper.GetReader(this.hashKey, targetType, this.reader, this.isMappingIgnoreCase);
-            while (await reader.ReadAsync())
-            {
-                var objResult = func?.Invoke(reader);
-                if (objResult == null) continue;
-                if (objResult is T) result.Add((T)objResult);
-                else result.Add((T)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
-            }
-            await this.ReadNextResultAsync();
-            return result;
-        }
-        private async Task ReadNextResultAsync()
-        {
-            if (!await this.reader.NextResultAsync())
-            {
-#if COREFX
-                try { this.command.Cancel(); } catch { }
-#else
-                this.reader.Close();
-#endif
-                this.reader.Dispose();
-                this.reader = null;
-                if (this.isCloseConnection)
-                {
-                    var conn = this.command.Connection;
-                    conn.Close();
-                    conn.Dispose();
-                    this.command.Dispose();
-                    this.command = null;
-                }
-            }
-        }
-#endif
         public void Dispose()
         {
             if (this.reader != null)
@@ -176,6 +109,29 @@ namespace Trolley
                 this.command.Dispose();
                 this.command = null;
             }
+        }
+    }
+    public class QueryReader<TEntity> : QueryReader
+    {
+        protected Type entityType;
+
+        public QueryReader(int hashKey, Type entityType, DbCommand command, DbDataReader reader, bool isMappingIgnoreCase, bool isCloseConnection)
+            : base(hashKey, command, reader, isMappingIgnoreCase, isCloseConnection)
+        {
+            this.entityType = entityType;
+        }
+        public TEntity Read()
+        {
+            TEntity result = default(TEntity);
+            var func = RepositoryHelper.GetReader(this.hashKey, this.entityType, this.reader, this.isMappingIgnoreCase);
+            while (reader.Read())
+            {
+                var objResult = func?.Invoke(reader);
+                if (objResult == null || objResult is TEntity) result = (TEntity)objResult;
+                else result = (TEntity)Convert.ChangeType(objResult, this.entityType, CultureInfo.InvariantCulture);
+            }
+            base.ReadNextResult();
+            return result;
         }
     }
 }

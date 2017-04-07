@@ -510,6 +510,7 @@ namespace Trolley
             OpCode opCode = default(OpCode);
             switch (colTypeCode)
             {
+                case TypeCode.Boolean:
                 case TypeCode.Byte:
                 case TypeCode.SByte:
                 case TypeCode.Int16:
@@ -518,6 +519,8 @@ namespace Trolley
                 case TypeCode.UInt32:
                 case TypeCode.Int64:
                 case TypeCode.UInt64:
+                case TypeCode.Single:
+                case TypeCode.Double:
                     switch (propTypeCode)
                     {
                         case TypeCode.Byte:
@@ -530,12 +533,17 @@ namespace Trolley
                             opCode = OpCodes.Conv_Ovf_I2; break;
                         case TypeCode.UInt32:
                             opCode = OpCodes.Conv_Ovf_I4_Un; break;
+                        case TypeCode.Boolean:
                         case TypeCode.Int32:
                             opCode = OpCodes.Conv_Ovf_I4; break;
                         case TypeCode.UInt64:
                             opCode = OpCodes.Conv_Ovf_I8_Un; break;
                         case TypeCode.Int64:
                             opCode = OpCodes.Conv_Ovf_I8; break;
+                        case TypeCode.Single:
+                            opCode = OpCodes.Conv_R4; break;
+                        case TypeCode.Double:
+                            opCode = OpCodes.Conv_R8; break;
                     }
                     break;
                 default: return false;
@@ -548,7 +556,6 @@ namespace Trolley
             MethodInfo op = null;
             if ((op = GetOperator(colType, underlyingType)) != null)
             {
-                il.Emit(OpCodes.Unbox_Any, colType);
                 il.Emit(OpCodes.Call, op);
             }
             else

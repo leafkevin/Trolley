@@ -71,7 +71,7 @@ namespace Trolley
             {
                 return DbType.Binary;
             }
-            throw new NotSupportedException(string.Format("没有设置类型{0}DbType的映射", type.FullName));
+            return DbType.Object;
         }
     }
 }

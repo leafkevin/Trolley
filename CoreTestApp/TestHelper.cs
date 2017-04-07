@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Trolley;
-using Trolley.Attributes;
 
 namespace CoreTestApp
 {
@@ -71,13 +70,22 @@ namespace CoreTestApp
             {
                 context.Rollback();
             }
-            var reader = repository.QueryMultiple("SELECT * FROM Coin_User;SELECT * FROM Coin_Dept", user);
-            var userList = reader.ReadList<User>();
-            var deptList = reader.ReadPageList<Dept>();
-            count = repository.Create(user);
-            user.UserName = "Kevin-Test";
-            user.Sex = Sex.Female;
-            count = repository.Update(f => f.Sex, user);
+            //多结果集
+            var order = new Order { Id = 1 };
+            var orderRepository = new Repository<Order>(connString);
+            var sql = "SELECT * FROM Coin_Order WHERE Id=@Id;SELECT * FROM Coin_OrderLine WHERE OrderId=@Id";
+            var reader = orderRepository.QueryMultiple(sql, order);
+            order = reader.Read<Order>();
+            order.Lines = reader.ReadList<OrderLine>();
+
+            order = orderRepository.QueryMap(map =>
+            {
+                var result = map.Read();
+                result.Lines = map.ReadList<OrderLine>();
+                return result;
+            }, "SELECT * FROM Coin_Order WHERE Id=@Id;SELECT * FROM Coin_OrderLine WHERE OrderId=@Id", order);
+            order.Number = "123456789";
+            orderRepository.Update(f => f.Number, order);
         }
         public static async Task TestAsync(string connString)
         {
@@ -122,7 +130,6 @@ namespace CoreTestApp
                     .Where(user.Sex.HasValue, "Sex=@Sex")
                     .Where(user.UpdatedAt.HasValue, "UpdatedAt>@UpdatedAt")
                     .AddSql("ORDER BY UpdatedAt DESC"), user);
-
             //分页
             var userInfoList = await repository.QueryPageAsync<UserInfo>("SELECT Id UniqueId,UserName,Sex FROM Coin_User WHERE Id>@UniqueId", 0, 10, "ORDER BY Id", user);
 
@@ -144,50 +151,21 @@ namespace CoreTestApp
                 context.Rollback();
             }
             //多结果集
-            var reader = await repository.QueryMultipleAsync("SELECT * FROM Coin_User;SELECT * FROM Coin_Dept", user);
-            var userList = await reader.ReadListAsync<User>();
-            var deptList = await reader.ReadPageListAsync<Dept>();
-            count = await repository.CreateAsync(user);
-            user.UserName = "Kevin-Test";
-            user.Sex = Sex.Female;
-            count = await repository.UpdateAsync(f => f.Sex, user);
-        }
-        public class UserInfo
-        {
-            public int UniqueId { get; set; }
-            public string UserName { get; set; }
-            public Sex Sex { get; set; }
-        }
-        [Table("Coin_User")]
-        public class User
-        {
-            [PrimaryKey("Id")]
-            public int UniqueId { get; set; }
-            public string UserName { get; set; }
-            [Column(typeof(string))]
-            public Sex? Sex { get; set; }
-            public int Age { get; set; }
-            public int DeptId { get; set; }
-            public DateTime? UpdatedAt { get; set; }
-        }
-        [Table("Coin_Dept")]
-        public class Dept
-        {
-            [PrimaryKey("Id")]
-            public int UniqueId { get; set; }
-            public string DeptName { get; set; }
-            public int PersonTotal { get; set; }
-            public DateTime? UpdatedAt { get; set; }
-        }
-        public class DeptInfo
-        {
-            public int DeptId { get; set; }
-            public int PersonTotal { get; set; }
-        }
-        public enum Sex : byte
-        {
-            Male = 1,
-            Female = 2
+            var order = new Order { Id = 1 };
+            var orderRepository = new Repository<Order>(connString);
+            var sql = "SELECT * FROM Coin_Order WHERE Id=@Id;SELECT * FROM Coin_OrderLine WHERE OrderId=@Id";
+            var reader = await orderRepository.QueryMultipleAsync(sql, order);
+            order = reader.Read<Order>();
+            order.Lines = reader.ReadList<OrderLine>();
+
+            order = await orderRepository.QueryMapAsync(map =>
+            {
+                var result = map.Read();
+                result.Lines = map.ReadList<OrderLine>();
+                return result;
+            }, "SELECT * FROM Coin_Order WHERE Id=@Id;SELECT * FROM Coin_OrderLine WHERE OrderId=@Id", order);
+            order.Number = "123456789";
+            await orderRepository.UpdateAsync(f => f.Number, order);
         }
     }
 }

@@ -69,6 +69,18 @@ namespace Trolley
             }
             else return this.QueryMultipleImpl(cacheKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType, false);
         }
+        public TResult QueryMap<TResult>(Func<QueryReader, TResult> mapping, string sql, object objParameter = null, CommandType cmdType = CommandType.Text)
+        {
+            Type paramType = objParameter != null ? objParameter.GetType() : null;
+            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
+            QueryReader reader = null;
+            if (this.Connection == null)
+            {
+                reader = this.QueryMultipleImpl(cacheKey, sql, this.Provider.CreateConnection(this.ConnString), null, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType, true);
+            }
+            else reader = this.QueryMultipleImpl(cacheKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType, false);
+            return mapping(reader);
+        }
         public int ExecSql(string sql, object objParameter = null, CommandType cmdType = CommandType.Text)
         {
             Type paramType = objParameter != null ? objParameter.GetType() : null;
@@ -106,6 +118,18 @@ namespace Trolley
                 return await this.QueryMultipleImplAsync(cacheKey, sql, this.Provider.CreateConnection(this.ConnString), null, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType, true);
             }
             else return await this.QueryMultipleImplAsync(cacheKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType, false);
+        }
+        public async Task<TResult> QueryMapAsync<TResult>(Func<QueryReader, TResult> mapping, string sql, object objParameter = null, CommandType cmdType = CommandType.Text)
+        {
+            Type paramType = objParameter != null ? objParameter.GetType() : null;
+            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
+            QueryReader reader = null;
+            if (this.Connection == null)
+            {
+                reader = await this.QueryMultipleImplAsync(cacheKey, sql, this.Provider.CreateConnection(this.ConnString), null, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType, true);
+            }
+            else reader = await this.QueryMultipleImplAsync(cacheKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType, false);
+            return mapping(reader);
         }
         public async Task<int> ExecSqlAsync(string sql, object objParameter = null, CommandType cmdType = CommandType.Text)
         {

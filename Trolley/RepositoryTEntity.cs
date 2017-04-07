@@ -121,6 +121,28 @@ namespace Trolley
             }
             else return this.QueryMultipleImpl(cacheKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, false);
         }
+        public TEntity QueryMap(Func<QueryReader<TEntity>, TEntity> mapping, string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
+        {
+            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
+            QueryReader<TEntity> reader = null;
+            if (this.Connection == null)
+            {
+                reader = this.QueryMultipleImpl(cacheKey, sql, this.Provider.CreateConnection(this.ConnString), null, cmdType, CommandBehavior.SequentialAccess, objParameter, true);
+            }
+            else reader = this.QueryMultipleImpl(cacheKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, false);
+            return mapping(reader);
+        }
+        public TTarget QueryMap<TTarget>(Func<QueryReader<TTarget>, TTarget> mapping, string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
+        {
+            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
+            QueryReader<TTarget> reader = null;
+            if (this.Connection == null)
+            {
+                reader = this.QueryMultipleImpl<TTarget>(cacheKey, sql, this.Provider.CreateConnection(this.ConnString), null, cmdType, CommandBehavior.SequentialAccess, objParameter, true);
+            }
+            else reader = this.QueryMultipleImpl<TTarget>(cacheKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, false);
+            return mapping(reader);
+        }
         public int ExecSql(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
         {
             int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
@@ -199,6 +221,28 @@ namespace Trolley
                 return await this.QueryMultipleImplAsync(cacheKey, sql, this.Provider.CreateConnection(this.ConnString), null, cmdType, CommandBehavior.SequentialAccess, objParameter, true);
             }
             else return await this.QueryMultipleImplAsync(cacheKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, false);
+        }
+        public async Task<TEntity> QueryMapAsync(Func<QueryReader<TEntity>, TEntity> mapping, string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
+        {
+            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
+            QueryReader<TEntity> reader = null;
+            if (this.Connection == null)
+            {
+                reader = await this.QueryMultipleImplAsync(cacheKey, sql, this.Provider.CreateConnection(this.ConnString), null, cmdType, CommandBehavior.SequentialAccess, objParameter, true);
+            }
+            else reader = await this.QueryMultipleImplAsync(cacheKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, false);
+            return mapping(reader);
+        }
+        public async Task<TTarget> QueryMapAsync<TTarget>(Func<QueryReader<TTarget>, TTarget> mapping, string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
+        {
+            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
+            QueryReader<TTarget> reader = null;
+            if (this.Connection == null)
+            {
+                reader = await this.QueryMultipleImplAsync<TTarget>(cacheKey, sql, this.Provider.CreateConnection(this.ConnString), null, cmdType, CommandBehavior.SequentialAccess, objParameter, true);
+            }
+            else reader = await this.QueryMultipleImplAsync<TTarget>(cacheKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, false);
+            return mapping(reader);
         }
         public async Task<int> ExecSqlAsync(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
         {
@@ -350,7 +394,7 @@ namespace Trolley
             }, objParameter, isPk);
             return result;
         }
-        private QueryReader QueryMultipleImpl(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior, TEntity objParameter, bool isCloseConnection)
+        private QueryReader<TEntity> QueryMultipleImpl(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior, TEntity objParameter, bool isCloseConnection)
         {
             DbCommand command = conn.CreateCommand();
             command.CommandText = sql;
@@ -363,7 +407,22 @@ namespace Trolley
             }
             this.Open(conn);
             DbDataReader reader = command.ExecuteReader(behavior);
-            return new QueryReader(hashKey, command, reader, this.Provider.IsMappingIgnoreCase, isCloseConnection);
+            return new QueryReader<TEntity>(hashKey, Mapper.EntityType, command, reader, this.Provider.IsMappingIgnoreCase, isCloseConnection);
+        }
+        private QueryReader<TTarget> QueryMultipleImpl<TTarget>(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior, TEntity objParameter, bool isCloseConnection)
+        {
+            DbCommand command = conn.CreateCommand();
+            command.CommandText = sql;
+            command.CommandType = cmdType;
+            command.Transaction = trans;
+            if (objParameter != null)
+            {
+                var paramAction = GetActionCache(hashKey, sql, this.Provider, false);
+                paramAction(command, objParameter);
+            }
+            this.Open(conn);
+            DbDataReader reader = command.ExecuteReader(behavior);
+            return new QueryReader<TTarget>(hashKey, typeof(TTarget), command, reader, this.Provider.IsMappingIgnoreCase, isCloseConnection);
         }
         private int ExecSqlImpl(int hashKey, string sql, CommandType cmdType = CommandType.Text, TEntity objParameter = null, bool isPk = false)
         {
@@ -495,7 +554,7 @@ namespace Trolley
             }, objParameter, isPk);
             return result;
         }
-        private async Task<QueryReader> QueryMultipleImplAsync(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior, TEntity objParameter, bool isCloseConnection)
+        private async Task<QueryReader<TEntity>> QueryMultipleImplAsync(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior, TEntity objParameter, bool isCloseConnection)
         {
             DbCommand command = conn.CreateCommand();
             command.CommandText = sql;
@@ -508,7 +567,22 @@ namespace Trolley
             }
             this.Open(conn);
             DbDataReader reader = await command.ExecuteReaderAsync(behavior);
-            return new QueryReader(hashKey, command, reader, this.Provider.IsMappingIgnoreCase, isCloseConnection);
+            return new QueryReader<TEntity>(hashKey, Mapper.EntityType, command, reader, this.Provider.IsMappingIgnoreCase, isCloseConnection);
+        }
+        private async Task<QueryReader<TTarget>> QueryMultipleImplAsync<TTarget>(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior, TEntity objParameter, bool isCloseConnection)
+        {
+            DbCommand command = conn.CreateCommand();
+            command.CommandText = sql;
+            command.CommandType = cmdType;
+            command.Transaction = trans;
+            if (objParameter != null)
+            {
+                var paramAction = GetActionCache(hashKey, sql, this.Provider, false);
+                paramAction(command, objParameter);
+            }
+            this.Open(conn);
+            DbDataReader reader = await command.ExecuteReaderAsync(behavior);
+            return new QueryReader<TTarget>(hashKey, typeof(TTarget), command, reader, this.Provider.IsMappingIgnoreCase, isCloseConnection);
         }
         private async Task<int> ExecSqlImplAsync(int hashKey, string sql, CommandType cmdType = CommandType.Text, TEntity objParameter = null, bool isPk = false)
         {
