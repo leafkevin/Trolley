@@ -83,7 +83,7 @@ namespace CoreTestApp
                 var result = map.Read();
                 result.Lines = map.ReadList<OrderLine>();
                 return result;
-            }, "SELECT * FROM Coin_Order WHERE Id=@Id;SELECT * FROM Coin_OrderLine WHERE OrderId=@Id", order);
+            }, sql, order);
             order.Number = "123456789";
             orderRepository.Update(f => f.Number, order);
         }
@@ -163,7 +163,7 @@ namespace CoreTestApp
                 var result = map.Read();
                 result.Lines = map.ReadList<OrderLine>();
                 return result;
-            }, "SELECT * FROM Coin_Order WHERE Id=@Id;SELECT * FROM Coin_OrderLine WHERE OrderId=@Id", order);
+            }, sql, order);
             order.Number = "123456789";
             await orderRepository.UpdateAsync(f => f.Number, order);
         }

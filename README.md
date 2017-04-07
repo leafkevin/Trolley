@@ -70,7 +70,7 @@ Repository无类型的仓储对象，操作方法中，都是object匿名类型�
 
 
 ```csharp
- public class User
+public class User
 {
     [PrimaryKey("Id")]
     public int UniqueId { get; set; }
@@ -608,16 +608,36 @@ IOrmProvider接口中的IsMappingIgnoreCase，表示数据库中的字段映射�
 QueryMultiple方法，获取多个结果集，返回一个QueryReader对象。
 再根据Read<T>()，ReadList<T>，ReadPageList<T>三个方法进一步获取强类型对象。
 ```csharp
-var reader = await repository.QueryMultipleAsync("SELECT * FROM Coin_User;SELECT * FROM Coin_Dept", user);
-var userList = await reader.ReadListAsync<User>();
-var deptList = await reader.ReadPageListAsync<Dept>();
+var order = new Order { Id = 1 };
+var orderRepository = new Repository<Order>(connString);
+var sql = "SELECT * FROM Coin_Order WHERE Id=@Id;SELECT * FROM Coin_OrderLine WHERE OrderId=@Id";
+var reader = orderRepository.QueryMultiple(sql, order);
+order = reader.Read<Order>();
+order.Lines = reader.ReadList<OrderLine>();
+
+order.Number = "123456789";
+orderRepository.Update(f => f.Number, order);
+
 ```
 
 
+也可以使用QueryMap方法，直接返回你想要的结果。
+```csharp
+var order = new Order { Id = 1 };
+var orderRepository = new Repository<Order>(connString);
+var sql = "SELECT * FROM Coin_Order WHERE Id=@Id;SELECT * FROM Coin_OrderLine WHERE OrderId=@Id";
 
+order = orderRepository.QueryMap(map =>
+{
+    var result = map.Read();
+    result.Lines = map.ReadList<OrderLine>();
+    return result;
+}, sql, order);
 
+order.Number = "123456789";
+orderRepository.Update(f => f.Number, order);
 
-待续。。。
+```
 
 欢迎大家使用
 ---------------------
