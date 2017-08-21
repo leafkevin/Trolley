@@ -612,39 +612,5 @@ namespace Trolley
                 return hashCode;
             }
         }
-        [Obsolete("本方法只能内部使用", false)]
-        public static void ThrowDataException(Exception ex, int index, IDataReader reader, object value)
-        {
-            Exception toThrow;
-            try
-            {
-                string name = "(n/a)", formattedValue = "(n/a)";
-                if (reader != null && index >= 0 && index < reader.FieldCount)
-                {
-                    name = reader.GetName(index);
-                    try
-                    {
-                        if (value == null || value is DBNull)
-                        {
-                            formattedValue = "<null>";
-                        }
-                        else
-                        {
-                            formattedValue = Convert.ToString(value) + " - " + Type.GetTypeCode(value.GetType());
-                        }
-                    }
-                    catch (Exception valEx)
-                    {
-                        formattedValue = valEx.Message;
-                    }
-                }
-                toThrow = new DataException($"Error parsing column {index} ({name}={formattedValue})", ex);
-            }
-            catch
-            { // throw the **original** exception, wrapped as DataException
-                toThrow = new DataException(ex.Message, ex);
-            }
-            throw toThrow;
-        }
     }
 }
