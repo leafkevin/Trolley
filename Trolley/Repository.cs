@@ -106,7 +106,8 @@ namespace Trolley
         public async Task<PagedList<TEntity>> QueryPageAsync<TEntity>(string sql, int pageIndex, int pageSize, string orderBy = null, object objParameter = null, CommandType cmdType = CommandType.Text)
         {
             Type paramType = objParameter != null ? objParameter.GetType() : null;
-            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql, paramType);
+            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql + orderBy ?? "", paramType);
+            sql = RepositoryHelper.GetPagingCache(cacheKey, this.ConnString, sql, pageIndex, pageSize, orderBy, this.Provider);
             return await this.QueryPageImplAsync<TEntity>(cacheKey, typeof(TEntity), sql, cmdType, objParameter, paramType);
         }
         public async Task<QueryReader> QueryMultipleAsync(string sql, object objParameter = null, CommandType cmdType = CommandType.Text)

@@ -41,13 +41,13 @@ namespace Trolley
             {
                 if (HasWhereRegex.IsMatch(this.sqlBuilder.ToString())) this.hasWhere = true;
             }
-            if (this.hasWhere) this.sqlBuilder.Append(" AND " + (condition ? trueClause : falseClause ?? ""));
-            else { this.sqlBuilder.Append(" WHERE " + (condition ? trueClause : falseClause ?? "")); hasWhere = true; }
+            if (this.hasWhere) this.sqlBuilder.Append(condition ? " AND " + trueClause : falseClause ?? "");
+            else { this.sqlBuilder.Append(condition ? " WHERE " + trueClause : falseClause ?? ""); hasWhere = true; }
             return this;
         }
         public SqlClauseBuilder OrWhere(bool condition, string trueClause, string falseClause = null)
         {
-            this.sqlBuilder.Append(" OR " + (condition ? trueClause : falseClause ?? ""));
+            this.sqlBuilder.Append(condition ? " OR " + trueClause : falseClause ?? "");
             return this;
         }
         public SqlClauseBuilder AddField(bool condition, string trueClause, string falseClause = null)

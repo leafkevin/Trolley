@@ -145,8 +145,7 @@ namespace Trolley
 #endif
                 il.Emit(OpCodes.Ldloc_0);
             }
-
-            // stack is now [target]           
+           // stack is now [target]           
             foreach (var propName in propNameList)
             {
                 // stack is now [target][target]
@@ -215,11 +214,11 @@ namespace Trolley
                                 if (colType == typeof(string))
                                 {
                                     il.Emit(OpCodes.Castclass, typeof(string));
-                                    il.DeclareLocal(colType);
-                                    il.Emit(OpCodes.Stloc_1);
+                                    var localIndex = il.DeclareLocal(colType).LocalIndex;
+                                    il.Emit(OpCodes.Stloc_S, localIndex);
                                     il.Emit(OpCodes.Ldtoken, underlyingType);
                                     il.EmitCall(OpCodes.Call, typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle)), null);
-                                    il.Emit(OpCodes.Ldloc_1);
+                                    il.Emit(OpCodes.Ldloc_S, localIndex);
                                     il.Emit(OpCodes.Ldc_I4_1);
                                     il.EmitCall(OpCodes.Call, typeof(Enum).GetMethod(nameof(Enum.Parse), new Type[] { typeof(Type), typeof(string), typeof(bool) }), null);
                                     il.Emit(OpCodes.Unbox_Any, underlyingType);
@@ -261,6 +260,7 @@ namespace Trolley
 #endif
             il.Emit(OpCodes.Ldloc_0);
             if (entityType.GetTypeInfo().IsValueType) il.Emit(OpCodes.Box, entityType);
+
             il.Emit(OpCodes.Ret);
             return (Func<DbDataReader, object>)dm.CreateDelegate(typeof(Func<DbDataReader, object>));
         }
@@ -611,6 +611,40 @@ namespace Trolley
                 }
                 return hashCode;
             }
+        }
+        [Obsolete("本方法只能内部使用", false)]
+        public static void ThrowDataException(Exception ex, int index, IDataReader reader, object value)
+        {
+            Exception toThrow;
+            try
+            {
+                string name = "(n/a)", formattedValue = "(n/a)";
+                if (reader != null && index >= 0 && index < reader.FieldCount)
+                {
+                    name = reader.GetName(index);
+                    try
+                    {
+                        if (value == null || value is DBNull)
+                        {
+                            formattedValue = "<null>";
+                        }
+                        else
+                        {
+                            formattedValue = Convert.ToString(value) + " - " + Type.GetTypeCode(value.GetType());
+                        }
+                    }
+                    catch (Exception valEx)
+                    {
+                        formattedValue = valEx.Message;
+                    }
+                }
+                toThrow = new DataException($"Error parsing column {index} ({name}={formattedValue})", ex);
+            }
+            catch
+            { // throw the **original** exception, wrapped as DataException
+                toThrow = new DataException(ex.Message, ex);
+            }
+            throw toThrow;
         }
     }
 }
