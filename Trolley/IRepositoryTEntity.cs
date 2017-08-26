@@ -9,9 +9,11 @@ namespace Trolley
 {
     public interface IRepository<TEntity> : IDisposable where TEntity : class, new()
     {
+        IOrmProvider Provider { get; }
         TEntity Get(TEntity key);
         int Create(TEntity entity);
         int Delete(TEntity key);
+        int Update(TEntity entity);
         int Update(string sql, TEntity entity = null);
         int Update<TFields>(Expression<Func<TEntity, TFields>> fields, TEntity objParameter = null);
         TEntity QueryFirst(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text);
@@ -25,6 +27,7 @@ namespace Trolley
         Task<TEntity> GetAsync(TEntity key);
         Task<int> CreateAsync(TEntity entity);
         Task<int> DeleteAsync(TEntity key);
+        Task<int> UpdateAsync(TEntity entity);
         Task<int> UpdateAsync(string sql, TEntity entity = null);
         Task<int> UpdateAsync<TFields>(Expression<Func<TEntity, TFields>> fields, TEntity objParameter = null);
         Task<TEntity> QueryFirstAsync(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text);

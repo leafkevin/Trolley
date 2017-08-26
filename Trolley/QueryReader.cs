@@ -53,19 +53,38 @@ namespace Trolley
             this.ReadNextResult();
             return result;
         }
-        public PagedList<T> ReadPageList<T>()
+        public Dictionary<TKey, TValue> ReadDictionary<TKey, TValue>()
+        {
+            Type targetType = typeof(KeyValuePair<TKey, TValue>);
+            Dictionary<TKey, TValue> result = new Dictionary<TKey, TValue>();
+            int keyIndex = reader.GetOrdinal(nameof(KeyValuePair<TKey, TValue>.Key));
+            int valueIndex = reader.GetOrdinal(nameof(KeyValuePair<TKey, TValue>.Value));
+            while (reader.Read())
+            {
+                result.Add(reader.GetFieldValue<TKey>(keyIndex), reader.GetFieldValue<TValue>(valueIndex));
+            }
+            this.ReadNextResult();
+            return result;
+        }
+        public PagedList<T> ReadPageList<T>(int pageIndex, int pageSize, int recordsTotal)
         {
             Type targetType = typeof(T);
             PagedList<T> result = new PagedList<T>();
+            result.Data = new List<T>();
             var func = RepositoryHelper.GetReader(this.hashKey, targetType, this.reader, this.isMappingIgnoreCase);
             while (reader.Read())
             {
                 var objResult = func?.Invoke(reader);
                 if (objResult == null) continue;
-                if (objResult is T) result.Add((T)objResult);
-                else result.Add((T)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
+                if (objResult is T) result.Data.Add((T)objResult);
+                else result.Data.Add((T)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
             }
             this.ReadNextResult();
+            result.PageIndex = pageIndex;
+            result.PageSize = pageSize;
+            result.RecordsTotal = recordsTotal;
+            if (pageSize <= 0) throw new ArgumentException("pageSize不能<=0");
+            result.PageTotal = (int)Math.Ceiling((double)recordsTotal / pageSize);
             return result;
         }
         protected void ReadNextResult()
@@ -114,7 +133,6 @@ namespace Trolley
     public class QueryReader<TEntity> : QueryReader
     {
         protected Type entityType;
-
         public QueryReader(int hashKey, Type entityType, DbCommand command, DbDataReader reader, bool isMappingIgnoreCase, bool isCloseConnection)
             : base(hashKey, command, reader, isMappingIgnoreCase, isCloseConnection)
         {

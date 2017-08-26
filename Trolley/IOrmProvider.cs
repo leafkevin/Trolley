@@ -17,5 +17,6 @@ namespace Trolley
         string GetTableName(string entityName);
         string GetColumnName(string propertyName);
         string GetPagingExpression(string sql, int skip, int? limit, string orderBy = null);
+        string GetPagingCountExpression(string sql);
     }
 }

@@ -61,16 +61,6 @@ namespace Trolley
             }
             return ReaderCache[readerKey];
         }
-        internal static string GetPagingCache(int hashKey, string connString, string sql, int pageIndex, int pageSize, string orderBy, IOrmProvider provider)
-        {
-            string result = String.Empty;
-            if (!PagingCache.TryGetValue(hashKey, out result))
-            {
-                result = provider.GetPagingExpression(sql, pageIndex * pageSize, pageSize, orderBy);
-                PagingCache.TryAdd(hashKey, result);
-            }
-            return result;
-        }
         public static object GetEnumName(object enumValue, Type enumType)
         {
             if (!enumNameDict.ContainsKey(enumType))
@@ -145,7 +135,7 @@ namespace Trolley
 #endif
                 il.Emit(OpCodes.Ldloc_0);
             }
-           // stack is now [target]           
+            // stack is now [target]           
             foreach (var propName in propNameList)
             {
                 // stack is now [target][target]

@@ -43,6 +43,7 @@ namespace WinTestApp
         public int Id { get; set; }
         public string Number { get; set; }
         public int BuyerId { get; set; }
+        [Ignore]
         public List<OrderLine> Lines { get; set; }
     }
     [Table("Coin_OrderLine")]

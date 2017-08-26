@@ -36,18 +36,18 @@ namespace CoreTestApp
             builder.RawSql("UPDATE Coin_User SET UserName=@UserName")
                    .AddField(user.Sex.HasValue, "Sex=@Sex")
                    .AddSql("WHERE Id=@UniqueId")
-                   .Where(user.UpdatedAt.HasValue, "UpdatedAt>@UpdatedAt");
+                   .AndWhere(user.UpdatedAt.HasValue, "UpdatedAt>@UpdatedAt");
             count = repository.Update(builder.BuildSql(), user);
 
             count = repository.Update(f => f.RawSql("UPDATE Coin_User SET UserName=@UserName")
                   .AddField(user.Sex.HasValue, "Sex=@Sex")
                   .AddSql("WHERE Id=@UniqueId")
-                  .Where(user.UpdatedAt.HasValue, "UpdatedAt>@UpdatedAt"), user);
+                  .AndWhere(user.UpdatedAt.HasValue, "UpdatedAt>@UpdatedAt"), user);
 
             //查询&动态SQL
             var list = repository.Query(f => f.RawSql("SELECT * FROM Coin_User")
-                    .Where(user.Sex.HasValue, "Sex=@Sex")
-                    .Where(user.UpdatedAt.HasValue, "UpdatedAt>@UpdatedAt")
+                    .AndWhere(user.Sex.HasValue, "Sex=@Sex")
+                    .AndWhere(user.UpdatedAt.HasValue, "UpdatedAt>@UpdatedAt")
                     .AddSql("ORDER BY UpdatedAt DESC"), user);
 
             //分页
@@ -117,18 +117,18 @@ namespace CoreTestApp
             builder.RawSql("UPDATE Coin_User SET UserName=@UserName")
                     .AddField(user.Sex.HasValue, "Sex=@Sex")
                     .AddSql("WHERE Id=@UniqueId")
-                    .Where(user.UpdatedAt.HasValue, "UpdatedAt>@UpdatedAt");
+                    .AndWhere(user.UpdatedAt.HasValue, "UpdatedAt>@UpdatedAt");
             count = await repository.UpdateAsync(builder.BuildSql(), user);
 
             count = await repository.UpdateAsync(f => f.RawSql("UPDATE Coin_User SET UserName=@UserName")
                     .AddField(user.Sex.HasValue, "Sex=@Sex")
                     .AddSql("WHERE Id=@UniqueId")
-                    .Where(user.UpdatedAt.HasValue, "UpdatedAt>@UpdatedAt"), user);
+                    .AndWhere(user.UpdatedAt.HasValue, "UpdatedAt>@UpdatedAt"), user);
 
             //查询&动态SQL
             var list = await repository.QueryAsync(f => f.RawSql("SELECT * FROM Coin_User")
-                    .Where(user.Sex.HasValue, "Sex=@Sex")
-                    .Where(user.UpdatedAt.HasValue, "UpdatedAt>@UpdatedAt")
+                    .AndWhere(user.Sex.HasValue, "Sex=@Sex")
+                    .AndWhere(user.UpdatedAt.HasValue, "UpdatedAt>@UpdatedAt")
                     .AddSql("ORDER BY UpdatedAt DESC"), user);
             //分页
             var userInfoList = await repository.QueryPageAsync<UserInfo>("SELECT Id UniqueId,UserName,Sex FROM Coin_User WHERE Id>@UniqueId", 0, 10, "ORDER BY Id", user);

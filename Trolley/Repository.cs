@@ -12,11 +12,11 @@ namespace Trolley
     public class Repository : IRepository
     {
         #region 属性
-        protected DbConnection Connection { get; private set; }
-        protected IOrmProvider Provider { get; private set; }
+        protected DbConnection Connection { get; private set; }       
         protected IRepositoryContext DbContext { get; private set; }
         protected DbTransaction Transaction { get { return this.DbContext.Transaction; } }
         public string ConnString { get; private set; }
+        public IOrmProvider Provider { get; private set; }
         #endregion
 
         #region 构造方法
@@ -54,10 +54,12 @@ namespace Trolley
         }
         public PagedList<TEntity> QueryPage<TEntity>(string sql, int pageIndex, int pageSize, string orderBy = null, object objParameter = null, CommandType cmdType = CommandType.Text)
         {
-            Type paramType = objParameter != null ? objParameter.GetType() : null;
-            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql + orderBy ?? "", paramType);
-            sql = RepositoryHelper.GetPagingCache(cacheKey, this.ConnString, sql, pageIndex, pageSize, orderBy, this.Provider);
-            return this.QueryPageImpl<TEntity>(cacheKey, typeof(TEntity), sql, cmdType, objParameter, paramType);
+            var builder = new SqlBuilder(this.Provider);
+            string countSql = this.Provider.GetPagingCountExpression(sql);
+            builder.RawSql(countSql + ";" + sql).Paging(pageIndex, pageSize, orderBy);
+            var reader = this.QueryMultiple(builder.BuildSql(), objParameter, cmdType);
+            var count = reader.Read<int>();
+            return reader.ReadPageList<TEntity>(pageIndex, pageSize, count);
         }
         public QueryReader QueryMultiple(string sql, object objParameter = null, CommandType cmdType = CommandType.Text)
         {
@@ -80,6 +82,16 @@ namespace Trolley
             }
             else reader = this.QueryMultipleImpl(cacheKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType, false);
             return mapping(reader);
+        }
+        public Dictionary<TKey, TValue> QueryDictionary<TKey, TValue>(string sql, object objParameter = null, CommandType cmdType = CommandType.Text)
+        {
+            Type paramType = objParameter != null ? objParameter.GetType() : null;
+            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
+            if (this.Connection == null)
+            {
+                return this.QueryDictionaryImplInternal<TKey, TValue>(cacheKey, sql, this.Provider.CreateConnection(this.ConnString), null, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType);
+            }
+            else return this.QueryDictionaryImplInternal<TKey, TValue>(cacheKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType);
         }
         public int ExecSql(string sql, object objParameter = null, CommandType cmdType = CommandType.Text)
         {
@@ -105,10 +117,12 @@ namespace Trolley
         }
         public async Task<PagedList<TEntity>> QueryPageAsync<TEntity>(string sql, int pageIndex, int pageSize, string orderBy = null, object objParameter = null, CommandType cmdType = CommandType.Text)
         {
-            Type paramType = objParameter != null ? objParameter.GetType() : null;
-            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql + orderBy ?? "", paramType);
-            sql = RepositoryHelper.GetPagingCache(cacheKey, this.ConnString, sql, pageIndex, pageSize, orderBy, this.Provider);
-            return await this.QueryPageImplAsync<TEntity>(cacheKey, typeof(TEntity), sql, cmdType, objParameter, paramType);
+            var builder = new SqlBuilder(this.Provider);
+            string countSql = this.Provider.GetPagingCountExpression(sql);
+            builder.RawSql(countSql + ";" + sql).Paging(pageIndex, pageSize, orderBy);
+            var reader = await this.QueryMultipleAsync(builder.BuildSql(), objParameter, cmdType);
+            var count = reader.Read<int>();
+            return reader.ReadPageList<TEntity>(pageIndex, pageSize, count);
         }
         public async Task<QueryReader> QueryMultipleAsync(string sql, object objParameter = null, CommandType cmdType = CommandType.Text)
         {
@@ -131,6 +145,16 @@ namespace Trolley
             }
             else reader = await this.QueryMultipleImplAsync(cacheKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType, false);
             return mapping(reader);
+        }
+        public async Task<Dictionary<TKey, TValue>> QueryDictionaryAsync<TKey, TValue>(string sql, object objParameter = null, CommandType cmdType = CommandType.Text)
+        {
+            Type paramType = objParameter != null ? objParameter.GetType() : null;
+            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
+            if (this.Connection == null)
+            {
+                return await this.QueryDictionaryImplInternalAsync<TKey, TValue>(cacheKey, sql, this.Provider.CreateConnection(this.ConnString), null, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType);
+            }
+            else return await this.QueryDictionaryImplInternalAsync<TKey, TValue>(cacheKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType);
         }
         public async Task<int> ExecSqlAsync(string sql, object objParameter = null, CommandType cmdType = CommandType.Text)
         {
@@ -181,31 +205,6 @@ namespace Trolley
         private List<TEntity> QueryImpl<TEntity>(int hashKey, Type entityType, string sql, CommandType cmdType, object objParameter = null, Type paramType = null)
         {
             List<TEntity> result = new List<TEntity>();
-            var behavior = CommandBehavior.SequentialAccess;
-            if (this.Connection == null)
-            {
-                using (var conn = this.Provider.CreateConnection(this.ConnString))
-                {
-                    behavior = CommandBehavior.CloseConnection | behavior;
-                    this.QueryImplInternal<TEntity>(hashKey, entityType, sql, conn, null, cmdType, behavior, objResult =>
-                    {
-                        if (objResult == null) return;
-                        if (objResult is TEntity) result.Add((TEntity)objResult);
-                        else result.Add((TEntity)Convert.ChangeType(objResult, entityType, CultureInfo.InvariantCulture));
-                    }, objParameter, paramType);
-                }
-            }
-            else this.QueryImplInternal<TEntity>(hashKey, entityType, sql, this.Connection, this.Transaction, cmdType, behavior, objResult =>
-            {
-                if (objResult == null) return;
-                if (objResult is TEntity) result.Add((TEntity)objResult);
-                else result.Add((TEntity)Convert.ChangeType(objResult, entityType, CultureInfo.InvariantCulture));
-            }, objParameter, paramType);
-            return result;
-        }
-        private PagedList<TEntity> QueryPageImpl<TEntity>(int hashKey, Type entityType, string sql, CommandType cmdType, object objParameter = null, Type paramType = null)
-        {
-            PagedList<TEntity> result = new PagedList<TEntity>();
             var behavior = CommandBehavior.SequentialAccess;
             if (this.Connection == null)
             {
@@ -284,6 +283,36 @@ namespace Trolley
             reader.Dispose();
             reader = null;
         }
+        private Dictionary<TKey, TValue> QueryDictionaryImplInternal<TKey, TValue>(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior, object objParameter, Type paramType)
+        {
+            DbCommand command = conn.CreateCommand();
+            command.CommandText = sql;
+            command.CommandType = cmdType;
+            command.Transaction = trans;
+            if (objParameter != null)
+            {
+                var paramAction = RepositoryHelper.GetActionCache(hashKey, sql, paramType, this.Provider);
+                paramAction(command, objParameter);
+            }
+            this.Open(conn);
+            DbDataReader reader = command.ExecuteReader(behavior);
+            int keyIndex = reader.GetOrdinal(nameof(KeyValuePair<TKey, TValue>.Key));
+            int valueIndex = reader.GetOrdinal(nameof(KeyValuePair<TKey, TValue>.Value));
+            Dictionary<TKey, TValue> result = new Dictionary<TKey, TValue>();
+            while (reader.Read())
+            {
+                result.Add(reader.GetFieldValue<TKey>(keyIndex), reader.GetFieldValue<TValue>(valueIndex));
+            }
+            while (reader.NextResult()) { }
+#if COREFX
+            try { command.Cancel(); } catch { }
+#else
+            reader.Close();
+#endif
+            reader.Dispose();
+            reader = null;
+            return result;
+        }
         private int ExecSqlImplInternal(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, object objParameter, Type paramType)
         {
             DbCommand command = conn.CreateCommand();
@@ -325,31 +354,6 @@ namespace Trolley
         private async Task<List<TEntity>> QueryImplAsync<TEntity>(int hashKey, Type entityType, string sql, CommandType cmdType, object objParameter = null, Type paramType = null)
         {
             List<TEntity> result = new List<TEntity>();
-            var behavior = CommandBehavior.SequentialAccess;
-            if (this.Connection == null)
-            {
-                using (var conn = this.Provider.CreateConnection(this.ConnString))
-                {
-                    behavior = CommandBehavior.CloseConnection | behavior;
-                    await this.QueryImplInternalAsync<TEntity>(hashKey, entityType, sql, conn, null, cmdType, behavior, objResult =>
-                    {
-                        if (objResult == null) return;
-                        if (objResult is TEntity) result.Add((TEntity)objResult);
-                        else result.Add((TEntity)Convert.ChangeType(objResult, entityType, CultureInfo.InvariantCulture));
-                    }, objParameter, paramType);
-                }
-            }
-            else await this.QueryImplInternalAsync<TEntity>(hashKey, entityType, sql, this.Connection, this.Transaction, cmdType, behavior, objResult =>
-            {
-                if (objResult == null) return;
-                if (objResult is TEntity) result.Add((TEntity)objResult);
-                else result.Add((TEntity)Convert.ChangeType(objResult, entityType, CultureInfo.InvariantCulture));
-            }, objParameter, paramType);
-            return result;
-        }
-        private async Task<PagedList<TEntity>> QueryPageImplAsync<TEntity>(int hashKey, Type entityType, string sql, CommandType cmdType, object objParameter = null, Type paramType = null)
-        {
-            PagedList<TEntity> result = new PagedList<TEntity>();
             var behavior = CommandBehavior.SequentialAccess;
             if (this.Connection == null)
             {
@@ -427,6 +431,36 @@ namespace Trolley
 #endif
             reader.Dispose();
             reader = null;
+        }
+        private async Task<Dictionary<TKey, TValue>> QueryDictionaryImplInternalAsync<TKey, TValue>(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior, object objParameter, Type paramType)
+        {
+            DbCommand command = conn.CreateCommand();
+            command.CommandText = sql;
+            command.CommandType = cmdType;
+            command.Transaction = trans;
+            if (objParameter != null)
+            {
+                var paramAction = RepositoryHelper.GetActionCache(hashKey, sql, paramType, this.Provider);
+                paramAction(command, objParameter);
+            }
+            this.Open(conn);
+            DbDataReader reader = await command.ExecuteReaderAsync(behavior);
+            int keyIndex = reader.GetOrdinal(nameof(KeyValuePair<TKey, TValue>.Key));
+            int valueIndex = reader.GetOrdinal(nameof(KeyValuePair<TKey, TValue>.Value));
+            Dictionary<TKey, TValue> result = new Dictionary<TKey, TValue>();
+            while (reader.Read())
+            {
+                result.Add(reader.GetFieldValue<TKey>(keyIndex), reader.GetFieldValue<TValue>(valueIndex));
+            }
+            while (reader.NextResult()) { }
+#if COREFX
+            try { command.Cancel(); } catch { }
+#else
+            reader.Close();
+#endif
+            reader.Dispose();
+            reader = null;
+            return result;
         }
         private async Task<int> ExecSqlImplInternalAsync(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, object objParameter, Type paramType)
         {

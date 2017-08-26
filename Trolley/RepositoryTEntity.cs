@@ -24,10 +24,10 @@ namespace Trolley
         #region 属性
         protected DbConnection Connection { get; private set; }
         protected static EntityMapper Mapper { get; private set; } = new EntityMapper(typeof(TEntity));
-        protected IOrmProvider Provider { get; private set; }
         protected IRepositoryContext DbContext { get; private set; }
         protected DbTransaction Transaction { get { return this.DbContext.Transaction; } }
         public string ConnString { get; private set; }
+        public IOrmProvider Provider { get; private set; }
         #endregion
 
         #region 构造方法
@@ -69,6 +69,12 @@ namespace Trolley
             var sql = GetSqlCache(cacheKey, this.ConnString, "DELETE", this.Provider);
             return this.ExecSqlImpl(cacheKey, sql, CommandType.Text, key, true);
         }
+        public int Update(TEntity entity)
+        {
+            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, "UPDATE");
+            var sql = GetSqlCache(cacheKey, this.ConnString, "UPDATE", this.Provider);
+            return this.ExecSqlImpl(cacheKey, sql, CommandType.Text, entity);
+        }
         public int Update(string sql, TEntity entity = null)
         {
             int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
@@ -102,15 +108,21 @@ namespace Trolley
         }
         public PagedList<TEntity> QueryPage(string sql, int pageIndex, int pageSize, string orderBy = null, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
         {
-            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql + orderBy ?? "");
-            sql = RepositoryHelper.GetPagingCache(cacheKey, this.ConnString, sql, pageIndex, pageSize, orderBy, this.Provider);
-            return this.QueryPageImpl<TEntity>(cacheKey, Mapper.EntityType, sql, cmdType, objParameter);
+            SqlBuilder builder = new SqlBuilder(this.Provider);
+            string countSql = this.Provider.GetPagingCountExpression(sql);
+            builder.RawSql(countSql + ";" + sql).Paging(pageIndex, pageSize, orderBy);
+            var reader = this.QueryMultiple(builder.BuildSql(), objParameter, cmdType);
+            var count = reader.Read<int>();
+            return reader.ReadPageList<TEntity>(pageIndex, pageSize, count);
         }
         public PagedList<TTarget> QueryPage<TTarget>(string sql, int pageIndex, int pageSize, string orderBy = null, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
         {
-            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
-            sql = RepositoryHelper.GetPagingCache(cacheKey, this.ConnString, sql, pageIndex, pageSize, orderBy, this.Provider);
-            return this.QueryPageImpl<TTarget>(cacheKey, typeof(TTarget), sql, cmdType, objParameter);
+            SqlBuilder builder = new SqlBuilder(this.Provider);
+            string countSql = this.Provider.GetPagingCountExpression(sql);
+            builder.RawSql(countSql + ";" + sql).Paging(pageIndex, pageSize, orderBy);
+            var reader = this.QueryMultiple(builder.BuildSql(), objParameter, cmdType);
+            var count = reader.Read<int>();
+            return reader.ReadPageList<TTarget>(pageIndex, pageSize, count);
         }
         public QueryReader QueryMultiple(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
         {
@@ -170,6 +182,12 @@ namespace Trolley
             var sql = GetSqlCache(cacheKey, this.ConnString, "DELETE", this.Provider);
             return await this.ExecSqlImplAsync(cacheKey, sql, CommandType.Text, key);
         }
+        public async Task<int> UpdateAsync(TEntity entity)
+        {
+            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, "UPDATE");
+            var sql = GetSqlCache(cacheKey, this.ConnString, "UPDATE", this.Provider);
+            return await this.ExecSqlImplAsync(cacheKey, sql, CommandType.Text, entity);
+        }
         public async Task<int> UpdateAsync(string sql, TEntity entity = null)
         {
             int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql);
@@ -203,15 +221,21 @@ namespace Trolley
         }
         public async Task<PagedList<TEntity>> QueryPageAsync(string sql, int pageIndex, int pageSize, string orderBy = null, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
         {
-            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql + orderBy ?? "");
-            sql = RepositoryHelper.GetPagingCache(cacheKey, this.ConnString, sql, pageIndex, pageSize, orderBy, this.Provider);
-            return await this.QueryPageImplAsync<TEntity>(cacheKey, Mapper.EntityType, sql, cmdType, objParameter);
+            SqlBuilder builder = new SqlBuilder(this.Provider);
+            string countSql = this.Provider.GetPagingCountExpression(sql);
+            builder.RawSql(countSql + ";" + sql).Paging(pageIndex, pageSize, orderBy);
+            var reader = await this.QueryMultipleAsync(builder.BuildSql(), objParameter, cmdType);
+            var count = reader.Read<int>();
+            return reader.ReadPageList<TEntity>(pageIndex, pageSize, count);
         }
         public async Task<PagedList<TTarget>> QueryPageAsync<TTarget>(string sql, int pageIndex, int pageSize, string orderBy = null, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
         {
-            int cacheKey = RepositoryHelper.GetHashKey(this.ConnString, sql + orderBy ?? "");
-            sql = RepositoryHelper.GetPagingCache(cacheKey, this.ConnString, sql, pageIndex, pageSize, orderBy, this.Provider);
-            return await this.QueryPageImplAsync<TTarget>(cacheKey, typeof(TTarget), sql, cmdType, objParameter);
+            SqlBuilder builder = new SqlBuilder(this.Provider);
+            string countSql = this.Provider.GetPagingCountExpression(sql);
+            builder.RawSql(countSql + ";" + sql).Paging(pageIndex, pageSize, orderBy);
+            var reader = await this.QueryMultipleAsync(builder.BuildSql(), objParameter, cmdType);
+            var count = reader.Read<int>();
+            return reader.ReadPageList<TTarget>(pageIndex, pageSize, count);
         }
         public async Task<QueryReader> QueryMultipleAsync(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
         {
@@ -368,32 +392,6 @@ namespace Trolley
             }, objParameter, isPk);
             return result;
         }
-        private PagedList<TTarget> QueryPageImpl<TTarget>(int hashKey, Type targetType, string sql, CommandType cmdType, TEntity objParameter = null, bool isPk = false)
-        {
-            PagedList<TTarget> result = new PagedList<TTarget>();
-            var behavior = CommandBehavior.SequentialAccess;
-            if (this.Connection == null)
-            {
-                using (var conn = this.Provider.CreateConnection(this.ConnString))
-                {
-                    behavior = CommandBehavior.CloseConnection | behavior;
-                    this.QueryImplInternal<TTarget>(hashKey, targetType, sql, conn, null, cmdType, behavior, objResult =>
-                    {
-                        if (objResult == null) return;
-                        if (objResult is TTarget) result.Add((TTarget)objResult);
-                        else result.Add((TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
-                    }, objParameter, isPk);
-                    conn.Close();
-                }
-            }
-            else this.QueryImplInternal<TTarget>(hashKey, targetType, sql, this.Connection, this.Transaction, cmdType, behavior, objResult =>
-            {
-                if (objResult == null) return;
-                if (objResult is TTarget) result.Add((TTarget)objResult);
-                else result.Add((TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
-            }, objParameter, isPk);
-            return result;
-        }
         private QueryReader<TEntity> QueryMultipleImpl(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior, TEntity objParameter, bool isCloseConnection)
         {
             DbCommand command = conn.CreateCommand();
@@ -507,31 +505,6 @@ namespace Trolley
         private async Task<List<TTarget>> QueryImplAsync<TTarget>(int hashKey, Type targetType, string sql, CommandType cmdType, TEntity objParameter = null, bool isPk = false)
         {
             List<TTarget> result = new List<TTarget>();
-            var behavior = CommandBehavior.SequentialAccess;
-            if (this.Connection == null)
-            {
-                using (var conn = this.Provider.CreateConnection(this.ConnString))
-                {
-                    behavior = CommandBehavior.CloseConnection | behavior;
-                    await this.QueryImplInternalAsync<TTarget>(hashKey, targetType, sql, conn, null, cmdType, behavior, objResult =>
-                    {
-                        if (objResult == null) return;
-                        if (objResult is TTarget) result.Add((TTarget)objResult);
-                        else result.Add((TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
-                    }, objParameter, isPk);
-                }
-            }
-            else await this.QueryImplInternalAsync<TTarget>(hashKey, targetType, sql, this.Connection, this.Transaction, cmdType, behavior, objResult =>
-            {
-                if (objResult == null) return;
-                if (objResult is TTarget) result.Add((TTarget)objResult);
-                else result.Add((TTarget)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
-            }, objParameter, isPk);
-            return result;
-        }
-        private async Task<PagedList<TTarget>> QueryPageImplAsync<TTarget>(int hashKey, Type targetType, string sql, CommandType cmdType, TEntity objParameter = null, bool isPk = false)
-        {
-            PagedList<TTarget> result = new PagedList<TTarget>();
             var behavior = CommandBehavior.SequentialAccess;
             if (this.Connection == null)
             {
