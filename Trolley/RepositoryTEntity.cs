@@ -108,19 +108,17 @@ namespace Trolley
         }
         public PagedList<TEntity> QueryPage(string sql, int pageIndex, int pageSize, string orderBy = null, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
         {
-            SqlBuilder builder = new SqlBuilder(this.Provider);
+            var pagingSql = this.Provider.GetPagingExpression(sql, pageIndex * pageSize, pageSize, orderBy);
             string countSql = this.Provider.GetPagingCountExpression(sql);
-            builder.RawSql(countSql + ";" + sql).Paging(pageIndex, pageSize, orderBy);
-            var reader = this.QueryMultiple(builder.BuildSql(), objParameter, cmdType);
+            var reader = this.QueryMultiple(countSql + ";" + pagingSql, objParameter, cmdType);
             var count = reader.Read<int>();
             return reader.ReadPageList<TEntity>(pageIndex, pageSize, count);
         }
         public PagedList<TTarget> QueryPage<TTarget>(string sql, int pageIndex, int pageSize, string orderBy = null, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
         {
-            SqlBuilder builder = new SqlBuilder(this.Provider);
+            var pagingSql = this.Provider.GetPagingExpression(sql, pageIndex * pageSize, pageSize, orderBy);
             string countSql = this.Provider.GetPagingCountExpression(sql);
-            builder.RawSql(countSql + ";" + sql).Paging(pageIndex, pageSize, orderBy);
-            var reader = this.QueryMultiple(builder.BuildSql(), objParameter, cmdType);
+            var reader = this.QueryMultiple(countSql + ";" + pagingSql, objParameter, cmdType);
             var count = reader.Read<int>();
             return reader.ReadPageList<TTarget>(pageIndex, pageSize, count);
         }
@@ -221,19 +219,17 @@ namespace Trolley
         }
         public async Task<PagedList<TEntity>> QueryPageAsync(string sql, int pageIndex, int pageSize, string orderBy = null, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
         {
-            SqlBuilder builder = new SqlBuilder(this.Provider);
+            var pagingSql = this.Provider.GetPagingExpression(sql, pageIndex * pageSize, pageSize, orderBy);
             string countSql = this.Provider.GetPagingCountExpression(sql);
-            builder.RawSql(countSql + ";" + sql).Paging(pageIndex, pageSize, orderBy);
-            var reader = await this.QueryMultipleAsync(builder.BuildSql(), objParameter, cmdType);
+            var reader = await this.QueryMultipleAsync(countSql + ";" + pagingSql, objParameter, cmdType);
             var count = reader.Read<int>();
             return reader.ReadPageList<TEntity>(pageIndex, pageSize, count);
         }
         public async Task<PagedList<TTarget>> QueryPageAsync<TTarget>(string sql, int pageIndex, int pageSize, string orderBy = null, TEntity objParameter = null, CommandType cmdType = CommandType.Text)
         {
-            SqlBuilder builder = new SqlBuilder(this.Provider);
+            var pagingSql = this.Provider.GetPagingExpression(sql, pageIndex * pageSize, pageSize, orderBy);
             string countSql = this.Provider.GetPagingCountExpression(sql);
-            builder.RawSql(countSql + ";" + sql).Paging(pageIndex, pageSize, orderBy);
-            var reader = await this.QueryMultipleAsync(builder.BuildSql(), objParameter, cmdType);
+            var reader = await this.QueryMultipleAsync(countSql + ";" + pagingSql, objParameter, cmdType);
             var count = reader.Read<int>();
             return reader.ReadPageList<TTarget>(pageIndex, pageSize, count);
         }

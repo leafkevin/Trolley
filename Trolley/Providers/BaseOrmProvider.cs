@@ -7,8 +7,8 @@ namespace Trolley.Providers
 {
     public abstract class BaseOrmProvider : IOrmProvider
     {
-        private static Regex HasUnionRegex = new Regex(@"FROM\s+((?<quote>\()[^\(\)]*)+((?<-quote>\))[^\(\)]*)+(?(quote)(?!))\s+UNION", RegexOptions.IgnoreCase | RegexOptions.Multiline);
-        private static Regex PagingCountRegex = new Regex(@"^\s*SELECT\s+[^()]*(?>[^()]+|\((?<quote>)|\)(?<-quote>))*[^()]*(?(quote)(?!))\s+FROM\s+", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline);
+        protected static Regex HasUnionRegex = new Regex(@"\bFROM\b[^()]*?(?>[^()]+|\((?<quote>)|\)(?<-quote>))*?[^()]*?(?(quote)(?!))\bUNION\b", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+        protected static Regex PagingCountRegex = new Regex(@"\bSELECT\b[^()]*?(?>[^()]+|\((?<quote>)|\)(?<-quote>))*?[^()]*?(?(quote)(?!))\bFROM\b", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline);
         public virtual string ParamPrefix { get { return "@"; } }
         public virtual bool IsMappingIgnoreCase { get { return false; } }
         public abstract DbConnection CreateConnection(string ConnString);
@@ -39,7 +39,14 @@ namespace Trolley.Providers
         }
         public virtual string GetPagingCountExpression(string sql)
         {
-            return PagingCountRegex.Replace(sql, "SELECT COUNT(*) FROM ");
+            if (HasUnionRegex.IsMatch(sql))
+            {
+                return "SELECT COUNT(*) FROM (" + sql + ") PT ";
+            }
+            else
+            {
+                return PagingCountRegex.Replace(sql, "SELECT COUNT(*) FROM ");
+            }
         }
     }
 }

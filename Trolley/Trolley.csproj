@@ -7,10 +7,10 @@
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-    <AssemblyVersion>1.2.0.0</AssemblyVersion>
-    <FileVersion>1.2.0.0</FileVersion>
-    <Version>1.2.0.0</Version>
-    <PackageReleaseNotes>支持.NET Standard 1.5, .NET Framework 4.5+, .NET Core 1.0+等平台</PackageReleaseNotes>
+    <AssemblyVersion>1.2.1.0</AssemblyVersion>
+    <FileVersion>1.2.1.0</FileVersion>
+    <Version>1.2.1.0</Version>
+    <PackageReleaseNotes>支持.NET Standard 1.5,2.0 .NET Framework 4.5+, .NET Core 1.0,2.0等平台</PackageReleaseNotes>
     <Description>一款轻量级高性能的ORM，可以不用写SQL语句，也支持动态SQL语句，分页，事务，多种数据库终端支持，支持同步/异步，性能与dapper相当。</Description>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' == 'net45'">
