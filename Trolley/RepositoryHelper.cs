@@ -14,7 +14,7 @@ namespace Trolley
 {
     public class RepositoryHelper
     {
-        private static Regex HasUnionRegex = new Regex(@"FROM\s+((?<quote>\()[^\(\)]*)+((?<-quote>\))[^\(\)]*)+(?(quote)(?!))\s+UNION", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+        private static Regex HasUnionRegex = new Regex(@"\bFROM\b[^()]*?(?>[^()]+|\((?<quote>)|\)(?<-quote>))*?[^()]*?(?(quote)(?!))\bUNION\b", RegexOptions.IgnoreCase | RegexOptions.Multiline);
         private static MethodInfo ReaderGetItemByIndex = typeof(IDataRecord).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                  .Where(p => p.GetIndexParameters().Any() && p.GetIndexParameters()[0].ParameterType == typeof(int))
                  .Select(p => p.GetGetMethod()).First();
@@ -22,27 +22,27 @@ namespace Trolley
                         .Where(p => p.GetIndexParameters().Any() && p.GetIndexParameters()[0].ParameterType == typeof(int))
                         .Select(p => p.GetGetMethod()).First();
         private static ConcurrentDictionary<Type, Dictionary<int, string>> enumNameDict = new ConcurrentDictionary<Type, Dictionary<int, string>>();
-
-        private static ConcurrentDictionary<int, Action<IDbCommand, object>> ActionCache = new ConcurrentDictionary<int, Action<IDbCommand, object>>();
-        private static ConcurrentDictionary<int, Func<DbDataReader, object>> ReaderCache = new ConcurrentDictionary<int, Func<DbDataReader, object>>();
+        private static ConcurrentDictionary<int, Action<IDbCommand, object>> paramActionCache = new ConcurrentDictionary<int, Action<IDbCommand, object>>();
+        private static ConcurrentDictionary<int, Func<DbDataReader, object>> readerCache = new ConcurrentDictionary<int, Func<DbDataReader, object>>();
         private static ConcurrentDictionary<int, string> PagingCache = new ConcurrentDictionary<int, string>();
+        private static Type dictParameterType = typeof(List<KeyValuePair<string, object>>);
 
-        internal static Action<IDbCommand, object> GetActionCache(int hashKey, string sql, Type paramType, IOrmProvider provider)
+        internal static Action<IDbCommand, object> GetActionCache(int hashKey, string sql, IOrmProvider provider, Type paramType)
         {
             Action<IDbCommand, object> result;
-            if (!ActionCache.TryGetValue(hashKey, out result))
+            if (!paramActionCache.TryGetValue(hashKey, out result))
             {
                 var mapper = new EntityMapper(Nullable.GetUnderlyingType(paramType) ?? paramType);
                 var colMappers = mapper.MemberMappers.Values.Where(p => Regex.IsMatch(sql, @"[?@:]" + p.MemberName + "([^a-z0-9_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant));
                 result = CreateParametersHandler(provider.ParamPrefix, mapper);
-                ActionCache.TryAdd(hashKey, result);
+                paramActionCache.TryAdd(hashKey, result);
             }
             return result;
         }
         internal static Func<DbDataReader, object> GetReader(int hashKey, Type targetType, DbDataReader reader, bool isIgnoreCase)
         {
-            int readerKey = GetReaderKey(targetType, hashKey);
-            if (!ReaderCache.ContainsKey(readerKey))
+            hashKey = RepositoryHelper.GetReaderKey(targetType, hashKey);
+            if (!readerCache.ContainsKey(hashKey))
             {
                 string propName = null;
                 PropertyInfo propInfo = null;
@@ -57,26 +57,62 @@ namespace Trolley
                     propNameList.Add(propInfo.Name);
                 }
                 var readerHandler = DbTypeMap.ContainsKey(targetType) ? CreateValueReaderHandler(targetType, reader.GetOrdinal(propName)) : CreateTypeReaderHandler(targetType, propNameList, reader);
-                ReaderCache.TryAdd(readerKey, readerHandler);
+                readerCache.TryAdd(hashKey, readerHandler);
             }
-            return ReaderCache[readerKey];
+            return readerCache[hashKey];
         }
-        public static object GetEnumName(object enumValue, Type enumType)
+        internal static Action<IDbCommand, TEntity> CreateParametersHandler<TEntity>(string paramPrefix, Type entityType, IEnumerable<MemberMapper> colMappers)
         {
-            if (!enumNameDict.ContainsKey(enumType))
+            var dm = new DynamicMethod("CreateParameter_" + Guid.NewGuid().ToString(), null, new[] { typeof(IDbCommand), entityType }, entityType, true);
+            ILGenerator il = dm.GetILGenerator();
+
+            il.Emit(OpCodes.Nop);
+            il.Emit(OpCodes.Ldarg_0);
+            il.EmitCall(OpCodes.Callvirt, typeof(IDbCommand).GetProperty(nameof(IDbCommand.Parameters)).GetGetMethod(), null);
+            // stack is now [parameters]
+            foreach (var colMapper in colMappers)
             {
-                Dictionary<int, string> enumDict = new Dictionary<int, string>();
-                var valueList = Enum.GetValues(enumType);
-                foreach (var value in valueList)
-                {
-                    enumDict.Add(Convert.ToInt32(value), Enum.GetName(enumType, value));
-                }
-                enumNameDict.TryAdd(enumType, enumDict);
+                CreateParamter(il, paramPrefix, colMapper, true);
             }
-            if (enumValue == null) return DBNull.Value;
-            int iEnumValue = Convert.ToInt32(enumValue);
-            if (!enumNameDict[enumType].ContainsKey(iEnumValue)) return DBNull.Value;
-            return enumNameDict[enumType][iEnumValue];
+            // stack is now [parameters]
+            il.Emit(OpCodes.Pop);
+            il.Emit(OpCodes.Ret);
+            return (Action<IDbCommand, TEntity>)dm.CreateDelegate(typeof(Action<IDbCommand, TEntity>));
+        }
+        internal static int GetHashKey(string connString, string sqlKey, CommandType cmdType)
+        {
+            int hashCode = 23;
+            unchecked
+            {
+                hashCode = hashCode * 17 + connString.GetHashCode();
+                hashCode = hashCode * 17 + sqlKey.GetHashCode();
+                hashCode = hashCode * 17 + cmdType.GetHashCode();
+            }
+            return hashCode;
+        }
+        internal static int GetHashKey(string connString, string sqlKey, Type paramterType)
+        {
+            int hashCode = 23;
+            unchecked
+            {
+                hashCode = hashCode * 17 + connString.GetHashCode();
+                hashCode = hashCode * 17 + sqlKey.GetHashCode();
+                if (paramterType != null)
+                {
+                    hashCode = hashCode * 17 + paramterType.GetHashCode();
+                }
+            }
+            return hashCode;
+        }
+        internal static int GetHashKey(int typeHashCode, string sqlKey)
+        {
+            int hashCode = 23;
+            unchecked
+            {
+                hashCode = hashCode * 17 + typeHashCode;
+                hashCode = hashCode * 17 + sqlKey.GetHashCode();
+            }
+            return hashCode;
         }
         private static Func<DbDataReader, object> CreateValueReaderHandler(Type valueType, int index)
         {
@@ -110,9 +146,7 @@ namespace Trolley
             ILGenerator il = dm.GetILGenerator();
             il.Emit(OpCodes.Nop);
             il.DeclareLocal(entityType);
-#if !COREFX
             bool supportInitialize = false;
-#endif
             if (entityType.GetTypeInfo().IsValueType)
             {
                 il.Emit(OpCodes.Ldloca_S, (byte)0);
@@ -125,14 +159,13 @@ namespace Trolley
                     throw new Exception(String.Format("类型{0}必须提供无类型参数的构造方法", entityType.FullName));
                 il.Emit(OpCodes.Newobj, entityType.GetConstructor(Type.EmptyTypes));
                 il.Emit(OpCodes.Stloc_0);
-#if !COREFX
+
                 supportInitialize = typeof(ISupportInitialize).IsAssignableFrom(entityType);
                 if (supportInitialize)
                 {
                     il.Emit(OpCodes.Ldloc_0);
                     il.EmitCall(OpCodes.Callvirt, typeof(ISupportInitialize).GetMethod(nameof(ISupportInitialize.BeginInit)), null);
                 }
-#endif
                 il.Emit(OpCodes.Ldloc_0);
             }
             // stack is now [target]           
@@ -245,16 +278,14 @@ namespace Trolley
             }
             if (entityType.GetTypeInfo().IsValueType) il.Emit(OpCodes.Pop);
             else il.Emit(OpCodes.Stloc_0);
-#if !COREFX
             if (supportInitialize) il.EmitCall(OpCodes.Callvirt, typeof(ISupportInitialize).GetMethod(nameof(ISupportInitialize.EndInit)), null);
-#endif
             il.Emit(OpCodes.Ldloc_0);
             if (entityType.GetTypeInfo().IsValueType) il.Emit(OpCodes.Box, entityType);
 
             il.Emit(OpCodes.Ret);
             return (Func<DbDataReader, object>)dm.CreateDelegate(typeof(Func<DbDataReader, object>));
         }
-        internal static Action<IDbCommand, object> CreateParametersHandler(string paramPrefix, EntityMapper mapper)
+        private static Action<IDbCommand, object> CreateParametersHandler(string paramPrefix, EntityMapper mapper)
         {
             var dm = new DynamicMethod("CreateParameter_" + Guid.NewGuid().ToString(), null, new[] { typeof(IDbCommand), typeof(object) }, mapper.EntityType, true);
             ILGenerator il = dm.GetILGenerator();
@@ -275,73 +306,26 @@ namespace Trolley
             il.Emit(OpCodes.Ret);
             return (Action<IDbCommand, object>)dm.CreateDelegate(typeof(Action<IDbCommand, object>));
         }
-        internal static Action<IDbCommand, TEntity> CreateParametersHandler<TEntity>(string paramPrefix, Type entityType, IEnumerable<MemberMapper> colMappers)
+        private static Action<IDbCommand, object> CreateParametersHandler(string paramPrefix, Dictionary<string, object> mapper)
         {
-            var dm = new DynamicMethod("CreateParameter_" + Guid.NewGuid().ToString(), null, new[] { typeof(IDbCommand), entityType }, entityType, true);
+            var dm = new DynamicMethod("CreateParameter_" + Guid.NewGuid().ToString(), null, new[] { typeof(IDbCommand), typeof(object) }, dictParameterType, true);
             ILGenerator il = dm.GetILGenerator();
 
             il.Emit(OpCodes.Nop);
+            il.DeclareLocal(typeof(Dictionary<string, object>));
+            il.Emit(OpCodes.Ldarg_1);
+            il.Emit(OpCodes.Castclass, typeof(Dictionary<string, object>));
+            il.Emit(OpCodes.Stloc_0);
+
             il.Emit(OpCodes.Ldarg_0);
             il.EmitCall(OpCodes.Callvirt, typeof(IDbCommand).GetProperty(nameof(IDbCommand.Parameters)).GetGetMethod(), null);
-            // stack is now [parameters]
-            foreach (var colMapper in colMappers)
+            foreach (var colMapper in mapper)
             {
-                CreateParamter(il, paramPrefix, colMapper, true);
+                CreateParamter(il, paramPrefix, colMapper);
             }
-            // stack is now [parameters]
             il.Emit(OpCodes.Pop);
             il.Emit(OpCodes.Ret);
-            return (Action<IDbCommand, TEntity>)dm.CreateDelegate(typeof(Action<IDbCommand, TEntity>));
-        }
-        internal static int GetHashKey(string connString, string sqlKey)
-        {
-            int hashCode = 23;
-            unchecked
-            {
-                hashCode = hashCode * 17 + connString.GetHashCode();
-                hashCode = hashCode * 17 + sqlKey.GetHashCode();
-            }
-            return hashCode;
-        }
-        internal static int GetHashKey(string connString, string sqlKey, Type paramterType)
-        {
-            int hashCode = 23;
-            unchecked
-            {
-                hashCode = hashCode * 17 + connString.GetHashCode();
-                hashCode = hashCode * 17 + sqlKey.GetHashCode();
-                if (paramterType != null)
-                {
-                    hashCode = hashCode * 17 + paramterType.GetHashCode();
-                }
-            }
-            return hashCode;
-        }
-        internal static void LoadInt32(ILGenerator il, int value)
-        {
-            switch (value)
-            {
-                case -1: il.Emit(OpCodes.Ldc_I4_M1); break;
-                case 0: il.Emit(OpCodes.Ldc_I4_0); break;
-                case 1: il.Emit(OpCodes.Ldc_I4_1); break;
-                case 2: il.Emit(OpCodes.Ldc_I4_2); break;
-                case 3: il.Emit(OpCodes.Ldc_I4_3); break;
-                case 4: il.Emit(OpCodes.Ldc_I4_4); break;
-                case 5: il.Emit(OpCodes.Ldc_I4_5); break;
-                case 6: il.Emit(OpCodes.Ldc_I4_6); break;
-                case 7: il.Emit(OpCodes.Ldc_I4_7); break;
-                case 8: il.Emit(OpCodes.Ldc_I4_8); break;
-                default:
-                    if (value >= -128 && value <= 127)
-                    {
-                        il.Emit(OpCodes.Ldc_I4_S, (sbyte)value);
-                    }
-                    else
-                    {
-                        il.Emit(OpCodes.Ldc_I4, value);
-                    }
-                    break;
-            }
+            return (Action<IDbCommand, object>)dm.CreateDelegate(typeof(Action<IDbCommand, object>));
         }
         private static void CreateParamter(ILGenerator il, string paramPrefix, MemberMapper colMapper, bool isTyped)
         {
@@ -452,6 +436,7 @@ namespace Trolley
 
                 //不为空
                 il.MarkLabel(notNullLabel);
+                int index = 0;
                 if (colMapper.IsString)
                 {
                     il.Emit(OpCodes.Dup);
@@ -467,9 +452,8 @@ namespace Trolley
                     LoadInt32(il, -1); // [string] [-1]
                     il.MarkLabel(lenDone);
 
-                    il.DeclareLocal(typeof(int));
-                    if (isTyped) il.Emit(OpCodes.Stloc_0);
-                    else il.Emit(OpCodes.Stloc_1);
+                    index = il.DeclareLocal(typeof(int)).LocalIndex;
+                    il.Emit(OpCodes.Stloc_S, index);
                 }
                 if (colMapper.IsLinqBinary)
                 {
@@ -483,8 +467,167 @@ namespace Trolley
                 {
                     il.Emit(OpCodes.Dup);
                     // stack is now [parameters][parameters][parameter][parameter].Size=len(string)
-                    if (isTyped) il.Emit(OpCodes.Ldloc_0);
-                    else il.Emit(OpCodes.Ldloc_1);
+                    il.Emit(OpCodes.Ldloc_S, (byte)index);
+                    il.EmitCall(OpCodes.Callvirt, typeof(IDbDataParameter).GetProperty(nameof(IDbDataParameter.Size)).GetSetMethod(), null);
+                    // stack is now [parameters][parameters][parameter]                        
+                }
+                il.MarkLabel(allDoneLabel);
+            }
+            // stack is now [parameters][parameters].Add([parameter])
+            il.EmitCall(OpCodes.Callvirt, typeof(IList).GetMethod(nameof(IList.Add)), null);
+            il.Emit(OpCodes.Pop);
+            // stack is now [parameters]
+        }
+        private static void CreateParamter(ILGenerator il, string paramPrefix, KeyValuePair<string, object> colMapper)
+        {
+            il.Emit(OpCodes.Dup);
+            il.Emit(OpCodes.Ldarg_0);
+            il.EmitCall(OpCodes.Callvirt, typeof(IDbCommand).GetMethod(nameof(IDbCommand.CreateParameter), Type.EmptyTypes), null);
+
+            // stack is now [parameters][parameters][parameter]
+            il.Emit(OpCodes.Dup);
+            il.Emit(OpCodes.Ldstr, paramPrefix + colMapper.Key);
+            il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.ParameterName)).GetSetMethod(), null);
+            // stack is now [parameters][parameters][parameter]
+
+            var memberType = colMapper.Value.GetType();
+            var dbType = DbTypeMap.LookupDbType(colMapper.Value.GetType());
+            var underlyingType = memberType;
+            var isValueType = memberType.GetTypeInfo().IsValueType;
+            var isEnum = memberType.GetTypeInfo().IsEnum;
+            var isNullable = Nullable.GetUnderlyingType(memberType) != null;
+            if (isNullable)
+            {
+                underlyingType = Nullable.GetUnderlyingType(memberType);
+                isEnum = underlyingType.GetTypeInfo().IsEnum;
+            }
+            var isString = underlyingType == typeof(string);
+
+            // stack is now [parameters][parameters][parameter][parameter].DbType={DbType}
+            il.Emit(OpCodes.Dup);
+            LoadInt32(il, (int)dbType);
+            il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.DbType)).GetSetMethod(), null);
+
+            // stack is now [parameters][parameters][parameter][parameter].Direction={ParameterDirection.Input}
+            il.Emit(OpCodes.Dup);
+            LoadInt32(il, (int)ParameterDirection.Input);
+            il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Direction)).GetSetMethod(), null);
+
+            //byte,double,float,int,long,sbyte,short,string,Type
+            il.Emit(OpCodes.Dup);
+            il.Emit(OpCodes.Ldloc_0);
+            il.Emit(OpCodes.Ldstr, colMapper.Key);
+            il.Emit(OpCodes.Call, typeof(KeyValuePair<string, object>).GetProperty(nameof(KeyValuePair<string, object>.Value)).GetGetMethod());
+
+            // stack is now [parameters][parameters][parameter][parameter][value]
+            if (memberType.GetTypeInfo().IsValueType)
+            {
+                il.Emit(OpCodes.Box, memberType);
+                if (memberType.GetTypeInfo().IsEnum && memberType == typeof(string))
+                {
+                    // stack is now [parameters][parameters][parameter][parameter][int-value][enum-type]
+                    il.Emit(OpCodes.Ldtoken, underlyingType);
+                    il.EmitCall(OpCodes.Call, typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle)), null);
+                    // stack is now [parameters][parameters][parameter][parameter][int-value][enum-type]
+                    il.EmitCall(OpCodes.Call, typeof(RepositoryHelper).GetMethod(nameof(RepositoryHelper.GetEnumName), BindingFlags.Static | BindingFlags.Public), null);
+                    il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
+
+                    //直接设置长度为100，枚举值都不会超过100个字符，避免了做类似下面的复杂逻辑操作
+                    il.Emit(OpCodes.Dup);
+                    LoadInt32(il, 100);
+                    il.EmitCall(OpCodes.Callvirt, typeof(IDbDataParameter).GetProperty(nameof(IDbDataParameter.Size)).GetSetMethod(), null);
+
+                    #region 获取字符串长度，设置长度
+                    //// stack is now [parameters][parameters][parameter][parameter][string or dbNull]
+                    //il.Emit(OpCodes.Dup);
+                    //il.Emit(OpCodes.Isinst, typeof(DBNull));
+                    //// stack is now [target][target][value][DBNull or null]
+                    //Label dbNullLabel = il.DefineLabel();
+                    //il.Emit(OpCodes.Brtrue_S, dbNullLabel);
+
+                    ////非空字符串
+                    //var iLocIndex = il.DeclareLocal(typeof(string)).LocalIndex;
+                    //il.Emit(OpCodes.Dup);
+                    //il.Emit(OpCodes.Castclass, typeof(string));
+                    //il.Emit(OpCodes.Stloc, iLocIndex);
+                    //il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
+                    //// stack is now [parameters][parameters][parameter]
+
+                    ////设置长度
+                    //il.Emit(OpCodes.Dup);
+                    //il.Emit(OpCodes.Ldloc, iLocIndex);
+                    //il.EmitCall(OpCodes.Callvirt, typeof(string).GetProperty(nameof(string.Length)).GetGetMethod(), null);
+                    //// stack is now [parameters][parameters][parameter][string-length]
+                    //il.EmitCall(OpCodes.Callvirt, typeof(IDbDataParameter).GetProperty(nameof(IDbDataParameter.Size)).GetSetMethod(), null);
+
+                    //Label allDoneLabel = il.DefineLabel();
+                    //il.Emit(OpCodes.Br_S, allDoneLabel);
+
+                    //il.MarkLabel(dbNullLabel);
+                    //il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
+                    //il.MarkLabel(allDoneLabel);
+                    #endregion
+                }
+                else
+                {
+                    if (isNullable)
+                    {
+                        il.Emit(OpCodes.Dup);
+                        Label notNullLabel = il.DefineLabel();
+                        il.Emit(OpCodes.Brtrue_S, notNullLabel);
+                        // stack is now [parameters][parameters][parameter]
+                        il.Emit(OpCodes.Pop);
+                        il.Emit(OpCodes.Ldsfld, typeof(DBNull).GetField(nameof(DBNull.Value)));
+                        il.MarkLabel(notNullLabel);
+                    }
+                    // stack is now [parameters][parameters][parameter][parameter][object-value]
+                    il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
+                }
+            }
+            else
+            {
+                // stack is now [parameters][parameters][parameter] 
+                il.Emit(OpCodes.Dup);
+                Label notNullLabel = il.DefineLabel();
+                il.Emit(OpCodes.Brtrue_S, notNullLabel);
+                // stack is now [parameters][parameters][parameter][parameter]
+                il.Emit(OpCodes.Pop);
+                il.Emit(OpCodes.Ldsfld, typeof(DBNull).GetField(nameof(DBNull.Value)));
+                // stack is now [parameters][parameters][parameter][parameter][DBNull]
+                il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
+
+                Label allDoneLabel = il.DefineLabel();
+                il.Emit(OpCodes.Br_S, allDoneLabel);
+
+                //不为空
+                il.MarkLabel(notNullLabel);
+                int? stringIndex = null;
+                if (isString)
+                {
+                    il.Emit(OpCodes.Dup);
+                    // stack is now [parameters][parameters][parameter][parameter][string][string]
+                    il.EmitCall(OpCodes.Callvirt, typeof(string).GetProperty(nameof(string.Length)).GetGetMethod(), null);
+                    LoadInt32(il, 4000);
+                    il.Emit(OpCodes.Cgt); // [string] [0 or 1]
+                    Label isLong = il.DefineLabel(), lenDone = il.DefineLabel();
+                    il.Emit(OpCodes.Brtrue_S, isLong);
+                    LoadInt32(il, 4000); // [string] [4000]
+                    il.Emit(OpCodes.Br_S, lenDone);
+                    il.MarkLabel(isLong);
+                    LoadInt32(il, -1); // [string] [-1]
+                    il.MarkLabel(lenDone);
+
+                    stringIndex = il.DeclareLocal(typeof(int)).LocalIndex;
+                    il.Emit(OpCodes.Stloc_S, (byte)stringIndex);
+                }
+                il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
+
+                // stack is now [parameters][parameters][parameter]
+                if (isString)
+                {
+                    il.Emit(OpCodes.Dup);
+                    // stack is now [parameters][parameters][parameter][parameter].Size=len(string)
+                    il.Emit(OpCodes.Stloc_S, (byte)stringIndex);
                     il.EmitCall(OpCodes.Callvirt, typeof(IDbDataParameter).GetProperty(nameof(IDbDataParameter.Size)).GetSetMethod(), null);
                     // stack is now [parameters][parameters][parameter]                        
                 }
@@ -577,7 +720,7 @@ namespace Trolley
             }
             return null;
         }
-        private static int GetReaderKey(Type type, int hashKey)
+        internal static int GetReaderKey(Type type, int hashKey)
         {
             unchecked
             {
@@ -601,6 +744,49 @@ namespace Trolley
                 }
                 return hashCode;
             }
+        }
+        private static void LoadInt32(ILGenerator il, int value)
+        {
+            switch (value)
+            {
+                case -1: il.Emit(OpCodes.Ldc_I4_M1); break;
+                case 0: il.Emit(OpCodes.Ldc_I4_0); break;
+                case 1: il.Emit(OpCodes.Ldc_I4_1); break;
+                case 2: il.Emit(OpCodes.Ldc_I4_2); break;
+                case 3: il.Emit(OpCodes.Ldc_I4_3); break;
+                case 4: il.Emit(OpCodes.Ldc_I4_4); break;
+                case 5: il.Emit(OpCodes.Ldc_I4_5); break;
+                case 6: il.Emit(OpCodes.Ldc_I4_6); break;
+                case 7: il.Emit(OpCodes.Ldc_I4_7); break;
+                case 8: il.Emit(OpCodes.Ldc_I4_8); break;
+                default:
+                    if (value >= -128 && value <= 127)
+                    {
+                        il.Emit(OpCodes.Ldc_I4_S, (sbyte)value);
+                    }
+                    else
+                    {
+                        il.Emit(OpCodes.Ldc_I4, value);
+                    }
+                    break;
+            }
+        }
+        private static object GetEnumName(object enumValue, Type enumType)
+        {
+            if (!enumNameDict.ContainsKey(enumType))
+            {
+                Dictionary<int, string> enumDict = new Dictionary<int, string>();
+                var valueList = Enum.GetValues(enumType);
+                foreach (var value in valueList)
+                {
+                    enumDict.Add(Convert.ToInt32(value), Enum.GetName(enumType, value));
+                }
+                enumNameDict.TryAdd(enumType, enumDict);
+            }
+            if (enumValue == null) return DBNull.Value;
+            int iEnumValue = Convert.ToInt32(enumValue);
+            if (!enumNameDict[enumType].ContainsKey(iEnumValue)) return DBNull.Value;
+            return enumNameDict[enumType][iEnumValue];
         }
     }
 }

@@ -2,9 +2,6 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Globalization;
-#if ASYNC
-using System.Threading.Tasks;
-#endif
 
 namespace Trolley
 {
@@ -91,11 +88,7 @@ namespace Trolley
         {
             if (!this.reader.NextResult())
             {
-#if COREFX
-                try { this.command.Cancel(); } catch { }
-#else
                 this.reader.Close();
-#endif
                 this.reader.Dispose();
                 this.reader = null;
                 if (this.isCloseConnection)
@@ -112,14 +105,7 @@ namespace Trolley
         {
             if (this.reader != null)
             {
-                if (!reader.IsClosed)
-                {
-#if COREFX
-                    try { this.command.Cancel(); } catch { }
-#else
-                    this.reader.Close();
-#endif
-                }
+                if (!reader.IsClosed) this.reader.Close();
                 this.reader.Dispose();
                 this.reader = null;
             }
@@ -128,28 +114,6 @@ namespace Trolley
                 this.command.Dispose();
                 this.command = null;
             }
-        }
-    }
-    public class QueryReader<TEntity> : QueryReader
-    {
-        protected Type entityType;
-        public QueryReader(int hashKey, Type entityType, DbCommand command, DbDataReader reader, bool isMappingIgnoreCase, bool isCloseConnection)
-            : base(hashKey, command, reader, isMappingIgnoreCase, isCloseConnection)
-        {
-            this.entityType = entityType;
-        }
-        public TEntity Read()
-        {
-            TEntity result = default(TEntity);
-            var func = RepositoryHelper.GetReader(this.hashKey, this.entityType, this.reader, this.isMappingIgnoreCase);
-            while (reader.Read())
-            {
-                var objResult = func?.Invoke(reader);
-                if (objResult == null || objResult is TEntity) result = (TEntity)objResult;
-                else result = (TEntity)Convert.ChangeType(objResult, this.entityType, CultureInfo.InvariantCulture);
-            }
-            base.ReadNextResult();
-            return result;
         }
     }
 }

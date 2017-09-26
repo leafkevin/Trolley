@@ -1,5 +1,7 @@
-﻿using System.Data;
+﻿using System;
+using System.Data;
 using System.Data.Common;
+using System.Threading.Tasks;
 
 namespace Trolley
 {
@@ -25,6 +27,11 @@ namespace Trolley
             this.Open();
             this.Transaction = this.Connection.BeginTransaction();
         }
+        public async Task BeginAsync()
+        {
+            await this.OpenAsync();
+            this.Transaction = this.Connection.BeginTransaction();
+        }
         public void Commit()
         {
             if (this.Transaction != null) this.Transaction.Commit();
@@ -33,19 +40,13 @@ namespace Trolley
         /// 获取无类型Repository对象，支持IOC重载
         /// </summary>
         /// <returns></returns>
-        public virtual IRepository RepositoryFor()
-        {
-            return new Repository(this.ConnString, this);
-        }
+        public virtual IRepository RepositoryFor() => new Repository(this.ConnString, this);
         /// <summary>
         /// 获取强类型Repository对象，支持IOC重载
         /// </summary>
         /// <typeparam name="TEntity"></typeparam>
         /// <returns></returns>
-        public virtual IRepository<TEntity> RepositoryFor<TEntity>() where TEntity : class, new()
-        {
-            return new Repository<TEntity>(this.ConnString, this);
-        }
+        public virtual IRepository<TEntity> RepositoryFor<TEntity>() where TEntity : class, new() => new Repository<TEntity>(this.ConnString, this);
         public void Rollback()
         {
             if (this.Transaction != null) this.Transaction.Rollback();
@@ -53,16 +54,23 @@ namespace Trolley
         public void Dispose()
         {
             if (this.Transaction != null) this.Transaction.Dispose();
-            if (this.Connection != null) this.Connection.Dispose();
+            if (this.Connection != null)
+            {
+                this.Connection.Close();
+                this.Connection.Dispose();
+            }
+            GC.SuppressFinalize(this);
         }
         private void Open()
         {
             if (this.Connection.State == ConnectionState.Broken) this.Connection.Close();
             if (this.Connection.State == ConnectionState.Closed) this.Connection.Open();
         }
-        public void Close()
+        private async Task OpenAsync()
         {
-            this.Connection.Close();
+            if (this.Connection.State == ConnectionState.Broken) this.Connection.Close();
+            if (Connection.State == ConnectionState.Closed) await this.Connection.OpenAsync().ConfigureAwait(false);
         }
+        public void Close() => this.Connection.Close();
     }
 }
