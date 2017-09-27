@@ -194,16 +194,16 @@ await repository.UpdateAsync(user);
 //更新
 await repository.UpdateAsync(builder.BuildSql(), user);
 
-var count = await repository.UpdateAsync(f => f.RawSql("UPDATE Coin_User SET UserName=@UserName")
-			f.RawSql("UPDATE Coin_User SET UserName=@UserName")
-			.AddField(user.Sex.HasValue, "Sex=@Sex")
-			.RawSql("WHERE Id=@UniqueId")
-			.AndWhere(beginDate.HasValue, "UpdatedAt>@UpdatedAt"), user);
+var count = await repository.UpdateAsync(f => 
+			f.RawSql("UPDATE Coin_User SET UserName=@UserName", user.UserName)
+			.AddField(user.Sex.HasValue, "Sex=@Sex", user.Sex)
+			.RawSql("WHERE Id=@UniqueId", user.UniqueId)
+			.AndWhere(beginDate.HasValue, "UpdatedAt>@UpdatedAt", user.UpdatedAt));
 
 var list = repository.QueryAsync(f => 
 			f.RawSql("SELECT * FROM Coin_User")
-			.AndWhere(user.Sex.HasValue, "Sex=@Sex")
-			.AndWhere(beginDate.HasValue, "UpdatedAt>@UpdatedAt")
+			.AndWhere(user.Sex.HasValue, "Sex=@Sex", user.Sex)
+			.AndWhere(beginDate.HasValue, "UpdatedAt>@UpdatedAt", user.UpdatedAt)
 			.RawSql("ORDER BY UpdatedAt DESC"), user);
 			
 //查询字典
