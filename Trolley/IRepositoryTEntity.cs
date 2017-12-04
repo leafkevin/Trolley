@@ -37,6 +37,8 @@ namespace Trolley
         TTarget QueryMap<TTarget>(Func<QueryReader, TTarget> mapping, string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text);
         TTarget QueryMap<TTarget>(Action<SqlBuilder> builder, Func<QueryReader, TTarget> mapping);
         QueryReader QueryMultiple(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text);
+        Dictionary<TKey, TValue> QueryDictionary<TKey, TValue>(string sql, object objParameter = null, CommandType cmdType = CommandType.Text);
+        Dictionary<TKey, TValue> QueryDictionary<TKey, TValue>(Action<SqlBuilder> builder);
         int ExecSql(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text);
         int ExecSql(Action<SqlBuilder> builder);
         #endregion
@@ -66,6 +68,8 @@ namespace Trolley
         Task<TTarget> QueryMapAsync<TTarget>(Func<QueryReader, TTarget> mapping, string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text);
         Task<TTarget> QueryMapAsync<TTarget>(Action<SqlBuilder> builder, Func<QueryReader, TTarget> mapping);
         Task<QueryReader> QueryMultipleAsync(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text);
+        Task<Dictionary<TKey, TValue>> QueryDictionaryAsync<TKey, TValue>(string sql, object objParameter = null, CommandType cmdType = CommandType.Text);
+        Task<Dictionary<TKey, TValue>> QueryDictionaryAsync<TKey, TValue>(Action<SqlBuilder> builder);
         Task<int> ExecSqlAsync(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text);
         Task<int> ExecSqlAsync(Action<SqlBuilder> builder);
         #endregion
