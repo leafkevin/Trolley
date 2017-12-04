@@ -115,6 +115,39 @@ namespace Trolley
             }
             else return this.QueryMultipleImpl(hashKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, false);
         }
+        public Dictionary<TKey, TValue> QueryDictionary<TKey, TValue>(string sql, object objParameter = null, CommandType cmdType = CommandType.Text)
+        {
+            Dictionary<TKey, TValue> result = null;
+            var paramType = objParameter != null ? objParameter.GetType() : null;
+            int hashKey = RepositoryHelper.GetHashKey(this.ConnString, sql, paramType);
+            if (this.Connection == null)
+            {
+                using (var conn = this.Provider.CreateConnection(this.ConnString))
+                {
+                    result = this.QueryDictionaryImpl<TKey, TValue>(hashKey, sql, conn, null, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType);
+                    conn.Close();
+                }
+            }
+            else result = this.QueryDictionaryImpl<TKey, TValue>(hashKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType);
+            return result;
+        }
+        public Dictionary<TKey, TValue> QueryDictionary<TKey, TValue>(Action<SqlBuilder> builder)
+        {
+            Dictionary<TKey, TValue> result = null;
+            var sqlBuilder = new SqlBuilder(this.Provider);
+            builder.Invoke(sqlBuilder);
+            var sql = sqlBuilder.BuildSql();
+            if (this.Connection == null)
+            {
+                using (var conn = this.Provider.CreateConnection(this.ConnString))
+                {
+                    result = this.QueryDictionaryImpl<TKey, TValue>(sqlBuilder, this.Provider.CreateConnection(this.ConnString), null, CommandType.Text, CommandBehavior.SequentialAccess, true);
+                    conn.Close();
+                }
+            }
+            else result = this.QueryDictionaryImpl<TKey, TValue>(sqlBuilder, this.Connection, this.Transaction, CommandType.Text, CommandBehavior.SequentialAccess, false);
+            return result;
+        }
         public int ExecSql(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text) => this.ExecSqlImpl(sql, objParameter, cmdType, false);
         public int ExecSql(Action<SqlBuilder> builder)
         {
@@ -199,6 +232,39 @@ namespace Trolley
                 return await this.QueryMultipleImplAsync(hashKey, sql, this.Provider.CreateConnection(this.ConnString), null, cmdType, CommandBehavior.SequentialAccess, objParameter, true);
             }
             else return await this.QueryMultipleImplAsync(hashKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, false);
+        }
+        public async Task<Dictionary<TKey, TValue>> QueryDictionaryAsync<TKey, TValue>(string sql, object objParameter = null, CommandType cmdType = CommandType.Text)
+        {
+            Dictionary<TKey, TValue> result = null;
+            var paramType = objParameter != null ? objParameter.GetType() : null;
+            int hashKey = RepositoryHelper.GetHashKey(this.ConnString, sql, paramType);
+            if (this.Connection == null)
+            {
+                using (var conn = this.Provider.CreateConnection(this.ConnString))
+                {
+                    result = await this.QueryDictionaryImplAsync<TKey, TValue>(hashKey, sql, this.Provider.CreateConnection(this.ConnString), null, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType);
+                    conn.Close();
+                }
+            }
+            else result = await this.QueryDictionaryImplAsync<TKey, TValue>(hashKey, sql, this.Connection, this.Transaction, cmdType, CommandBehavior.SequentialAccess, objParameter, paramType);
+            return result;
+        }
+        public async Task<Dictionary<TKey, TValue>> QueryDictionaryAsync<TKey, TValue>(Action<SqlBuilder> builder)
+        {
+            Dictionary<TKey, TValue> result = null;
+            var sqlBuilder = new SqlBuilder(this.Provider);
+            builder.Invoke(sqlBuilder);
+            var sql = sqlBuilder.BuildSql();
+            if (this.Connection == null)
+            {
+                using (var conn = this.Provider.CreateConnection(this.ConnString))
+                {
+                    result = await this.QueryDictionaryImplAsync<TKey, TValue>(sqlBuilder, this.Provider.CreateConnection(this.ConnString), null, CommandType.Text, CommandBehavior.SequentialAccess);
+                    conn.Close();
+                }
+            }
+            else result = await this.QueryDictionaryImplAsync<TKey, TValue>(sqlBuilder, this.Connection, this.Transaction, CommandType.Text, CommandBehavior.SequentialAccess);
+            return result;
         }
         public async Task<int> ExecSqlAsync(string sql, TEntity objParameter = null, CommandType cmdType = CommandType.Text) => await this.ExecSqlImplAsync(sql, cmdType, objParameter, false);
         public async Task<int> ExecSqlAsync(Action<SqlBuilder> builder)
@@ -527,6 +593,56 @@ namespace Trolley
             else reader = this.QueryMultipleImpl(sql, sqlBuilder, this.Connection, this.Transaction, CommandType.Text, CommandBehavior.SequentialAccess, false);
             return mapping(reader);
         }
+        private Dictionary<TKey, TValue> QueryDictionaryImpl<TKey, TValue>(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior, object objParameter, Type paramType)
+        {
+            DbCommand command = conn.CreateCommand();
+            command.CommandText = sql;
+            command.CommandType = cmdType;
+            command.Transaction = trans;
+            if (objParameter != null)
+            {
+                var paramAction = RepositoryHelper.GetActionCache(hashKey, sql, this.Provider, paramType);
+                paramAction(command, objParameter);
+            }
+            this.Open(conn);
+            DbDataReader reader = command.ExecuteReader(behavior);
+            int keyIndex = reader.GetOrdinal(nameof(KeyValuePair<TKey, TValue>.Key));
+            int valueIndex = reader.GetOrdinal(nameof(KeyValuePair<TKey, TValue>.Value));
+            Dictionary<TKey, TValue> result = new Dictionary<TKey, TValue>();
+            while (reader.Read())
+            {
+                result.Add(reader.GetFieldValue<TKey>(keyIndex), reader.GetFieldValue<TValue>(valueIndex));
+            }
+            while (reader.NextResult()) { }
+            reader.Close();
+            reader.Dispose();
+            reader = null;
+            return result;
+        }
+        private Dictionary<TKey, TValue> QueryDictionaryImpl<TKey, TValue>(SqlBuilder sqlBuilder, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior, bool isCloseConnection)
+        {
+            var sql = sqlBuilder.BuildSql();
+            DbCommand command = conn.CreateCommand();
+            command.CommandText = sql;
+            command.CommandType = cmdType;
+            command.Transaction = trans;
+            this.InitBuilderParameter(sql, command, sqlBuilder);
+            this.Open(conn);
+            DbDataReader reader = command.ExecuteReader(behavior);
+            int keyIndex = reader.GetOrdinal(nameof(KeyValuePair<TKey, TValue>.Key));
+            int valueIndex = reader.GetOrdinal(nameof(KeyValuePair<TKey, TValue>.Value));
+            Dictionary<TKey, TValue> result = new Dictionary<TKey, TValue>();
+            while (reader.Read())
+            {
+                result.Add(reader.GetFieldValue<TKey>(keyIndex), reader.GetFieldValue<TValue>(valueIndex));
+            }
+            while (reader.NextResult()) { }
+            reader.Close();
+            reader.Dispose();
+            reader = null;
+            return result;
+        }
+
         private int ExecSqlImpl(string sql, TEntity objParameter, CommandType cmdType, bool isPkParameter)
         {
             int result = 0;
@@ -791,6 +907,55 @@ namespace Trolley
             DbDataReader reader = await command.ExecuteReaderAsync(behavior).ConfigureAwait(false);
             int hashKey = RepositoryHelper.GetHashKey(this.ConnString, sql, cmdType);
             return new QueryReader(hashKey, command, reader, this.Provider.IsMappingIgnoreCase, isCloseConnection);
+        }
+        private async Task<Dictionary<TKey, TValue>> QueryDictionaryImplAsync<TKey, TValue>(int hashKey, string sql, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior, object objParameter, Type paramType)
+        {
+            DbCommand command = conn.CreateCommand();
+            command.CommandText = sql;
+            command.CommandType = cmdType;
+            command.Transaction = trans;
+            if (objParameter != null)
+            {
+                var paramAction = RepositoryHelper.GetActionCache(hashKey, sql, this.Provider, paramType);
+                paramAction(command, objParameter);
+            }
+            this.Open(conn);
+            DbDataReader reader = await command.ExecuteReaderAsync(behavior);
+            int keyIndex = reader.GetOrdinal(nameof(KeyValuePair<TKey, TValue>.Key));
+            int valueIndex = reader.GetOrdinal(nameof(KeyValuePair<TKey, TValue>.Value));
+            Dictionary<TKey, TValue> result = new Dictionary<TKey, TValue>();
+            while (await reader.ReadAsync().ConfigureAwait(false))
+            {
+                result.Add(reader.GetFieldValue<TKey>(keyIndex), reader.GetFieldValue<TValue>(valueIndex));
+            }
+            while (await reader.NextResultAsync().ConfigureAwait(false)) { }
+            reader.Close();
+            reader.Dispose();
+            reader = null;
+            return result;
+        }
+        private async Task<Dictionary<TKey, TValue>> QueryDictionaryImplAsync<TKey, TValue>(SqlBuilder sqlBuilder, DbConnection conn, DbTransaction trans, CommandType cmdType, CommandBehavior behavior)
+        {
+            var sql = sqlBuilder.BuildSql();
+            DbCommand command = conn.CreateCommand();
+            command.CommandText = sql;
+            command.CommandType = cmdType;
+            command.Transaction = trans;
+            this.InitBuilderParameter(sql, command, sqlBuilder);
+            await this.OpenAsync(conn);
+            DbDataReader reader = await command.ExecuteReaderAsync(behavior).ConfigureAwait(false);
+            int keyIndex = reader.GetOrdinal(nameof(KeyValuePair<TKey, TValue>.Key));
+            int valueIndex = reader.GetOrdinal(nameof(KeyValuePair<TKey, TValue>.Value));
+            Dictionary<TKey, TValue> result = new Dictionary<TKey, TValue>();
+            while (await reader.ReadAsync().ConfigureAwait(false))
+            {
+                result.Add(reader.GetFieldValue<TKey>(keyIndex), reader.GetFieldValue<TValue>(valueIndex));
+            }
+            while (await reader.NextResultAsync().ConfigureAwait(false)) { }
+            reader.Close();
+            reader.Dispose();
+            reader = null;
+            return result;
         }
         private async Task<int> ExecSqlImplAsync(string sql, CommandType cmdType, TEntity objParameter, bool isPkParameter)
         {

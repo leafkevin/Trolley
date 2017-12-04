@@ -105,6 +105,7 @@ namespace WinTestApp
             //查询字典
             var dictRepository = new Repository();
             var dict = dictRepository.QueryDictionary<int, string>("SELECT Id Key,UserName Value FROM Coin_User");
+            dict = repository.QueryDictionary<int, string>("SELECT Id Key,UserName Value FROM Coin_User");
         }
         public static async Task TestAsync(string connString)
         {
@@ -114,6 +115,8 @@ namespace WinTestApp
             var dept = new Dept { UniqueId = 1, DeptName = "IT", PersonTotal = 1, UpdatedAt = DateTime.Now };
             var dept1 = new Dept { UniqueId = 2, DeptName = "HR", PersonTotal = 1, UpdatedAt = DateTime.Now };
             var repository = new Repository<User>(connString);
+
+
 
             //删除
             count = await repository.DeleteAsync(user);
@@ -223,6 +226,7 @@ namespace WinTestApp
 
             order.Number = "123456789";
             await orderRepository.UpdateAsync(f => f.Number, order);
+            var dict = repository.QueryDictionaryAsync<int, string>("SELECT Id [Key],UserName [Value] FROM Coin_User");
         }
     }
 }
