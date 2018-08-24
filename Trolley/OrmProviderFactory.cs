@@ -23,10 +23,12 @@ namespace Trolley
         {
             return OrmProviderFactory.providers[connString];
         }
-        public static DbProviderFactory GetFactory(string assemblyQualifiedName)
+        public static DbProviderFactory GetFactory(string assemblyQualifiedName, string assemblyFile)
         {
-            var ft = Type.GetType(assemblyQualifiedName);
-            return (DbProviderFactory)ft.GetField("Instance").GetValue(null);
+            var factory = Type.GetType(assemblyQualifiedName);
+            if (factory == null) Assembly.LoadFrom(assemblyFile);
+            factory = Type.GetType(assemblyQualifiedName);
+            return (DbProviderFactory)factory.GetField("Instance").GetValue(null);
         }
     }
 }

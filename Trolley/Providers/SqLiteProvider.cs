@@ -6,7 +6,8 @@ namespace Trolley.Providers
     {
         public override DbConnection CreateConnection(string connString)
         {
-            var factory = OrmProviderFactory.GetFactory("Microsoft.Data.Sqlite.SqliteFactory, Microsoft.Data.Sqlite, Culture=neutral, PublicKeyToken=adb9793829ddae60");
+            var assemblyQualifiedName = "System.Data.SQLite.SQLiteFactory, System.Data.SqlClient, Culture=neutral, PublicKeyToken=db937bc2d44ff139";
+            var factory = OrmProviderFactory.GetFactory(assemblyQualifiedName, "System.Data.SqlClient.dll");
             var result = factory.CreateConnection();
             result.ConnectionString = connString;
             return result;

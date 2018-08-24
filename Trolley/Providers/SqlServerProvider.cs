@@ -8,12 +8,14 @@ namespace Trolley.Providers
     {
         public override DbConnection CreateConnection(string connString)
         {
-            var factory =
 #if COREFX
-              OrmProviderFactory.GetFactory("System.Data.SqlClient.SqlClientFactory, System.Data.SqlClient, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a");
+            var assemblyQualifiedName ="System.Data.SqlClient.SqlClientFactory, System.Data.SqlClient, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a";
+            var assemblyFile = "System.Data.SqlClient.dll";
 #else
-              OrmProviderFactory.GetFactory("System.Data.SqlClient.SqlClientFactory, System.Data, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089");
+            var assemblyQualifiedName = "System.Data.SqlClient.SqlClientFactory, System.Data, Culture=neutral, PublicKeyToken=b77a5c561934e089";
+            var assemblyFile = "System.Data.dll";
 #endif
+            var factory = OrmProviderFactory.GetFactory(assemblyQualifiedName, assemblyFile);
             var result = factory.CreateConnection();
             result.ConnectionString = connString;
             return result;

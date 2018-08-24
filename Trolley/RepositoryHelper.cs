@@ -16,8 +16,8 @@ namespace Trolley
     {
         private static Regex HasUnionRegex = new Regex(@"\bFROM\b[^()]*?(?>[^()]+|\((?<quote>)|\)(?<-quote>))*?[^()]*?(?(quote)(?!))\bUNION\b", RegexOptions.IgnoreCase | RegexOptions.Multiline);
         private static MethodInfo ReaderGetItemByIndex = typeof(IDataRecord).GetProperties(BindingFlags.Instance | BindingFlags.Public)
-                 .Where(p => p.GetIndexParameters().Any() && p.GetIndexParameters()[0].ParameterType == typeof(int))
-                 .Select(p => p.GetGetMethod()).First();
+                        .Where(p => p.GetIndexParameters().Length > 0 && p.GetIndexParameters()[0].ParameterType == typeof(int))
+                        .Select(p => p.GetGetMethod()).First();
         private static MethodInfo StringGetItemByIndex = typeof(string).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                         .Where(p => p.GetIndexParameters().Any() && p.GetIndexParameters()[0].ParameterType == typeof(int))
                         .Select(p => p.GetGetMethod()).First();
@@ -142,33 +142,45 @@ namespace Trolley
         }
         private static Func<DbDataReader, object> CreateTypeReaderHandler(Type entityType, List<string> propNameList, DbDataReader reader)
         {
-            var dm = new DynamicMethod("CreateTReader_" + Guid.NewGuid().ToString(), typeof(object), new[] { typeof(DbDataReader) }, true);
-            ILGenerator il = dm.GetILGenerator();
-            il.Emit(OpCodes.Nop);
+            var isValueType = entityType.GetTypeInfo().IsValueType;
+            var returnType = isValueType ? typeof(object) : entityType;
+            var dm = new DynamicMethod("CreateTReader_" + Guid.NewGuid().ToString(), returnType, new[] { typeof(DbDataReader) }, entityType, true);
+            var il = dm.GetILGenerator();
+            il.DeclareLocal(typeof(int));
             il.DeclareLocal(entityType);
-            bool supportInitialize = false;
-            if (entityType.GetTypeInfo().IsValueType)
+            il.Emit(OpCodes.Ldc_I4_0);
+            il.Emit(OpCodes.Stloc_0);
+
+            var supportInitialize = false;
+            if (isValueType)
             {
-                il.Emit(OpCodes.Ldloca_S, (byte)0);
+                il.Emit(OpCodes.Ldloca_S, (byte)1);
                 il.Emit(OpCodes.Initobj, entityType);
-                il.Emit(OpCodes.Ldloca_S, (byte)0);
             }
             else
             {
                 if (entityType.GetConstructor(Type.EmptyTypes) == null)
                     throw new Exception(String.Format("类型{0}必须提供无类型参数的构造方法", entityType.FullName));
                 il.Emit(OpCodes.Newobj, entityType.GetConstructor(Type.EmptyTypes));
-                il.Emit(OpCodes.Stloc_0);
+                il.Emit(OpCodes.Stloc_1);
 
                 supportInitialize = typeof(ISupportInitialize).IsAssignableFrom(entityType);
                 if (supportInitialize)
                 {
-                    il.Emit(OpCodes.Ldloc_0);
+                    il.Emit(OpCodes.Ldloc_1);
                     il.EmitCall(OpCodes.Callvirt, typeof(ISupportInitialize).GetMethod(nameof(ISupportInitialize.BeginInit)), null);
                 }
-                il.Emit(OpCodes.Ldloc_0);
             }
-            // stack is now [target]           
+
+            il.BeginExceptionBlock();
+
+            if (isValueType) il.Emit(OpCodes.Ldloca_S, (byte)1);// [target] 
+            else il.Emit(OpCodes.Ldloc_1);// [target]            
+
+            var allDone = il.DefineLabel();
+            int valueCopyLocal = il.DeclareLocal(typeof(object)).LocalIndex;
+            int toTypeLocal = il.DeclareLocal(typeof(string)).LocalIndex;
+
             foreach (var propName in propNameList)
             {
                 // stack is now [target][target]
@@ -176,8 +188,14 @@ namespace Trolley
                 // stack is now [target][target][reader][index]
                 il.Emit(OpCodes.Ldarg_0);
                 LoadInt32(il, reader.GetOrdinal(propName));
+                il.Emit(OpCodes.Dup);
+                StoreLocal(il, toTypeLocal);
+
                 il.EmitCall(OpCodes.Callvirt, ReaderGetItemByIndex, null);
                 // stack is now [target][target][value]
+
+                il.Emit(OpCodes.Dup); // stack is now [target][target][value-as-object][value-as-object]
+                StoreLocal(il, valueCopyLocal);
 
                 // stack is now [target][target][value][value]
                 il.Emit(OpCodes.Dup);
@@ -191,6 +209,9 @@ namespace Trolley
                 var underlyingType = Nullable.GetUnderlyingType(propType);
                 bool isNullable = underlyingType != null;
                 if (!isNullable) underlyingType = propType;
+
+                il.Emit(OpCodes.Ldstr, colType.FullName);
+                StoreLocal(il, toTypeLocal);
 
                 if (underlyingType.FullName == DbTypeMap.LinqBinary)
                 {
@@ -265,7 +286,7 @@ namespace Trolley
                 }
 
                 // stack is now [target][target][typed-value]
-                il.Emit(entityType.GetTypeInfo().IsValueType ? OpCodes.Call : OpCodes.Callvirt, entityType.GetProperty(propName).GetSetMethod());
+                il.Emit(isValueType ? OpCodes.Call : OpCodes.Callvirt, entityType.GetProperty(propName).GetSetMethod());
 
                 var endLabel = il.DefineLabel();
                 il.Emit(OpCodes.Br_S, endLabel);
@@ -276,13 +297,32 @@ namespace Trolley
                 il.Emit(OpCodes.Pop);
                 il.MarkLabel(endLabel);
             }
-            if (entityType.GetTypeInfo().IsValueType) il.Emit(OpCodes.Pop);
-            else il.Emit(OpCodes.Stloc_0);
-            if (supportInitialize) il.EmitCall(OpCodes.Callvirt, typeof(ISupportInitialize).GetMethod(nameof(ISupportInitialize.EndInit)), null);
-            il.Emit(OpCodes.Ldloc_0);
-            if (entityType.GetTypeInfo().IsValueType) il.Emit(OpCodes.Box, entityType);
 
+            if (isValueType) il.Emit(OpCodes.Pop);
+            else
+            {
+                il.Emit(OpCodes.Stloc_1); // stack is empty
+
+                if (supportInitialize)
+                {
+                    il.Emit(OpCodes.Ldloc_1);
+                    il.EmitCall(OpCodes.Callvirt, typeof(ISupportInitialize).GetMethod(nameof(ISupportInitialize.EndInit)), null);
+                }
+            }
+
+            il.MarkLabel(allDone);
+            il.BeginCatchBlock(typeof(Exception)); // stack is Exception
+            il.Emit(OpCodes.Ldloc_0); // stack is Exception, index
+            il.Emit(OpCodes.Ldarg_0); // stack is Exception, index, reader
+            LoadLocal(il, toTypeLocal);
+            LoadLocal(il, valueCopyLocal); // stack is Exception, index, reader, value
+            il.EmitCall(OpCodes.Call, typeof(RepositoryHelper).GetMethod(nameof(RepositoryHelper.ThrowDataException)), null);
+            il.EndExceptionBlock();
+
+            il.Emit(OpCodes.Ldloc_1); // stack is [rval]
+            if (isValueType) il.Emit(OpCodes.Box, entityType);
             il.Emit(OpCodes.Ret);
+
             return (Func<DbDataReader, object>)dm.CreateDelegate(typeof(Func<DbDataReader, object>));
         }
         private static Action<IDbCommand, object> CreateParametersHandler(string paramPrefix, EntityMapper mapper)
@@ -730,20 +770,55 @@ namespace Trolley
                 return hashCode;
             }
         }
-        private static int GetReaderKey(Type type, IDataReader reader)
+        private static void StoreLocal(ILGenerator il, int index)
         {
-            unchecked
+            if (index < 0 || index >= short.MaxValue) throw new ArgumentNullException(nameof(index));
+            switch (index)
             {
-                int hashCode = 23;
-                hashCode = hashCode * 17 + type.GetHashCode();
-                hashCode = hashCode * 17 + reader.FieldCount.GetHashCode();
-                for (int i = 0; i < reader.FieldCount; i++)
-                {
-                    object name = reader.GetName(i);
-                    hashCode = 17 * ((hashCode * 31) + (name?.GetHashCode() ?? 0)) + (reader.GetFieldType(i)?.GetHashCode() ?? 0);
-                }
-                return hashCode;
+                case 0: il.Emit(OpCodes.Stloc_0); break;
+                case 1: il.Emit(OpCodes.Stloc_1); break;
+                case 2: il.Emit(OpCodes.Stloc_2); break;
+                case 3: il.Emit(OpCodes.Stloc_3); break;
+                default:
+                    if (index <= 255)
+                    {
+                        il.Emit(OpCodes.Stloc_S, (byte)index);
+                    }
+                    else
+                    {
+                        il.Emit(OpCodes.Stloc, (short)index);
+                    }
+                    break;
             }
+        }
+        [Obsolete("This method is for internal use only", false)]
+        public static void ThrowDataException(Exception ex, int index, IDataReader reader, string toType, object value)
+        {
+            Exception toThrow;
+            try
+            {
+                var colName = reader.GetName(index);
+                var formattedValue = String.Empty;
+                var fromType = String.Empty;
+                colName = reader.GetName(index);
+                try
+                {
+                    if (value == null || value is DBNull)
+                    {
+                        fromType = "null/DBNull";
+                        formattedValue = "<null>";
+                    }
+                    else
+                    {
+                        formattedValue = Convert.ToString(value);
+                        fromType = value.GetType().FullName;
+                    }
+                }
+                catch (Exception valEx) { formattedValue = valEx.Message; }
+                toThrow = new DataException($"反序列化失败，Reader[{index}-{colName}](Value:{formattedValue},Type:{fromType}) to Type:{toType} fail", ex);
+            }
+            catch { toThrow = new DataException(ex.Message, ex); }
+            throw toThrow;
         }
         private static void LoadInt32(ILGenerator il, int value)
         {
@@ -771,7 +846,28 @@ namespace Trolley
                     break;
             }
         }
-        private static object GetEnumName(object enumValue, Type enumType)
+        private static void LoadLocal(ILGenerator il, int index)
+        {
+            if (index < 0 || index >= short.MaxValue) throw new ArgumentNullException(nameof(index));
+            switch (index)
+            {
+                case 0: il.Emit(OpCodes.Ldloc_0); break;
+                case 1: il.Emit(OpCodes.Ldloc_1); break;
+                case 2: il.Emit(OpCodes.Ldloc_2); break;
+                case 3: il.Emit(OpCodes.Ldloc_3); break;
+                default:
+                    if (index <= 255)
+                    {
+                        il.Emit(OpCodes.Ldloc_S, (byte)index);
+                    }
+                    else
+                    {
+                        il.Emit(OpCodes.Ldloc, (short)index);
+                    }
+                    break;
+            }
+        }
+        public static object GetEnumName(object enumValue, Type enumType)
         {
             if (!enumNameDict.ContainsKey(enumType))
             {

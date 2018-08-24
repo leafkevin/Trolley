@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Trolley
 {
+    [DebuggerDisplay("SQL:{BuildSql()},Parameters:[Count={Parameters.Count}]")]
+    [DebuggerTypeProxy(typeof(SqlBuilder.DebugView))]
     public class SqlBuilder
     {
         private static Regex HasWhereRegex = new Regex(@"\bWHERE\b((?<quote>\()[^\(\)]*)*((?<-quote>\))[^\(\)]*)*(?(quote)(?!))[^\(\)]", RegexOptions.IgnoreCase | RegexOptions.Multiline);
@@ -14,24 +17,16 @@ namespace Trolley
         private IOrmProvider provider = null;
         private StringBuilder sqlBuilder = new StringBuilder();
         private Dictionary<string, object> parameters = new Dictionary<string, object>();
-        private List<object> entityParameters = new List<object>();
         internal Dictionary<string, object> Parameters => this.parameters;
-        internal List<object> EntityParameters => this.entityParameters;
         /// <summary>
         /// 用默认的Provider生成SqlBuilder对象
         /// </summary>
-        public SqlBuilder()
-        {
-            this.provider = OrmProviderFactory.DefaultProvider;
-        }
+        public SqlBuilder() => this.provider = OrmProviderFactory.DefaultProvider;
         /// <summary>
         /// 使用指定的Provider生成SqlBuilder对象
         /// </summary>
         /// <param name="provider">Provider对象</param>
-        public SqlBuilder(IOrmProvider provider)
-        {
-            this.provider = provider;
-        }
+        public SqlBuilder(IOrmProvider provider) => this.provider = provider;
         /// <summary>
         /// 追加sql语句
         /// </summary>
@@ -48,7 +43,8 @@ namespace Trolley
         public SqlBuilder RawSql(string sql, params object[] parameters)
         {
             if (String.IsNullOrEmpty(sql)) throw new ArgumentNullException("sql", "sql不能为空字符串！");
-            this.sqlBuilder.Append(sql);
+            if (this.sqlBuilder.Length > 0) this.sqlBuilder.Append(" ");
+            this.sqlBuilder.Append(sql.TrimEnd());
             this.AddParameters(sql, parameters);
             return this;
         }
@@ -73,10 +69,9 @@ namespace Trolley
             if (condition)
             {
                 if (String.IsNullOrEmpty(clause)) throw new ArgumentNullException("clause", "clause不能为空字符串！");
-                if (!this.hasWhere)
-                {
-                    if (HasWhereRegex.IsMatch(this.sqlBuilder.ToString())) this.hasWhere = true;
-                }
+                var sql = this.sqlBuilder.ToString();
+                if (!this.hasWhere) { if (HasWhereRegex.IsMatch(sql)) this.hasWhere = true; }
+                else if (sql.LastIndexOf(";") > sql.ToUpper().LastIndexOf("WHERE")) this.hasWhere = false;
                 if (this.hasWhere) this.sqlBuilder.Append(" AND " + clause);
                 else { this.sqlBuilder.Append(" WHERE " + clause); hasWhere = true; }
                 this.AddParameters(clause, parameters);
@@ -104,10 +99,9 @@ namespace Trolley
             if (condition)
             {
                 if (String.IsNullOrEmpty(clause)) throw new ArgumentNullException("clause", "clause不能为空字符串！");
-                if (!this.hasWhere)
-                {
-                    if (HasWhereRegex.IsMatch(this.sqlBuilder.ToString())) this.hasWhere = true;
-                }
+                var sql = this.sqlBuilder.ToString();
+                if (!this.hasWhere) { if (HasWhereRegex.IsMatch(sql)) this.hasWhere = true; }
+                else if (sql.LastIndexOf(";") > sql.ToUpper().LastIndexOf("WHERE")) this.hasWhere = false;
                 if (this.hasWhere) this.sqlBuilder.Append(" AND (" + clause);
                 else { this.sqlBuilder.Append(" WHERE (" + clause); hasWhere = true; }
                 this.AddParameters(clause, parameters);
@@ -271,6 +265,15 @@ namespace Trolley
                     index++;
                 }
             }
+        }
+        sealed class DebugView
+        {
+            private readonly SqlBuilder builder;
+            public DebugView(SqlBuilder builder) => this.builder = builder;
+            [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+            public string SQL => this.builder.sqlBuilder.ToString();
+            [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+            public Dictionary<string, object> Parameters => this.builder.Parameters;
         }
     }
 }

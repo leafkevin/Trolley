@@ -11,7 +11,8 @@ namespace Trolley.Providers
         public override DbConnection CreateConnection(string connString)
         {
             //TODO:Oracle官方暂时还没有提供.NET Core版本驱动，无法实现跨平台
-            var factory = OrmProviderFactory.GetFactory("Oracle.ManagedDataAccess.Client.OracleClientFactory, Oracle.ManagedDataAccess, Culture=neutral, PublicKeyToken=89b483f429c47342");
+            var assemblyQualifiedName = "Oracle.ManagedDataAccess.Client.OracleClientFactory, Oracle.ManagedDataAccess, Culture=neutral, PublicKeyToken=89b483f429c47342";
+            var factory = OrmProviderFactory.GetFactory(assemblyQualifiedName, "Oracle.ManagedDataAccess.dll");
             var result = factory.CreateConnection();
             result.ConnectionString = connString;
             return result;
