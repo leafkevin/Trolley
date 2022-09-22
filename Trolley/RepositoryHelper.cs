@@ -2,887 +2,2643 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using System.Data.Common;
+using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
-using System.Reflection.Emit;
+using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Trolley
+namespace Trolley;
+
+class RepositoryHelper
 {
-    public class RepositoryHelper
+    private static MethodInfo readerItemByIndex = typeof(IDataRecord).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+             .Where(p => p.GetIndexParameters().Length > 0 && p.GetIndexParameters()[0].ParameterType == typeof(int)).Select(p => p.GetGetMethod()).First();
+    private static ConcurrentDictionary<RuntimeTypeHandle, bool> isAutoIncrementCache = new ConcurrentDictionary<RuntimeTypeHandle, bool>();
+    private static ConcurrentDictionary<int, string> typedSqlCache = new ConcurrentDictionary<int, string>();
+    private static ConcurrentDictionary<int, CommandInitializer> typedInitializerCache = new ConcurrentDictionary<int, CommandInitializer>();
+    private static ConcurrentDictionary<int, CommandInitializer> sqlInitializerCache = new ConcurrentDictionary<int, CommandInitializer>();
+    private static ConcurrentDictionary<int, PagedCommandInitializer> pagedInitializerCache = new ConcurrentDictionary<int, PagedCommandInitializer>();
+    private static ConcurrentDictionary<int, Func<IDataReader, object>> typedReaderCache = new ConcurrentDictionary<int, Func<IDataReader, object>>();
+    private static ConcurrentDictionary<int, Func<IDataReader, object>> sqlReaderCache = new ConcurrentDictionary<int, Func<IDataReader, object>>();
+    private static ConcurrentDictionary<int, Func<IDataReader, object>> valueTupleReaderCache = new ConcurrentDictionary<int, Func<IDataReader, object>>();
+
+    public static (CommandInitializer Initializer, bool IsAutoIncrement) BuildCreateCache(IOrmDbFactory dbFactory, TheaConnection connection, Type entityType, ParameterInfo insertObj)
     {
-        private static Regex HasUnionRegex = new Regex(@"\bFROM\b[^()]*?(?>[^()]+|\((?<quote>)|\)(?<-quote>))*?[^()]*?(?(quote)(?!))\bUNION\b", RegexOptions.IgnoreCase | RegexOptions.Multiline);
-        private static MethodInfo ReaderGetItemByIndex = typeof(IDataRecord).GetProperties(BindingFlags.Instance | BindingFlags.Public)
-                        .Where(p => p.GetIndexParameters().Length > 0 && p.GetIndexParameters()[0].ParameterType == typeof(int))
-                        .Select(p => p.GetGetMethod()).First();
-        private static MethodInfo StringGetItemByIndex = typeof(string).GetProperties(BindingFlags.Instance | BindingFlags.Public)
-                        .Where(p => p.GetIndexParameters().Any() && p.GetIndexParameters()[0].ParameterType == typeof(int))
-                        .Select(p => p.GetGetMethod()).First();
-        private static ConcurrentDictionary<Type, Dictionary<int, string>> enumNameDict = new ConcurrentDictionary<Type, Dictionary<int, string>>();
-        private static ConcurrentDictionary<int, Action<IDbCommand, object>> paramActionCache = new ConcurrentDictionary<int, Action<IDbCommand, object>>();
-        private static ConcurrentDictionary<int, Func<DbDataReader, object>> readerCache = new ConcurrentDictionary<int, Func<DbDataReader, object>>();
-        private static ConcurrentDictionary<int, string> PagingCache = new ConcurrentDictionary<int, string>();
-        private static Type dictParameterType = typeof(List<KeyValuePair<string, object>>);
+        CommandInitializer commandInitializer = null;
+        if (insertObj.IsDictionary)
+        {
+            var entityMapper = dbFactory.GetEntityMap(entityType);
+            commandInitializer = (command, parameters) =>
+            {
+                var dict = parameters[0] as Dictionary<string, object>;
 
-        internal static Action<IDbCommand, object> GetActionCache(int hashKey, string sql, IOrmProvider provider, Type paramType)
-        {
-            Action<IDbCommand, object> result;
-            if (!paramActionCache.TryGetValue(hashKey, out result))
-            {
-                var mapper = new EntityMapper(Nullable.GetUnderlyingType(paramType) ?? paramType);
-                var colMappers = mapper.MemberMappers.Values.Where(p => Regex.IsMatch(sql, @"[?@:]" + p.MemberName + "([^a-z0-9_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant));
-                result = CreateParametersHandler(provider.ParamPrefix, mapper);
-                paramActionCache.TryAdd(hashKey, result);
-            }
-            return result;
-        }
-        internal static Func<DbDataReader, object> GetReader(int hashKey, Type targetType, DbDataReader reader, bool isIgnoreCase)
-        {
-            hashKey = RepositoryHelper.GetReaderKey(targetType, hashKey);
-            if (!readerCache.ContainsKey(hashKey))
-            {
-                string propName = null;
-                PropertyInfo propInfo = null;
-                var bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-                if (isIgnoreCase) bindingFlags |= BindingFlags.IgnoreCase;
-                List<string> propNameList = new List<string>();
-                for (int i = 0; i < reader.FieldCount; i++)
+                var index = 0;
+                var insertBuilder = new StringBuilder();
+                if (!string.IsNullOrEmpty(command.CommandText))
+                    insertBuilder.Append(command.CommandText + ";");
+                insertBuilder.Append("INSERT INTO " + connection.OrmProvider.GetTableName(entityMapper.TableName) + " (");
+                var valueBuilder = new StringBuilder(") VALUES(");
+                foreach (var item in dict)
                 {
-                    propName = reader.GetName(i);
-                    propInfo = targetType.GetProperty(propName, bindingFlags);
-                    if (propInfo == null) continue;
-                    propNameList.Add(propInfo.Name);
-                }
-                var readerHandler = DbTypeMap.ContainsKey(targetType) ? CreateValueReaderHandler(targetType, reader.GetOrdinal(propName)) : CreateTypeReaderHandler(targetType, propNameList, reader);
-                readerCache.TryAdd(hashKey, readerHandler);
-            }
-            return readerCache[hashKey];
-        }
-        internal static Action<IDbCommand, TEntity> CreateParametersHandler<TEntity>(string paramPrefix, Type entityType, IEnumerable<MemberMapper> colMappers)
-        {
-            var dm = new DynamicMethod("CreateParameter_" + Guid.NewGuid().ToString(), null, new[] { typeof(IDbCommand), entityType }, entityType, true);
-            ILGenerator il = dm.GetILGenerator();
+                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || propMapper.IsIgnore)
+                        continue;
 
-            il.Emit(OpCodes.Nop);
-            il.Emit(OpCodes.Ldarg_0);
-            il.EmitCall(OpCodes.Callvirt, typeof(IDbCommand).GetProperty(nameof(IDbCommand.Parameters)).GetGetMethod(), null);
-            // stack is now [parameters]
-            foreach (var colMapper in colMappers)
-            {
-                CreateParamter(il, paramPrefix, colMapper, true);
-            }
-            // stack is now [parameters]
-            il.Emit(OpCodes.Pop);
-            il.Emit(OpCodes.Ret);
-            return (Action<IDbCommand, TEntity>)dm.CreateDelegate(typeof(Action<IDbCommand, TEntity>));
-        }
-        internal static int GetHashKey(string connString, string sqlKey, CommandType cmdType)
-        {
-            int hashCode = 23;
-            unchecked
-            {
-                hashCode = hashCode * 17 + connString.GetHashCode();
-                hashCode = hashCode * 17 + sqlKey.GetHashCode();
-                hashCode = hashCode * 17 + cmdType.GetHashCode();
-            }
-            return hashCode;
-        }
-        internal static int GetHashKey(string connString, string sqlKey, Type paramterType)
-        {
-            int hashCode = 23;
-            unchecked
-            {
-                hashCode = hashCode * 17 + connString.GetHashCode();
-                hashCode = hashCode * 17 + sqlKey.GetHashCode();
-                if (paramterType != null)
-                {
-                    hashCode = hashCode * 17 + paramterType.GetHashCode();
-                }
-            }
-            return hashCode;
-        }
-        internal static int GetHashKey(int typeHashCode, string sqlKey)
-        {
-            int hashCode = 23;
-            unchecked
-            {
-                hashCode = hashCode * 17 + typeHashCode;
-                hashCode = hashCode * 17 + sqlKey.GetHashCode();
-            }
-            return hashCode;
-        }
-        private static Func<DbDataReader, object> CreateValueReaderHandler(Type valueType, int index)
-        {
-            var underlyingType = Nullable.GetUnderlyingType(valueType);
-            if (underlyingType != null)
-            {
-                if (underlyingType.GetTypeInfo().IsEnum)
-                {
-                    return f =>
+                    if (index > 0)
                     {
-                        var objValue = f.GetValue(index);
-                        if (objValue is DBNull) return null;
-                        if (f.GetFieldType(index) == typeof(string)) return Enum.Parse(underlyingType, objValue.ToString(), true);
-                        else return Enum.ToObject(underlyingType, objValue);
-                    };
-                }
-                else
-                {
-                    return f =>
-                    {
-                        var objValue = f.GetValue(index);
-                        return objValue is DBNull ? null : objValue;
-                    };
-                }
-            }
-            else return f => { return f.GetValue(index); };
-        }
-        private static Func<DbDataReader, object> CreateTypeReaderHandler(Type entityType, List<string> propNameList, DbDataReader reader)
-        {
-            var isValueType = entityType.GetTypeInfo().IsValueType;
-            var returnType = isValueType ? typeof(object) : entityType;
-            var dm = new DynamicMethod("CreateTReader_" + Guid.NewGuid().ToString(), returnType, new[] { typeof(DbDataReader) }, entityType, true);
-            var il = dm.GetILGenerator();
-            il.DeclareLocal(typeof(int));
-            il.DeclareLocal(entityType);
-            il.Emit(OpCodes.Ldc_I4_0);
-            il.Emit(OpCodes.Stloc_0);
+                        insertBuilder.Append(",");
+                        valueBuilder.Append(",");
+                    }
+                    var parameterName = $"{connection.OrmProvider.ParameterPrefix}{item.Key}{insertObj.MulitIndex}";
+                    insertBuilder.Append(connection.OrmProvider.GetFieldName(propMapper.FieldName));
+                    valueBuilder.Append(parameterName);
 
-            var supportInitialize = false;
-            if (isValueType)
+                    var parameter = command.CreateParameter();
+                    parameter.ParameterName = parameterName;
+                    parameter.Direction = ParameterDirection.Input;
+                    var itemValue = dict[item.Key];
+                    if (itemValue != null && itemValue is string strValue)
+                        parameter.Size = strValue.Length;
+                    if (itemValue == null) parameter.Value = DBNull.Value;
+                    else parameter.Value = itemValue;
+                    command.Parameters.Add(parameter);
+                    index++;
+                }
+                valueBuilder.Append(") ");
+                if (entityMapper.IsAutoIncrement)
+                    valueBuilder.AppendFormat(connection.OrmProvider.SelectIdentitySql, entityMapper.AutoIncrementField);
+
+                command.CommandText = $"{insertBuilder}{valueBuilder}";
+                command.CommandType = CommandType.Text;
+            };
+            return (commandInitializer, entityMapper.IsAutoIncrement);
+        }
+        var cacheKey = GetTypedSqlParameterKey(connection, "BuildCreateCache", insertObj.IsMulti, entityType, entityType, insertObj.ParameterType);
+        if (!typedInitializerCache.TryGetValue(cacheKey, out commandInitializer))
+        {
+            var entityMapper = dbFactory.GetEntityMap(entityType);
+            var insertObjMapper = dbFactory.GetEntityMap(insertObj.ParameterType);
+            var blockParameters = new List<ParameterExpression>();
+            var blockBodies = new List<Expression>();
+
+            var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
+            var objExpr = Expression.Parameter(typeof(object), "obj");
+            var typedObjExpr = Expression.Variable(insertObj.ParameterType, "entity");
+
+            ParameterExpression builderExpr = null;
+            ParameterExpression suffixExpr = null;
+            if (insertObj.IsMulti)
             {
-                il.Emit(OpCodes.Ldloca_S, (byte)1);
-                il.Emit(OpCodes.Initobj, entityType);
+                builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
+                suffixExpr = Expression.Parameter(typeof(string), "suffix");
+            }
+
+            blockParameters.Add(typedObjExpr);
+            blockBodies.Add(Expression.Assign(typedObjExpr, Expression.Convert(objExpr, insertObj.ParameterType)));
+            var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
+            var concatMethodInfo = typeof(string).GetMethod(nameof(String.Concat), new Type[] { typeof(string), typeof(string) });
+
+            int index = 0;
+            StringBuilder sqlBuilder = null;
+            if (!insertObj.IsMulti) sqlBuilder = new StringBuilder("(");
+            else blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant("(", typeof(string))));
+
+            foreach (var insertObjPropMapper in insertObjMapper.MemberMaps)
+            {
+                if (!entityMapper.TryGetMemberMap(insertObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore || propMapper.IsAutoIncrement)
+                    continue;
+
+                if (index > 0)
+                {
+                    if (!insertObj.IsMulti) sqlBuilder.Append(",");
+                    else blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(",", typeof(string))));
+                }
+                var parameterName = $"{connection.OrmProvider.ParameterPrefix}{insertObjPropMapper.MemberName}{insertObj.MulitIndex}";
+
+                Expression parameterNameExpr = Expression.Constant(parameterName, typeof(string));
+                if (insertObj.IsMulti)
+                {
+                    parameterNameExpr = Expression.Call(concatMethodInfo, parameterNameExpr, suffixExpr);
+                    blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, parameterNameExpr));
+                }
+                else sqlBuilder.Append(parameterName);
+
+                AddParameter(connection, commandExpr, parameterNameExpr, typedObjExpr, insertObjPropMapper, propMapper, insertObj, blockParameters, blockBodies);
+                index++;
+            }
+            if (!insertObj.IsMulti) sqlBuilder.Append(")");
+            else blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(")", typeof(string))));
+
+            //isAutoIncrement与实体类型相关，只要实体类型存在自增列，就为true             
+            isAutoIncrementCache.AddOrUpdate(entityType.TypeHandle, entityMapper.IsAutoIncrement, (k, o) => entityMapper.IsAutoIncrement);
+
+            var sql = BuildInsertSql(connection, entityMapper, insertObjMapper);
+            var insertSql = sql.InsertSql;
+            var valuesSql = sql.ValuesSql;
+            if (insertObj.IsMulti)
+            {
+                var initializer = Expression.Lambda<Action<IDbCommand, StringBuilder, string, object>>(
+                    Expression.Block(blockParameters, blockBodies), commandExpr, builderExpr, suffixExpr, objExpr).Compile();
+
+                commandInitializer = (command, parameters) =>
+                {
+                    var resultBuilder = new StringBuilder();
+                    if (!string.IsNullOrEmpty(command.CommandText))
+                        resultBuilder.Append(command.CommandText + ";");
+
+                    resultBuilder.Append(insertSql);
+                    resultBuilder.Append(" VALUES ");
+                    int index = 1;
+                    var enumerable = parameters[0] as IEnumerable;
+                    foreach (var item in enumerable)
+                    {
+                        if (index > 1) resultBuilder.Append(",");
+                        initializer(command, resultBuilder, index.ToString(), item);
+                        index++;
+                    }
+
+                    command.CommandText = resultBuilder.ToString();
+                    command.CommandType = CommandType.Text;
+                };
             }
             else
             {
-                if (entityType.GetConstructor(Type.EmptyTypes) == null)
-                    throw new Exception(String.Format("类型{0}必须提供无类型参数的构造方法", entityType.FullName));
-                il.Emit(OpCodes.Newobj, entityType.GetConstructor(Type.EmptyTypes));
-                il.Emit(OpCodes.Stloc_1);
+                var initializer = Expression.Lambda<Action<IDbCommand, object>>(
+                    Expression.Block(blockParameters, blockBodies), commandExpr, objExpr).Compile();
+                var usedSql = $"{insertSql} {valuesSql}";
+                if (entityMapper.IsAutoIncrement)
+                    usedSql += string.Format(connection.OrmProvider.SelectIdentitySql, connection.OrmProvider.GetFieldName(entityMapper.AutoIncrementField));
 
-                supportInitialize = typeof(ISupportInitialize).IsAssignableFrom(entityType);
-                if (supportInitialize)
+                commandInitializer = (command, parameters) =>
                 {
-                    il.Emit(OpCodes.Ldloc_1);
-                    il.EmitCall(OpCodes.Callvirt, typeof(ISupportInitialize).GetMethod(nameof(ISupportInitialize.BeginInit)), null);
-                }
+                    initializer(command, parameters[0]);
+                    var sql = usedSql;
+                    if (!string.IsNullOrEmpty(command.CommandText))
+                        sql = command.CommandText + ";" + usedSql;
+                    command.CommandText = sql;
+                    command.CommandType = CommandType.Text;
+                };
             }
 
-            il.BeginExceptionBlock();
-
-            if (isValueType) il.Emit(OpCodes.Ldloca_S, (byte)1);// [target] 
-            else il.Emit(OpCodes.Ldloc_1);// [target]            
-
-            var allDone = il.DefineLabel();
-            int valueCopyLocal = il.DeclareLocal(typeof(object)).LocalIndex;
-            int toTypeLocal = il.DeclareLocal(typeof(string)).LocalIndex;
-
-            foreach (var propName in propNameList)
+            typedInitializerCache.TryAdd(cacheKey, commandInitializer);
+        }
+        isAutoIncrementCache.TryGetValue(entityType.TypeHandle, out var isAutoIncrement);
+        return (commandInitializer, isAutoIncrement);
+    }
+    /// <summary>
+    /// 查询返回指定实体类型的数据，生成SELECT * FROM TABLE WHERE @whereObj SQL语句，并初始化参数
+    /// </summary>
+    /// <param name="dbFactory"></param>
+    /// <param name="connection"></param>
+    /// <param name="entityType"></param>
+    /// <param name="targetObjType"></param>
+    /// <param name="whereObj"></param>
+    /// <returns></returns>
+    public static CommandInitializer BuildQueryCache(IOrmDbFactory dbFactory, TheaConnection connection, Type entityType, Type targetObjType, ParameterInfo whereObj)
+    {
+        CommandInitializer commandInitializer = null;
+        if (whereObj.IsDictionary)
+        {
+            commandInitializer = (command, parameters) =>
             {
-                // stack is now [target][target]
-                il.Emit(OpCodes.Dup);
-                // stack is now [target][target][reader][index]
-                il.Emit(OpCodes.Ldarg_0);
-                LoadInt32(il, reader.GetOrdinal(propName));
-                il.Emit(OpCodes.Dup);
-                StoreLocal(il, toTypeLocal);
+                var dict = parameters[0] as Dictionary<string, object>;
+                var entityMapper = dbFactory.GetEntityMap(entityType);
+                var sql = BuildQuerySelectCache(dbFactory, connection, entityType, targetObjType);
 
-                il.EmitCall(OpCodes.Callvirt, ReaderGetItemByIndex, null);
-                // stack is now [target][target][value]
-
-                il.Emit(OpCodes.Dup); // stack is now [target][target][value-as-object][value-as-object]
-                StoreLocal(il, valueCopyLocal);
-
-                // stack is now [target][target][value][value]
-                il.Emit(OpCodes.Dup);
-                il.Emit(OpCodes.Isinst, typeof(DBNull));
-                // stack is now [target][target][value][DBNull or null]
-                Label dbNullLabel = il.DefineLabel();
-                il.Emit(OpCodes.Brtrue_S, dbNullLabel);
-
-                var colType = reader.GetFieldType(reader.GetOrdinal(propName));
-                var propType = entityType.GetProperty(propName).PropertyType;
-                var underlyingType = Nullable.GetUnderlyingType(propType);
-                bool isNullable = underlyingType != null;
-                if (!isNullable) underlyingType = propType;
-
-                il.Emit(OpCodes.Ldstr, colType.FullName);
-                StoreLocal(il, toTypeLocal);
-
-                if (underlyingType.FullName == DbTypeMap.LinqBinary)
+                var index = 0;
+                var sqlBuilder = new StringBuilder();
+                if (!string.IsNullOrEmpty(command.CommandText))
+                    sqlBuilder.Append(command.CommandText + ";");
+                sqlBuilder.Append(sql + " WHERE ");
+                foreach (var item in dict)
                 {
-                    il.Emit(OpCodes.Unbox_Any, typeof(byte[]));
-                    il.Emit(OpCodes.Newobj, propType.GetConstructor(new Type[] { typeof(byte[]) }));
-                    // stack is now [target][target][byte[]-value]
+                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || propMapper.IsIgnore)
+                        continue;
+
+                    if (index > 0) sqlBuilder.Append(" AND ");
+                    var parameterName = $"{connection.OrmProvider.ParameterPrefix}{item.Key}{whereObj.MulitIndex}";
+                    sqlBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} = {parameterName}");
+
+                    var parameter = command.CreateParameter();
+                    parameter.ParameterName = parameterName;
+                    parameter.Direction = ParameterDirection.Input;
+                    var itemValue = dict[item.Key];
+                    if (itemValue != null && itemValue is string strValue)
+                        parameter.Size = strValue.Length;
+                    if (itemValue == null) parameter.Value = DBNull.Value;
+                    else parameter.Value = itemValue;
+                    command.Parameters.Add(parameter);
+                    index++;
                 }
-                else if (underlyingType == colType) il.Emit(OpCodes.Unbox_Any, propType);
-                else
+                command.CommandText = sqlBuilder.ToString();
+                command.CommandType = CommandType.Text;
+            };
+            return commandInitializer;
+        }
+
+        var cacheKey = GetTypedSqlParameterKey(connection, "BuildQueryCache", whereObj.IsMulti, entityType, targetObjType, whereObj.ParameterType);
+        if (!typedInitializerCache.TryGetValue(cacheKey, out commandInitializer))
+        {
+            var entityMapper = dbFactory.GetEntityMap(entityType);
+            var sqlBuilder = new StringBuilder("SELECT ");
+
+            var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
+            var objExpr = Expression.Parameter(typeof(object), "obj");
+
+            var blockParameters = new List<ParameterExpression>();
+            var blockBodies = new List<Expression>();
+            var typedWhereObjExpr = Expression.Variable(whereObj.ParameterType, "whereObj");
+
+            EntityMap selectObjMapper = null;
+            if (entityType != targetObjType)
+                selectObjMapper = dbFactory.GetEntityMap(targetObjType);
+            else selectObjMapper = entityMapper;
+            var whereObjMapper = dbFactory.GetEntityMap(whereObj.ParameterType);
+
+            blockParameters.Add(typedWhereObjExpr);
+            blockBodies.Add(Expression.Assign(typedWhereObjExpr, Expression.Convert(objExpr, whereObj.ParameterType)));
+
+            int index = 0;
+            string parameterName = null;
+            ParameterExpression deferredExpr = null;
+            bool hasDeferred = false;
+            foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
+            {
+                if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore)
+                    continue;
+
+                if (propMapper.MemberType != whereObjPropMapper.MemberType
+                    && typeof(IEnumerable).IsAssignableFrom(whereObjPropMapper.MemberType)
+                    && whereObjPropMapper.MemberType != typeof(string))
                 {
-                    if (underlyingType == typeof(Guid))
+                    //有数组参数，将不再设置sqlBuilder变量
+                    if (!connection.OrmProvider.IsSupportArrayParameter)
                     {
-                        il.Emit(OpCodes.Unbox_Any, colType);
-                        //支持byte[],string类型
-                        il.Emit(OpCodes.Newobj, typeof(Guid).GetConstructor(new Type[] { colType }));
+                        hasDeferred = true;
+                        break;
                     }
-                    else if (underlyingType == typeof(char))
+                }
+            }
+            if (hasDeferred)
+            {
+                deferredExpr = Expression.Variable(typeof(Stack<Action<StringBuilder>>), "deferredStack");
+                blockParameters.Add(deferredExpr);
+                var newExp = Expression.New(typeof(Stack<Action<StringBuilder>>).GetConstructor(Type.EmptyTypes));
+                blockBodies.Add(Expression.Assign(deferredExpr, newExp));
+            }
+            index = 0;
+            foreach (var propMapper in entityMapper.MemberMaps)
+            {
+                if (propMapper.IsIgnore) continue;
+                if (entityType == targetObjType || selectObjMapper.TryGetMemberMap(propMapper.MemberName, out var memberMap))
+                {
+                    if (index > 0) sqlBuilder.Append(",");
+                    sqlBuilder.Append(GetAliasParameterSql(connection, propMapper.FieldName, propMapper.MemberName));
+                    index++;
+                }
+            }
+            sqlBuilder.Append($" FROM {connection.OrmProvider.GetTableName(entityMapper.TableName)} WHERE ");
+            index = 0;
+            foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
+            {
+                if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore)
+                    continue;
+                if (index > 0) sqlBuilder.Append(" AND ");
+                parameterName = $"{connection.OrmProvider.ParameterPrefix}{propMapper.MemberName}{whereObj.MulitIndex}";
+
+                //支持数组参数
+                if (propMapper.MemberType != whereObjPropMapper.MemberType
+                    && typeof(IEnumerable).IsAssignableFrom(whereObjPropMapper.MemberType)
+                    && whereObjPropMapper.MemberType != typeof(string))
+                {
+                    if (connection.OrmProvider.IsSupportArrayParameter)
                     {
-                        if (colType == typeof(string))
-                        {
-                            il.Emit(OpCodes.Unbox_Any, colType);
-                            LoadInt32(il, 0);
-                            il.EmitCall(OpCodes.Call, StringGetItemByIndex, null);
-                        }
-                    }
-                    else if (underlyingType == typeof(bool))
-                    {
-                        il.Emit(OpCodes.Unbox_Any, colType);
-                        if (colType != typeof(int)) il.Emit(OpCodes.Conv_I4);
-                        il.Emit(OpCodes.Ldc_I4_0);
-                        il.Emit(OpCodes.Ceq);
-                        il.Emit(OpCodes.Ldc_I4_0);
-                        il.Emit(OpCodes.Ceq);
+                        sqlBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} = ANY({parameterName})");
+                        AddParameter(connection, commandExpr, parameterName, typedWhereObjExpr, whereObjPropMapper, propMapper, whereObj, blockParameters, blockBodies);
                     }
                     else
                     {
-                        var propTypeCode = Type.GetTypeCode(underlyingType);
-                        var colTypeCode = Type.GetTypeCode(colType);
-                        if (underlyingType.GetTypeInfo().IsEnum)
+                        sqlBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} IN ");
+                        BuildWhereInSqlParameters(connection, commandExpr, typedWhereObjExpr, deferredExpr, parameterName, whereObjPropMapper, sqlBuilder.Length, blockBodies);
+                    }
+                }
+                else
+                {
+                    sqlBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} = {parameterName}");
+                    AddParameter(connection, commandExpr, parameterName, typedWhereObjExpr, whereObjPropMapper, propMapper, whereObj, blockParameters, blockBodies);
+                }
+                index++;
+            }
+            if (hasDeferred)
+            {
+                var returnLabel = Expression.Label(typeof(Stack<Action<StringBuilder>>));
+                blockBodies.Add(Expression.Return(returnLabel, deferredExpr));
+
+                var converExpr = Expression.Convert(Expression.Constant(null), typeof(Stack<Action<StringBuilder>>));
+                blockBodies.Add(Expression.Label(returnLabel, converExpr));
+            }
+
+            string sql = sqlBuilder.ToString();
+            if (hasDeferred)
+            {
+                var initializer = Expression.Lambda<Func<IDbCommand, object, Stack<Action<StringBuilder>>>>(
+                    Expression.Block(blockParameters, blockBodies), commandExpr, objExpr).Compile();
+
+                commandInitializer = (command, parameters) =>
+                {
+                    var resultBuilder = new StringBuilder();
+                    if (!string.IsNullOrEmpty(command.CommandText))
+                        resultBuilder.Append(command.CommandText + ";");
+                    resultBuilder.Append(sql);
+                    var stack = initializer(command, parameters[0]);
+                    while (stack.TryPop(out var deferred))
+                    {
+                        deferred(resultBuilder);
+                    }
+                    command.CommandText = resultBuilder.ToString();
+                    command.CommandType = CommandType.Text;
+                };
+            }
+            else
+            {
+                var initializer = Expression.Lambda<Action<IDbCommand, object>>(
+                    Expression.Block(blockParameters, blockBodies), commandExpr, objExpr).Compile();
+
+                commandInitializer = (command, parameters) =>
+                {
+                    initializer(command, parameters[0]);
+                    var resultSql = sql;
+                    if (!string.IsNullOrEmpty(command.CommandText))
+                        resultSql = command.CommandText + ";" + sql;
+                    command.CommandText = resultSql;
+                    command.CommandType = CommandType.Text;
+                };
+            }
+            typedInitializerCache.TryAdd(cacheKey, commandInitializer);
+        }
+        return commandInitializer;
+    }
+    public static CommandInitializer BuildQuerySelectCache(IOrmDbFactory dbFactory, TheaConnection connection, Type entityType, Type targetObjType)
+    {
+        var sql = BuildQuerySelectSql(dbFactory, connection, entityType, targetObjType);
+        return (command, parameters) =>
+        {
+            if (!string.IsNullOrEmpty(command.CommandText))
+                sql = command.CommandText + ";" + sql;
+            command.CommandText = sql;
+            command.CommandType = CommandType.Text;
+        };
+    }
+    /// <summary>
+    /// 生成SELECT SQL语句
+    /// </summary>
+    /// <param name="dbFactory"></param>
+    /// <param name="connection"></param>
+    /// <param name="entityType"></param>
+    /// <param name="targetObjType"></param>
+    /// <returns></returns>
+    private static string BuildQuerySelectSql(IOrmDbFactory dbFactory, TheaConnection connection, Type entityType, Type targetObjType)
+    {
+        var cacheKey = GetTypedSqlKey(connection, entityType, targetObjType);
+        if (!typedSqlCache.TryGetValue(cacheKey, out var sql))
+        {
+            var entityMapper = dbFactory.GetEntityMap(entityType);
+            var sqlBuilder = new StringBuilder("SELECT ");
+            var selectObjMapper = dbFactory.GetEntityMap(targetObjType);
+            int index = 0;
+            foreach (var propMapper in entityMapper.MemberMaps)
+            {
+                if (propMapper.IsIgnore) continue;
+                if (entityType == targetObjType || selectObjMapper.TryGetMemberMap(propMapper.MemberName, out var memberMapper))
+                {
+                    if (index > 0) sqlBuilder.Append(",");
+                    sqlBuilder.Append(GetAliasParameterSql(connection, propMapper.FieldName, propMapper.MemberName));
+                    index++;
+                }
+            }
+            sqlBuilder.Append($" FROM {connection.OrmProvider.GetTableName(entityMapper.TableName)}");
+            typedSqlCache.TryAdd(cacheKey, sql = sqlBuilder.ToString());
+        }
+        return sql;
+    }
+    /// <summary>
+    /// 根据SQL初始化参数,已有sql
+    /// </summary>
+    /// <param name="dbFactory"></param>
+    /// <param name="connection"></param>
+    /// <param name="cmdType"></param>
+    /// <param name="whereObj"></param>
+    /// <returns></returns>
+    public static CommandInitializer BuildQueryWhereSqlCache(IOrmDbFactory dbFactory, TheaConnection connection, CommandType cmdType, ParameterInfo whereObj)
+    {
+        CommandInitializer commandInitializer = null;
+        if (whereObj.IsDictionary)
+        {
+            commandInitializer = (command, parameters) =>
+            {
+                var sql = parameters[0] as string;
+                var dict = parameters[1] as Dictionary<string, object>;
+
+                foreach (var item in dict)
+                {
+                    var parameterName = $"{connection.OrmProvider.ParameterPrefix}{item.Key}{whereObj.MulitIndex}";
+                    if (!Regex.IsMatch(sql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
+                        continue;
+
+                    var parameter = command.CreateParameter();
+                    parameter.ParameterName = parameterName;
+                    parameter.Direction = ParameterDirection.Input;
+                    var itemValue = dict[item.Key];
+                    if (itemValue != null && itemValue is string strValue)
+                        parameter.Size = strValue.Length;
+                    if (itemValue == null) parameter.Value = DBNull.Value;
+                    else parameter.Value = itemValue;
+                    command.Parameters.Add(parameter);
+                }
+            };
+            return commandInitializer;
+        }
+
+        var cacheKey = GetSqlParameterKey(connection, cmdType, whereObj.IsMulti, whereObj.ParameterType);
+        if (!sqlInitializerCache.TryGetValue(cacheKey, out commandInitializer))
+        {
+            var whereObjMapper = dbFactory.GetEntityMap(whereObj.ParameterType);
+            var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
+            var objExpr = Expression.Parameter(typeof(object), "obj");
+            var sqlExpr = Expression.Variable(typeof(string), "sql");
+            var typedWhereObjExpr = Expression.Variable(whereObj.ParameterType, "whereObj");
+            var blockParameters = new List<ParameterExpression>();
+            var blockBodies = new List<Expression>();
+
+            blockParameters.AddRange(new[] { typedWhereObjExpr, sqlExpr });
+            blockBodies.Add(Expression.Assign(typedWhereObjExpr, Expression.Convert(objExpr, whereObj.ParameterType)));
+            var methodInfo = typeof(IDbCommand).GetProperty(nameof(IDbCommand.CommandText)).GetGetMethod();
+            blockBodies.Add(Expression.Assign(sqlExpr, Expression.Call(commandExpr, methodInfo)));
+
+            methodInfo = typeof(Regex).GetMethod(nameof(Regex.IsMatch), new Type[] { typeof(string), typeof(string), typeof(RegexOptions) });
+            foreach (var propMapper in whereObjMapper.MemberMaps)
+            {
+                var parameterName = $"{connection.OrmProvider.ParameterPrefix}{propMapper.MemberName}";
+                var isMatchExpr = Expression.Call(methodInfo, sqlExpr, Expression.Constant(parameterName + @"([^\p{L}\p{N}_]+|$)", typeof(string)),
+                    Expression.Constant(RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant, typeof(RegexOptions)));
+
+                var parameterBlockBodies = new List<Expression>();
+                //支持数组参数
+                if (typeof(IEnumerable).IsAssignableFrom(propMapper.MemberType) && propMapper.MemberType != typeof(string))
+                {
+                    if (connection.OrmProvider.IsSupportArrayParameter)
+                    {
+                        var parameterBlockParameters = new List<ParameterExpression>();
+                        AddParameter(connection, commandExpr, parameterName, typedWhereObjExpr, propMapper, propMapper, whereObj, parameterBlockParameters, parameterBlockBodies);
+                        blockBodies.Add(Expression.IfThen(isMatchExpr, Expression.Block(parameterBlockParameters, parameterBlockBodies)));
+                    }
+                    else
+                    {
+                        BuildWhereInSqlParameters(connection, commandExpr, typedWhereObjExpr, propMapper, parameterBlockBodies);
+                        blockBodies.Add(Expression.IfThen(isMatchExpr, Expression.Block(parameterBlockBodies)));
+                    }
+                }
+                else
+                {
+                    var parameterBlockParameters = new List<ParameterExpression>();
+                    AddParameter(connection, commandExpr, parameterName, typedWhereObjExpr, propMapper, propMapper, whereObj, parameterBlockParameters, parameterBlockBodies);
+                    blockBodies.Add(Expression.IfThen(isMatchExpr, Expression.Block(parameterBlockParameters, parameterBlockBodies)));
+                }
+            }
+
+            var initializer = Expression.Lambda<Action<IDbCommand, object>>(
+                Expression.Block(blockParameters, blockBodies), commandExpr, objExpr).Compile();
+            commandInitializer = (command, parameters) => initializer(command, parameters[0]);
+
+            sqlInitializerCache.TryAdd(cacheKey, commandInitializer);
+        }
+        return commandInitializer;
+    }
+    /// <summary>
+    /// 根据实体生成SELECT分页 SQL语句, 没有whereObj参数
+    /// </summary>
+    /// <param name="dbFactory"></param>
+    /// <param name="connection"></param>
+    /// <param name="entityType"></param>
+    /// <param name="targetObjType"></param>
+    /// <returns></returns>
+    public static PagedCommandInitializer BuildQueryPageCache(IOrmDbFactory dbFactory, TheaConnection connection, Type entityType, Type targetObjType)
+    {
+        var cacheKey = GetTypedSqlParameterKey(connection, "BuildQueryPageCache1", false, entityType, targetObjType, null);
+        if (!pagedInitializerCache.TryGetValue(cacheKey, out var commandInitializer))
+        {
+            EntityMap entityMapper = dbFactory.GetEntityMap(entityType);
+            EntityMap selectObjMapper = null;
+            if (entityType != targetObjType)
+                selectObjMapper = dbFactory.GetEntityMap(targetObjType);
+            else selectObjMapper = entityMapper;
+
+            int index = 0;
+            var sqlBuilder = new StringBuilder();
+            foreach (var propMapper in entityMapper.MemberMaps)
+            {
+                if (propMapper.IsIgnore) continue;
+                if (entityType == targetObjType || selectObjMapper.TryGetMemberMap(propMapper.MemberName, out var memberMap))
+                {
+                    if (index > 0) sqlBuilder.Append(",");
+                    sqlBuilder.Append(GetAliasParameterSql(connection, propMapper.FieldName, propMapper.MemberName));
+                    index++;
+                }
+            }
+            var selectSql = sqlBuilder.ToString();
+            var tableSql = connection.OrmProvider.GetTableName(entityMapper.TableName);
+            commandInitializer = (command, pageIndex, pageSize, orderBy, parameters) =>
+            {
+                if (pageIndex >= 1) pageIndex = pageIndex - 1;
+                var skip = pageIndex * pageSize;
+                //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ WHERE /**conditions**/");                   
+                var pageSql = connection.OrmProvider.GetPagingTemplate(skip, pageSize, orderBy);
+                pageSql = pageSql.Replace("/**fields**/", selectSql);
+                pageSql = pageSql.Replace("/**tables**/", tableSql);
+                pageSql = pageSql.Replace("WHERE /**conditions**/", string.Empty);
+
+                var sql = $"SELECT COUNT(*) FROM {tableSql};{pageSql}";
+                if (!string.IsNullOrEmpty(command.CommandText))
+                    sql = command.CommandText + ";" + sql;
+                command.CommandText = sql;
+                command.CommandType = CommandType.Text;
+            };
+            pagedInitializerCache.TryAdd(cacheKey, commandInitializer);
+        }
+        return commandInitializer;
+    }
+    /// <summary>
+    /// 根据类型生成SELECT+WHERE分页 SQL语句，并初始化参数
+    /// </summary>
+    /// <param name="dbFactory"></param>
+    /// <param name="connection"></param>
+    /// <param name="entityType"></param>
+    /// <param name="targetObjType"></param>
+    /// <param name="whereObj"></param>
+    /// <returns></returns>
+    public static PagedCommandInitializer BuildQueryPageCache(IOrmDbFactory dbFactory, TheaConnection connection, Type entityType, Type targetObjType, ParameterInfo whereObj)
+    {
+        PagedCommandInitializer commandInitializer = null;
+        if (whereObj.IsDictionary)
+        {
+            commandInitializer = (command, pageIndex, pageSize, orderBy, parameters) =>
+            {
+                var dict = parameters[0] as Dictionary<string, object>;
+                var entityMapper = dbFactory.GetEntityMap(entityType);
+                var selectSql = BuildQuerySelectSql(dbFactory, connection, entityType, targetObjType);
+
+                var index = 0;
+                var whereBuilder = new StringBuilder();
+                foreach (var item in dict)
+                {
+                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || propMapper.IsIgnore)
+                        continue;
+
+                    if (index > 0) whereBuilder.Append(" AND ");
+                    var parameterName = $"{connection.OrmProvider.ParameterPrefix}{item.Key}{whereObj.MulitIndex}";
+                    whereBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
+
+                    var parameter = command.CreateParameter();
+                    parameter.ParameterName = parameterName;
+                    parameter.Direction = ParameterDirection.Input;
+                    var itemValue = dict[item.Key];
+                    if (itemValue != null && itemValue is string strValue)
+                        parameter.Size = strValue.Length;
+                    if (itemValue == null) parameter.Value = DBNull.Value;
+                    else parameter.Value = itemValue;
+                    command.Parameters.Add(parameter);
+                    index++;
+                }
+
+                if (pageIndex >= 1) pageIndex = pageIndex - 1;
+                var skip = pageIndex * pageSize;
+                //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ WHERE /**conditions**/");
+                var tableSql = connection.OrmProvider.GetTableName(entityMapper.TableName);
+                var pageSql = connection.OrmProvider.GetPagingTemplate(skip, pageSize, orderBy);
+                pageSql = pageSql.Replace("/**fields**/", selectSql.Substring(7));//去掉SELECT
+                pageSql = pageSql.Replace("/**tables**/", tableSql);
+                pageSql = pageSql.Replace("/**conditions**/", whereBuilder.ToString());
+
+                var sql = $"SELECT COUNT(*) FROM {tableSql};{pageSql}";
+                if (!string.IsNullOrEmpty(command.CommandText))
+                    sql = command.CommandText + ";" + sql;
+                command.CommandText = sql;
+                command.CommandType = CommandType.Text;
+            };
+            return commandInitializer;
+        }
+
+        var cacheKey = GetTypedSqlParameterKey(connection, "BuildQueryPageCache2", whereObj.IsMulti, entityType, targetObjType, whereObj.ParameterType);
+        if (!pagedInitializerCache.TryGetValue(cacheKey, out commandInitializer))
+        {
+            var entityMapper = dbFactory.GetEntityMap(entityType);
+
+            var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
+            var objExpr = Expression.Parameter(typeof(object), "obj");
+            var blockParameters = new List<ParameterExpression>();
+            var blockBodies = new List<Expression>();
+            var typedWhereObjExpr = Expression.Variable(whereObj.ParameterType, "whereObj");
+
+            var selectObjMapper = dbFactory.GetEntityMap(targetObjType);
+            var whereObjMapper = dbFactory.GetEntityMap(whereObj.ParameterType);
+
+            ParameterExpression deferredExpr = null;
+            bool hasDeferred = false;
+            foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
+            {
+                if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore)
+                    continue;
+
+                if (propMapper.MemberType != whereObjPropMapper.MemberType
+                    && typeof(IEnumerable).IsAssignableFrom(whereObjPropMapper.MemberType)
+                    && whereObjPropMapper.MemberType != typeof(string))
+                {
+                    //有数组参数，将不再设置sqlBuilder变量
+                    if (!connection.OrmProvider.IsSupportArrayParameter)
+                    {
+                        hasDeferred = true;
+                        break;
+                    }
+                }
+            }
+            if (hasDeferred)
+            {
+                deferredExpr = Expression.Variable(typeof(Stack<Action<StringBuilder>>), "deferredStack");
+                blockParameters.Add(deferredExpr);
+                var newExp = Expression.New(typeof(Stack<Action<StringBuilder>>).GetConstructor(Type.EmptyTypes));
+                blockBodies.Add(Expression.Assign(deferredExpr, newExp));
+            }
+
+            blockParameters.Add(typedWhereObjExpr);
+            blockBodies.Add(Expression.Assign(typedWhereObjExpr, Expression.Convert(objExpr, whereObj.ParameterType)));
+
+            int index = 0;
+            string parameterName = null;
+            var selectBuilder = new StringBuilder();
+            foreach (var propMapper in entityMapper.MemberMaps)
+            {
+                if (propMapper.IsIgnore) continue;
+                if (entityType == targetObjType || selectObjMapper.TryGetMemberMap(propMapper.MemberName, out var memberMap))
+                {
+                    if (index > 0) selectBuilder.Append(",");
+                    selectBuilder.Append(GetAliasParameterSql(connection, propMapper.FieldName, propMapper.MemberName));
+                    index++;
+                }
+            }
+
+            index = 0;
+            var whereBuilder = new StringBuilder();
+            foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
+            {
+                if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore)
+                    continue;
+
+                if (index > 0) whereBuilder.Append(" AND ");
+                parameterName = $"{connection.OrmProvider.ParameterPrefix}{propMapper.MemberName}{whereObj.MulitIndex}";
+
+                //支持数组参数
+                if (propMapper.MemberType != whereObjPropMapper.MemberType
+                    && typeof(IEnumerable).IsAssignableFrom(whereObjPropMapper.MemberType)
+                    && whereObjPropMapper.MemberType != typeof(string))
+                {
+                    if (connection.OrmProvider.IsSupportArrayParameter)
+                    {
+                        whereBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} = ANY({parameterName})");
+                        AddParameter(connection, commandExpr, parameterName, typedWhereObjExpr, whereObjPropMapper, propMapper, whereObj, blockParameters, blockBodies);
+                    }
+                    else
+                    {
+                        whereBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} IN ");
+                        BuildWhereInSqlParameters(connection, commandExpr, typedWhereObjExpr, deferredExpr, parameterName, whereObjPropMapper, whereBuilder.Length, blockBodies);
+                    }
+                }
+                else
+                {
+                    whereBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
+                    AddParameter(connection, commandExpr, parameterName, typedWhereObjExpr, whereObjPropMapper, propMapper, whereObj, blockParameters, blockBodies);
+                }
+                index++;
+            }
+
+            var selectSql = selectBuilder.ToString();
+            var whereSql = whereBuilder.ToString();
+            var tableSql = connection.OrmProvider.GetTableName(entityMapper.TableName);
+
+            if (hasDeferred)
+            {
+                var returnLabel = Expression.Label(typeof(Stack<Action<StringBuilder>>));
+                blockBodies.Add(Expression.Return(returnLabel, deferredExpr));
+
+                var converExpr = Expression.Convert(Expression.Constant(null), typeof(Stack<Action<StringBuilder>>));
+                blockBodies.Add(Expression.Label(returnLabel, converExpr));
+
+                var initializer = Expression.Lambda<Func<IDbCommand, object, Stack<Action<StringBuilder>>>>(
+                    Expression.Block(blockParameters, blockBodies), commandExpr, objExpr).Compile();
+
+                commandInitializer = (command, pageIndex, pageSize, orderBy, parameters) =>
+                {
+                    var resultBuidler = new StringBuilder(whereSql);
+                    var stack = initializer(command, parameters[0]);
+                    while (stack.TryPop(out var deferred))
+                    {
+                        deferred(resultBuidler);
+                    }
+                    var result = resultBuidler.ToString();
+
+                    if (pageIndex >= 1) pageIndex = pageIndex - 1;
+                    var skip = pageIndex * pageSize;
+                    var pageSql = connection.OrmProvider.GetPagingTemplate(skip, pageSize, orderBy);
+                    //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ WHERE /**conditions**/");
+                    pageSql = pageSql.Replace("/**fields**/", selectSql);
+                    pageSql = pageSql.Replace("/**tables**/", tableSql);
+                    pageSql = pageSql.Replace("/**conditions**/", result);
+
+                    var sql = $"SELECT COUNT(*) FROM {tableSql} WHERE {result};{pageSql}";
+                    if (!string.IsNullOrEmpty(command.CommandText))
+                        sql = command.CommandText + ";" + sql;
+                    command.CommandText = sql;
+                    command.CommandType = CommandType.Text;
+                };
+            }
+            else
+            {
+                var initializer = Expression.Lambda<Action<IDbCommand, object>>(
+                    Expression.Block(blockParameters, blockBodies), commandExpr, objExpr).Compile();
+
+                commandInitializer = (command, pageIndex, pageSize, orderBy, parameters) =>
+                {
+                    initializer(command, parameters[0]);
+                    if (pageIndex >= 1) pageIndex = pageIndex - 1;
+                    var skip = pageIndex * pageSize;
+                    var pageSql = connection.OrmProvider.GetPagingTemplate(skip, pageSize, orderBy);
+                    //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ WHERE /**conditions**/");
+                    pageSql = pageSql.Replace("/**fields**/", selectSql);
+                    pageSql = pageSql.Replace("/**tables**/", tableSql);
+                    pageSql = pageSql.Replace("/**conditions**/", whereSql);
+
+                    var sql = $"SELECT COUNT(*) FROM {tableSql} WHERE {whereSql};{pageSql}";
+                    if (!string.IsNullOrEmpty(command.CommandText))
+                        sql = command.CommandText + ";" + sql;
+
+                    command.CommandText = sql;
+                    command.CommandType = CommandType.Text;
+                };
+            };
+            pagedInitializerCache.TryAdd(cacheKey, commandInitializer);
+        }
+        return commandInitializer;
+    }
+    public static CommandInitializer BuildUpdateKeyCache(IOrmDbFactory dbFactory, TheaConnection connection, Type entityType, ParameterInfo updateObj)
+    {
+        CommandInitializer commandInitializer = null;
+        if (updateObj.IsDictionary)
+        {
+            commandInitializer = (command, parameters) =>
+            {
+                var dict = parameters[0] as Dictionary<string, object>;
+                var entityMapper = dbFactory.GetEntityMap(entityType);
+
+                int updateIndex = 0, whereIndex = 0;
+                var updateBuilder = new StringBuilder($"UPDATE {connection.OrmProvider.GetTableName(entityMapper.TableName)} SET ");
+                var whereBuilder = new StringBuilder(" WHERE ");
+                foreach (var item in dict)
+                {
+                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || propMapper.IsIgnore)
+                        continue;
+
+                    var parameterName = $"{connection.OrmProvider.ParameterPrefix}{item.Key}{updateObj.MulitIndex}";
+                    if (propMapper.IsKey)
+                    {
+                        if (whereIndex > 0) whereBuilder.Append(" AND ");
+                        whereBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
+                        whereIndex++;
+                    }
+                    else
+                    {
+                        if (updateIndex > 0) updateBuilder.Append(",");
+                        updateBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
+                        updateIndex++;
+                    }
+
+                    if (command.Parameters.Contains(parameterName))
+                        continue;
+
+                    var parameter = command.CreateParameter();
+                    parameter.ParameterName = parameterName;
+                    parameter.Direction = ParameterDirection.Input;
+                    var itemValue = dict[item.Key];
+                    if (itemValue != null && itemValue is string strValue)
+                        parameter.Size = strValue.Length;
+                    if (itemValue == null) parameter.Value = DBNull.Value;
+                    else parameter.Value = itemValue;
+                    command.Parameters.Add(parameter);
+                }
+                if (whereIndex == 0) throw new Exception("当前字典参数中不包含主键信息");
+                if (updateIndex == 0) throw new Exception("当前字典参数没有可更新的内容");
+
+                var sql = $"{updateBuilder}{whereBuilder}";
+                if (!string.IsNullOrEmpty(command.CommandText))
+                    sql = command.CommandText + ";" + sql;
+
+                command.CommandText = sql;
+                command.CommandType = CommandType.Text;
+            };
+            return commandInitializer;
+        }
+
+        var cacheKey = GetTypedSqlParameterKey(connection, "BuildUpdateKeyCache", updateObj.IsMulti, entityType, updateObj.ParameterType, updateObj.ParameterType);
+        if (!typedInitializerCache.TryGetValue(cacheKey, out commandInitializer))
+        {
+            var entityMapper = dbFactory.GetEntityMap(entityType);
+            var updateObjMapper = dbFactory.GetEntityMap(updateObj.ParameterType);
+
+            var blockParameters = new List<ParameterExpression>();
+            var blockBodies = new List<Expression>();
+
+            var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
+            var objExpr = Expression.Parameter(typeof(object), "obj");
+
+            //传入参数的实际元素类型，如果传入参数是数组，typedUpdateObjExpr就是其元素的类型
+            var typedUpdateObjExpr = Expression.Variable(updateObj.ParameterType, "entity");
+            blockParameters.Add(typedUpdateObjExpr);
+
+            var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
+            var concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
+
+            bool hasDeferred = false;
+            foreach (var propMapper in entityMapper.MemberMaps)
+            {
+                if (propMapper.IsIgnore || !propMapper.IsKey) continue;
+                if (!updateObjMapper.TryGetMemberMap(propMapper.MemberName, out var updateObjPropMapper))
+                    throw new Exception($"更新参数中不包含主键栏位的实体成员{updateObjPropMapper.MemberName}");
+
+                if (propMapper.MemberType != updateObjPropMapper.MemberType
+                    && typeof(IEnumerable).IsAssignableFrom(updateObjPropMapper.MemberType)
+                    && updateObjPropMapper.MemberType != typeof(string))
+                {
+                    //有数组参数，将不再设置sqlBuilder变量
+                    if (!connection.OrmProvider.IsSupportArrayParameter)
+                    {
+                        hasDeferred = true;
+                        break;
+                    }
+                }
+            }
+
+            ParameterExpression sqlBuilderExpr = null;
+            ParameterExpression deferredExpr = null;
+            ParameterExpression suffixExpr = null;
+            StringBuilder sqlBuidler = null;
+
+            blockBodies.Add(Expression.Assign(typedUpdateObjExpr, Expression.Convert(objExpr, updateObj.ParameterType)));
+            if (updateObj.IsMulti)
+            {
+                sqlBuilderExpr = Expression.Parameter(typeof(StringBuilder), "sqlBuidler");
+                suffixExpr = Expression.Parameter(typeof(string), "suffix");
+            }
+            if (hasDeferred)
+            {
+                deferredExpr = Expression.Variable(typeof(Stack<Action<StringBuilder>>), "deferredStack");
+                blockParameters.Add(deferredExpr);
+                var newExp = Expression.New(typeof(Stack<Action<StringBuilder>>).GetConstructor(Type.EmptyTypes));
+                blockBodies.Add(Expression.Assign(deferredExpr, newExp));
+            }
+
+            var index = 0;
+            var sql = $"UPDATE {connection.OrmProvider.GetTableName(entityMapper.TableName)} SET ";
+            if (!updateObj.IsMulti) sqlBuidler = new StringBuilder(sql);
+            else blockBodies.Add(Expression.Call(sqlBuilderExpr, appendMethodInfo, Expression.Constant(sql, typeof(string))));
+
+            foreach (var updateObjPropMapper in updateObjMapper.MemberMaps)
+            {
+                if (!entityMapper.TryGetMemberMap(updateObjPropMapper.MemberName, out var propMapper)
+                    || propMapper.IsIgnore || propMapper.IsKey)
+                    continue;
+
+                if (index > 0)
+                {
+                    if (!updateObj.IsMulti) sqlBuidler.Append(",");
+                    else blockBodies.Add(Expression.Call(sqlBuilderExpr, appendMethodInfo, Expression.Constant(",", typeof(string))));
+                }
+
+                var parameterName = $"{connection.OrmProvider.ParameterPrefix}{propMapper.MemberName}{updateObj.MulitIndex}";
+                Expression parameterNameExpr = Expression.Constant(parameterName, typeof(string));
+                if (updateObj.IsMulti)
+                    parameterNameExpr = Expression.Call(concatMethodInfo, parameterNameExpr, suffixExpr);
+
+                //field=@propName
+                if (updateObj.IsMulti)
+                {
+                    blockBodies.Add(Expression.Call(sqlBuilderExpr, appendMethodInfo,
+                        Expression.Constant(connection.OrmProvider.GetFieldName(propMapper.FieldName) + "=", typeof(string))));
+                    blockBodies.Add(Expression.Call(sqlBuilderExpr, appendMethodInfo, parameterNameExpr));
+                }
+                else sqlBuidler.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
+
+                AddParameter(connection, commandExpr, parameterNameExpr, typedUpdateObjExpr, updateObjPropMapper, propMapper, updateObj, blockParameters, blockBodies);
+                index++;
+            }
+
+            index = 0;
+            if (!updateObj.IsMulti) sqlBuidler.Append(" WHERE ");
+            else blockBodies.Add(Expression.Call(sqlBuilderExpr, appendMethodInfo, Expression.Constant(" WHERE ", typeof(string))));
+
+            foreach (var propMapper in entityMapper.MemberMaps)
+            {
+                if (propMapper.IsIgnore || !propMapper.IsKey) continue;
+
+                if (!updateObjMapper.TryGetMemberMap(propMapper.MemberName, out var updateObjPropMapper))
+                    throw new Exception($"更新参数中不包含主键栏位的实体成员{updateObjPropMapper.MemberName}");
+
+                if (index > 0)
+                {
+                    if (!updateObj.IsMulti) sqlBuidler.Append(" AND ");
+                    else blockBodies.Add(Expression.Call(sqlBuilderExpr, appendMethodInfo, Expression.Constant(" AND ", typeof(string))));
+                }
+
+                //@propName
+                var parameterName = $"{connection.OrmProvider.ParameterPrefix}{propMapper.MemberName}{updateObj.MulitIndex}";
+                Expression parameterNameExpr = Expression.Constant(parameterName, typeof(string));
+                //@propName1,2,3
+                if (updateObj.IsMulti)
+                    parameterNameExpr = Expression.Call(concatMethodInfo, parameterNameExpr, suffixExpr);
+
+                //属性是数组 hasDeferred=true
+                if (propMapper.MemberType != updateObjPropMapper.MemberType
+                    && typeof(IEnumerable).IsAssignableFrom(updateObjPropMapper.MemberType)
+                    && updateObjPropMapper.MemberType != typeof(string))
+                {
+                    //有数组参数，将不再设置sqlBuilder变量
+                    if (connection.OrmProvider.IsSupportArrayParameter)
+                    {
+                        //field=ANY(@propName)
+                        if (updateObj.IsMulti)
                         {
-                            propTypeCode = Type.GetTypeCode(Enum.GetUnderlyingType(underlyingType));
-                            if (propTypeCode != colTypeCode)
-                            {
-                                if (colType == typeof(string))
-                                {
-                                    il.Emit(OpCodes.Castclass, typeof(string));
-                                    var localIndex = il.DeclareLocal(colType).LocalIndex;
-                                    il.Emit(OpCodes.Stloc_S, localIndex);
-                                    il.Emit(OpCodes.Ldtoken, underlyingType);
-                                    il.EmitCall(OpCodes.Call, typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle)), null);
-                                    il.Emit(OpCodes.Ldloc_S, localIndex);
-                                    il.Emit(OpCodes.Ldc_I4_1);
-                                    il.EmitCall(OpCodes.Call, typeof(Enum).GetMethod(nameof(Enum.Parse), new Type[] { typeof(Type), typeof(string), typeof(bool) }), null);
-                                    il.Emit(OpCodes.Unbox_Any, underlyingType);
-                                }
-                                else
-                                {
-                                    il.Emit(OpCodes.Unbox_Any, colType);
-                                    ConvertToNumber(il, colType, propTypeCode, colTypeCode);
-                                }
-                            }
-                            else il.Emit(OpCodes.Unbox_Any, underlyingType);
+                            blockBodies.Add(Expression.Call(sqlBuilderExpr, appendMethodInfo,
+                                Expression.Constant(connection.OrmProvider.GetFieldName(propMapper.FieldName) + " = ANY(", typeof(string))));
+                            blockBodies.Add(Expression.Call(sqlBuilderExpr, appendMethodInfo, parameterNameExpr));
+                            blockBodies.Add(Expression.Call(sqlBuilderExpr, appendMethodInfo, Expression.Constant(")", typeof(string))));
                         }
                         else
                         {
-                            il.Emit(OpCodes.Unbox_Any, colType);
-                            if (!ConvertToNumber(il, colType, propTypeCode, colTypeCode))
-                                ConvertTo(il, colType, underlyingType);
+                            sqlBuidler.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} = ANY(");
+                            sqlBuidler.Append(parameterName + ")");
+                        }
+                        AddParameter(connection, commandExpr, parameterNameExpr, typedUpdateObjExpr, updateObjPropMapper, propMapper, updateObj, blockParameters, blockBodies);
+                    }
+                    else
+                    {
+                        //field IN (@prop1,@prop2,@prop3,...)
+                        if (updateObj.IsMulti)
+                        {
+                            blockBodies.Add(Expression.Call(sqlBuilderExpr, appendMethodInfo,
+                              Expression.Constant(connection.OrmProvider.GetFieldName(propMapper.FieldName) + " IN ", typeof(string))));
+
+                            BuildWhereInSqlParameters(connection, commandExpr, typedUpdateObjExpr, sqlBuilderExpr, parameterName, updateObjPropMapper, blockBodies);
+                        }
+                        else
+                        {
+                            sqlBuidler.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} IN ");
+                            BuildWhereInSqlParameters(connection, commandExpr, typedUpdateObjExpr, deferredExpr, parameterName, updateObjPropMapper, sqlBuidler.Length, blockBodies);
                         }
                     }
-                    if (isNullable) il.Emit(OpCodes.Newobj, propType.GetConstructor(new[] { underlyingType }));
-                }
-
-                // stack is now [target][target][typed-value]
-                il.Emit(isValueType ? OpCodes.Call : OpCodes.Callvirt, entityType.GetProperty(propName).GetSetMethod());
-
-                var endLabel = il.DefineLabel();
-                il.Emit(OpCodes.Br_S, endLabel);
-
-                il.MarkLabel(dbNullLabel);
-                // stack is now [target][target][value]
-                il.Emit(OpCodes.Pop);
-                il.Emit(OpCodes.Pop);
-                il.MarkLabel(endLabel);
-            }
-
-            if (isValueType) il.Emit(OpCodes.Pop);
-            else
-            {
-                il.Emit(OpCodes.Stloc_1); // stack is empty
-
-                if (supportInitialize)
-                {
-                    il.Emit(OpCodes.Ldloc_1);
-                    il.EmitCall(OpCodes.Callvirt, typeof(ISupportInitialize).GetMethod(nameof(ISupportInitialize.EndInit)), null);
-                }
-            }
-
-            il.MarkLabel(allDone);
-            il.BeginCatchBlock(typeof(Exception)); // stack is Exception
-            il.Emit(OpCodes.Ldloc_0); // stack is Exception, index
-            il.Emit(OpCodes.Ldarg_0); // stack is Exception, index, reader
-            LoadLocal(il, toTypeLocal);
-            LoadLocal(il, valueCopyLocal); // stack is Exception, index, reader, value
-            il.EmitCall(OpCodes.Call, typeof(RepositoryHelper).GetMethod(nameof(RepositoryHelper.ThrowDataException)), null);
-            il.EndExceptionBlock();
-
-            il.Emit(OpCodes.Ldloc_1); // stack is [rval]
-            if (isValueType) il.Emit(OpCodes.Box, entityType);
-            il.Emit(OpCodes.Ret);
-
-            return (Func<DbDataReader, object>)dm.CreateDelegate(typeof(Func<DbDataReader, object>));
-        }
-        private static Action<IDbCommand, object> CreateParametersHandler(string paramPrefix, EntityMapper mapper)
-        {
-            var dm = new DynamicMethod("CreateParameter_" + Guid.NewGuid().ToString(), null, new[] { typeof(IDbCommand), typeof(object) }, mapper.EntityType, true);
-            ILGenerator il = dm.GetILGenerator();
-
-            il.Emit(OpCodes.Nop);
-            il.DeclareLocal(mapper.EntityType);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Castclass, mapper.EntityType);
-            il.Emit(OpCodes.Stloc_0);
-
-            il.Emit(OpCodes.Ldarg_0);
-            il.EmitCall(OpCodes.Callvirt, typeof(IDbCommand).GetProperty(nameof(IDbCommand.Parameters)).GetGetMethod(), null);
-            foreach (var colMapper in mapper.MemberMappers.Values)
-            {
-                CreateParamter(il, paramPrefix, colMapper, false);
-            }
-            il.Emit(OpCodes.Pop);
-            il.Emit(OpCodes.Ret);
-            return (Action<IDbCommand, object>)dm.CreateDelegate(typeof(Action<IDbCommand, object>));
-        }
-        private static Action<IDbCommand, object> CreateParametersHandler(string paramPrefix, Dictionary<string, object> mapper)
-        {
-            var dm = new DynamicMethod("CreateParameter_" + Guid.NewGuid().ToString(), null, new[] { typeof(IDbCommand), typeof(object) }, dictParameterType, true);
-            ILGenerator il = dm.GetILGenerator();
-
-            il.Emit(OpCodes.Nop);
-            il.DeclareLocal(typeof(Dictionary<string, object>));
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Castclass, typeof(Dictionary<string, object>));
-            il.Emit(OpCodes.Stloc_0);
-
-            il.Emit(OpCodes.Ldarg_0);
-            il.EmitCall(OpCodes.Callvirt, typeof(IDbCommand).GetProperty(nameof(IDbCommand.Parameters)).GetGetMethod(), null);
-            foreach (var colMapper in mapper)
-            {
-                CreateParamter(il, paramPrefix, colMapper);
-            }
-            il.Emit(OpCodes.Pop);
-            il.Emit(OpCodes.Ret);
-            return (Action<IDbCommand, object>)dm.CreateDelegate(typeof(Action<IDbCommand, object>));
-        }
-        private static void CreateParamter(ILGenerator il, string paramPrefix, MemberMapper colMapper, bool isTyped)
-        {
-            il.Emit(OpCodes.Dup);
-            il.Emit(OpCodes.Ldarg_0);
-            il.EmitCall(OpCodes.Callvirt, typeof(IDbCommand).GetMethod(nameof(IDbCommand.CreateParameter), Type.EmptyTypes), null);
-
-            // stack is now [parameters][parameters][parameter]
-            il.Emit(OpCodes.Dup);
-            il.Emit(OpCodes.Ldstr, paramPrefix + colMapper.MemberName);
-            il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.ParameterName)).GetSetMethod(), null);
-            // stack is now [parameters][parameters][parameter]
-
-            // stack is now [parameters][parameters][parameter][parameter].DbType={DbType}
-            il.Emit(OpCodes.Dup);
-            LoadInt32(il, (int)colMapper.DbType);
-            il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.DbType)).GetSetMethod(), null);
-
-            // stack is now [parameters][parameters][parameter][parameter].Direction={ParameterDirection.Input}
-            il.Emit(OpCodes.Dup);
-            LoadInt32(il, (int)ParameterDirection.Input);
-            il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Direction)).GetSetMethod(), null);
-
-            il.Emit(OpCodes.Dup);
-            if (isTyped) il.Emit(OpCodes.Ldarg_1);
-            else il.Emit(OpCodes.Ldloc_0);
-
-            il.Emit(OpCodes.Callvirt, colMapper.GetMethodInfo);
-            // stack is now [parameters][parameters][parameter][parameter][value]
-            if (colMapper.IsValueType)
-            {
-                il.Emit(OpCodes.Box, colMapper.MemberType);
-                if (colMapper.IsEnum && colMapper.IsString)
-                {
-                    // stack is now [parameters][parameters][parameter][parameter][int-value][enum-type]
-                    il.Emit(OpCodes.Ldtoken, colMapper.UnderlyingType);
-                    il.EmitCall(OpCodes.Call, typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle)), null);
-                    // stack is now [parameters][parameters][parameter][parameter][int-value][enum-type]
-                    il.EmitCall(OpCodes.Call, typeof(RepositoryHelper).GetMethod(nameof(RepositoryHelper.GetEnumName), BindingFlags.Static | BindingFlags.Public), null);
-                    il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
-
-                    //直接设置长度为100，枚举值都不会超过100个字符，避免了做类似下面的复杂逻辑操作
-                    il.Emit(OpCodes.Dup);
-                    LoadInt32(il, 100);
-                    il.EmitCall(OpCodes.Callvirt, typeof(IDbDataParameter).GetProperty(nameof(IDbDataParameter.Size)).GetSetMethod(), null);
-
-                    #region 获取字符串长度，设置长度
-                    //// stack is now [parameters][parameters][parameter][parameter][string or dbNull]
-                    //il.Emit(OpCodes.Dup);
-                    //il.Emit(OpCodes.Isinst, typeof(DBNull));
-                    //// stack is now [target][target][value][DBNull or null]
-                    //Label dbNullLabel = il.DefineLabel();
-                    //il.Emit(OpCodes.Brtrue_S, dbNullLabel);
-
-                    ////非空字符串
-                    //var iLocIndex = il.DeclareLocal(typeof(string)).LocalIndex;
-                    //il.Emit(OpCodes.Dup);
-                    //il.Emit(OpCodes.Castclass, typeof(string));
-                    //il.Emit(OpCodes.Stloc, iLocIndex);
-                    //il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
-                    //// stack is now [parameters][parameters][parameter]
-
-                    ////设置长度
-                    //il.Emit(OpCodes.Dup);
-                    //il.Emit(OpCodes.Ldloc, iLocIndex);
-                    //il.EmitCall(OpCodes.Callvirt, typeof(string).GetProperty(nameof(string.Length)).GetGetMethod(), null);
-                    //// stack is now [parameters][parameters][parameter][string-length]
-                    //il.EmitCall(OpCodes.Callvirt, typeof(IDbDataParameter).GetProperty(nameof(IDbDataParameter.Size)).GetSetMethod(), null);
-
-                    //Label allDoneLabel = il.DefineLabel();
-                    //il.Emit(OpCodes.Br_S, allDoneLabel);
-
-                    //il.MarkLabel(dbNullLabel);
-                    //il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
-                    //il.MarkLabel(allDoneLabel);
-                    #endregion
                 }
                 else
                 {
-                    if (colMapper.IsNullable)
+                    //属性不是数组，单体 hasDeferred=false
+                    //field = @propName
+                    if (updateObj.IsMulti)
                     {
-                        il.Emit(OpCodes.Dup);
-                        Label notNullLabel = il.DefineLabel();
-                        il.Emit(OpCodes.Brtrue_S, notNullLabel);
-                        // stack is now [parameters][parameters][parameter]
-                        il.Emit(OpCodes.Pop);
-                        il.Emit(OpCodes.Ldsfld, typeof(DBNull).GetField(nameof(DBNull.Value)));
-                        il.MarkLabel(notNullLabel);
+                        blockBodies.Add(Expression.Call(sqlBuilderExpr, appendMethodInfo,
+                            Expression.Constant(connection.OrmProvider.GetFieldName(propMapper.FieldName) + "=", typeof(string))));
+                        blockBodies.Add(Expression.Call(sqlBuilderExpr, appendMethodInfo, parameterNameExpr));
                     }
-                    // stack is now [parameters][parameters][parameter][parameter][object-value]
-                    il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
+                    else sqlBuidler.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
+
+                    AddParameter(connection, commandExpr, parameterNameExpr, typedUpdateObjExpr, updateObjPropMapper, propMapper, updateObj, blockParameters, blockBodies);
+                }
+                index++;
+            }
+            if (hasDeferred)
+            {
+                var returnLabel = Expression.Label(typeof(Stack<Action<StringBuilder>>));
+                blockBodies.Add(Expression.Return(returnLabel, deferredExpr));
+
+                var converExpr = Expression.Convert(Expression.Constant(null), typeof(Stack<Action<StringBuilder>>));
+                blockBodies.Add(Expression.Label(returnLabel, converExpr));
+            }
+
+            if (updateObj.IsMulti)
+            {
+                if (hasDeferred)
+                {
+                    var initializer = Expression.Lambda<Func<IDbCommand, StringBuilder, string, object, Stack<Action<StringBuilder>>>>(
+                        Expression.Block(blockParameters, blockBodies), commandExpr, sqlBuilderExpr, suffixExpr, objExpr).Compile();
+
+                    commandInitializer = (command, parameters) =>
+                    {
+                        var enumerable = parameters[0] as IEnumerable;
+                        var resultBuilder = new StringBuilder();
+                        var sqlItemBuidler = new StringBuilder();
+                        if (!string.IsNullOrEmpty(command.CommandText))
+                            resultBuilder.Append(command.CommandText + ";");
+
+                        var index = 1;
+                        foreach (var item in enumerable)
+                        {
+                            var stack = initializer(command, sqlItemBuidler, index.ToString(), item);
+                            while (stack.TryPop(out var deferred))
+                            {
+                                deferred(sqlItemBuidler);
+                            }
+                            resultBuilder.Append(sqlItemBuidler);
+                            resultBuilder.Append(";");
+                            sqlItemBuidler.Clear();
+                            index++;
+                        }
+                        command.CommandText = resultBuilder.ToString();
+                        command.CommandType = CommandType.Text;
+                    };
+                }
+                else
+                {
+                    var initializer = Expression.Lambda<Action<IDbCommand, StringBuilder, string, object>>(
+                        Expression.Block(blockParameters, blockBodies), commandExpr, sqlBuilderExpr, suffixExpr, objExpr).Compile();
+
+                    commandInitializer = (command, parameters) =>
+                    {
+                        var enumerable = parameters[0] as IEnumerable;
+                        var resultBuilder = new StringBuilder();
+                        var sqlItemBuidler = new StringBuilder();
+                        if (!string.IsNullOrEmpty(command.CommandText))
+                            resultBuilder.Append(command.CommandText + ";");
+
+                        var index = 1;
+                        foreach (var item in enumerable)
+                        {
+                            initializer(command, sqlItemBuidler, index.ToString(), item);
+                            resultBuilder.Append(sqlItemBuidler);
+                            resultBuilder.Append(";");
+                            sqlItemBuidler.Clear();
+                            index++;
+                        }
+                        command.CommandText = resultBuilder.ToString();
+                        command.CommandType = CommandType.Text;
+                    };
                 }
             }
             else
             {
-                // stack is now [parameters][parameters][parameter] 
-                il.Emit(OpCodes.Dup);
-                Label notNullLabel = il.DefineLabel();
-                il.Emit(OpCodes.Brtrue_S, notNullLabel);
-                // stack is now [parameters][parameters][parameter][parameter]
-                il.Emit(OpCodes.Pop);
-                il.Emit(OpCodes.Ldsfld, typeof(DBNull).GetField(nameof(DBNull.Value)));
-                // stack is now [parameters][parameters][parameter][parameter][DBNull]
-                il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
-
-                Label allDoneLabel = il.DefineLabel();
-                il.Emit(OpCodes.Br_S, allDoneLabel);
-
-                //不为空
-                il.MarkLabel(notNullLabel);
-                int index = 0;
-                if (colMapper.IsString)
+                var updateSql = sqlBuidler.ToString();
+                if (hasDeferred)
                 {
-                    il.Emit(OpCodes.Dup);
-                    // stack is now [parameters][parameters][parameter][parameter][string][string]
-                    il.EmitCall(OpCodes.Callvirt, typeof(string).GetProperty(nameof(string.Length)).GetGetMethod(), null);
-                    LoadInt32(il, 4000);
-                    il.Emit(OpCodes.Cgt); // [string] [0 or 1]
-                    Label isLong = il.DefineLabel(), lenDone = il.DefineLabel();
-                    il.Emit(OpCodes.Brtrue_S, isLong);
-                    LoadInt32(il, 4000); // [string] [4000]
-                    il.Emit(OpCodes.Br_S, lenDone);
-                    il.MarkLabel(isLong);
-                    LoadInt32(il, -1); // [string] [-1]
-                    il.MarkLabel(lenDone);
+                    var initializer = Expression.Lambda<Func<IDbCommand, object, Stack<Action<StringBuilder>>>>(
+                        Expression.Block(blockParameters, blockBodies), commandExpr, objExpr).Compile();
 
-                    index = il.DeclareLocal(typeof(int)).LocalIndex;
-                    il.Emit(OpCodes.Stloc_S, index);
+                    commandInitializer = (command, parameters) =>
+                    {
+                        var resultBuilder = new StringBuilder();
+                        if (!string.IsNullOrEmpty(command.CommandText))
+                            resultBuilder.Append(command.CommandText + ";");
+                        resultBuilder.Append(updateSql);
+                        var stack = initializer(command, parameters[0]);
+                        while (stack.TryPop(out var deferred))
+                        {
+                            deferred(resultBuilder);
+                        }
+                        command.CommandText = resultBuilder.ToString();
+                        command.CommandType = CommandType.Text;
+                    };
                 }
-                if (colMapper.IsLinqBinary)
+                else
                 {
-                    il.EmitCall(OpCodes.Callvirt, colMapper.MemberType.GetMethod("ToArray", BindingFlags.Public | BindingFlags.Instance), null);
-                    // stack is now [parameters][parameters][parameter][parameter][bytesArray]
-                }
-                il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
 
-                // stack is now [parameters][parameters][parameter]
-                if (colMapper.IsString)
-                {
-                    il.Emit(OpCodes.Dup);
-                    // stack is now [parameters][parameters][parameter][parameter].Size=len(string)
-                    il.Emit(OpCodes.Ldloc_S, (byte)index);
-                    il.EmitCall(OpCodes.Callvirt, typeof(IDbDataParameter).GetProperty(nameof(IDbDataParameter.Size)).GetSetMethod(), null);
-                    // stack is now [parameters][parameters][parameter]                        
+                    var initializer = Expression.Lambda<Action<IDbCommand, object>>(
+                        Expression.Block(blockParameters, blockBodies), commandExpr, objExpr).Compile();
+
+                    commandInitializer = (command, parameters) =>
+                    {
+                        initializer(command, parameters[0]);
+                        var sql = updateSql;
+                        if (!string.IsNullOrEmpty(command.CommandText))
+                            sql = command.CommandText + ";" + updateSql;
+                        command.CommandText = sql;
+                        command.CommandType = CommandType.Text;
+                    };
                 }
-                il.MarkLabel(allDoneLabel);
             }
-            // stack is now [parameters][parameters].Add([parameter])
-            il.EmitCall(OpCodes.Callvirt, typeof(IList).GetMethod(nameof(IList.Add)), null);
-            il.Emit(OpCodes.Pop);
-            // stack is now [parameters]
+            typedInitializerCache.TryAdd(cacheKey, commandInitializer);
         }
-        private static void CreateParamter(ILGenerator il, string paramPrefix, KeyValuePair<string, object> colMapper)
+        return commandInitializer;
+    }
+    public static CommandInitializer BuildUpdateCache(IOrmDbFactory dbFactory, TheaConnection connection, Type entityType, ParameterInfo updateObj, ParameterInfo whereObj)
+    {
+        CommandInitializer commandInitializer = null;
+        if (updateObj.IsDictionary || whereObj.IsDictionary) throw new Exception("暂时参数不支持字典类型");
+
+        var cacheKey = GetTypedSqlParameterKey(connection, "BuildUpdateCache", whereObj.IsMulti, entityType, updateObj.ParameterType, whereObj.ParameterType);
+        if (!typedInitializerCache.TryGetValue(cacheKey, out commandInitializer))
         {
-            il.Emit(OpCodes.Dup);
-            il.Emit(OpCodes.Ldarg_0);
-            il.EmitCall(OpCodes.Callvirt, typeof(IDbCommand).GetMethod(nameof(IDbCommand.CreateParameter), Type.EmptyTypes), null);
+            var entityMapper = dbFactory.GetEntityMap(entityType);
+            var updateObjMapper = dbFactory.GetEntityMap(updateObj.ParameterType);
+            var whereObjMapper = dbFactory.GetEntityMap(whereObj.ParameterType);
 
-            // stack is now [parameters][parameters][parameter]
-            il.Emit(OpCodes.Dup);
-            il.Emit(OpCodes.Ldstr, paramPrefix + colMapper.Key);
-            il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.ParameterName)).GetSetMethod(), null);
-            // stack is now [parameters][parameters][parameter]
+            var blockParameters = new List<ParameterExpression>();
+            var blockBodies = new List<Expression>();
 
-            var memberType = colMapper.Value.GetType();
-            var dbType = DbTypeMap.LookupDbType(colMapper.Value.GetType());
-            var underlyingType = memberType;
-            var isValueType = memberType.GetTypeInfo().IsValueType;
-            var isEnum = memberType.GetTypeInfo().IsEnum;
-            var isNullable = Nullable.GetUnderlyingType(memberType) != null;
+            var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
+            var updateObjExpr = Expression.Parameter(typeof(object), "updateObj");
+            var whereObjExpr = Expression.Parameter(typeof(object), "whereObj");
+
+            var typedUpdateObjExpr = Expression.Variable(updateObj.ParameterType, "typedUpdateObj");
+            var typedWhereObjExpr = Expression.Variable(whereObj.ParameterType, "typedWhereObj");
+            blockParameters.AddRange(new[] { typedUpdateObjExpr, typedWhereObjExpr });
+            blockBodies.Add(Expression.Assign(typedUpdateObjExpr, Expression.Convert(updateObjExpr, updateObj.ParameterType)));
+            blockBodies.Add(Expression.Assign(typedWhereObjExpr, Expression.Convert(whereObjExpr, whereObj.ParameterType)));
+
+            ParameterExpression deferredExpr = null;
+            bool hasDeferred = false;
+            foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
+            {
+                if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore)
+                    continue;
+
+                if (propMapper.MemberType != whereObjPropMapper.MemberType
+                    && typeof(IEnumerable).IsAssignableFrom(whereObjPropMapper.MemberType)
+                    && whereObjPropMapper.MemberType != typeof(string))
+                {
+                    //有数组参数，将不再设置sqlBuilder变量
+                    if (!connection.OrmProvider.IsSupportArrayParameter)
+                    {
+                        hasDeferred = true;
+                        break;
+                    }
+                }
+            }
+            if (hasDeferred)
+            {
+                deferredExpr = Expression.Variable(typeof(Stack<Action<StringBuilder>>), "deferredStack");
+                blockParameters.Add(deferredExpr);
+                var newExp = Expression.New(typeof(Stack<Action<StringBuilder>>).GetConstructor(Type.EmptyTypes));
+                blockBodies.Add(Expression.Assign(deferredExpr, newExp));
+            }
+
+            int index = 0;
+            string parameterName = null;
+            var sqlBuilder = new StringBuilder($"UPDATE {connection.OrmProvider.GetTableName(entityMapper.TableName)} SET ");
+
+            foreach (var updateObjPropMapper in updateObjMapper.MemberMaps)
+            {
+                if (!entityMapper.TryGetMemberMap(updateObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore)
+                    continue;
+
+                if (index > 0) sqlBuilder.Append(",");
+                parameterName = $"{connection.OrmProvider.ParameterPrefix}{propMapper.MemberName}{updateObj.MulitIndex}";
+                sqlBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} = {parameterName}");
+
+                AddParameter(connection, commandExpr, parameterName, typedUpdateObjExpr, updateObjPropMapper, propMapper, updateObj, blockParameters, blockBodies);
+                index++;
+            }
+
+            index = 0;
+            sqlBuilder.Append(" WHERE ");
+            foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
+            {
+                if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore)
+                    continue;
+
+                if (index > 0) sqlBuilder.Append(" AND ");
+                parameterName = $"{connection.OrmProvider.ParameterPrefix}p{propMapper.MemberName}{whereObj.MulitIndex}";
+
+                if (propMapper.MemberType != whereObjPropMapper.MemberType
+                    && typeof(IEnumerable).IsAssignableFrom(whereObjPropMapper.MemberType)
+                    && whereObjPropMapper.MemberType != typeof(string))
+                {
+                    if (connection.OrmProvider.IsSupportArrayParameter)
+                    {
+                        //field=ANY(@propName)
+                        sqlBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} = ANY(");
+                        sqlBuilder.Append($"{parameterName})");
+                        AddParameter(connection, commandExpr, parameterName, typedWhereObjExpr, whereObjPropMapper, propMapper, whereObj, blockParameters, blockBodies);
+                    }
+                    else
+                    {
+                        //field IN (@prop1,@prop2,@prop3,...)
+                        sqlBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} IN ");
+                        BuildWhereInSqlParameters(connection, commandExpr, typedWhereObjExpr, deferredExpr, parameterName, whereObjPropMapper, sqlBuilder.Length, blockBodies);
+                    }
+                }
+                else
+                {
+                    //field = @propName
+                    sqlBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} = {parameterName}");
+                    AddParameter(connection, commandExpr, parameterName, typedWhereObjExpr, whereObjPropMapper, propMapper, whereObj, blockParameters, blockBodies);
+                }
+                index++;
+            }
+            if (index == 0) throw new Exception($"当前更新语句缺少where条件,SQL:{sqlBuilder}");
+
+            var updateSql = sqlBuilder.ToString();
+            if (hasDeferred)
+            {
+                var returnLabel = Expression.Label(typeof(Stack<Action<StringBuilder>>));
+                if (hasDeferred) blockBodies.Add(Expression.Return(returnLabel, deferredExpr));
+
+                var converExpr = Expression.Convert(Expression.Constant(null), typeof(Stack<Action<StringBuilder>>));
+                blockBodies.Add(Expression.Label(returnLabel, converExpr));
+
+                var initializer = Expression.Lambda<Func<IDbCommand, object, object, Stack<Action<StringBuilder>>>>(
+                    Expression.Block(blockParameters, blockBodies), commandExpr, updateObjExpr, whereObjExpr).Compile();
+
+                commandInitializer = (command, parameters) =>
+                {
+                    var resultBuilder = new StringBuilder();
+                    if (!string.IsNullOrEmpty(command.CommandText))
+                        resultBuilder.Append(command.CommandText + ";");
+                    resultBuilder.Append(updateSql);
+
+                    var stack = initializer(command, parameters[0], parameters[1]);
+                    while (stack.TryPop(out var deferred))
+                    {
+                        deferred(resultBuilder);
+                    }
+                    command.CommandText = resultBuilder.ToString();
+                    command.CommandType = CommandType.Text;
+                };
+            }
+            else
+            {
+                var initializer = Expression.Lambda<Action<IDbCommand, object, object>>(
+                    Expression.Block(blockParameters, blockBodies), commandExpr, updateObjExpr, whereObjExpr).Compile();
+
+                commandInitializer = (command, parameters) =>
+                {
+                    initializer(command, parameters[0], parameters[1]);
+                    var sql = updateSql;
+                    if (!string.IsNullOrEmpty(command.CommandText))
+                        sql = command.CommandText + ";" + updateSql;
+                    command.CommandText = sql;
+                    command.CommandType = CommandType.Text;
+                };
+            }
+            typedInitializerCache.TryAdd(cacheKey, commandInitializer);
+        }
+        return commandInitializer;
+    }
+    public static CommandInitializer BuildDeleteCache(IOrmDbFactory dbFactory, TheaConnection connection, Type entityType, ParameterInfo whereObj)
+    {
+        CommandInitializer commandInitializer = null;
+        if (whereObj.IsDictionary)
+        {
+            commandInitializer = (command, parameters) =>
+            {
+                var dict = parameters[0] as Dictionary<string, object>;
+                var entityMapper = dbFactory.GetEntityMap(entityType);
+
+                int index = 0;
+                var sqlBuilder = new StringBuilder();
+                if (!string.IsNullOrEmpty(command.CommandText))
+                    sqlBuilder.Append(command.CommandText + ";");
+                sqlBuilder.Append($"DELETE FROM {connection.OrmProvider.GetTableName(entityMapper.TableName)} WHERE ");
+                foreach (var item in dict)
+                {
+                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || propMapper.IsIgnore)
+                        continue;
+
+                    var parameterName = $"{connection.OrmProvider.ParameterPrefix}{item.Key}{whereObj.MulitIndex}";
+                    if (index > 0) sqlBuilder.Append(" AND ");
+                    sqlBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} = {parameterName}");
+
+                    if (command.Parameters.Contains(parameterName))
+                        continue;
+
+                    var parameter = command.CreateParameter();
+                    parameter.ParameterName = parameterName;
+                    parameter.Direction = ParameterDirection.Input;
+                    var itemValue = dict[item.Key];
+                    if (itemValue != null && itemValue is string strValue)
+                        parameter.Size = strValue.Length;
+                    if (itemValue == null) parameter.Value = DBNull.Value;
+                    else parameter.Value = itemValue;
+                    command.Parameters.Add(parameter);
+                    index++;
+                }
+                if (index == 0) throw new Exception($"当前字典参数中不包含删除语句，SQL:{sqlBuilder}");
+
+                command.CommandText = sqlBuilder.ToString();
+                command.CommandType = CommandType.Text;
+            };
+            return commandInitializer;
+        }
+
+        var cacheKey = GetTypedSqlParameterKey(connection, "BuildDeleteCache", whereObj.IsMulti, entityType, null, whereObj.ParameterType);
+        if (!typedInitializerCache.TryGetValue(cacheKey, out commandInitializer))
+        {
+            var entityMapper = dbFactory.GetEntityMap(entityType);
+            var whereObjMapper = dbFactory.GetEntityMap(whereObj.ParameterType);
+
+            var blockParameters = new List<ParameterExpression>();
+            var blockBodies = new List<Expression>();
+
+            var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
+            var objExpr = Expression.Parameter(typeof(object), "obj");
+            var typedWhereObjExpr = Expression.Variable(whereObj.ParameterType, "whereObj");
+            blockParameters.Add(typedWhereObjExpr);
+            blockBodies.Add(Expression.Assign(typedWhereObjExpr, Expression.Convert(objExpr, whereObj.ParameterType)));
+
+            ParameterExpression deferredExpr = null;
+            bool hasDeferred = false;
+            foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
+            {
+                if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore)
+                    continue;
+
+                if (propMapper.MemberType != whereObjPropMapper.MemberType
+                    && typeof(IEnumerable).IsAssignableFrom(whereObjPropMapper.MemberType)
+                    && whereObjPropMapper.MemberType != typeof(string))
+                {
+                    //有数组参数，将不再设置sqlBuilder变量
+                    if (!connection.OrmProvider.IsSupportArrayParameter)
+                    {
+                        hasDeferred = true;
+                        break;
+                    }
+                }
+            }
+            if (hasDeferred)
+            {
+                deferredExpr = Expression.Variable(typeof(Stack<Action<StringBuilder>>), "deferredStack");
+                blockParameters.Add(deferredExpr);
+                var newExp = Expression.New(typeof(Stack<Action<StringBuilder>>).GetConstructor(Type.EmptyTypes));
+                blockBodies.Add(Expression.Assign(deferredExpr, newExp));
+            }
+
+            int index = 0;
+            var sqlBuilder = new StringBuilder($"DELETE FROM {connection.OrmProvider.GetTableName(entityMapper.TableName)} WHERE ");
+            foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
+            {
+                if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore)
+                    continue;
+
+                if (index > 0) sqlBuilder.Append(" AND ");
+                var parameterName = $"{connection.OrmProvider.ParameterPrefix}{whereObjPropMapper.MemberName}{whereObj.MulitIndex}";
+
+                if (propMapper.MemberType != whereObjPropMapper.MemberType
+                    && typeof(IEnumerable).IsAssignableFrom(whereObjPropMapper.MemberType)
+                    && whereObjPropMapper.MemberType != typeof(string))
+                {
+                    if (connection.OrmProvider.IsSupportArrayParameter)
+                    {
+                        //field=ANY(@propName)
+                        sqlBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} = ANY(");
+                        sqlBuilder.Append($"{parameterName})");
+                        AddParameter(connection, commandExpr, parameterName, typedWhereObjExpr, whereObjPropMapper, propMapper, whereObj, blockParameters, blockBodies);
+                    }
+                    else
+                    {
+                        if (!hasDeferred)
+                        {
+                            blockParameters.Add(deferredExpr);
+                            var newExp = Expression.New(typeof(Stack<Action<StringBuilder>>).GetConstructor(Type.EmptyTypes));
+                            blockBodies.Add(Expression.Assign(deferredExpr, newExp));
+                            hasDeferred = true;
+                        }
+                        //field IN (@prop1,@prop2,@prop3,...)
+                        sqlBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} IN ");
+                        BuildWhereInSqlParameters(connection, commandExpr, typedWhereObjExpr, deferredExpr, parameterName, whereObjPropMapper, sqlBuilder.Length, blockBodies);
+                    }
+                }
+                else
+                {
+                    //field = @propName
+                    sqlBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} = {parameterName}");
+                    AddParameter(connection, commandExpr, parameterName, typedWhereObjExpr, whereObjPropMapper, propMapper, whereObj, blockParameters, blockBodies);
+                }
+                index++;
+            }
+            if (index == 0) throw new Exception($"当前删除语句缺少where条件,SQL:{sqlBuilder}");
+
+            var deleteSql = sqlBuilder.ToString();
+            if (hasDeferred)
+            {
+                var returnLabel = Expression.Label(typeof(Stack<Action<StringBuilder>>));
+                if (hasDeferred) blockBodies.Add(Expression.Return(returnLabel, deferredExpr));
+
+                var converExpr = Expression.Convert(Expression.Constant(null), typeof(Stack<Action<StringBuilder>>));
+                blockBodies.Add(Expression.Label(returnLabel, converExpr));
+
+                var initializer = Expression.Lambda<Func<IDbCommand, object, Stack<Action<StringBuilder>>>>(
+                    Expression.Block(blockParameters, blockBodies), commandExpr, objExpr).Compile();
+
+                commandInitializer = (command, parameters) =>
+                {
+                    var resultBuilder = new StringBuilder();
+                    if (!string.IsNullOrEmpty(command.CommandText))
+                        resultBuilder.Append(command.CommandText + ";");
+                    resultBuilder.Append(deleteSql);
+                    var stack = initializer(command, parameters[0]);
+                    while (stack.TryPop(out var deferred))
+                    {
+                        deferred(resultBuilder);
+                    }
+
+                    command.CommandText = resultBuilder.ToString();
+                    command.CommandType = CommandType.Text;
+                };
+            }
+            else
+            {
+                var initializer = Expression.Lambda<Action<IDbCommand, object>>(
+                    Expression.Block(blockParameters, blockBodies), commandExpr, objExpr).Compile();
+
+                commandInitializer = (command, parameters) =>
+                {
+                    initializer(command, parameters[0]);
+                    var sql = deleteSql;
+                    if (!string.IsNullOrEmpty(command.CommandText))
+                        sql = command.CommandText + ";" + deleteSql;
+                    command.CommandText = sql;
+                    command.CommandType = CommandType.Text;
+                };
+            }
+            typedInitializerCache.TryAdd(cacheKey, commandInitializer);
+        }
+        return commandInitializer;
+    }
+    public static CommandInitializer BuildExistsCache(IOrmDbFactory dbFactory, TheaConnection connection, Type entityType, ParameterInfo whereObj)
+    {
+        CommandInitializer commandInitializer = null;
+        if (whereObj.IsDictionary)
+        {
+            commandInitializer = (command, parameters) =>
+            {
+                var dict = parameters[0] as Dictionary<string, object>;
+                var entityMapper = dbFactory.GetEntityMap(entityType);
+
+                int index = 0;
+                var sqlBuilder = new StringBuilder();
+                if (!string.IsNullOrEmpty(command.CommandText))
+                    sqlBuilder.Append(command.CommandText + ";");
+                sqlBuilder.Append($"SELECT COUNT(*) FROM {connection.OrmProvider.GetTableName(entityMapper.TableName)} WHERE ");
+                foreach (var item in dict)
+                {
+                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || propMapper.IsIgnore)
+                        continue;
+
+                    var parameterName = $"{connection.OrmProvider.ParameterPrefix}{item.Key}{whereObj.MulitIndex}";
+                    if (index > 0) sqlBuilder.Append(" AND ");
+                    sqlBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} = {parameterName}");
+
+                    if (command.Parameters.Contains(parameterName))
+                        continue;
+
+                    var parameter = command.CreateParameter();
+                    parameter.ParameterName = parameterName;
+                    parameter.Direction = ParameterDirection.Input;
+                    var itemValue = dict[item.Key];
+                    if (itemValue != null && itemValue is string strValue)
+                        parameter.Size = strValue.Length;
+                    if (itemValue == null) parameter.Value = DBNull.Value;
+                    else parameter.Value = itemValue;
+                    command.Parameters.Add(parameter);
+                    index++;
+                }
+                //if (index == 0) throw new Exception($"当前查询语句缺少where条件，SQL:{sqlBuilder}");
+
+                command.CommandText = sqlBuilder.ToString();
+                command.CommandType = CommandType.Text;
+            };
+            return commandInitializer;
+        }
+
+        var cacheKey = GetTypedSqlParameterKey(connection, "BuildExistsCache", whereObj.IsMulti, entityType, null, whereObj.ParameterType);
+        if (!typedInitializerCache.TryGetValue(cacheKey, out commandInitializer))
+        {
+            var entityMapper = dbFactory.GetEntityMap(entityType);
+            var whereObjMapper = dbFactory.GetEntityMap(whereObj.ParameterType);
+
+            var blockParameters = new List<ParameterExpression>();
+            var blockBodies = new List<Expression>();
+
+            var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
+            var objExpr = Expression.Parameter(typeof(object), "obj");
+            var typedWhereObjExpr = Expression.Variable(whereObj.ParameterType, "whereObj");
+            blockParameters.Add(typedWhereObjExpr);
+            blockBodies.Add(Expression.Assign(typedWhereObjExpr, Expression.Convert(objExpr, whereObj.ParameterType)));
+
+            ParameterExpression deferredExpr = null;
+            bool hasDeferred = false;
+            foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
+            {
+                if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore)
+                    continue;
+
+                if (propMapper.MemberType != whereObjPropMapper.MemberType
+                    && typeof(IEnumerable).IsAssignableFrom(whereObjPropMapper.MemberType)
+                    && whereObjPropMapper.MemberType != typeof(string))
+                {
+                    //有数组参数，将不再设置sqlBuilder变量
+                    if (!connection.OrmProvider.IsSupportArrayParameter)
+                    {
+                        hasDeferred = true;
+                        break;
+                    }
+                }
+            }
+            if (hasDeferred)
+            {
+                deferredExpr = Expression.Variable(typeof(Stack<Action<StringBuilder>>), "deferredStack");
+                blockParameters.Add(deferredExpr);
+                var newExp = Expression.New(typeof(Stack<Action<StringBuilder>>).GetConstructor(Type.EmptyTypes));
+                blockBodies.Add(Expression.Assign(deferredExpr, newExp));
+            }
+
+            int index = 0;
+            var sqlBuilder = new StringBuilder($"SELECT COUNT(*) FROM {connection.OrmProvider.GetTableName(entityMapper.TableName)} WHERE ");
+            foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
+            {
+                if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore)
+                    continue;
+
+                if (index > 0) sqlBuilder.Append(" AND ");
+                var parameterName = $"{connection.OrmProvider.ParameterPrefix}{whereObjPropMapper.MemberName}{whereObj.MulitIndex}";
+
+                if (propMapper.MemberType != whereObjPropMapper.MemberType
+                    && typeof(IEnumerable).IsAssignableFrom(whereObjPropMapper.MemberType)
+                    && whereObjPropMapper.MemberType != typeof(string))
+                {
+                    if (connection.OrmProvider.IsSupportArrayParameter)
+                    {
+                        //field=ANY(@propName)
+                        sqlBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} = ANY(");
+                        sqlBuilder.Append($"{parameterName})");
+                        AddParameter(connection, commandExpr, parameterName, typedWhereObjExpr, whereObjPropMapper, propMapper, whereObj, blockParameters, blockBodies);
+                    }
+                    else
+                    {
+                        if (!hasDeferred)
+                        {
+                            blockParameters.Add(deferredExpr);
+                            var newExp = Expression.New(typeof(Stack<Action<StringBuilder>>).GetConstructor(Type.EmptyTypes));
+                            blockBodies.Add(Expression.Assign(deferredExpr, newExp));
+                            hasDeferred = true;
+                        }
+                        //field IN (@prop1,@prop2,@prop3,...)
+                        sqlBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} IN ");
+                        BuildWhereInSqlParameters(connection, commandExpr, typedWhereObjExpr, deferredExpr, parameterName, whereObjPropMapper, sqlBuilder.Length, blockBodies);
+                    }
+                }
+                else
+                {
+                    //field = @propName
+                    sqlBuilder.Append($"{connection.OrmProvider.GetFieldName(propMapper.FieldName)} = {parameterName}");
+                    AddParameter(connection, commandExpr, parameterName, typedWhereObjExpr, whereObjPropMapper, propMapper, whereObj, blockParameters, blockBodies);
+                }
+                index++;
+            }
+            //if (index == 0) throw new Exception($"当前查询语句缺少where条件,SQL:{sqlBuilder}");
+
+            var existsSql = sqlBuilder.ToString();
+            if (hasDeferred)
+            {
+                var returnLabel = Expression.Label(typeof(Stack<Action<StringBuilder>>));
+                if (hasDeferred) blockBodies.Add(Expression.Return(returnLabel, deferredExpr));
+
+                var converExpr = Expression.Convert(Expression.Constant(null), typeof(Stack<Action<StringBuilder>>));
+                blockBodies.Add(Expression.Label(returnLabel, converExpr));
+
+                var initializer = Expression.Lambda<Func<IDbCommand, object, Stack<Action<StringBuilder>>>>(
+                    Expression.Block(blockParameters, blockBodies), commandExpr, objExpr).Compile();
+
+                commandInitializer = (command, parameters) =>
+                {
+                    var resultBuilder = new StringBuilder();
+                    if (!string.IsNullOrEmpty(command.CommandText))
+                        resultBuilder.Append(command.CommandText + ";");
+                    sqlBuilder.Append(existsSql);
+
+                    var stack = initializer(command, parameters[0]);
+                    while (stack.TryPop(out var deferred))
+                    {
+                        deferred(resultBuilder);
+                    }
+
+                    command.CommandText = resultBuilder.ToString();
+                    command.CommandType = CommandType.Text;
+                };
+            }
+            else
+            {
+                var initializer = Expression.Lambda<Action<IDbCommand, object>>(
+                    Expression.Block(blockParameters, blockBodies), commandExpr, objExpr).Compile();
+
+                commandInitializer = (command, parameters) =>
+                {
+                    initializer(command, parameters[0]);
+                    var sql = existsSql;
+                    if (!string.IsNullOrEmpty(command.CommandText))
+                        sql = command.CommandText + ";" + existsSql;
+                    command.CommandText = sql;
+                    command.CommandType = CommandType.Text;
+                };
+            }
+            typedInitializerCache.TryAdd(cacheKey, commandInitializer);
+        }
+        return commandInitializer;
+    }
+    public static Func<IDataReader, object> GetReader(bool isTyped, IOrmDbFactory dbFactory, TheaConnection connection, IDataReader reader, Type entityType, Type targetType)
+    {
+        Type type = targetType;
+        Type underlyingType = null;
+        if (targetType == typeof(object) || targetType == typeof(TheaRow))
+            return GetTheaRowReader(reader);
+        else if (targetType.IsValueType && (targetType.FullName.StartsWith("System.ValueTuple`")
+            || ((underlyingType = Nullable.GetUnderlyingType(type)) != null && underlyingType.FullName.StartsWith("System.ValueTuple`"))))
+            return GetValueTupleReader(connection, reader, targetType);
+        else if (!(DbTypeMap.ContainsKey(type) || type.IsEnum || type.IsArray || type.FullName == DbTypeMap.LinqBinary
+            || (type.IsValueType && (underlyingType ?? (underlyingType = Nullable.GetUnderlyingType(type))) != null && underlyingType.IsEnum)))
+            return GetEntityReader(isTyped, dbFactory, connection, reader, entityType, targetType);
+        else return GetStructDeserializer(type, underlyingType ?? Nullable.GetUnderlyingType(type) ?? type);
+    }
+
+    public static int GetTypedSqlKey(IDbConnection connection, Type entityType, Type targetType)
+    {
+        unchecked
+        {
+            var hashCode = 17;
+            hashCode = hashCode * 23 + connection.GetHashCode();
+            hashCode = hashCode * 23 + entityType.GetHashCode();
+            hashCode = hashCode * 23 + targetType.GetHashCode();
+            return hashCode;
+        }
+    }
+    public static int GetTypedSqlParameterKey(IDbConnection connection, string sqlType, bool isMulti, Type entityType, Type targetType, Type whereType)
+    {
+        unchecked
+        {
+            var hashCode = 17;
+            hashCode = hashCode * 23 + connection.GetHashCode();
+            hashCode = hashCode * 23 + sqlType.GetHashCode();
+            hashCode = hashCode * 23 + isMulti.GetHashCode();
+            hashCode = hashCode * 23 + entityType.GetHashCode();
+            hashCode = hashCode * 23;
+            if (targetType != null) hashCode += targetType.GetHashCode();
+            hashCode = hashCode * 23;
+            if (whereType != null) hashCode += whereType.GetHashCode();
+            return hashCode;
+        }
+    }
+    public static int GetSqlParameterKey(IDbConnection connection, CommandType cmdType, bool isMulti, Type whereType)
+    {
+        unchecked
+        {
+            var hashCode = 17;
+            hashCode = hashCode * 23 + connection.GetHashCode();
+            hashCode = hashCode * 23 + cmdType.GetHashCode();
+            hashCode = hashCode * 23 + isMulti.GetHashCode();
+            hashCode = hashCode * 23 + whereType.GetHashCode();
+            return hashCode;
+        }
+    }
+    public static int GetTypedReaderKey(IDbConnection connection, Type entityType, Type targetType)
+    {
+        unchecked
+        {
+            var hashCode = 17;
+            hashCode = hashCode * 23 + connection.GetHashCode();
+            hashCode = hashCode * 23 + entityType.GetHashCode();
+            hashCode = hashCode * 23 + targetType.GetHashCode();
+            return hashCode;
+        }
+    }
+    public static int GetSqlReaderKey(IDbConnection connection, IDataReader reader, Type entityType, Type targetType)
+    {
+        unchecked
+        {
+            int hashCode = reader.FieldCount;
+            hashCode = hashCode * -37 + connection.GetHashCode();
+            hashCode = hashCode * -37 + entityType.GetHashCode();
+            hashCode = hashCode * -37 + targetType.GetHashCode();
+            for (int i = 0; i < reader.FieldCount; i++)
+            {
+                object fieldName = reader.GetName(i);
+                hashCode = (-79 * ((hashCode * 31) + (fieldName?.GetHashCode() ?? 0))) + (reader.GetFieldType(i)?.GetHashCode() ?? 0);
+            }
+            return hashCode;
+        }
+    }
+    public static int GetReaderKey(IDbConnection connection, string sqlType, Type entityType, Type targetType)
+    {
+        unchecked
+        {
+            var hashCode = 17;
+            hashCode = hashCode * 23 + connection.GetHashCode();
+            hashCode = hashCode * 23 + entityType.GetHashCode();
+            hashCode = hashCode * 23 + sqlType.GetHashCode();
+            hashCode = hashCode * 23 + targetType.GetHashCode();
+            return hashCode;
+        }
+    }
+    public static int GetReaderKey(IDbConnection connection, string sqlType, IDataReader reader, Type targetType)
+    {
+        unchecked
+        {
+            int hashCode = reader.FieldCount;
+            hashCode = hashCode * -37 + connection.GetHashCode();
+            hashCode = hashCode * -37 + sqlType.GetHashCode();
+            hashCode = hashCode * -37 + targetType.GetHashCode();
+            for (int i = 0; i < reader.FieldCount; i++)
+            {
+                object fieldName = reader.GetName(i);
+                hashCode = (-79 * ((hashCode * 31) + (fieldName?.GetHashCode() ?? 0))) + (reader.GetFieldType(i)?.GetHashCode() ?? 0);
+            }
+            return hashCode;
+        }
+    }
+    public static ParameterInfo CreateParameterInfo(object parameters)
+    {
+        if (parameters is Dictionary<string, object>)
+        {
+            return new ParameterInfo
+            {
+                IsDictionary = true,
+                IsMulti = false,
+                ParameterType = parameters.GetType(),
+                Parameters = parameters
+            };
+        }
+        if (parameters is IEnumerable entities)
+        {
+            foreach (var entity in entities)
+            {
+                if (entity is Dictionary<string, object>)
+                {
+                    return new ParameterInfo
+                    {
+                        IsDictionary = true,
+                        IsMulti = true,
+                        ParameterType = entity.GetType(),
+                        Parameters = parameters
+                    };
+                }
+                return new ParameterInfo
+                {
+                    IsDictionary = false,
+                    IsMulti = true,
+                    ParameterType = entity.GetType(),
+                    Parameters = parameters
+                };
+            }
+        }
+        return new ParameterInfo
+        {
+            IsDictionary = false,
+            IsMulti = false,
+            ParameterType = parameters.GetType(),
+            Parameters = parameters
+        };
+    }
+    private static (string InsertSql, string ValuesSql) BuildInsertSql(TheaConnection connection, EntityMap entityMapper, EntityMap insertObjMapper)
+    {
+        var insertBuilder = new StringBuilder("INSERT INTO " + connection.OrmProvider.GetTableName(entityMapper.TableName) + " (");
+        var valuesBuilder = new StringBuilder("VALUES(");
+        int index = 0;
+        foreach (var insertObjPropMapper in insertObjMapper.MemberMaps)
+        {
+            if (!entityMapper.TryGetMemberMap(insertObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore || propMapper.IsAutoIncrement)
+                continue;
+
+            if (index > 0)
+            {
+                insertBuilder.Append(",");
+                valuesBuilder.Append(",");
+            }
+            insertBuilder.Append(connection.OrmProvider.GetFieldName(propMapper.FieldName));
+            valuesBuilder.Append($"{connection.OrmProvider.ParameterPrefix}{propMapper.MemberName}");
+            index++;
+        }
+        insertBuilder.Append(")");
+        valuesBuilder.Append(")");
+        return (insertBuilder.ToString(), valuesBuilder.ToString());
+    }
+    private static Func<IDataReader, object> GetTheaRowReader(IDataReader reader)
+    {
+        var fieldCount = reader.FieldCount;
+        TheaTable table = null;
+        return reader =>
+        {
+            if (table == null)
+            {
+                string[] names = new string[fieldCount];
+                for (int i = 0; i < fieldCount; i++)
+                {
+                    names[i] = reader.GetName(i);
+                }
+                table = new TheaTable(names);
+            }
+            var values = new object[fieldCount];
+            for (int i = 0; i < values.Length; i++)
+            {
+                object readerValue = reader.GetValue(i);
+                values[i] = readerValue is DBNull ? null : readerValue;
+            }
+            return new TheaRow(table, values);
+        };
+    }
+    private static Func<IDataReader, object> GetStructDeserializer(Type type, Type effectiveType)
+    {
+        if (type == typeof(char))
+        {
+            return reader =>
+            {
+                var readerValue = reader.GetValue(0);
+                if (readerValue is string s && s.Length == 1) return s[0];
+                if (readerValue is char c) return c;
+                throw new ArgumentNullException("readerValue", "数据为null,不能转换为char类型");
+            };
+        }
+        if (type == typeof(char?))
+        {
+            return reader =>
+            {
+                var readerValue = reader.GetValue(0);
+                if (readerValue is string s && s.Length == 1) return s[0];
+                if (readerValue is char c) return c;
+                return null;
+            };
+        }
+        if (type.FullName == DbTypeMap.LinqBinary)
+            return reader => Activator.CreateInstance(type, reader.GetValue(0));
+        if (type == typeof(Guid))
+        {
+            return reader =>
+            {
+                var readerValue = reader.GetValue(0);
+                if (readerValue is string strValue) return new Guid(strValue);
+                if (readerValue is byte[] bValue) return new Guid(bValue);
+                return Guid.Empty;
+            };
+        }
+        if (type == typeof(Guid?))
+        {
+            return reader =>
+            {
+                var readerValue = reader.GetValue(0);
+                if (readerValue is string strValue) return new Guid(strValue);
+                if (readerValue is byte[] bValue) return new Guid(bValue);
+                return null;
+            };
+        }
+        if (effectiveType.IsEnum)
+        {
+            return reader =>
+            {
+                var readerValue = reader.GetValue(0);
+                if (readerValue is float || readerValue is double || readerValue is decimal)
+                {
+                    readerValue = Convert.ChangeType(readerValue, Enum.GetUnderlyingType(effectiveType), CultureInfo.InvariantCulture);
+                }
+                return readerValue is DBNull ? null : Enum.ToObject(effectiveType, readerValue);
+            };
+        }
+        return reader =>
+        {
+            var readerValue = reader.GetValue(0);
+            return readerValue is DBNull ? null : readerValue;
+        };
+    }
+    private static Func<IDataReader, object> GetValueTupleReader(TheaConnection connection, IDataReader reader, Type targetType)
+    {
+        int cacheKey = RepositoryHelper.GetReaderKey(connection, "GetValueTupleReader", reader, targetType);
+        if (!valueTupleReaderCache.TryGetValue(cacheKey, out var readerFunc))
+        {
+            var blockParameters = new List<ParameterExpression>();
+            var blockBodies = new List<Expression>();
+            var valuesExprs = new List<Expression>();
+
+            var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
+            var resultLabelExpr = Expression.Label(typeof(object), "result");
+            var isNullable = true;
+            var underlyingType = Nullable.GetUnderlyingType(targetType);
+            if (underlyingType == null)
+            {
+                underlyingType = targetType;
+                isNullable = false;
+            }
+            var fields = underlyingType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+            for (int index = 0; index < reader.FieldCount; index++)
+            {
+                //达到元组个数后，停止遍历
+                if (index >= fields.Length) break;
+                var fieldName = reader.GetName(index);
+                AddReaderParameter(reader, readerExpr, index, fieldName, fields[index].FieldType, blockParameters, blockBodies, valuesExprs);
+            }
+            //var returnValue=new (reader[0],reader[1],...);               
+            var returnValueExpr = NewValueTupleExpression(targetType, valuesExprs);
+            if (isNullable) returnValueExpr = Expression.Convert(returnValueExpr, targetType);
+            blockBodies.Add(Expression.Return(resultLabelExpr, returnValueExpr));
+
+            Expression defaultValueExpr = null;
+            if (isNullable) defaultValueExpr = Expression.Convert(Expression.Constant(null), targetType);
+            else defaultValueExpr = Expression.Default(targetType);
+            blockBodies.Add(Expression.Label(resultLabelExpr, defaultValueExpr));
+
+            readerFunc = Expression.Lambda<Func<IDataReader, object>>(Expression.Block(blockBodies), readerExpr).Compile();
+            valueTupleReaderCache.TryAdd(cacheKey, readerFunc);
+        }
+        return readerFunc;
+    }
+    private static Func<IDataReader, object> GetEntityReader(bool isTyped, IOrmDbFactory dbFactory, TheaConnection connection, IDataReader reader, Type entityType, Type targetType)
+    {
+        int cacheKey;
+        ConcurrentDictionary<int, Func<IDataReader, object>> readerCache = null;
+        if (isTyped)
+        {
+            cacheKey = RepositoryHelper.GetTypedReaderKey(connection, entityType, targetType);
+            readerCache = typedReaderCache;
+        }
+        else
+        {
+            cacheKey = RepositoryHelper.GetSqlReaderKey(connection, reader, entityType, targetType);
+            readerCache = sqlReaderCache;
+        }
+        if (!readerCache.TryGetValue(cacheKey, out var readerFunc))
+        {
+            var entityMapper = dbFactory.GetEntityMap(entityType);
+            var targetMapper = dbFactory.GetEntityMap(targetType);
+
+            var blockParameters = new List<ParameterExpression>();
+            var blockBodies = new List<Expression>();
+
+            var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
+            var targetExpr = Expression.Variable(targetType, "target");
+            var resultLabelExpr = Expression.Label(typeof(object));
+            blockParameters.Add(targetExpr);
+            var localValueExpr = Expression.Variable(typeof(object), "localValue");
+            blockBodies.Add(Expression.Assign(targetExpr, NewEntityExpression(targetType)));
+            bool isDefinedLocal = false;
+
+            for (int index = 0; index < reader.FieldCount; index++)
+            {
+                var fieldName = reader.GetName(index);
+                MemberMap targetPropMapper = null;
+                if (entityMapper.TryGetMemberMap(fieldName, out var propMapper))
+                {
+                    if (targetMapper.TryGetMemberMap(fieldName, out targetPropMapper))
+                    {
+                        AddReaderParameter(reader, readerExpr, targetExpr, index, fieldName, targetPropMapper, localValueExpr, ref isDefinedLocal, blockParameters, blockBodies);
+                        continue;
+                    }
+                }
+                if (targetMapper.TryGetMemberMap(fieldName, out targetPropMapper))
+                    AddReaderParameter(reader, readerExpr, targetExpr, index, fieldName, targetPropMapper, localValueExpr, ref isDefinedLocal, blockParameters, blockBodies);
+            }
+
+            var returnExpr = Expression.Return(resultLabelExpr, targetExpr);
+
+            Expression defaultValueExpr = null;
+            if (entityMapper.EntityType.IsValueType && !entityMapper.IsNullable)
+                defaultValueExpr = Expression.Convert(Expression.Default(targetType), typeof(object));
+            else defaultValueExpr = Expression.Constant(null);
+
+            var returnLabelExpr = Expression.Label(resultLabelExpr, defaultValueExpr);
+            blockBodies.Add(returnExpr);
+            blockBodies.Add(returnLabelExpr);
+
+            readerFunc = Expression.Lambda<Func<IDataReader, object>>(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
+            readerCache.TryAdd(cacheKey, readerFunc);
+        }
+        return readerFunc;
+    }
+    private static void AddParameter(TheaConnection connection, ParameterExpression commandExpr, string parameterName,
+       Expression typedObjExpr, MemberMap paramMapper, MemberMap propMapper, ParameterInfo parameterInfo, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
+    {
+        var parameterNameExpr = Expression.Constant(parameterName, typeof(string));
+        AddParameter(connection, commandExpr, parameterNameExpr, typedObjExpr, paramMapper, propMapper, parameterInfo, blockParameters, blockBodies);
+    }
+    private static void AddParameter(TheaConnection connection, ParameterExpression commandExpr, Expression parameterNameExpr,
+        Expression typedObjExpr, MemberMap paramMapper, MemberMap propMapper, ParameterInfo parameterInfo, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
+    {
+        //TODO:
+        Type dbParameterType = null;// connection.OrmProvider.NativeDbParameterType;
+        var parameterExpr = Expression.Variable(dbParameterType, "parameter");
+        blockParameters.Add(parameterExpr);
+
+        //var parameter=command.CreateParameter();
+        var createParameterExpr = Expression.Call(commandExpr, typeof(IDbCommand).GetMethod(nameof(IDbCommand.CreateParameter)));
+        var parameterAssignExpr = Expression.Assign(parameterExpr, Expression.Convert(createParameterExpr, dbParameterType));
+        blockBodies.Add(parameterAssignExpr);
+
+        //parameter.ParameterName="@1"或"@Name";
+        var methodInfo = typeof(IDataParameter).GetProperty(nameof(IDbDataParameter.ParameterName)).GetSetMethod();
+        Expression setPropExpr = Expression.Call(parameterExpr, methodInfo, parameterNameExpr);
+        blockBodies.Add(setPropExpr);
+
+        //parameter.Direction = ParameterDirection.Input;
+        methodInfo = typeof(IDataParameter).GetProperty(nameof(IDbDataParameter.Direction)).GetSetMethod();
+        setPropExpr = Expression.Call(parameterExpr, methodInfo, Expression.Constant(ParameterDirection.Input, typeof(ParameterDirection)));
+        blockBodies.Add(setPropExpr);
+
+        var valueExpr = Expression.PropertyOrField(typedObjExpr, paramMapper.MemberName);
+
+        if (paramMapper.MemberType == propMapper.MemberType)
+        {
+            //支持数据参数，获取元素类型              
+            if (connection.OrmProvider.IsSupportArrayParameter
+                && typeof(IEnumerable).IsAssignableFrom(paramMapper.MemberType)
+                && paramMapper.MemberType != typeof(string))
+            {
+                Type itemType = null;
+                if (paramMapper.MemberType.IsArray) itemType = paramMapper.MemberType.GetElementType();
+                else
+                {
+                    var objValue = GetArrayItemValue(parameterInfo, paramMapper);
+                    itemType = objValue.GetType();
+                }
+                //TODO:待测试
+                var nativeDbType = connection.OrmProvider.GetNativeDbType(paramMapper.MemberType);
+                var nativeDbTypeValueExpr = Expression.Constant(nativeDbType, typeof(int));
+                //TODO:
+                //var nativeDbTypeValue = Expression.Convert(nativeDbTypeValueExpr, connection.OrmProvider.NativeDbTypeType);
+                //methodInfo = connection.OrmProvider.NativeDbTypePropertyOfDbParameter.GetSetMethod();
+                //setPropExpr = Expression.Call(parameterExpr, methodInfo, nativeDbTypeValue);
+            }
+            else
+            {
+                if (propMapper.NativeDbType.HasValue)
+                {
+                    //parameter.NpgsqlDbType=NpgsqlDbType.Jsonb;
+                    //TODO:
+                    //methodInfo = connection.OrmProvider.NativeDbTypePropertyOfDbParameter.GetSetMethod();
+                    //var nativeDbTypeValueExpr = Expression.Constant(propMapper.NativeDbType.Value, typeof(int));
+                    //var nativeDbTypeValue = Expression.Convert(nativeDbTypeValueExpr, connection.OrmProvider.NativeDbTypeType);
+                    //setPropExpr = Expression.Call(parameterExpr, methodInfo, nativeDbTypeValue);
+                }
+                else
+                {
+                    //parameter.DbType=DbType.String;
+                    methodInfo = typeof(IDataParameter).GetProperty(nameof(IDbDataParameter.DbType)).GetSetMethod();
+                    setPropExpr = Expression.Call(parameterExpr, methodInfo, Expression.Constant(propMapper.DbType, typeof(DbType)));
+                }
+            }
+        }
+        else
+        {
+            //支持数据参数，获取元素类型
+            if (connection.OrmProvider.IsSupportArrayParameter
+                && typeof(IEnumerable).IsAssignableFrom(paramMapper.MemberType)
+                && paramMapper.MemberType != typeof(string))
+            {
+                Type itemType = null;
+                if (paramMapper.MemberType.IsArray) itemType = paramMapper.MemberType.GetElementType();
+                else
+                {
+                    var objValue = GetArrayItemValue(parameterInfo, paramMapper);
+                    itemType = objValue.GetType();
+                }
+                var nativeDbType = connection.OrmProvider.GetNativeDbType(paramMapper.MemberType);
+                var nativeDbTypeValueExpr = Expression.Constant(nativeDbType, typeof(int));
+                //TODO:
+                //var nativeDbTypeValue = Expression.Convert(nativeDbTypeValueExpr, connection.OrmProvider.NativeDbTypeType);
+                //methodInfo = connection.OrmProvider.NativeDbTypePropertyOfDbParameter.GetSetMethod();
+                //setPropExpr = Expression.Call(parameterExpr, methodInfo, nativeDbTypeValue);
+            }
+            else
+            {
+                //parameter.DbType=DbType.String;
+                methodInfo = typeof(IDataParameter).GetProperty(nameof(IDbDataParameter.DbType)).GetSetMethod();
+                var dbType = DbTypeMap.FindDbType(paramMapper.MemberType);
+                setPropExpr = Expression.Call(parameterExpr, methodInfo, Expression.Constant(dbType, typeof(DbType)));
+            }
+        }
+        blockBodies.Add(setPropExpr);
+
+        //parameter.Size=4000;
+        if (paramMapper.MemberType == typeof(string))
+        {
+            methodInfo = typeof(string).GetProperty(nameof(string.Length)).GetGetMethod();
+            var lengthExpr = Expression.Call(valueExpr, methodInfo);
+            var lessThenExpr = Expression.LessThan(lengthExpr, Expression.Constant(4000, typeof(int)));
+
+            methodInfo = typeof(IDbDataParameter).GetProperty(nameof(IDbDataParameter.Size)).GetSetMethod();
+            setPropExpr = Expression.IfThenElse(lessThenExpr,
+                Expression.Call(parameterExpr, methodInfo, Expression.Constant(4000, typeof(int))),
+                Expression.Call(parameterExpr, methodInfo, Expression.Constant(-1, typeof(int))));
+
+            setPropExpr = Expression.IfThen(Expression.NotEqual(valueExpr, Expression.Constant(null)), setPropExpr);
+            blockBodies.Add(setPropExpr);
+        }
+
+        //if(propValue==null)paramValue=DbNull.Value;
+        //else paramValue=(int)propValue;//(int)Gender.Female
+        //paramValue=propValue; 不为null
+
+        Expression underlyingValueExpr = null;
+        Expression setValueExpr = null;
+        Expression setParameterValueExpr = null;
+        var parameterValueExpr = Expression.Variable(typeof(object), "objValue");
+        blockParameters.Add(parameterValueExpr);
+
+        if (paramMapper.MemberType.IsValueType)
+        {
+            //paramValue=(int)Gender.Female/propValue
+            if (paramMapper.IsEnum) underlyingValueExpr = Expression.Convert(valueExpr, paramMapper.UnderlyingType);
+            else underlyingValueExpr = valueExpr;
+            underlyingValueExpr = Expression.Convert(underlyingValueExpr, typeof(object));
+            setValueExpr = Expression.Assign(parameterValueExpr, underlyingValueExpr);
+            if (paramMapper.IsNullable)
+            {
+                var isNullExpr = Expression.Equal(valueExpr, Expression.Constant(null));
+                var setNullExpr = Expression.Assign(parameterValueExpr, Expression.Constant(DBNull.Value, typeof(DBNull)));
+
+                //if(propValue==null)paramValue=DbNull.Value;
+                //else paramValue=(int)propValue;或(int)Gender.Female
+                setParameterValueExpr = Expression.IfThenElse(isNullExpr, setNullExpr, setValueExpr);
+            }
+            else setParameterValueExpr = setValueExpr;
+        }
+        //paramValue=propValue;
+        else
+        {
+            var isNullExpr = Expression.Equal(valueExpr, Expression.Constant(null));
+            var setNullExpr = Expression.Assign(parameterValueExpr, Expression.Constant(DBNull.Value, typeof(DBNull)));
+            //LinqBinary               
+            if (paramMapper.MemberType.FullName == DbTypeMap.LinqBinary)
+            {
+                var toArrayMethodInfo = paramMapper.MemberType.GetMethod("ToArray", BindingFlags.Public | BindingFlags.Instance);
+                underlyingValueExpr = Expression.Call(valueExpr, toArrayMethodInfo);
+                underlyingValueExpr = Expression.Convert(underlyingValueExpr, typeof(object));
+            }
+            //其他类型，如:String
+            else underlyingValueExpr = Expression.Convert(valueExpr, typeof(object));
+            setValueExpr = Expression.Assign(parameterValueExpr, underlyingValueExpr);
+
+            //if(propValue==null)paramValue=DbNull.Value;
+            //else paramValue=byte[] propValue;
+            setParameterValueExpr = Expression.IfThenElse(isNullExpr, setNullExpr, setValueExpr);
+        }
+
+        blockBodies.Add(setParameterValueExpr);
+        methodInfo = typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod();
+        var setParamValueExpr = Expression.Call(parameterExpr, methodInfo, parameterValueExpr);
+        blockBodies.Add(setParamValueExpr);
+
+        //command.Parameters.Add(parameter);
+        var propertyInfo = typeof(IDbCommand).GetProperty(nameof(IDbCommand.Parameters));
+        var parametersExpr = Expression.MakeMemberAccess(commandExpr, propertyInfo);
+        //methodInfo = typeof(IDataParameterCollection).GetMethod(nameof(IDbCommand.Parameters.Contains));
+        //var containsExpr = Expression.Call(parametersExpr, methodInfo, parameterNameExpr);
+        methodInfo = typeof(IList).GetMethod(nameof(IDbCommand.Parameters.Add));
+        var addParameterExpr = Expression.Call(parametersExpr, methodInfo, parameterExpr);
+        //blockBodies.Add(Expression.IfThen(Expression.IsFalse(containsExpr), addParameterExpr));
+        blockBodies.Add(addParameterExpr);
+    }
+    private static void AddReaderParameter(IDataReader reader, ParameterExpression readerExpr, int index, string fieldName, Type memberType,
+       List<ParameterExpression> blockParameters, List<Expression> blockBodies, List<Expression> valuesBodies)
+    {
+        MethodInfo methodInfo = null;
+        Expression defaultValueExpr = null;
+        Expression typedValueExpr = null;
+
+        var readerType = reader.GetFieldType(index);
+        //reader[index];
+        Expression readerValueExpr = Expression.Call(readerExpr, readerItemByIndex, Expression.Constant(index, typeof(int)));
+
+        //null或default(int)
+        var isNullable = false;
+        Type underlyingType = null;
+        if (memberType.IsValueType)
+        {
+            isNullable = Nullable.GetUnderlyingType(memberType) != null;
             if (isNullable)
             {
+                defaultValueExpr = Expression.Convert(Expression.Constant(null), memberType);
                 underlyingType = Nullable.GetUnderlyingType(memberType);
-                isEnum = underlyingType.GetTypeInfo().IsEnum;
             }
-            var isString = underlyingType == typeof(string);
+            else defaultValueExpr = Expression.Default(memberType);
+        }
+        else defaultValueExpr = Expression.Default(memberType);
 
-            // stack is now [parameters][parameters][parameter][parameter].DbType={DbType}
-            il.Emit(OpCodes.Dup);
-            LoadInt32(il, (int)dbType);
-            il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.DbType)).GetSetMethod(), null);
+        if (memberType.IsAssignableFrom(readerType))
+            typedValueExpr = Expression.Convert(readerValueExpr, memberType);
+        else if (memberType == typeof(Guid) || memberType == typeof(Guid?))
+        {
+            if (readerType == typeof(string))
+                typedValueExpr = Expression.New(typeof(Guid).GetConstructor(new Type[] { typeof(string) }), Expression.Convert(readerValueExpr, typeof(string)));
+            else if (readerType == typeof(byte[]))
+                typedValueExpr = Expression.New(typeof(Guid).GetConstructor(new Type[] { typeof(byte[]) }), Expression.Convert(readerValueExpr, typeof(byte[])));
+            else throw new Exception($"数据库字段{fieldName}类型{readerType.FullName}与当前ValueTuple类型{memberType.FullName}不匹配，无法赋值");
 
-            // stack is now [parameters][parameters][parameter][parameter].Direction={ParameterDirection.Input}
-            il.Emit(OpCodes.Dup);
-            LoadInt32(il, (int)ParameterDirection.Input);
-            il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Direction)).GetSetMethod(), null);
-
-            //byte,double,float,int,long,sbyte,short,string,Type
-            il.Emit(OpCodes.Dup);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Ldstr, colMapper.Key);
-            il.Emit(OpCodes.Call, typeof(KeyValuePair<string, object>).GetProperty(nameof(KeyValuePair<string, object>.Value)).GetGetMethod());
-
-            // stack is now [parameters][parameters][parameter][parameter][value]
-            if (memberType.GetTypeInfo().IsValueType)
+            if (!isNullable) defaultValueExpr = Expression.Constant(Guid.Empty, typeof(Guid));
+        }
+        else
+        {
+            //else propValue=Convert.ToInt32(reader[index]);
+            if (!isNullable) underlyingType = memberType;
+            var typeCode = Type.GetTypeCode(underlyingType);
+            string toTypeMethod = null;
+            switch (typeCode)
             {
-                il.Emit(OpCodes.Box, memberType);
-                if (memberType.GetTypeInfo().IsEnum && memberType == typeof(string))
+                case TypeCode.Boolean: toTypeMethod = nameof(Convert.ToBoolean); break;
+                case TypeCode.Byte: toTypeMethod = nameof(Convert.ToByte); break;
+                case TypeCode.SByte: toTypeMethod = nameof(Convert.ToSByte); break;
+                case TypeCode.Int16: toTypeMethod = nameof(Convert.ToInt16); break;
+                case TypeCode.UInt16: toTypeMethod = nameof(Convert.ToUInt16); break;
+                case TypeCode.Int32: toTypeMethod = nameof(Convert.ToInt32); break;
+                case TypeCode.UInt32: toTypeMethod = nameof(Convert.ToUInt32); break;
+                case TypeCode.Int64: toTypeMethod = nameof(Convert.ToInt64); break;
+                case TypeCode.UInt64: toTypeMethod = nameof(Convert.ToUInt64); break;
+                case TypeCode.Single: toTypeMethod = nameof(Convert.ToSingle); break;
+                case TypeCode.Double: toTypeMethod = nameof(Convert.ToDouble); break;
+                case TypeCode.Decimal: toTypeMethod = nameof(Convert.ToDecimal); break;
+                case TypeCode.DateTime: toTypeMethod = nameof(Convert.ToDateTime); break;
+                case TypeCode.String: toTypeMethod = nameof(Convert.ToString); break;
+            }
+
+            methodInfo = typeof(Convert).GetMethod(toTypeMethod, new Type[] { typeof(object), typeof(IFormatProvider) });
+            typedValueExpr = Expression.Call(methodInfo, readerValueExpr, Expression.Constant(CultureInfo.CurrentCulture));
+            if (underlyingType.IsEnum)
+            {
+                //targetMapper.EnumType
+                var enumType = underlyingType;
+                switch (Type.GetTypeCode(underlyingType))
                 {
-                    // stack is now [parameters][parameters][parameter][parameter][int-value][enum-type]
-                    il.Emit(OpCodes.Ldtoken, underlyingType);
-                    il.EmitCall(OpCodes.Call, typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle)), null);
-                    // stack is now [parameters][parameters][parameter][parameter][int-value][enum-type]
-                    il.EmitCall(OpCodes.Call, typeof(RepositoryHelper).GetMethod(nameof(RepositoryHelper.GetEnumName), BindingFlags.Static | BindingFlags.Public), null);
-                    il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
+                    case TypeCode.Byte: underlyingType = typeof(byte); break;
+                    case TypeCode.SByte: underlyingType = typeof(sbyte); break;
+                    case TypeCode.Int16: underlyingType = typeof(short); break;
+                    case TypeCode.Int32: underlyingType = typeof(int); break;
+                    case TypeCode.Int64: underlyingType = typeof(long); break;
+                    case TypeCode.UInt16: underlyingType = typeof(ushort); break;
+                    case TypeCode.UInt32: underlyingType = typeof(uint); break;
+                    case TypeCode.UInt64: underlyingType = typeof(ulong); break;
+                }
+                methodInfo = typeof(Enum).GetMethod(nameof(Enum.ToObject), new Type[] { typeof(Type), underlyingType });
+                var toEnumExpr = Expression.Call(methodInfo, Expression.Constant(enumType), typedValueExpr);
+                typedValueExpr = Expression.Convert(toEnumExpr, enumType);
+            }
+            if (isNullable) typedValueExpr = Expression.Convert(typedValueExpr, memberType);
+        }
 
-                    //直接设置长度为100，枚举值都不会超过100个字符，避免了做类似下面的复杂逻辑操作
-                    il.Emit(OpCodes.Dup);
-                    LoadInt32(il, 100);
-                    il.EmitCall(OpCodes.Callvirt, typeof(IDbDataParameter).GetProperty(nameof(IDbDataParameter.Size)).GetSetMethod(), null);
+        var localValueExpr = Expression.Variable(memberType, $"local{fieldName}");
+        blockParameters.Add(localValueExpr);
 
-                    #region 获取字符串长度，设置长度
-                    //// stack is now [parameters][parameters][parameter][parameter][string or dbNull]
-                    //il.Emit(OpCodes.Dup);
-                    //il.Emit(OpCodes.Isinst, typeof(DBNull));
-                    //// stack is now [target][target][value][DBNull or null]
-                    //Label dbNullLabel = il.DefineLabel();
-                    //il.Emit(OpCodes.Brtrue_S, dbNullLabel);
+        //if(localValue is DBNull)
+        var isNullExpr = Expression.TypeIs(readerValueExpr, typeof(DBNull));
+        var setDefaultValueExpr = Expression.Assign(localValueExpr, defaultValueExpr);
+        var setTypedValueExpr = Expression.Assign(localValueExpr, typedValueExpr);
+        Expression setParameterValueExpr = Expression.IfThenElse(isNullExpr, setDefaultValueExpr, setTypedValueExpr);
+        blockBodies.Add(setParameterValueExpr);
 
-                    ////非空字符串
-                    //var iLocIndex = il.DeclareLocal(typeof(string)).LocalIndex;
-                    //il.Emit(OpCodes.Dup);
-                    //il.Emit(OpCodes.Castclass, typeof(string));
-                    //il.Emit(OpCodes.Stloc, iLocIndex);
-                    //il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
-                    //// stack is now [parameters][parameters][parameter]
+        valuesBodies.Add(localValueExpr);
+    }
+    private static void AddReaderParameter(IDataReader reader, ParameterExpression readerExpr, ParameterExpression targetExpr, int index, string fieldName,
+        MemberMap targetMapper, ParameterExpression localValueExpr, ref bool isDefinedLocal, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
+    {
+        MethodInfo methodInfo = null;
+        Expression defaultValueExpr = null;
+        Expression typedValueExpr = null;
 
-                    ////设置长度
-                    //il.Emit(OpCodes.Dup);
-                    //il.Emit(OpCodes.Ldloc, iLocIndex);
-                    //il.EmitCall(OpCodes.Callvirt, typeof(string).GetProperty(nameof(string.Length)).GetGetMethod(), null);
-                    //// stack is now [parameters][parameters][parameter][string-length]
-                    //il.EmitCall(OpCodes.Callvirt, typeof(IDbDataParameter).GetProperty(nameof(IDbDataParameter.Size)).GetSetMethod(), null);
+        var readerType = reader.GetFieldType(index);
+        //reader[index];
+        Expression readerValueExpr = Expression.Call(readerExpr, readerItemByIndex, Expression.Constant(index, typeof(int)));
 
-                    //Label allDoneLabel = il.DefineLabel();
-                    //il.Emit(OpCodes.Br_S, allDoneLabel);
+        //null或default(int)
+        if (targetMapper.MemberType.IsValueType)
+        {
+            if (targetMapper.IsNullable) defaultValueExpr = Expression.Convert(Expression.Constant(null), targetMapper.MemberType);
+            else defaultValueExpr = Expression.Default(targetMapper.MemberType);
+        }
+        else defaultValueExpr = Expression.Default(targetMapper.MemberType);
 
-                    //il.MarkLabel(dbNullLabel);
-                    //il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
-                    //il.MarkLabel(allDoneLabel);
-                    #endregion
+        if (!isDefinedLocal)
+        {
+            blockParameters.Add(localValueExpr);
+            isDefinedLocal = true;
+        }
+        blockBodies.Add(Expression.Assign(localValueExpr, readerValueExpr));
+        readerValueExpr = localValueExpr;
+
+        if (targetMapper.MemberType.IsAssignableFrom(readerType))
+            typedValueExpr = Expression.Convert(readerValueExpr, targetMapper.MemberType);
+        else if (targetMapper.MemberType == typeof(Guid) || targetMapper.MemberType == typeof(Guid?))
+        {
+            if (readerType == typeof(string))
+                typedValueExpr = Expression.New(typeof(Guid).GetConstructor(new Type[] { typeof(string) }), Expression.Convert(readerValueExpr, typeof(string)));
+            else if (readerType == typeof(byte[]))
+                typedValueExpr = Expression.New(typeof(Guid).GetConstructor(new Type[] { typeof(byte[]) }), Expression.Convert(readerValueExpr, typeof(byte[])));
+            else throw new Exception($"数据库字段{fieldName}类型{readerType.FullName}与实体属性{targetMapper.MemberName}类型{targetMapper.MemberType}不匹配，无法赋值");
+
+            if (!targetMapper.IsNullable) defaultValueExpr = Expression.Constant(Guid.Empty, typeof(Guid));
+        }
+        else
+        {
+            //else propValue=Convert.ToInt32(reader[index]);
+            var typeCode = Type.GetTypeCode(targetMapper.UnderlyingType);
+            string toTypeMethod = null;
+            switch (typeCode)
+            {
+                case TypeCode.Boolean: toTypeMethod = nameof(Convert.ToBoolean); break;
+                case TypeCode.Byte: toTypeMethod = nameof(Convert.ToByte); break;
+                case TypeCode.SByte: toTypeMethod = nameof(Convert.ToSByte); break;
+                case TypeCode.Int16: toTypeMethod = nameof(Convert.ToInt16); break;
+                case TypeCode.UInt16: toTypeMethod = nameof(Convert.ToUInt16); break;
+                case TypeCode.Int32: toTypeMethod = nameof(Convert.ToInt32); break;
+                case TypeCode.UInt32: toTypeMethod = nameof(Convert.ToUInt32); break;
+                case TypeCode.Int64: toTypeMethod = nameof(Convert.ToInt64); break;
+                case TypeCode.UInt64: toTypeMethod = nameof(Convert.ToUInt64); break;
+                case TypeCode.Single: toTypeMethod = nameof(Convert.ToSingle); break;
+                case TypeCode.Double: toTypeMethod = nameof(Convert.ToDouble); break;
+                case TypeCode.Decimal: toTypeMethod = nameof(Convert.ToDecimal); break;
+                case TypeCode.DateTime: toTypeMethod = nameof(Convert.ToDateTime); break;
+                case TypeCode.String: toTypeMethod = nameof(Convert.ToString); break;
+            }
+
+            methodInfo = typeof(Convert).GetMethod(toTypeMethod, new Type[] { typeof(object), typeof(IFormatProvider) });
+            typedValueExpr = Expression.Call(methodInfo, readerValueExpr, Expression.Constant(CultureInfo.CurrentCulture));
+            if (targetMapper.IsEnum)
+            {
+                //targetMapper.EnumType
+                methodInfo = typeof(Enum).GetMethod(nameof(Enum.ToObject), new Type[] { typeof(Type), targetMapper.UnderlyingType });
+                var toEnumExpr = Expression.Call(methodInfo, Expression.Constant(targetMapper.EnumUnderlyingType), typedValueExpr);
+                typedValueExpr = Expression.Convert(toEnumExpr, targetMapper.EnumUnderlyingType);
+            }
+            if (targetMapper.IsNullable) typedValueExpr = Expression.Convert(typedValueExpr, targetMapper.MemberType);
+        }
+
+        //if(localValue is DBNull)
+        var isNullExpr = Expression.TypeIs(readerValueExpr, typeof(DBNull));
+        var setDefaultValueExpr = Expression.Assign(Expression.PropertyOrField(targetExpr, targetMapper.MemberName), defaultValueExpr);
+        var setTypedValueExpr = Expression.Assign(Expression.PropertyOrField(targetExpr, targetMapper.MemberName), typedValueExpr);
+        Expression setParameterValueExpr = Expression.IfThenElse(isNullExpr, setDefaultValueExpr, setTypedValueExpr);
+        blockBodies.Add(setParameterValueExpr);
+    }
+    private static Expression NewEntityExpression(Type type)
+    {
+        var ctor = type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+        if (ctor != null) return Expression.New(ctor);
+        ctor = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).OrderBy(f => f.IsPublic ? 0 : (f.IsPrivate ? 2 : 1)).First();
+        var parameters = new List<Expression>();
+        Array.ForEach(ctor.GetParameters(), f => parameters.Add(Expression.Default(f.ParameterType)));
+        return Expression.New(ctor, parameters);
+    }
+    private static Expression NewValueTupleExpression(Type type, List<Expression> parameters)
+    {
+        var fieldTypes = type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).Select(f => f.FieldType).ToArray();
+        var ctor = type.GetConstructor(fieldTypes);
+        if (ctor != null) return Expression.New(ctor, parameters);
+        return Expression.Empty();
+    }
+    private static string GetAliasParameterSql(TheaConnection connection, string fieldName, string propName)
+    {
+        //return connection.OrmProvider.GetFieldName(fieldName);
+        if (fieldName == propName) return connection.OrmProvider.GetFieldName(fieldName);
+        else return connection.OrmProvider.GetFieldName(fieldName) + " AS " + connection.OrmProvider.GetFieldName(propName);
+    }
+    private static void BuildWhereInSqlParameters(TheaConnection connection, ParameterExpression commandExpr, Expression typedObjExpr, Expression deferredExpr, string parameterName, MemberMap paramMapper, int position, List<Expression> blockBodies)
+    {
+        var methodInfo = typeof(RepositoryHelper).GetMethod(nameof(RepositoryHelper.BuildWhereInParameters),
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, null,
+            new Type[] { typeof(IDbCommand), typeof(IOrmProvider), typeof(int), typeof(string), typeof(object), typeof(Stack<Action<StringBuilder>>) }, null);
+        var callExpr = Expression.Call(methodInfo, commandExpr,
+            Expression.Constant(connection.OrmProvider, typeof(IOrmProvider)),
+            Expression.Constant(position, typeof(int)),
+            Expression.Constant(parameterName, typeof(string)),
+            Expression.Convert(Expression.PropertyOrField(typedObjExpr, paramMapper.MemberName), typeof(object)),
+            deferredExpr);
+        blockBodies.Add(callExpr);
+    }
+    private static void BuildWhereInSqlParameters(TheaConnection connection, ParameterExpression commandExpr, Expression typedObjExpr, MemberMap paramMapper, List<Expression> blockBodies)
+    {
+        var methodInfo = typeof(RepositoryHelper).GetMethod(nameof(RepositoryHelper.BuildWhereInParameters),
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, null,
+            new Type[] { typeof(IDbCommand), typeof(IOrmProvider), typeof(string), typeof(object) }, null);
+        var callExpr = Expression.Call(methodInfo, commandExpr,
+            Expression.Constant(connection.OrmProvider, typeof(IOrmProvider)),
+            Expression.Constant(paramMapper.MemberName, typeof(string)),
+            Expression.Convert(Expression.PropertyOrField(typedObjExpr, paramMapper.MemberName), typeof(object)));
+        blockBodies.Add(callExpr);
+    }
+    private static void BuildWhereInSqlParameters(TheaConnection connection, ParameterExpression commandExpr, Expression typedObjExpr, Expression sqlBuidlerExpr, string parameterName, MemberMap paramMapper, List<Expression> blockBodies)
+    {
+        var methodInfo = typeof(RepositoryHelper).GetMethod(nameof(RepositoryHelper.BuildWhereInParameters),
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, null,
+            new Type[] { typeof(IDbCommand), typeof(IOrmProvider), typeof(string), typeof(object), typeof(StringBuilder) }, null);
+        var callExpr = Expression.Call(methodInfo, commandExpr,
+            Expression.Constant(connection.OrmProvider, typeof(IOrmProvider)),
+            Expression.Constant(parameterName, typeof(string)),
+            Expression.Convert(Expression.PropertyOrField(typedObjExpr, paramMapper.MemberName), typeof(object)),
+            sqlBuidlerExpr);
+        blockBodies.Add(callExpr);
+    }
+    private static void BuildWhereInParameters(IDbCommand command, IOrmProvider ormProvider, int position, string paramName, object value, Stack<Action<StringBuilder>> deferredStack)
+    {
+        if (value == null) return;
+        var enumerable = value as IEnumerable;
+        bool isString = value is IEnumerable<string>;
+
+        DbType dbType = 0;
+        var index = 1;
+        var sqlBuilder = new StringBuilder($"(");
+        foreach (var item in enumerable)
+        {
+            if (index == 1)
+            {
+                //TODO:为null的数据跳过  
+                if (item == null) continue;
+                dbType = DbTypeMap.FindDbType(item.GetType());
+            }
+
+            var parameterName = paramName + index.ToString();
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = parameterName;
+            if (isString)
+            {
+                parameter.Size = 4000;
+                if (item != null && ((string)item).Length > 4000)
+                    parameter.Size = -1;
+            }
+            parameter.Value = ToUnboxValue(item);
+            parameter.DbType = dbType;
+            command.Parameters.Add(parameter);
+            if (index > 1) sqlBuilder.Append(",");
+            sqlBuilder.Append(parameterName);
+            index++;
+        }
+        if (index > 1)
+        {
+            sqlBuilder.Append(")");
+            Action<StringBuilder> initializer = builder => builder.Insert(position, sqlBuilder.ToString());
+            deferredStack.Push(initializer);
+        }
+    }
+    private static void BuildWhereInParameters(IDbCommand command, IOrmProvider ormProvider, string propName, object value)
+    {
+        if (value == null) return;
+        var paramName = ormProvider.ParameterPrefix + propName;
+        var enumerable = value as IEnumerable;
+        bool isString = value is IEnumerable<string>;
+
+        DbType dbType = 0;
+        var index = 1;
+        var sqlBuilder = new StringBuilder("(");
+        var regexIncludingUnknown = "([?@:]" + Regex.Escape(propName) + @")(?!\w)(\s+(?i)unknown(?-i))?";
+        foreach (var item in enumerable)
+        {
+            if (index == 1)
+            {
+                //TODO:为null的数据跳过  
+                if (item == null) continue;
+                dbType = DbTypeMap.FindDbType(item.GetType());
+            }
+
+            var parameter = command.CreateParameter();
+            var parameterName = paramName + index.ToString();
+            parameter.ParameterName = parameterName;
+            if (isString)
+            {
+                parameter.Size = 4000;
+                if (item != null && ((string)item).Length > 4000)
+                    parameter.Size = -1;
+            }
+            parameter.Value = ToUnboxValue(item);
+            parameter.DbType = dbType;
+
+            command.Parameters.Add(parameter);
+            if (index > 1) sqlBuilder.Append(",");
+            sqlBuilder.Append(parameterName);
+            index++;
+        }
+        if (index > 1)
+        {
+            sqlBuilder.Append(")");
+            command.CommandText = Regex.Replace(command.CommandText, regexIncludingUnknown, match =>
+            {
+                var variableName = match.Groups[1].Value;
+                if (match.Groups[2].Success)
+                {
+                    // looks like an optimize hint; expand it
+                    var suffix = match.Groups[2].Value;
+                    var builder = new StringBuilder();
+                    builder.Append(variableName).Append(1).Append(suffix);
+                    for (int i = 2; i <= index - 1; i++)
+                    {
+                        builder.Append(',').Append(variableName).Append(i).Append(suffix);
+                    }
+                    return builder.ToString();
                 }
                 else
                 {
-                    if (isNullable)
+                    var builder = new StringBuilder();
+                    builder.Append('(').Append(variableName);
+                    builder.Append(1);
+                    for (int i = 2; i <= index - 1; i++)
                     {
-                        il.Emit(OpCodes.Dup);
-                        Label notNullLabel = il.DefineLabel();
-                        il.Emit(OpCodes.Brtrue_S, notNullLabel);
-                        // stack is now [parameters][parameters][parameter]
-                        il.Emit(OpCodes.Pop);
-                        il.Emit(OpCodes.Ldsfld, typeof(DBNull).GetField(nameof(DBNull.Value)));
-                        il.MarkLabel(notNullLabel);
+                        builder.Append(',').Append(variableName);
+                        builder.Append(i);
                     }
-                    // stack is now [parameters][parameters][parameter][parameter][object-value]
-                    il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
+                    return builder.Append(')').ToString();
                 }
-            }
-            else
+            }, RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant);
+        }
+        else
+        {
+            command.CommandText = Regex.Replace(command.CommandText, regexIncludingUnknown, match =>
             {
-                // stack is now [parameters][parameters][parameter] 
-                il.Emit(OpCodes.Dup);
-                Label notNullLabel = il.DefineLabel();
-                il.Emit(OpCodes.Brtrue_S, notNullLabel);
-                // stack is now [parameters][parameters][parameter][parameter]
-                il.Emit(OpCodes.Pop);
-                il.Emit(OpCodes.Ldsfld, typeof(DBNull).GetField(nameof(DBNull.Value)));
-                // stack is now [parameters][parameters][parameter][parameter][DBNull]
-                il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
+                var variableName = match.Groups[1].Value;
+                if (match.Groups[2].Success) return match.Value;
+                else return "(SELECT " + variableName + " WHERE 1 = 0)";
+            }, RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant);
+            var dummyParam = command.CreateParameter();
+            dummyParam.ParameterName = paramName;
+            dummyParam.Value = DBNull.Value;
+            command.Parameters.Add(dummyParam);
+        }
+    }
+    private static void BuildWhereInParameters(IDbCommand command, IOrmProvider ormProvider, string paramName, object value, StringBuilder sqlBuilder)
+    {
+        if (value == null) return;
+        var enumerable = value as IEnumerable;
+        bool isString = value is IEnumerable<string>;
 
-                Label allDoneLabel = il.DefineLabel();
-                il.Emit(OpCodes.Br_S, allDoneLabel);
+        DbType dbType = 0;
+        var index = 1;
+        sqlBuilder.Append("(");
+        foreach (var item in enumerable)
+        {
+            if (index == 1)
+            {
+                //TODO:为null的数据跳过  
+                if (item == null) continue;
+                dbType = DbTypeMap.FindDbType(item.GetType());
+            }
 
-                //不为空
-                il.MarkLabel(notNullLabel);
-                int? stringIndex = null;
-                if (isString)
-                {
-                    il.Emit(OpCodes.Dup);
-                    // stack is now [parameters][parameters][parameter][parameter][string][string]
-                    il.EmitCall(OpCodes.Callvirt, typeof(string).GetProperty(nameof(string.Length)).GetGetMethod(), null);
-                    LoadInt32(il, 4000);
-                    il.Emit(OpCodes.Cgt); // [string] [0 or 1]
-                    Label isLong = il.DefineLabel(), lenDone = il.DefineLabel();
-                    il.Emit(OpCodes.Brtrue_S, isLong);
-                    LoadInt32(il, 4000); // [string] [4000]
-                    il.Emit(OpCodes.Br_S, lenDone);
-                    il.MarkLabel(isLong);
-                    LoadInt32(il, -1); // [string] [-1]
-                    il.MarkLabel(lenDone);
+            var parameterName = paramName + index.ToString();
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = parameterName;
+            if (isString)
+            {
+                parameter.Size = 4000;
+                if (item != null && ((string)item).Length > 4000)
+                    parameter.Size = -1;
+            }
+            parameter.Value = ToUnboxValue(item);
+            parameter.DbType = dbType;
+            command.Parameters.Add(parameter);
+            if (index > 1) sqlBuilder.Append(",");
+            sqlBuilder.Append(parameterName);
+            index++;
+        }
+        if (index > 1) sqlBuilder.Append(")");
+    }
+    private static object GetArrayItemValue(ParameterInfo parameterInfo, MemberMap paramMapper)
+    {
+        var breakLabel = Expression.Label(typeof(object));
+        var continueLabel = Expression.Label(typeof(object));
+        var typedObjExpr = Expression.Parameter(typeof(object), "obj");
+        var enumeratorExpr = Expression.Variable(typeof(IEnumerator), "enumerator");
+        var objExpr = Expression.Variable(typeof(object), "item");
 
-                    stringIndex = il.DeclareLocal(typeof(int)).LocalIndex;
-                    il.Emit(OpCodes.Stloc_S, (byte)stringIndex);
-                }
-                il.EmitCall(OpCodes.Callvirt, typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod(), null);
+        var valueExpr = Expression.PropertyOrField(typedObjExpr, paramMapper.MemberName);
+        var enumerableExpr = Expression.Convert(valueExpr, typeof(IEnumerable));
+        var enumeratorCallExpr = Expression.Call(enumerableExpr, typeof(IEnumerable).GetMethod(nameof(IEnumerable.GetEnumerator)));
 
-                // stack is now [parameters][parameters][parameter]
-                if (isString)
-                {
-                    il.Emit(OpCodes.Dup);
-                    // stack is now [parameters][parameters][parameter][parameter].Size=len(string)
-                    il.Emit(OpCodes.Stloc_S, (byte)stringIndex);
-                    il.EmitCall(OpCodes.Callvirt, typeof(IDbDataParameter).GetProperty(nameof(IDbDataParameter.Size)).GetSetMethod(), null);
-                    // stack is now [parameters][parameters][parameter]                        
-                }
-                il.MarkLabel(allDoneLabel);
-            }
-            // stack is now [parameters][parameters].Add([parameter])
-            il.EmitCall(OpCodes.Callvirt, typeof(IList).GetMethod(nameof(IList.Add)), null);
-            il.Emit(OpCodes.Pop);
-            // stack is now [parameters]
-        }
-        private static bool ConvertToNumber(ILGenerator il, Type colType, TypeCode propTypeCode, TypeCode colTypeCode)
-        {
-            OpCode opCode = default(OpCode);
-            switch (colTypeCode)
-            {
-                case TypeCode.Boolean:
-                case TypeCode.Byte:
-                case TypeCode.SByte:
-                case TypeCode.Int16:
-                case TypeCode.UInt16:
-                case TypeCode.Int32:
-                case TypeCode.UInt32:
-                case TypeCode.Int64:
-                case TypeCode.UInt64:
-                case TypeCode.Single:
-                case TypeCode.Double:
-                    switch (propTypeCode)
-                    {
-                        case TypeCode.Byte:
-                            opCode = OpCodes.Conv_Ovf_I1_Un; break;
-                        case TypeCode.SByte:
-                            opCode = OpCodes.Conv_Ovf_I1; break;
-                        case TypeCode.UInt16:
-                            opCode = OpCodes.Conv_Ovf_I2_Un; break;
-                        case TypeCode.Int16:
-                            opCode = OpCodes.Conv_Ovf_I2; break;
-                        case TypeCode.UInt32:
-                            opCode = OpCodes.Conv_Ovf_I4_Un; break;
-                        case TypeCode.Boolean:
-                        case TypeCode.Int32:
-                            opCode = OpCodes.Conv_Ovf_I4; break;
-                        case TypeCode.UInt64:
-                            opCode = OpCodes.Conv_Ovf_I8_Un; break;
-                        case TypeCode.Int64:
-                            opCode = OpCodes.Conv_Ovf_I8; break;
-                        case TypeCode.Single:
-                            opCode = OpCodes.Conv_R4; break;
-                        case TypeCode.Double:
-                            opCode = OpCodes.Conv_R8; break;
-                    }
-                    break;
-                default: return false;
-            }
-            il.Emit(opCode);
-            return true;
-        }
-        private static void ConvertTo(ILGenerator il, Type colType, Type underlyingType)
-        {
-            MethodInfo op = null;
-            if ((op = GetOperator(colType, underlyingType)) != null)
-            {
-                il.Emit(OpCodes.Call, op);
-            }
-            else
-            {
-                il.Emit(OpCodes.Ldtoken, underlyingType);
-                il.EmitCall(OpCodes.Call, typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle)), null);
-                il.EmitCall(OpCodes.Call, typeof(Convert).GetMethod(nameof(Convert.ChangeType), new Type[] { typeof(object), typeof(Type) }), null);
-                il.Emit(OpCodes.Unbox_Any, underlyingType);
-            }
-        }
-        private static MethodInfo GetOperator(Type fromType, Type toType)
-        {
-            if (toType == null) return null;
-            MethodInfo[] fromMethods, toMethods;
-            return ResolveOperator(fromMethods = fromType.GetMethods(BindingFlags.Static | BindingFlags.Public), fromType, toType, "op_Implicit")
-                ?? ResolveOperator(toMethods = toType.GetMethods(BindingFlags.Static | BindingFlags.Public), fromType, toType, "op_Implicit")
-                ?? ResolveOperator(fromMethods, fromType, toType, "op_Explicit")
-                ?? ResolveOperator(toMethods, fromType, toType, "op_Explicit");
+        var currentExpr = Expression.Call(enumeratorExpr, typeof(IEnumerator).GetProperty(nameof(IEnumerator.Current)).GetGetMethod());
 
-        }
-        private static MethodInfo ResolveOperator(MethodInfo[] methods, Type from, Type to, string name)
+        var func = Expression.Lambda<Func<object, object>>(
+            Expression.Loop(Expression.Block(new ParameterExpression[] { enumeratorExpr, objExpr },
+                Expression.Assign(enumeratorExpr, enumeratorCallExpr),
+                Expression.Call(enumeratorExpr, typeof(IEnumerator).GetMethod(nameof(IEnumerator.MoveNext))),
+                Expression.Assign(objExpr, Expression.Convert(currentExpr, typeof(object))),
+                Expression.IfThenElse(Expression.Equal(objExpr, Expression.Constant(null)),
+                    Expression.Continue(continueLabel),
+                    Expression.Break(breakLabel, objExpr))
+                ), breakLabel, continueLabel), typedObjExpr).Compile();
+
+        return func(parameterInfo.Parameters);
+    }
+    private static object ToUnboxValue(object value)
+    {
+        if (value == null) return DBNull.Value;
+        if (value is Enum)
         {
-            for (int i = 0; i < methods.Length; i++)
+            TypeCode typeCode = value is IConvertible convertible
+                ? convertible.GetTypeCode()
+                : Type.GetTypeCode(Enum.GetUnderlyingType(value.GetType()));
+
+            switch (typeCode)
             {
-                if (methods[i].Name != name || methods[i].ReturnType != to) continue;
-                var args = methods[i].GetParameters();
-                if (args.Length != 1 || args[0].ParameterType != from) continue;
-                return methods[i];
-            }
-            return null;
-        }
-        internal static int GetReaderKey(Type type, int hashKey)
-        {
-            unchecked
-            {
-                int hashCode = 23;
-                hashCode = hashCode * 17 + type.GetHashCode();
-                hashCode = hashCode * 17 + hashKey;
-                return hashCode;
-            }
-        }
-        private static void StoreLocal(ILGenerator il, int index)
-        {
-            if (index < 0 || index >= short.MaxValue) throw new ArgumentNullException(nameof(index));
-            switch (index)
-            {
-                case 0: il.Emit(OpCodes.Stloc_0); break;
-                case 1: il.Emit(OpCodes.Stloc_1); break;
-                case 2: il.Emit(OpCodes.Stloc_2); break;
-                case 3: il.Emit(OpCodes.Stloc_3); break;
-                default:
-                    if (index <= 255)
-                    {
-                        il.Emit(OpCodes.Stloc_S, (byte)index);
-                    }
-                    else
-                    {
-                        il.Emit(OpCodes.Stloc, (short)index);
-                    }
-                    break;
+                case TypeCode.Byte: return (byte)value;
+                case TypeCode.SByte: return (sbyte)value;
+                case TypeCode.Int16: return (short)value;
+                case TypeCode.Int32: return (int)value;
+                case TypeCode.Int64: return (long)value;
+                case TypeCode.UInt16: return (ushort)value;
+                case TypeCode.UInt32: return (uint)value;
+                case TypeCode.UInt64: return (ulong)value;
             }
         }
-        [Obsolete("This method is for internal use only", false)]
-        public static void ThrowDataException(Exception ex, int index, IDataReader reader, string toType, object value)
-        {
-            Exception toThrow;
-            try
-            {
-                var colName = reader.GetName(index);
-                var formattedValue = String.Empty;
-                var fromType = String.Empty;
-                colName = reader.GetName(index);
-                try
-                {
-                    if (value == null || value is DBNull)
-                    {
-                        fromType = "null/DBNull";
-                        formattedValue = "<null>";
-                    }
-                    else
-                    {
-                        formattedValue = Convert.ToString(value);
-                        fromType = value.GetType().FullName;
-                    }
-                }
-                catch (Exception valEx) { formattedValue = valEx.Message; }
-                toThrow = new DataException($"反序列化失败，Reader[{index}-{colName}](Value:{formattedValue},Type:{fromType}) to Type:{toType} fail", ex);
-            }
-            catch { toThrow = new DataException(ex.Message, ex); }
-            throw toThrow;
-        }
-        private static void LoadInt32(ILGenerator il, int value)
-        {
-            switch (value)
-            {
-                case -1: il.Emit(OpCodes.Ldc_I4_M1); break;
-                case 0: il.Emit(OpCodes.Ldc_I4_0); break;
-                case 1: il.Emit(OpCodes.Ldc_I4_1); break;
-                case 2: il.Emit(OpCodes.Ldc_I4_2); break;
-                case 3: il.Emit(OpCodes.Ldc_I4_3); break;
-                case 4: il.Emit(OpCodes.Ldc_I4_4); break;
-                case 5: il.Emit(OpCodes.Ldc_I4_5); break;
-                case 6: il.Emit(OpCodes.Ldc_I4_6); break;
-                case 7: il.Emit(OpCodes.Ldc_I4_7); break;
-                case 8: il.Emit(OpCodes.Ldc_I4_8); break;
-                default:
-                    if (value >= -128 && value <= 127)
-                    {
-                        il.Emit(OpCodes.Ldc_I4_S, (sbyte)value);
-                    }
-                    else
-                    {
-                        il.Emit(OpCodes.Ldc_I4, value);
-                    }
-                    break;
-            }
-        }
-        private static void LoadLocal(ILGenerator il, int index)
-        {
-            if (index < 0 || index >= short.MaxValue) throw new ArgumentNullException(nameof(index));
-            switch (index)
-            {
-                case 0: il.Emit(OpCodes.Ldloc_0); break;
-                case 1: il.Emit(OpCodes.Ldloc_1); break;
-                case 2: il.Emit(OpCodes.Ldloc_2); break;
-                case 3: il.Emit(OpCodes.Ldloc_3); break;
-                default:
-                    if (index <= 255)
-                    {
-                        il.Emit(OpCodes.Ldloc_S, (byte)index);
-                    }
-                    else
-                    {
-                        il.Emit(OpCodes.Ldloc, (short)index);
-                    }
-                    break;
-            }
-        }
-        public static object GetEnumName(object enumValue, Type enumType)
-        {
-            if (!enumNameDict.ContainsKey(enumType))
-            {
-                Dictionary<int, string> enumDict = new Dictionary<int, string>();
-                var valueList = Enum.GetValues(enumType);
-                foreach (var value in valueList)
-                {
-                    enumDict.Add(Convert.ToInt32(value), Enum.GetName(enumType, value));
-                }
-                enumNameDict.TryAdd(enumType, enumDict);
-            }
-            if (enumValue == null) return DBNull.Value;
-            int iEnumValue = Convert.ToInt32(enumValue);
-            if (!enumNameDict[enumType].ContainsKey(iEnumValue)) return DBNull.Value;
-            return enumNameDict[enumType][iEnumValue];
-        }
+        return value;
     }
 }

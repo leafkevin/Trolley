@@ -1,13 +1,15 @@
 ﻿using System.Collections.Generic;
 
-namespace Trolley
+namespace Trolley;
+
+public class PagedList<T> : IPagedList<T>
 {
-    public class PagedList<T>
+    public int RecordsTotal { get; set; }
+    public List<T> Items { get; set; }
+    public PagedList() { }
+    public PagedList(int recordsTotal, List<T> items)
     {
-        public int PageIndex { get; set; }
-        public int PageSize { get; set; }
-        public int PageTotal { get; set; }
-        public int RecordsTotal { get; set; }
-        public List<T> Data { get; set; }
+        RecordsTotal = recordsTotal;
+        Items = items;
     }
 }

@@ -1,22 +1,23 @@
-﻿using System.Data.Common;
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Reflection;
 
-namespace Trolley
+namespace Trolley;
+
+public delegate string MethodCallSqlFormatter(object target, Stack<DeferredExpr> deferredExprs, params object[] arguments);
+
+public interface IOrmProvider
 {
-    public interface IOrmProvider
-    {
-        /// <summary>
-        /// 参数名前导字符，如：@:?
-        /// </summary>
-        string ParamPrefix { get; }
-        /// <summary>
-        /// 实体映射是否忽略大小写，对于Postgresql很有用
-        /// </summary>
-        bool IsMappingIgnoreCase { get; }
-        DbConnection CreateConnection(string ConnString);
-        string GetPropertyName(string propertyName);
-        string GetTableName(string entityName);
-        string GetColumnName(string propertyName);
-        string GetPagingExpression(string sql, int skip, int? limit, string orderBy = null);
-        string GetPagingCountExpression(string sql);
-    }
+    string ParameterPrefix { get; }
+    string SelectIdentitySql { get; }
+    bool IsSupportArrayParameter { get; }
+    IDbConnection CreateConnection(string connectionString);
+    IDbDataParameter CreateParameter(string parameterName, object value);
+    string GetTableName(string entityName);
+    string GetFieldName(string propertyName);
+    string GetPagingTemplate(int skip, int? limit, string orderBy = null);
+    int GetNativeDbType(Type type);
+    string GetQuotedValue(Type fieldType, object value);
+    bool TryGetMethodCallSqlFormatter(MethodInfo methodInfo, out MethodCallSqlFormatter formatter);
 }

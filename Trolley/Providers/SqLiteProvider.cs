@@ -1,29 +1,18 @@
-﻿using System.Data.Common;
+﻿using System.Data;
 
-namespace Trolley.Providers
+namespace Trolley;.Providers;
+
+public class SqLiteProvider : BaseOrmProvider
 {
-    public class SqLiteProvider : BaseOrmProvider
+    public override IDbConnection CreateConnection(string connString)
     {
-        public override DbConnection CreateConnection(string connString)
-        {
-            var assemblyQualifiedName = "System.Data.SQLite.SQLiteFactory, System.Data.SqlClient, Culture=neutral, PublicKeyToken=db937bc2d44ff139";
-            var factory = OrmProviderFactory.GetFactory(assemblyQualifiedName, "System.Data.SqlClient.dll");
-            var result = factory.CreateConnection();
-            result.ConnectionString = connString;
-            return result;
-        }
-        public override string GetPropertyName(string propertyName)
-        {
-            return "\"" + propertyName + "\"";
-        }
-        public override string GetTableName(string entityName)
-        {
-            return "\"" + entityName + "\"";
-        }
-        public override string GetColumnName(string propertyName)
-        {
-            return "\"" + propertyName + "\"";
-        }
+        var assemblyQualifiedName = "System.Data.SQLite.SQLiteFactory, System.Data.SqlClient, Culture=neutral, PublicKeyToken=db937bc2d44ff139";
+        var factory = this.GetFactory(assemblyQualifiedName);
+        var result = factory.CreateConnection();
+        result.ConnectionString = connString;
+        return result;
     }
+    public override string GetFieldName(string propertyName) => "\"" + propertyName + "\"";
+    public override string GetTableName(string entityName) => "\"" + entityName + "\"";
 }
 

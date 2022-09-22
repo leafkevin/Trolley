@@ -1,119 +1,139 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace Trolley
+namespace Trolley;
+
+public class QueryReader : IQueryReader
 {
-    public class QueryReader : IDisposable
-    {
-        protected bool isMappingIgnoreCase = false;
-        protected bool isCloseConnection = true;
-        protected int hashKey;
-        protected DbDataReader reader;
-        protected DbCommand command;
+    private readonly IOrmDbFactory dbFactory;
+    private readonly TheaConnection connection;
+    private readonly IDbCommand command;
+    private readonly IDataReader reader;
 
-        public QueryReader(int hashKey, DbCommand command, DbDataReader reader, bool isMappingIgnoreCase, bool isCloseConnection)
+    public QueryReader(IOrmDbFactory dbFactory, TheaConnection connection, IDbCommand command, IDataReader reader)
+    {
+        this.dbFactory = dbFactory;
+        this.connection = connection;
+        this.command = command;
+        this.reader = reader;
+    }
+
+    #region 同步方法
+    public TEntity Read<TEntity>()
+    {
+        var entityType = typeof(TEntity);
+        var result = default(TEntity);
+        var func = RepositoryHelper.GetReader(false, this.dbFactory, this.connection, this.reader, entityType, entityType);
+        while (reader.Read())
         {
-            this.hashKey = hashKey;
-            this.command = command;
-            this.reader = reader;
-            this.isMappingIgnoreCase = isMappingIgnoreCase;
-            this.isCloseConnection = isCloseConnection;
+            var objResult = func?.Invoke(reader);
+            if (objResult == null || objResult is TEntity) result = (TEntity)objResult;
+            else result = (TEntity)Convert.ChangeType(objResult, entityType, CultureInfo.InvariantCulture);
         }
-        public T Read<T>()
+        this.ReadNextResult();
+        return result;
+    }
+    public List<TEntity> ReadList<TEntity>()
+    {
+        var entityType = typeof(TEntity);
+        var result = new List<TEntity>();
+        var func = RepositoryHelper.GetReader(false, this.dbFactory, this.connection, this.reader, entityType, entityType);
+        while (reader.Read())
         {
-            Type targetType = typeof(T);
-            T result = default(T);
-            var func = RepositoryHelper.GetReader(this.hashKey, targetType, this.reader, this.isMappingIgnoreCase);
-            while (reader.Read())
-            {
-                var objResult = func?.Invoke(reader);
-                if (objResult == null || objResult is T) result = (T)objResult;
-                else result = (T)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture);
-            }
-            this.ReadNextResult();
-            return result;
+            var objResult = func?.Invoke(reader);
+            if (objResult == null) continue;
+            if (objResult is TEntity) result.Add((TEntity)objResult);
+            else result.Add((TEntity)Convert.ChangeType(objResult, entityType, CultureInfo.InvariantCulture));
         }
-        public List<T> ReadList<T>()
+        this.ReadNextResult();
+        return result;
+    }
+    public IPagedList<TEntity> ReadPageList<TEntity>()
+    {
+        var recordsTotal = this.Read<int>();
+        return new PagedList<TEntity>(recordsTotal, this.ReadList<TEntity>());
+    }
+    private void ReadNextResult()
+    {
+        if (!this.reader.NextResult())
         {
-            Type targetType = typeof(T);
-            List<T> result = new List<T>();
-            var func = RepositoryHelper.GetReader(this.hashKey, targetType, this.reader, this.isMappingIgnoreCase);
-            while (reader.Read())
-            {
-                var objResult = func?.Invoke(reader);
-                if (objResult == null) continue;
-                if (objResult is T) result.Add((T)objResult);
-                else result.Add((T)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
-            }
-            this.ReadNextResult();
-            return result;
-        }
-        public Dictionary<TKey, TValue> ReadDictionary<TKey, TValue>()
-        {
-            Type targetType = typeof(KeyValuePair<TKey, TValue>);
-            Dictionary<TKey, TValue> result = new Dictionary<TKey, TValue>();
-            int keyIndex = reader.GetOrdinal(nameof(KeyValuePair<TKey, TValue>.Key));
-            int valueIndex = reader.GetOrdinal(nameof(KeyValuePair<TKey, TValue>.Value));
-            while (reader.Read())
-            {
-                result.Add(reader.GetFieldValue<TKey>(keyIndex), reader.GetFieldValue<TValue>(valueIndex));
-            }
-            this.ReadNextResult();
-            return result;
-        }
-        public PagedList<T> ReadPageList<T>(int pageIndex, int pageSize, int recordsTotal)
-        {
-            Type targetType = typeof(T);
-            PagedList<T> result = new PagedList<T>();
-            result.Data = new List<T>();
-            var func = RepositoryHelper.GetReader(this.hashKey, targetType, this.reader, this.isMappingIgnoreCase);
-            while (reader.Read())
-            {
-                var objResult = func?.Invoke(reader);
-                if (objResult == null) continue;
-                if (objResult is T) result.Data.Add((T)objResult);
-                else result.Data.Add((T)Convert.ChangeType(objResult, targetType, CultureInfo.InvariantCulture));
-            }
-            this.ReadNextResult();
-            result.PageIndex = pageIndex;
-            result.PageSize = pageSize;
-            result.RecordsTotal = recordsTotal;
-            if (pageSize <= 0) throw new ArgumentException("pageSize不能<=0");
-            result.PageTotal = (int)Math.Ceiling((double)recordsTotal / pageSize);
-            return result;
-        }
-        protected void ReadNextResult()
-        {
-            if (!this.reader.NextResult())
-            {
-                this.reader.Close();
-                this.reader.Dispose();
-                this.reader = null;
-                if (this.isCloseConnection)
-                {
-                    var conn = this.command.Connection;
-                    conn.Close();
-                    conn.Dispose();
-                    this.command.Dispose();
-                    this.command = null;
-                }
-            }
-        }
-        public void Dispose()
-        {
-            if (this.reader != null)
-            {
-                if (!reader.IsClosed) this.reader.Close();
-                this.reader.Dispose();
-                this.reader = null;
-            }
-            if (this.command != null)
-            {
-                this.command.Dispose();
-                this.command = null;
-            }
+            this.reader.Dispose();
+            this.Dispose();
         }
     }
+    public void Dispose()
+    {
+        if (this.reader != null)
+        {
+            if (!this.reader.IsClosed) this.command?.Cancel();
+            this.reader.Dispose();
+        }
+        if (this.command != null) this.command.Dispose();
+        GC.SuppressFinalize(this);
+    }
+    #endregion
+
+    #region 异步方法
+    public async Task<TEntity> ReadAsync<TEntity>(CancellationToken cancellationToken = default)
+    {
+        var entityType = typeof(TEntity);
+        var result = default(TEntity);
+        var func = RepositoryHelper.GetReader(false, this.dbFactory, this.connection, this.reader, entityType, entityType);
+        var readerAsync = this.reader as DbDataReader;
+        while (await readerAsync.ReadAsync(cancellationToken))
+        {
+            var objResult = func?.Invoke(reader);
+            if (objResult == null || objResult is TEntity) result = (TEntity)objResult;
+            else result = (TEntity)Convert.ChangeType(objResult, entityType, CultureInfo.InvariantCulture);
+        }
+        await this.ReadNextResultAsync(cancellationToken);
+        return result;
+    }
+    public async Task<List<TEntity>> ReadListAsync<TEntity>(CancellationToken cancellationToken = default)
+    {
+        var entityType = typeof(TEntity);
+        var result = new List<TEntity>();
+        var func = RepositoryHelper.GetReader(false, this.dbFactory, this.connection, this.reader, entityType, entityType);
+        var readerAsync = this.reader as DbDataReader;
+        while (await readerAsync.ReadAsync(cancellationToken))
+        {
+            var objResult = func?.Invoke(reader);
+            if (objResult == null) continue;
+            if (objResult is TEntity) result.Add((TEntity)objResult);
+            else result.Add((TEntity)Convert.ChangeType(objResult, entityType, CultureInfo.InvariantCulture));
+        }
+        await this.ReadNextResultAsync(cancellationToken);
+        return result;
+    }
+    public async Task<IPagedList<TEntity>> ReadPageListAsync<TEntity>(CancellationToken cancellationToken = default)
+    {
+        var recordsTotal = await this.ReadAsync<int>();
+        return new PagedList<TEntity>(recordsTotal, await this.ReadListAsync<TEntity>(cancellationToken));
+    }
+    public async Task ReadNextResultAsync(CancellationToken cancellationToken = default)
+    {
+        var readerAsync = this.reader as DbDataReader;
+        if (!(await readerAsync.NextResultAsync(cancellationToken)))
+        {
+            await readerAsync.DisposeAsync();
+            await this.DisposeAsync();
+        }
+    }
+    public async Task DisposeAsync()
+    {
+        if (this.reader != null)
+        {
+            var readerAsync = this.reader as DbDataReader;
+            if (!this.reader.IsClosed) this.command?.Cancel();
+            await readerAsync.DisposeAsync();
+        }
+        if (this.command != null) this.command.Dispose();
+        GC.SuppressFinalize(this);
+    }
+    #endregion
 }
