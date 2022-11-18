@@ -6,6 +6,8 @@ using System.Text;
 
 namespace Trolley.Providers;
 
+public delegate IDbConnection CreateNativeDbConnectionDelegate(string connectionString);
+public delegate IDbDataParameter CreateNativeParameterDelegate(string name, int nativeDbType, object value);
 public abstract class BaseOrmProvider : IOrmProvider
 {
     public virtual string ParameterPrefix => "@";
@@ -26,6 +28,7 @@ public abstract class BaseOrmProvider : IOrmProvider
         return builder.ToString();
     }
     public abstract int GetNativeDbType(Type type);
+    public abstract string CastTo(Type type);
     public virtual string GetQuotedValue(Type fieldType, object value)
     {
         if (fieldType == typeof(bool))
@@ -38,17 +41,18 @@ public abstract class BaseOrmProvider : IOrmProvider
             return this.GetQuotedValue(sqlSegment.Value);
         return value.ToString();
     }
+    public abstract bool TryGetMemberAccessSqlFormatter(MemberInfo memberInfo, out MemberAccessSqlFormatter formatter);
     public abstract bool TryGetMethodCallSqlFormatter(MethodInfo methodInfo, out MethodCallSqlFormatter formatter);
-    protected virtual Func<string, IDbConnection> CreateConnectionDelegate(Type connectionType)
+    protected virtual CreateNativeDbConnectionDelegate CreateConnectionDelegate(Type connectionType)
     {
         var constructor = connectionType.GetConstructor(new Type[] { typeof(string) });
         var connStringExpr = Expression.Parameter(typeof(string), "connectionString");
         var instanceExpr = Expression.New(constructor, connStringExpr);
-        return Expression.Lambda<Func<string, IDbConnection>>(
+        return Expression.Lambda<CreateNativeDbConnectionDelegate>(
              Expression.Convert(instanceExpr, typeof(IDbConnection))
              , connStringExpr).Compile();
     }
-    protected virtual Func<string, int, object, IDbDataParameter> CreateParameterDelegate(Type dbTypeType, Type dbParameterType, PropertyInfo dbTypePropertyInfo)
+    protected virtual CreateNativeParameterDelegate CreateParameterDelegate(Type dbTypeType, Type dbParameterType, PropertyInfo dbTypePropertyInfo)
     {
         var constructor = dbParameterType.GetConstructor(new Type[] { typeof(string), typeof(object) });
         var parametersExpr = new ParameterExpression[] {
@@ -59,7 +63,7 @@ public abstract class BaseOrmProvider : IOrmProvider
         var returnLabel = Expression.Label(typeof(IDbDataParameter));
         var instanceExpr = Expression.New(constructor, parametersExpr[0], parametersExpr[2]);
         var dbTypeExpr = Expression.Convert(parametersExpr[1], dbTypeType);
-        return Expression.Lambda<Func<string, int, object, IDbDataParameter>>(
+        return Expression.Lambda<CreateNativeParameterDelegate>(
             Expression.Block(
                 Expression.Call(instanceExpr, dbTypePropertyInfo.GetSetMethod(), dbTypeExpr),
                 Expression.Return(returnLabel, Expression.Convert(instanceExpr, typeof(IDbDataParameter))),

@@ -1,54 +1,51 @@
 ﻿using System.Collections.Generic;
-using System.Linq.Expressions;
 
 namespace Trolley;
 
 public enum SqlSegmentType : byte
 {
     None = 0,
-    From,
-    InnerJoin,
-    LeftJoin,
-    RightJoin,
-    Select,
-    Include,
-    Distinct,
+    /// <summary>
+    /// MemberVisit(有运算),Const,Func<bool>
+    /// </summary>
     Where,
-    Take,
-    Skip,
-    Paging,
-    OrderBy,
-    OrderByDescending,
-    //ThenBy,
-    //ThenByDesc,
+    /// <summary>
+    /// MemberVisit(有运算),New(无Member)
+    /// </summary>
     GroupBy,
-    //Include,
-    //Aggregate 
+    /// <summary>
+    /// MemberVisit(有运算),New(有Member),MemberInit,IQuery,Const
+    /// </summary>
+    Select,
+    /// <summary>
+    /// MemberVisit(无运算)
+    /// </summary>
+    Include,
+    Tracking
 }
 
-class SqlExpressionScope
+class WhereScope
 {
     /// <summary>
-    /// Expression,SqlExpressionScope
+    /// Expression,WhereScope
     /// </summary>
     public object Value { get; set; }
-    public string Separator { get; set; }
-    public Expression Source { get; set; }
     /// <summary>
-    /// Expression,SqlExpressionScope
+    /// 解析where子句中使用的AND/OR
+    /// </summary>
+    public string Separator { get; set; }
+    /// <summary>
+    /// Expression,WhereScope
     /// </summary>
     public Stack<object> NextExprs { get; set; }
-    public SqlExpressionScope Parent { get; set; }
+    public WhereScope Parent { get; set; }
     public int Deep { get; set; }
-
-    public SqlExpressionScope() { }
-    public SqlExpressionScope(string separator) => this.Separator = separator;
+    public WhereScope(string separator) => this.Separator = separator;
     public void Push(object scopeExpr)
     {
-        if (this.NextExprs == null)
-            this.NextExprs = new Stack<object>();
+        this.NextExprs ??= new Stack<object>();
         this.NextExprs.Push(scopeExpr);
-        if (scopeExpr is SqlExpressionScope currentScope)
+        if (scopeExpr is WhereScope currentScope)
         {
             currentScope.Deep = this.Deep + 1;
             currentScope.Parent = this;

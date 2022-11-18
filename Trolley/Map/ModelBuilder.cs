@@ -7,6 +7,7 @@ public class ModelBuilder
     private readonly IOrmDbFactory dbFactory;
     public ModelBuilder(IOrmDbFactory dbFactory)
         => this.dbFactory = dbFactory;
+
     public virtual ModelBuilder Entity<TEntity>(Action<EntityBuilder<TEntity>> initializer) where TEntity : class
     {
         var entityType = typeof(TEntity);

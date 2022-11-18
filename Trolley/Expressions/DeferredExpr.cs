@@ -1,13 +1,25 @@
-﻿using System.Linq.Expressions;
+﻿namespace Trolley;
 
-namespace Trolley;
-
+public enum OperationType
+{
+    None = 0,
+    And,
+    Or,
+    Equal,
+    Not,
+    Concat,
+    Convert,
+    Comma
+}
 /// <summary>
 /// 针对当前操作数的延时表达式处理
 /// </summary>
 public class DeferredExpr
 {
-    public ExpressionType ExpressionType { get; set; }
+    /// <summary>
+    /// 操作符：And/Or/Concat/Equals/NotEquals/Convert/Comma
+    /// </summary>
+    public OperationType OperationType { get; set; }
     /// <summary>
     /// SqlSegment.Null/SqlSegment.True/null常量或是字符串连接操作的List<Expression>或是Expression成员访问表达式
     /// </summary>

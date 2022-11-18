@@ -1,0 +1,71 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
+<#@ output extension=".cs" #>
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq.Expressions;
+
+namespace Trolley;
+
+class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember>
+{
+    private readonly IOrmDbFactory dbFactory;
+    private readonly TheaConnection connection;
+    private readonly IDbTransaction transaction;
+    private readonly QueryVisitor visitor;
+
+    public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+        : base(dbFactory, connection, transaction, visitor) { }
+
+    public IIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member, Expression<Func<TNavigation, bool>> filter = null)
+    {
+        this.visitor.Include(member, filter);
+        return new IncludableQuery<T, TNavigation>(this.dbFactory, this.connection, this.transaction, this.visitor);
+    }
+    public IIncludableQuery<T, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
+    {
+        this.visitor.Include(member, filter);
+        return new IncludableQuery<T, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+    }
+}
+<#
+    var count = 16;
+    var tables = "T1";
+    for (int i = 2; i < count; i++)
+    {
+        tables += $", T{i}";
+#>
+class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IIncludableQuery<<#=tables#>, TMember>
+{
+    private readonly IOrmDbFactory dbFactory;
+    private readonly TheaConnection connection;
+    private readonly IDbTransaction transaction;
+    private readonly QueryVisitor visitor;
+
+    public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+        : base(dbFactory, connection, transaction, visitor) { }
+
+    public IIncludableQuery<<#=tables#>, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member, Expression<Func<TNavigation, bool>> filter = null)
+    {
+        this.visitor.Include(member, filter);
+        return new IncludableQuery<<#=tables#>, TNavigation>(this.dbFactory, this.connection, this.transaction, this.visitor);
+    }
+    public IIncludableQuery<<#=tables#>, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
+    {
+        this.visitor.Include(member, filter);
+        return new IncludableQuery<<#=tables#>, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+    }
+}
+<#  }
+    tables += $", T{count}";
+#>
+class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IIncludableQuery<<#=tables#>, TMember>
+{
+    public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+        : base(dbFactory, connection, transaction, visitor) { }
+}

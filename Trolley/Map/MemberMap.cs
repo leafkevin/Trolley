@@ -22,11 +22,20 @@ public class MemberMap
     public bool IsIgnore { get; set; }
 
     public bool IsNavigation { get; set; }
-    public string NavigationTable { get; set; }
-    public Type NavigationTargetType { get; set; }
+    /// <summary>
+    /// 如果是1:1关系，导航属性类型和成员类型MemberType一致，如果是1:N关系，导航属性类型和成员类型的元素类型ElementType一致
+    /// </summary>
+    public Type NavigationType { get; set; }
+    /// <summary>
+    /// 当前值对象映射的实体模型Type
+    /// </summary>
+    public Type MapType { get; set; }
     public bool IsToOne { get; set; }
-    public string NavigationMemberName { get; set; }
-    public MemberMap(MemberInfo memberInfo) : this(null, string.Empty, memberInfo) { }
+    /// <summary>
+    /// 外键成员，是类属性
+    /// </summary>
+    public string ForeignKey { get; set; }
+
     public MemberMap(EntityMap parent, string fieldPrefix, MemberInfo memberInfo)
     {
         this.Parent = parent;
@@ -42,8 +51,6 @@ public class MemberMap
             case MemberTypes.Property:
                 var propertyInfo = memberInfo as PropertyInfo;
                 this.MemberType = propertyInfo.PropertyType;
-                //this.GetMethodInfo = propertyInfo.GetGetMethod();
-                //this.SetMethodInfo = propertyInfo.GetSetMethod();
                 break;
         }
         this.DbType = DbTypeMap.FindDbType(this.MemberType);
@@ -58,5 +65,39 @@ public class MemberMap
         this.IsEnum = this.UnderlyingType.IsEnum;
         if (this.IsEnum)
             this.EnumUnderlyingType = this.UnderlyingType.GetEnumUnderlyingType();
+    }
+
+    public MemberMap Clone(EntityMap parent, string fieldPrefix, MemberInfo memberInfo)
+    {
+        var result = new MemberMap(parent, fieldPrefix, memberInfo);
+        result.Parent = parent;
+        result.Member = memberInfo;
+        result.FieldName = this.FieldName;
+        result.MemberName = memberInfo.Name;
+        switch (memberInfo.MemberType)
+        {
+            case MemberTypes.Field:
+                var fieldInfo = memberInfo as FieldInfo;
+                result.MemberType = fieldInfo.FieldType;
+                break;
+            case MemberTypes.Property:
+                var propertyInfo = memberInfo as PropertyInfo;
+                result.MemberType = propertyInfo.PropertyType;
+                break;
+        }
+        result.DbType = this.DbType;
+        result.NativeDbType = this.NativeDbType;
+        result.UnderlyingType = result.MemberType;
+        if (result.MemberType.IsValueType)
+        {
+            var underlyingType = Nullable.GetUnderlyingType(result.MemberType);
+            result.IsNullable = underlyingType != null;
+            if (result.IsNullable)
+                result.UnderlyingType = underlyingType;
+        }
+        result.IsEnum = result.UnderlyingType.IsEnum;
+        if (result.IsEnum)
+            result.EnumUnderlyingType = result.UnderlyingType.GetEnumUnderlyingType();
+        return result;
     }
 }

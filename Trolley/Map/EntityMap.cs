@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -7,17 +8,15 @@ namespace Trolley;
 
 public class EntityMap
 {
-    private readonly Dictionary<string, MemberMap> memberMaps = new();
+    private readonly ConcurrentDictionary<string, MemberMap> memberMaps = new();
 
     public EntityMap(Type entityType) => this.EntityType = entityType;
 
-    public string EntityName { get; set; }
     public Type EntityType { get; set; }
     public string TableName { get; set; }
     public string FieldPrefix { get; set; } = String.Empty;
     public bool IsNullable { get; set; }
     public Type UnderlyingType { get; set; }
-    public bool IsValueTuple { get; set; }
     public bool IsAutoIncrement { get; set; }
 
     public List<string> KeyFields { get; set; }
@@ -52,21 +51,21 @@ public class EntityMap
     }
     public MemberMap GetMemberMap(string memberName)
     {
+        //导航属性，一定存在映射，有就直接返回了
         if (this.memberMaps.TryGetValue(memberName, out var mapper))
             return mapper;
         var memberInfos = this.EntityType.GetMember(memberName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
         if (memberInfos == null || memberInfos.Length <= 0)
             throw new Exception($"不存在名为{memberName}的成员");
+        //this.AddMemberMap(memberName, mapper = new MemberMap(this, this.FieldPrefix, memberInfos[0]));
+        //除了指定映射，其他成员映射不做缓存，根据成员信息现生成映射
         return new MemberMap(this, this.FieldPrefix, memberInfos[0]);
     }
-    public List<MemberInfo> GetMembers() => this.EntityType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-        .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+
     public void AddMemberMap(string memberName, MemberMap mapper)
         => this.memberMaps.TryAdd(memberName, mapper);
     public EntityMap Build()
     {
-        if (string.IsNullOrEmpty(this.EntityName))
-            this.EntityName = this.EntityType.Name;
         if (string.IsNullOrEmpty(this.TableName))
             this.TableName = this.EntityType.Name;
 
@@ -76,10 +75,14 @@ public class EntityMap
             this.IsNullable = this.UnderlyingType != null;
             if (!this.IsNullable)
                 this.UnderlyingType = this.EntityType;
-
-            this.IsValueTuple = this.UnderlyingType.FullName.StartsWith("System.ValueTuple`");
         }
-
+        //不补充其他未配置的列映射，在生成SQL的时候，动态获取，减少映射内存占用
+        //var memberInfos = this.GetMembers();
+        //foreach (var memberInfo in memberInfos)
+        //{
+        //    if (!this.TryGetMemberMap(memberInfo.Name, out _))
+        //        this.AddMemberMap(memberInfo.Name, new MemberMap(this, this.FieldPrefix, memberInfo));
+        //}
         if (this.memberMaps.Count > 0)
         {
             this.KeyFields = new List<string>();
@@ -97,9 +100,9 @@ public class EntityMap
     public static EntityMap CreateDefaultMap(Type entityType)
     {
         var mapper = new EntityMap(entityType);
-        mapper.EntityName = entityType.Name;
         mapper.TableName = entityType.Name;
 
+        bool isValueTuple = false;
         if (entityType.IsValueType)
         {
             mapper.UnderlyingType = Nullable.GetUnderlyingType(entityType);
@@ -107,10 +110,11 @@ public class EntityMap
             if (!mapper.IsNullable)
                 mapper.UnderlyingType = entityType;
 
-            mapper.IsValueTuple = mapper.UnderlyingType.FullName.StartsWith("System.ValueTuple`");
+            isValueTuple = mapper.UnderlyingType.FullName.StartsWith("System.ValueTuple`");
+
         }
         MemberInfo[] memberInfos = null;
-        if (mapper.IsValueTuple)
+        if (isValueTuple)
             memberInfos = mapper.UnderlyingType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
         else
         {
@@ -128,4 +132,48 @@ public class EntityMap
         }
         return mapper;
     }
+    public static EntityMap CreateDefaultMap(Type entityType, EntityMap mapTo)
+    {
+        if (entityType == mapTo.EntityType)
+            return mapTo;
+
+        var mapper = new EntityMap(entityType);
+        mapper.FieldPrefix = mapTo.FieldPrefix;
+        mapper.TableName = mapTo.TableName;
+        mapper.IsAutoIncrement = mapTo.IsAutoIncrement;
+        mapper.KeyFields = mapTo.KeyFields;
+        mapper.AutoIncrementField = mapTo.AutoIncrementField;
+
+        bool isValueTuple = false;
+        if (entityType.IsValueType)
+        {
+            mapper.UnderlyingType = Nullable.GetUnderlyingType(entityType);
+            mapper.IsNullable = mapper.UnderlyingType != null;
+            if (!mapper.IsNullable)
+                mapper.UnderlyingType = entityType;
+
+            isValueTuple = mapper.UnderlyingType.FullName.StartsWith("System.ValueTuple`");
+        }
+        MemberInfo[] memberInfos = null;
+        if (isValueTuple)
+            memberInfos = mapper.UnderlyingType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+        else
+        {
+            memberInfos = mapper.EntityType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                .Where(p => p.GetIndexParameters().Length == 0).ToArray();
+        }
+
+        if (memberInfos != null && memberInfos.Length > 0)
+        {
+            foreach (var memberInfo in memberInfos)
+            {
+                var mapToMemberMapper = mapTo.GetMemberMap(memberInfo.Name);
+                var memberMapper = mapToMemberMapper.Clone(mapper, mapper.FieldPrefix, memberInfo);
+                mapper.memberMaps.TryAdd(memberMapper.MemberName, memberMapper);
+            }
+        }
+        return mapper;
+    }
+    public List<MemberInfo> GetMembers() => this.EntityType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+        .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
 }

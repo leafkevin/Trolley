@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -11,10 +12,12 @@ namespace Trolley.Providers;
 
 public class MySqlProvider : BaseOrmProvider
 {
-    private static Func<string, IDbConnection> createNativeConnectonDelegate = null;
-    private static Func<string, int, object, IDbDataParameter> createNativeParameterDelegate = null;
+    private static CreateNativeDbConnectionDelegate createNativeConnectonDelegate = null;
+    private static CreateNativeParameterDelegate createNativeParameterDelegate = null;
+    private static ConcurrentDictionary<MemberInfo, MemberAccessSqlFormatter> memberAccessSqlFormatterCahe = new();
     private static ConcurrentDictionary<MethodInfo, MethodCallSqlFormatter> methodCallSqlFormatterCahe = new();
     private static Dictionary<Type, int> nativeDbTypes = new();
+    private static Dictionary<Type, string> castTos = new();
     public override string SelectIdentitySql => ";SELECT LAST_INSERT_ID()";
     public MySqlProvider()
     {
@@ -30,6 +33,28 @@ public class MySqlProvider : BaseOrmProvider
         nativeDbTypes[typeof(string)] = 253;
         nativeDbTypes[typeof(DateTime)] = 12;
         nativeDbTypes[typeof(DateTime?)] = 12;
+
+        castTos[typeof(long)] = "bigint";
+        castTos[typeof(long?)] = "bigint";
+        castTos[typeof(short)] = "smallint";
+        castTos[typeof(short?)] = "smallint";
+        castTos[typeof(byte)] = "tinyint";
+        castTos[typeof(byte?)] = "tinyint";
+
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("Count", Type.EmptyTypes), (target, deferredExprs, arguments) => "COUNT(1)");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("LongCount", Type.EmptyTypes), (target, deferredExprs, arguments) => "COUNT(1)");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("Count", 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"COUNT({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("CountDistinct", 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"COUNT(DISTINCT {arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("LongCount", 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"COUNT({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("LongCountDistinct", 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"COUNT(DISTINCT {arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("Sum", 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"SUM({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("SumAs", 2, new Type[] { Type.MakeGenericMethodParameter(0), Type.MakeGenericMethodParameter(1) }), (target, deferredExprs, arguments) => $"SUM({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("Avg", 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"AVG({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("AvgAs", 2, new Type[] { Type.MakeGenericMethodParameter(0), Type.MakeGenericMethodParameter(1) }), (target, deferredExprs, arguments) => $"AVG({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("Max", 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"MAX({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("MaxAs", 2, new Type[] { Type.MakeGenericMethodParameter(0), Type.MakeGenericMethodParameter(1) }), (target, deferredExprs, arguments) => $"MAX({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("Min", 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"MIN({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("MinAs", 2, new Type[] { Type.MakeGenericMethodParameter(0), Type.MakeGenericMethodParameter(1) }), (target, deferredExprs, arguments) => $"MIN({arguments[0]})");
     }
     public override IDbConnection CreateConnection(string connectionString)
         => createNativeConnectonDelegate.Invoke(connectionString);
@@ -45,6 +70,51 @@ public class MySqlProvider : BaseOrmProvider
         if (nativeDbTypes.TryGetValue(type, out var dbType))
             return dbType;
         return 0;
+    }
+    public override string CastTo(Type type)
+    {
+        if (castTos.TryGetValue(type, out var dbType))
+            return dbType;
+        return type.ToString().ToLower();
+    }
+    public override bool TryGetMemberAccessSqlFormatter(MemberInfo memberInfo, out MemberAccessSqlFormatter formatter)
+    {
+        if (!memberAccessSqlFormatterCahe.TryGetValue(memberInfo, out formatter))
+        {
+            bool result = false;
+            switch (memberInfo.Name)
+            {
+                case "Empty":
+                    //String.Empty
+                    if (memberInfo.DeclaringType == typeof(string))
+                    {
+                        memberAccessSqlFormatterCahe.TryAdd(memberInfo, formatter = target => "''");
+                        result = true;
+                    }
+                    break;
+                case "Length":
+                    //String.Length
+                    if (memberInfo.DeclaringType == typeof(string))
+                    {
+                        memberAccessSqlFormatterCahe.TryAdd(memberInfo, formatter = target =>
+                        {
+                            string fieldSql = null;
+                            if (target is SqlSegment sqlSegment)
+                            {
+                                if (!sqlSegment.IsParameter && !sqlSegment.HasField)
+                                    fieldSql = this.GetQuotedValue(sqlSegment);
+                                else fieldSql = sqlSegment.ToString();
+                            }
+                            else fieldSql = this.GetQuotedValue(target);
+                            return $"CHAR_LENGTH({fieldSql})";
+                        });
+                        result = true;
+                    }
+                    break;
+            }
+            return result;
+        }
+        return true;
     }
     public override bool TryGetMethodCallSqlFormatter(MethodInfo methodInfo, out MethodCallSqlFormatter formatter)
     {
@@ -73,7 +143,7 @@ public class MySqlProvider : BaseOrmProvider
                             {
                                 if (builder.Length > 0)
                                     builder.Append(',');
-                                //目前数组元素是原来的值，没有SqlSegment包装
+                                //目前数组元素有SqlSegment包装
                                 builder.Append(this.GetQuotedValue(element));
                             }
 
@@ -89,11 +159,9 @@ public class MySqlProvider : BaseOrmProvider
                             int notIndex = 0;
                             if (deferExprs != null)
                             {
-                                while (deferExprs.TryPeek(out var deferrdExpr)
-                               && deferrdExpr.ExpressionType == ExpressionType.Not)
+                                while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
                                 {
                                     notIndex++;
-                                    deferExprs.TryPop(out _);
                                 }
                             }
                             string notString = notIndex % 2 > 0 ? " NOT" : "";
@@ -148,11 +216,9 @@ public class MySqlProvider : BaseOrmProvider
                             int notIndex = 0;
                             if (deferExprs != null)
                             {
-                                while (deferExprs.TryPeek(out var deferrdExpr)
-                               && deferrdExpr.ExpressionType == ExpressionType.Not)
+                                while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
                                 {
                                     notIndex++;
-                                    deferExprs.TryPop(out _);
                                 }
                             }
                             string notString = notIndex % 2 > 0 ? " NOT" : "";
@@ -199,11 +265,9 @@ public class MySqlProvider : BaseOrmProvider
                             int notIndex = 0;
                             if (deferExprs != null)
                             {
-                                while (deferExprs.TryPeek(out var deferrdExpr)
-                               && deferrdExpr.ExpressionType == ExpressionType.Not)
+                                while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
                                 {
                                     notIndex++;
-                                    deferExprs.TryPop(out _);
                                 }
                             }
                             string notString = notIndex % 2 > 0 ? " NOT" : "";
@@ -438,11 +502,9 @@ public class MySqlProvider : BaseOrmProvider
                         int notIndex = 0;
                         if (deferExprs != null)
                         {
-                            while (deferExprs.TryPeek(out var deferrdExpr)
-                                && deferrdExpr.ExpressionType == ExpressionType.Not)
+                            while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
                             {
                                 notIndex++;
-                                deferExprs.TryPop(out _);
                             }
                         }
                         string equalsString = notIndex % 2 > 0 ? "<>" : "=";
@@ -476,11 +538,9 @@ public class MySqlProvider : BaseOrmProvider
                         int notIndex = 0;
                         if (deferExprs != null)
                         {
-                            while (deferExprs.TryPeek(out var deferrdExpr)
-                           && deferrdExpr.ExpressionType == ExpressionType.Not)
+                            while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
                             {
                                 notIndex++;
-                                deferExprs.TryPop(out _);
                             }
                         }
                         string notString = notIndex % 2 > 0 ? " NOT" : "";
@@ -514,11 +574,9 @@ public class MySqlProvider : BaseOrmProvider
                         int notIndex = 0;
                         if (deferExprs != null)
                         {
-                            while (deferExprs.TryPeek(out var deferrdExpr)
-                           && deferrdExpr.ExpressionType == ExpressionType.Not)
+                            while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
                             {
                                 notIndex++;
-                                deferExprs.TryPop(out _);
                             }
                         }
                         string notString = notIndex % 2 > 0 ? " NOT" : "";
@@ -536,10 +594,11 @@ public class MySqlProvider : BaseOrmProvider
                 case "ToString":
                     if (methodInfo.DeclaringType == typeof(string))
                         formatter = (target, deferExprs, args) => target.ToString();
-                    else formatter = (target, deferExprs, args) => $"CAST({target} AS VARCHAR(1000))";
+                    else formatter = (target, deferExprs, args) => $"CAST({target} AS {this.CastTo(typeof(string))})";
                     methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
                     result = true;
                     break;
+
                 default: formatter = null; result = false; break;
             }
             return result;

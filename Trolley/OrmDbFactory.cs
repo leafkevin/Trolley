@@ -63,7 +63,11 @@ public class OrmDbFactory : IOrmDbFactory
     //        }
     //    }
     //}
-    public ModelBuilder CreateModelBuidler() => new ModelBuilder(this);
+    public void BuildModel(Action<ModelBuilder> modelInitializer)
+    {
+        var builder = new ModelBuilder(this);
+        modelInitializer.Invoke(builder);
+    }
     public IRepository Create(TheaConnection connection) => new Repository(this, connection);
     public IRepository Create(string dbKey = null, int? tenantId = null)
     {
@@ -96,7 +100,7 @@ public class OrmDbFactory : IOrmDbFactory
     public TheaDatabase GetDatabase(string dbKey = null)
     {
         TheaDatabase database = null;
-        if (String.IsNullOrEmpty(dbKey))
+        if (string.IsNullOrEmpty(dbKey))
             database = this.defaultDatabase;
         else if (!this.databases.TryGetValue(dbKey, out database))
             throw new Exception($"未配置dbKey:{dbKey}数据库连接串");

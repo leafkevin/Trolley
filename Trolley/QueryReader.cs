@@ -28,9 +28,10 @@ public class QueryReader : IQueryReader
     {
         var entityType = typeof(TEntity);
         var result = default(TEntity);
-        var func = RepositoryHelper.GetReader(false, this.dbFactory, this.connection, this.reader, entityType, entityType);
+
         while (reader.Read())
         {
+            reader.To<TEntity>();
             var objResult = func?.Invoke(reader);
             if (objResult == null || objResult is TEntity) result = (TEntity)objResult;
             else result = (TEntity)Convert.ChangeType(objResult, entityType, CultureInfo.InvariantCulture);
@@ -57,6 +58,10 @@ public class QueryReader : IQueryReader
     {
         var recordsTotal = this.Read<int>();
         return new PagedList<TEntity>(recordsTotal, this.ReadList<TEntity>());
+    }
+    public Dictionary<TKey, TValue> ReadDictionary<TKey, TValue>()
+    {
+        throw new NotImplementedException();
     }
     private void ReadNextResult()
     {
@@ -124,6 +129,10 @@ public class QueryReader : IQueryReader
             await this.DisposeAsync();
         }
     }
+    public Task<Dictionary<TKey, TValue>> ReadDictionaryAsync<TKey, TValue>(CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
     public async Task DisposeAsync()
     {
         if (this.reader != null)
@@ -134,6 +143,11 @@ public class QueryReader : IQueryReader
         }
         if (this.command != null) this.command.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        throw new NotImplementedException();
     }
     #endregion
 }

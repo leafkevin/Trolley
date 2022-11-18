@@ -1,0 +1,91 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
+<#@ output extension=".cs" #>
+using System;
+using System.Linq.Expressions;
+
+namespace Trolley;
+
+public interface IUpdate<T>
+{
+    IUpdate<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> predicate);
+    IUpdate<T> WithBy<TUpdateObject>(TUpdateObject updateObjs);
+    IUpdate<T> Set<TSetObject>(Expression<Func<T, TSetObject>> setExpr);
+    IUpdate<T> Where(Expression<Func<T, bool>> predicate);
+    IUpdate<T> Where(bool condition, Expression<Func<T, bool>> predicate);
+    int Execute();
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    string ToSql();
+}
+<#
+    var count = 6;
+    var tables = "T";
+    for (int i = 1; i < count; i++)
+    {
+        tables += $", T{i}";
+#>
+public interface IUpdate<<#=tables#>>
+{
+    IUpdate<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> predicate);
+    IUpdate<<#=tables#>> WithBy<TUpdateObject>(TUpdateObject updateObjs);
+    IUpdate<<#=tables#>> Set<TSetObject>(Expression<Func<<#=tables#>, TSetObject>> setExpr);
+    IUpdate<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
+    IUpdate<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> predicate);
+    int Execute();
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    string ToSql();
+}
+<#  }
+    var nextTable = tables + $", T{count}";
+#>
+public interface IUpdate<<#=nextTable#>>
+{
+    IUpdate<<#=nextTable#>> WithBy<TUpdateObject>(TUpdateObject updateObjs);
+    IUpdate<<#=nextTable#>> Set<TSetObject>(Expression<Func<<#=nextTable#>, TSetObject>> setExpr);
+    IUpdate<<#=nextTable#>> Where(Expression<Func<<#=nextTable#>, bool>> predicate);
+    IUpdate<<#=nextTable#>> Where(bool condition, Expression<Func<<#=nextTable#>, bool>> predicate);
+    int Execute();
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    string ToSql();
+}
+
+public interface IMultiUpdate<T>
+{
+    IMultiUpdate<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> predicate);
+    IMultiUpdate<T> WithBy<TUpdateObject>(TUpdateObject updateObjs);
+    IMultiUpdate<T> Set<TSetObject>(Expression<Func<T, TSetObject>> setExpr);
+    IMultiUpdate<T> Where(Expression<Func<T, bool>> predicate);
+    IMultiUpdate<T> Where(bool condition, Expression<Func<T, bool>> predicate);
+    IMultiQuery Execute();
+    string ToSql();
+}
+<#
+    tables = "T";
+    for (int i = 1; i < count; i++)
+    {
+        tables += $", T{i}";
+#>
+public interface IMultiUpdate<<#=tables#>>
+{
+    IMultiUpdate<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> predicate);
+    IMultiUpdate<<#=tables#>> WithBy<TUpdateObject>(TUpdateObject updateObjs);
+    IMultiUpdate<<#=tables#>> Set<TSetObject>(Expression<Func<<#=tables#>, TSetObject>> setExpr);
+    IMultiUpdate<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
+    IMultiUpdate<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> predicate);
+    IMultiQuery Execute();
+    string ToSql();
+}
+<#  }#>
+public interface IMultiUpdate<<#=nextTable#>>
+{
+    IMultiUpdate<<#=nextTable#>> WithBy<TUpdateObject>(TUpdateObject updateObjs);
+    IMultiUpdate<<#=nextTable#>> Set<TSetObject>(Expression<Func<<#=nextTable#>, TSetObject>> setExpr);
+    IMultiUpdate<<#=nextTable#>> Where(Expression<Func<<#=nextTable#>, bool>> predicate);
+    IMultiUpdate<<#=nextTable#>> Where(bool condition, Expression<Func<<#=nextTable#>, bool>> predicate);
+    IMultiQuery Execute();
+    string ToSql();
+}

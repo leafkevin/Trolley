@@ -1,0 +1,259 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
+<#@ output extension=".cs" #>
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq.Expressions;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Trolley;
+
+public interface IQuery<T>
+{
+    #region Include
+    /// <summary>
+    /// 单表查询，包含1:1关联方式的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系。
+    /// 可以通过使用InnerJoin(Expression&lt;Func&lt;T, bool&gt;&gt; joinOn)、RightJoin(Expression&lt;Func&lt;T, bool&gt;&gt; joinOn)方法改变默认关联方式
+    /// </summary>
+    /// <typeparam name="TMember">导航属性泛型类型</typeparam>
+    /// <param name="memberSelector">导航属性选择表达式</param>
+    /// <returns>返回实体对象，带有导航属性</returns>
+    IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector);
+    /// <summary>
+    /// 单表查询，包含1:N关联方式的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系。
+    /// 可以通过使用InnerJoin(Expression&lt;Func&lt;T, bool&gt;&gt; joinOn)、RightJoin(Expression&lt;Func&lt;T, bool&gt;&gt; joinOn)方法改变默认关联方式
+    /// </summary>
+    /// <typeparam name="TElment">导航属性泛型类型</typeparam>
+    /// <param name="memberSelector">导航属性选择表达式</param>
+    /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
+    /// <returns>返回实体对象，带有导航属性</returns>
+    IIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
+    #endregion
+
+    #region Join
+    /// <summary>
+    /// 添加子查询表，方便后续关联,如：
+    /// 如：WithTable(f => f.From&lt;Order, OrderDetail&gt;().Where((a, b) => a.Id == b.OrderId).SelectAggregate((a, b, c) => new { b.OrderNo, ProductCount = a.Count(c.Id) })))
+    /// </summary>
+    /// <typeparam name="TOther"></typeparam>
+    /// <param name="subQuery">子查询表达式，如：
+    /// WithTable(f => f.From&lt;Order, OrderDetail&gt;().Where((a, b) => a.Id == b.OrderId).SelectAggregate((a, b, c) => new { b.OrderNo, ProductCount = a.Count(c.Id) })))</param>
+    /// <returns></returns>
+    IQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    /// <summary>
+    /// 实体中导航表关联，如: rep.From&lt;Order&gt;().InnerJoin(f => f.BuyerId == f.Buyer.Id);
+    /// </summary>
+    /// <param name="joinOn"></param>
+    /// <returns></returns>
+    IQuery<T> InnerJoin(Expression<Func<T, bool>> joinOn);
+    IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    IQuery<T> LeftJoin(Expression<Func<T, bool>> joinOn);
+    IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    IQuery<T> RightJoin(Expression<Func<T, bool>> joinOn);
+    IQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    #endregion
+
+    #region Union
+    IQuery<T> Union<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IQuery<T> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    #endregion
+
+    #region Where
+    IQuery<T> Where(Expression<Func<T, bool>> predicate);
+    IQuery<T> Where(bool condition, Expression<Func<T, bool>> predicate);
+    #endregion
+
+    #region GroupBy/OrderBy
+    IGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr);
+    IQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr);
+    IQuery<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr);
+    #endregion
+
+    IQuery<T> Distinct();
+    IQuery<T> Skip(int offset);
+    IQuery<T> Take(int limit);
+    IQuery<T> ToChunk(int size);
+
+    IQuery<T> Select();
+    IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr);
+
+    int Count();
+    Task<int> CountAsync(CancellationToken cancellationToken = default);
+    long LongCount();
+    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
+    int Count<TField>(Expression<Func<T, TField>> fieldExpr);
+    Task<int> CountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    int CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
+    Task<int> CountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    long LongCount<TField>(Expression<Func<T, TField>> fieldExpr);
+    Task<long> LongCountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    long LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
+    Task<long> LongCountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+
+    TField Sum<TField>(Expression<Func<T, TField>> fieldExpr);
+    Task<TField> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TTarget SumAs<TField, TTarget>(Expression<Func<T, TField>> fieldExpr);
+    Task<TTarget> SumAsAsync<TField, TTarget>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Avg<TField>(Expression<Func<T, TField>> fieldExpr);
+    Task<TField> AvgAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TTarget AvgAs<TField, TTarget>(Expression<Func<T, TField>> fieldExpr);
+    Task<TTarget> AvgAsAsync<TField, TTarget>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Max<TField>(Expression<Func<T, TField>> fieldExpr);
+    Task<TField> MaxAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TTarget MaxAs<TField, TTarget>(Expression<Func<T, TField>> fieldExpr);
+    Task<TTarget> MaxAsAsync<TField, TTarget>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Min<TField>(Expression<Func<T, TField>> fieldExpr);
+    Task<TField> MinAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TTarget MinAs<TField, TTarget>(Expression<Func<T, TField>> fieldExpr);
+    Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+
+    T First();
+    Task<T> FirstAsync(CancellationToken cancellationToken = default);
+    List<T> ToList();
+    Task<List<T>> ToListAsync(CancellationToken cancellationToken = default);
+    IPagedList<T> ToPageList(int pageIndex, int pageSize);
+    Task<IPagedList<T>> ToPageListAsync(int pageIndex, int pageSize, CancellationToken cancellationToken = default);
+    Dictionary<TKey, TElement> ToDictionary<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> valueSelector) where TKey : notnull;
+    Task<Dictionary<TKey, TElement>> ToDictionaryAsync<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull;
+    string ToSql(out List<IDbDataParameter> dbParameters);
+}
+<#
+    var count = 16;
+    string tables = "T1";
+    for (int i = 2; i < count; i++)
+    {
+        tables += $", T{i}";
+#>
+public interface IQuery<<#=tables#>>
+{
+    IIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector);
+    IIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
+
+    IQuery<<#=tables#>, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    IQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    IQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    IQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    IQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    IQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+
+    IQuery<<#=tables#>> Union<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IQuery<<#=tables#>> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+
+    IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
+    IQuery<<#=tables#>> Where(Expression<Func<IWhereSql, <#=tables#>, bool>> predicate);
+    IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> predicate);
+    IQuery<<#=tables#>> Where(bool condition, Expression<Func<IWhereSql, <#=tables#>, bool>> predicate);
+
+    IGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr);
+    IQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+    IQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+
+    IQuery<<#=tables#>> Distinct();
+    IQuery<<#=tables#>> Skip(int offset);
+    IQuery<<#=tables#>> Take(int limit);
+    IQuery<<#=tables#>> ToChunk(int size);
+
+    IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, <#=tables#>, TTarget>> fieldsExpr);
+
+    int Count();
+    Task<int> CountAsync(CancellationToken cancellationToken = default);
+    long LongCount();
+    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
+    int Count<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<int> CountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    int CountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<int> CountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    long LongCount<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<long> LongCountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    long LongCountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<long> LongCountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+
+    TField Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TField> SumAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TTarget SumAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TTarget> SumAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Avg<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TField> AvgAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TTarget AvgAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TTarget> AvgAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Max<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TField> MaxAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TTarget MaxAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TTarget> MaxAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Min<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TField> MinAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TTarget MinAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+
+    string ToSql(out List<IDbDataParameter> dbParameters);
+}
+<#  }
+    tables += $", T{count}";
+#>
+public interface IQuery<<#=tables#>>
+{
+    IIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector);
+    IIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
+
+    IQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    IQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    IQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+
+    IQuery<<#=tables#>> Union<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IQuery<<#=tables#>> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+
+    IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
+    IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> predicate);
+
+    IGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr);
+    IQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+    IQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+
+    IQuery<<#=tables#>> Distinct();
+    IQuery<<#=tables#>> Skip(int offset);
+    IQuery<<#=tables#>> Take(int limit);
+    IQuery<<#=tables#>> ToChunk(int size);
+
+    IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);
+
+    int Count();
+    Task<int> CountAsync(CancellationToken cancellationToken = default);
+    long LongCount();
+    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
+    int Count<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<int> CountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    int CountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<int> CountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    long LongCount<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<long> LongCountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    long LongCountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<long> LongCountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+
+    TField Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TField> SumAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TTarget SumAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TTarget> SumAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Avg<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TField> AvgAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TTarget AvgAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TTarget> AvgAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Max<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TField> MaxAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TTarget MaxAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TTarget> MaxAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Min<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TField> MinAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TTarget MinAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+
+    string ToSql(out List<IDbDataParameter> dbParameters);
+}

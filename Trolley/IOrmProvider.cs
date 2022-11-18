@@ -5,8 +5,8 @@ using System.Reflection;
 
 namespace Trolley;
 
+public delegate string MemberAccessSqlFormatter(object target);
 public delegate string MethodCallSqlFormatter(object target, Stack<DeferredExpr> deferredExprs, params object[] arguments);
-
 public interface IOrmProvider
 {
     string ParameterPrefix { get; }
@@ -18,6 +18,8 @@ public interface IOrmProvider
     string GetFieldName(string propertyName);
     string GetPagingTemplate(int skip, int? limit, string orderBy = null);
     int GetNativeDbType(Type type);
+    string CastTo(Type type);
     string GetQuotedValue(Type fieldType, object value);
+    bool TryGetMemberAccessSqlFormatter(MemberInfo memberInfo, out MemberAccessSqlFormatter formatter);
     bool TryGetMethodCallSqlFormatter(MethodInfo methodInfo, out MethodCallSqlFormatter formatter);
 }
