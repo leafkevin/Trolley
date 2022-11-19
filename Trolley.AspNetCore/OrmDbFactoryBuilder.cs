@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
+using System.Collections.Generic;
 
 namespace Trolley;
 
@@ -13,13 +15,13 @@ public class OrmDbFactoryBuilder
     }
     public OrmDbFactoryBuilder Configure(IModelConfiguration configuration)
     {
-        var builder = this.dbFactory.CreateModelBuidler();
+        var builder = new ModelBuilder(this.dbFactory);
         configuration.OnModelCreating(builder);
         return this;
     }
     public OrmDbFactoryBuilder Configure<TModelConfiguration>() where TModelConfiguration : class, IModelConfiguration, new()
     {
-        var builder = this.dbFactory.CreateModelBuidler();
+        var builder = new ModelBuilder(this.dbFactory);
         var configuration = new TModelConfiguration();
         configuration.OnModelCreating(builder);
         return this;

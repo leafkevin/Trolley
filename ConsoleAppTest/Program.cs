@@ -1,10 +1,9 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualBasic;
 using MySqlConnector;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
+using Trolley;
+using Trolley.Providers;
 
 namespace ConsoleAppTest;
 
@@ -22,16 +21,16 @@ class Program
     }
     static void Main(string[] args)
     {
-        var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
-        var connection = new MySqlConnection(connectionString);
-        var command = new MySqlCommand("select Name from sys_user where Id=3", connection);
-        connection.Open();
-        var reader = command.ExecuteReader();
-        if (reader.Read())
-        {
-            var readerValue = reader.GetValue(0);
-            int sfdsfsdf = 0;
-        }
+        //var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
+        //var connection = new MySqlConnection(connectionString);
+        //var command = new MySqlCommand("select Name from sys_user where Id=3", connection);
+        //connection.Open();
+        //var reader = command.ExecuteReader();
+        //if (reader.Read())
+        //{
+        //    var readerValue = reader.GetValue(0);
+        //    int sfdsfsdf = 0;
+        //}
 
         //Init(() => new Order
         //{
@@ -40,29 +39,32 @@ class Program
         //    Buyer = new User { Age = 40, Name = "leafkevin" },
         //    Details = new List<OrderDetail>() { new OrderDetail { Price = 2, Amount = 3 } }
         //});
-        Init(f => f.TotalAmount == 456 + 15);
+        //Init(f => f.TotalAmount == 456 + 15);
 
-        //var services = new ServiceCollection();
-        //services.AddSingleton<IOrmProvider, MySqlProvider>();
-        //services.AddSingleton<IOrmDbFactory, OrmDbFactory>(f =>
-        //{
-        //    var dbFactory = new OrmDbFactory(f);
-        //    //var connectionString = "Server=bj-cdb-o9bbr5vl.sql.tencentcdb.com;Port=63227;Database=fengling;Uid=root;password=Siia@TxDb582e4sdf;charset=utf8mb4;";
-        //    var connectionString = "Server=.;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
-        //    dbFactory.Register("fengling", true, f => f.Add<MySqlProvider>(connectionString, true));
-        //    dbFactory.BuildModel(f => new ModelConfiguration().OnModelCreating(f));
-        //    return dbFactory;
-        //});
-        //var serviceProvider = services.BuildServiceProvider();
-        //var dbFactory = serviceProvider.GetService<IOrmDbFactory>();
-        //var repository = dbFactory.Create();
+        var services = new ServiceCollection();
+        services.AddSingleton<IOrmProvider, MySqlProvider>();
+        services.AddSingleton<IOrmDbFactory, OrmDbFactory>(f =>
+        {
+            var dbFactory = new OrmDbFactory(f);
+            //var connectionString = "Server=bj-cdb-o9bbr5vl.sql.tencentcdb.com;Port=63227;Database=fengling;Uid=root;password=Siia@TxDb582e4sdf;charset=utf8mb4;";
+            var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
+            dbFactory.Register("fengling", true, f => f.Add<MySqlProvider>(connectionString, true));
+            dbFactory.BuildModel(f => new ModelConfiguration().OnModelCreating(f));
+            return dbFactory;
+        });
+        var serviceProvider = services.BuildServiceProvider();
+        var dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+        var repository = dbFactory.Create();
 
         ////From Order a;LeftJoin User b includeForm Last;Where Order a;ToList解析
         ////From User;From Order includeForm Last Filter;From Detail includeForm Last Filter;ToList解析
         ////结构：EntityType,QueryType(from),IncludeFrom,IncludeManyFrom,Body,JoinOn,AlaisName
         ////到ToList,First才开始解析，前面只生成方便解析的结构
         ////Stack<>
-        //var rep = dbFactory.Create();
+        var rep = dbFactory.Create();
+        var result = rep.From<Order>().Include(f => f.Buyer).First();
+
+
         //rep.From<Order>().Include(f => f.Buyer).Include(f => f.Details)
         //    .InnerJoin(f => f.BuyerId == f.Buyer.Id)
         //    .Where(f => f.CreatedAt > DateTime.Parse("2021-10-01"))
@@ -72,7 +74,7 @@ class Program
         //    .Where((a, b, c) => a.Exists<User>(t => t.Id == b.BuyerId && t.Age > 40)
         //        && a.In(b.BuyerId, f => f.From<User>().Where(t => t.Id == b.BuyerId && t.Age > 40).Select(t => t.Id))
         //        && a.In(b.BuyerId, new int[] { 1, 2, 3 }))
-        //    .Select((a, b) => new { UserId = a.BuyerId, UserName = b.Name, a.OrderNo, a.ProductCount, a.Buyer })
+        //    .Select((a, b) => new { UserId = a.BuyerId, UserName = b.Name, a.OrderNo, a.ProductCount })
         //    .ToList();
 
         //rep.From<Order>().InnerJoin<User>((a, b) => a.BuyerId == b.Id)

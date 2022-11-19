@@ -16,7 +16,7 @@ class Query<T> : IQuery<T>
     private readonly IOrmDbFactory dbFactory;
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -24,7 +24,6 @@ class Query<T> : IQuery<T>
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T));
     }
 
     #region Include
@@ -43,7 +42,7 @@ class Query<T> : IQuery<T>
     #region Join
     public IQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery($"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -89,7 +88,7 @@ class Query<T> : IQuery<T>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -105,7 +104,7 @@ class Query<T> : IQuery<T>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -143,7 +142,7 @@ class Query<T> : IQuery<T>
     public IGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T, TGrouping>(this.visitor);
+        return new GroupingQuery<T, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
     {
@@ -198,7 +197,7 @@ class Query<T> : IQuery<T>
         => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
     public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
     public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-         => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T, TField>> fieldExpr)
         => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     public async Task<int> CountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
@@ -222,26 +221,15 @@ class Query<T> : IQuery<T>
     public TTarget SumAs<TField, TTarget>(Expression<Func<T, TField>> fieldExpr)
         => this.QueryFirstValue<TTarget>("SUM({0})", fieldExpr);
     public async Task<TTarget> SumAsAsync<TField, TTarget>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-    {
-        this.visitor.Select(null, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out var readerFields);
-        var values = await this.QueryListAsync<TField>(sql, dbParameters, readerFields);
-        return (TTarget)(object)values.Sum(f => (decimal)(object)f);
-    }
+        => await this.QueryFirstValueAsync<TTarget>("SUM({0})", fieldExpr, cancellationToken);
     public TField Avg<TField>(Expression<Func<T, TField>> fieldExpr)
         => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
     public async Task<TField> AvgAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
     public TTarget AvgAs<TField, TTarget>(Expression<Func<T, TField>> fieldExpr)
-    {
-        var castTo = this.connection.OrmProvider.CastTo(typeof(TTarget));
-        return this.QueryFirstValue<TTarget>($"AVG(CAST({{0}} AS {castTo}))", fieldExpr);
-    }
+        => this.QueryFirstValue<TTarget>("AVG({0})", fieldExpr);
     public async Task<TTarget> AvgAsAsync<TField, TTarget>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-    {
-        var castTo = this.connection.OrmProvider.CastTo(typeof(TTarget));
-        return await this.QueryFirstValueAsync<TTarget>($"AVG(CAST({{0}} AS {castTo}))", fieldExpr, cancellationToken);
-    }
+        => await this.QueryFirstValueAsync<TTarget>("AVG({0})", fieldExpr, cancellationToken);
     public TField Max<TField>(Expression<Func<T, TField>> fieldExpr)
         => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
     public async Task<TField> MaxAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
@@ -491,55 +479,5 @@ class Query<T> : IQuery<T>
         await reader.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
-    }
-    private List<TTarget> QueryList<TTarget>(string sql, List<IDbDataParameter> dbParameters = null, List<MemberSegment> readerFields = null)
-    {
-        var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-        var result = new List<TTarget>();
-        connection.Open();
-        var behavior = CommandBehavior.SequentialAccess;
-        var reader = command.ExecuteReader(behavior);
-        while (reader.Read())
-        {
-            result.Add(reader.To<TTarget>(connection, readerFields));
-        }
-        while (reader.NextResult()) { }
-        reader.Close();
-        reader.Dispose();
-        return result;
-    }
-    private async Task<List<TTarget>> QueryListAsync<TTarget>(string sql, List<IDbDataParameter> dbParameters = null, List<MemberSegment> readerFields = null, CancellationToken cancellationToken = default)
-    {
-        var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-
-        if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
-
-        var result = new List<TTarget>();
-        await connection.OpenAsync(cancellationToken);
-        var behavior = CommandBehavior.SequentialAccess;
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            result.Add(reader.To<TTarget>(connection, readerFields));
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
-        await reader.CloseAsync();
-        await reader.DisposeAsync();
-        return result;
     }
 }

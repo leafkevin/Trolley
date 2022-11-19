@@ -21,7 +21,7 @@ public abstract class BaseOrmProvider : IOrmProvider
     public virtual string GetFieldName(string propertyName) => propertyName;
     public virtual string GetPagingTemplate(int skip, int? limit, string orderBy = null)
     {
-        var builder = new StringBuilder("SELECT /**fields**/ FROM /**tables**/ WHERE /**conditions**/");
+        var builder = new StringBuilder("SELECT /**fields**/ FROM /**tables**/ /**others**/");
         if (!String.IsNullOrEmpty(orderBy)) builder.Append($" {orderBy}");
         if (limit.HasValue) builder.Append($" LIMIT {limit}");
         builder.Append($" OFFSET {skip}");

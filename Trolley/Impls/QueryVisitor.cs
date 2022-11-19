@@ -30,8 +30,8 @@ class QueryVisitor
     private string parameterPrefix;
 
     private bool isMultiTable = false;
-    private List<TableSegment> tables { get; set; }
-    private Dictionary<string, TableSegment> tableAlias { get; set; }
+    private List<TableSegment> tables = new();
+    private Dictionary<string, TableSegment> tableAlias = new();
     private List<TableSegment> includeTables = new();
     public QueryVisitor(IOrmDbFactory dbFactory, IOrmProvider ormProvider, string parameterPrefix = "p")
     {
@@ -43,6 +43,7 @@ class QueryVisitor
     {
         var builder = new StringBuilder();
         string tableSql = null;
+
         if (this.tables.Count > 0)
         {
             foreach (var tableSegment in this.tables)
@@ -106,6 +107,10 @@ class QueryVisitor
     {
         var builder = new StringBuilder();
         string tableSql = null;
+
+        if (string.IsNullOrEmpty(this.selectSql))
+            this.Select(null, defaultExpr);
+
         if (this.tables.Count > 0)
         {
             foreach (var tableInfo in this.tables)
@@ -113,7 +118,8 @@ class QueryVisitor
                 var tableName = tableInfo.Body;
                 if (string.IsNullOrEmpty(tableName))
                 {
-                    tableInfo.Mapper = this.dbFactory.GetEntityMap(tableInfo.EntityType);
+                    if (tableInfo.Mapper == null)
+                        tableInfo.Mapper = this.dbFactory.GetEntityMap(tableInfo.EntityType);
                     tableName = this.ormProvider.GetTableName(tableInfo.Mapper.TableName);
                 }
                 if (builder.Length > 0) builder.Append(' ');
@@ -131,9 +137,6 @@ class QueryVisitor
             }
             tableSql = builder.ToString();
         }
-
-        if (string.IsNullOrEmpty(this.selectSql))
-            this.Select(null, defaultExpr);
 
         builder.Clear();
         if (!string.IsNullOrEmpty(this.groupBySql))
@@ -161,17 +164,15 @@ class QueryVisitor
             var pageSql = this.ormProvider.GetPagingTemplate(this.skip ?? 0, this.limit, orderBy);
             pageSql = pageSql.Replace("/**fields**/", this.selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
-            pageSql = pageSql.Replace("/**conditions**/", this.whereSql);
+            pageSql = pageSql.Replace("/**others**/", this.whereSql);
             return $"SELECT COUNT(*) FROM {tableSql};{pageSql}{others}";
         }
-        else return $"SELECT {this.selectSql} FROM {tableSql} WHERE {this.whereSql}{others} {orderBy}";
+        else return $"SELECT {this.selectSql} FROM {tableSql}{this.whereSql}{others} {orderBy}";
     }
     public void From(params Type[] entityTypes)
     {
         char tableIndex = 'a';
         this.isMultiTable = entityTypes.Length > 0;
-        this.tableAlias = new Dictionary<string, TableSegment>();
-        this.tables = new List<TableSegment>();
         for (int i = 0; i < entityTypes.Length; i++)
         {
             this.tables.Add(new TableSegment
@@ -253,14 +254,37 @@ class QueryVisitor
             {
                 case ExpressionType.New:
                 case ExpressionType.MemberInit:
-                    if (lambdaExpr.Body.NodeType == ExpressionType.New)
-                        sqlSegment = this.VisitNew(sqlSegment);
-                    else sqlSegment = this.VisitMemberInit(sqlSegment);
+                case ExpressionType.Parameter:
+                    sqlSegment = this.Visit(sqlSegment);
                     if (sqlSegment.Value is List<MemberSegment> memberSegments)
                     {
                         this.readerFields = memberSegments;
+                        int readerIndex = 0;
+                        int tableIndex = 0;
+                        TableSegment lastTableSegment = null;
                         foreach (var memberSegment in this.readerFields)
                         {
+                            if (memberSegment.TableSegment != lastTableSegment)
+                            {
+                                lastTableSegment = memberSegment.TableSegment;
+                                lastTableSegment.IsUsed = true;
+                                if (lastTableSegment.IncludedFrom != null)
+                                {
+                                    lastTableSegment.ReaderIndex = lastTableSegment.IncludedFrom.ReaderIndex;
+                                    readerIndex = lastTableSegment.ReaderIndex;
+                                    tableIndex++;
+                                    lastTableSegment.TableIndex = tableIndex;
+                                }
+                                else
+                                {
+                                    readerIndex++;
+                                    tableIndex++;
+                                    lastTableSegment.ReaderIndex = readerIndex;
+                                    lastTableSegment.TableIndex = tableIndex;
+                                }
+                            }
+                            memberSegment.ReaderIndex = readerIndex;
+                            memberSegment.TableIndex = tableIndex;
                             if (builder.Length > 0)
                                 builder.Append(", ");
                             builder.Append(memberSegment.Body);
@@ -322,29 +346,11 @@ class QueryVisitor
         this.nodeType = SqlSegmentType.Where;
         this.InitTableAlias(whereExpr);
         var lambdaExpr = whereExpr as LambdaExpression;
-        this.whereSql = this.VisitConditionExpr(lambdaExpr.Body);
+        this.whereSql = " WHERE " + this.VisitConditionExpr(lambdaExpr.Body);
     }
     public void Distinct() => this.isDistinct = true;
-    public void Clear()
-    {
-        this.selectSql = string.Empty;
-        this.whereSql = string.Empty;
-        this.groupBySql = string.Empty;
-        this.havingSql = string.Empty;
-        this.orderBySql = string.Empty;
-        this.isDistinct = false;
-        this.skip = null;
-        this.limit = null;
-        this.isUnion = false;
-        this.tables.Clear();
-        this.tableAlias.Clear();
-        this.isMultiTable = false;
-        this.tableAlias.Clear();
-        this.includeTables.Clear();
-        this.dbParameters?.Clear();
-    }
     private SqlSegment VisitAndDeferred(SqlSegment sqlSegment)
-        => this.VisitBooleanDeferred(this.Visit(sqlSegment));
+       => this.VisitBooleanDeferred(this.Visit(sqlSegment));
     private SqlSegment Visit(SqlSegment sqlSegment)
     {
         if (sqlSegment == SqlSegment.None)
@@ -676,8 +682,8 @@ class QueryVisitor
         var memberSegments = this.GetTableFields(fromSegment);
         while (true)
         {
-            var childSegment = this.tables.Find(f => f.FromTable == tableSegment);
-            if (fromSegment == null) break;
+            var childSegment = this.tables.Find(f => f.IncludedFrom == tableSegment);
+            if (childSegment == null) break;
             memberSegments.AddRange(this.GetTableFields(childSegment, childSegment.FromMember));
             tableSegment = childSegment;
         }
@@ -1128,7 +1134,9 @@ class QueryVisitor
 
         while (memberExprs.TryPop(out currentExpr))
         {
-            var fromMapper = fromSegment.Mapper ?? this.dbFactory.GetEntityMap(fromType);//TODO
+            if (fromSegment.Mapper == null)
+                fromSegment.Mapper = this.dbFactory.GetEntityMap(fromType);
+            var fromMapper = fromSegment.Mapper;
             var memberMapper = fromMapper.GetMemberMap(currentExpr.Member.Name);
 
             if (!memberMapper.IsNavigation)
@@ -1163,10 +1171,9 @@ class QueryVisitor
                     EntityType = entityType,
                     Mapper = entityMapper,
                     AliasName = rightAlias,
-                    FromTable = fromSegment,
+                    IncludedFrom = fromSegment,
                     FromMember = memberMapper.Member,
-                    ForeignKey = memberMapper.ForeignKey,
-                    OnExpr = $"{fromSegment.AliasName}.{memberMapper.ForeignKey}={rightAlias}.{entityMapper.KeyFields[0]}",
+                    OnExpr = $"{fromSegment.AliasName}.{this.ormProvider.GetFieldName(memberMapper.ForeignKey)}={rightAlias}.{this.ormProvider.GetFieldName(entityMapper.KeyFields[0])}",
                     IsInclude = true,
                     IsSelectAll = true,
                     Path = path
@@ -1176,16 +1183,16 @@ class QueryVisitor
             {
                 if (fromMapper.KeyFields.Count > 1)
                     throw new Exception($"导航属性表，暂时不支持多个主键字段，实体：{fromMapper.EntityType.FullName}");
-
+                var targetMapper = this.dbFactory.GetEntityMap(memberMapper.NavigationType);
+                var targetMemberMapper = targetMapper.GetMemberMap(memberMapper.ForeignKey);
                 this.includeTables.Add(tableSegment = new TableSegment
                 {
                     //默认FROM
                     EntityType = entityType,
                     Mapper = entityMapper,
-                    FromTable = fromSegment,
+                    IncludedFrom = fromSegment,
                     FromMember = memberMapper.Member,
-                    ForeignKey = memberMapper.ForeignKey,
-                    OnExpr = $"{memberMapper.ForeignKey} IN ({{0}})",
+                    OnExpr = $"{this.ormProvider.GetFieldName(targetMemberMapper.FieldName)} IN ({{0}})",
                     IsInclude = true,
                     IsSelectAll = true,
                     Path = path
@@ -1208,13 +1215,16 @@ class QueryVisitor
         var memberSegments = new List<MemberSegment>();
         foreach (var memberInfo in memberMappers)
         {
+            if (memberInfo.GetMemberType().IsEntityType())
+                continue;
             var memberMapper = fromSegment.Mapper.GetMemberMap(memberInfo.Name);
             memberSegments.Add(new MemberSegment
             {
                 //此处FromIndex,FromMember,Body不做处理，不知道是否作为Select内容
-                FromMember = fromMember,
+                FromMember = fromMember ?? memberInfo,
                 MemberMapper = memberMapper,
                 TableSegment = fromSegment,
+                Body = $"{fromSegment.AliasName}.{this.ormProvider.GetFieldName(memberMapper.FieldName)}",
                 IsNeedAlias = false,
                 Path = fromSegment.Path + "." + memberInfo.Name
             });

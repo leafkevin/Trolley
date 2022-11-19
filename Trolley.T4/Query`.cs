@@ -41,7 +41,7 @@ class Query<T1, T2> : IQuery<T1, T2>
     #region Join
     public IQuery<T1, T2, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery($"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -87,7 +87,7 @@ class Query<T1, T2> : IQuery<T1, T2>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -103,7 +103,7 @@ class Query<T1, T2> : IQuery<T1, T2>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -141,7 +141,7 @@ class Query<T1, T2> : IQuery<T1, T2>
     public IGroupingQuery<T1, T2, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, TGrouping>(this.visitor);
+        return new GroupingQuery<T1, T2, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2> OrderBy<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr)
     {
@@ -350,7 +350,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
     #region Join
     public IQuery<T1, T2, T3, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery($"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -396,7 +396,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -412,7 +412,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -450,7 +450,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
     public IGroupingQuery<T1, T2, T3, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, TGrouping>(this.visitor);
+        return new GroupingQuery<T1, T2, T3, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3> OrderBy<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
     {
@@ -659,7 +659,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     #region Join
     public IQuery<T1, T2, T3, T4, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery($"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -705,7 +705,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -721,7 +721,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -759,7 +759,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     public IGroupingQuery<T1, T2, T3, T4, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, TGrouping>(this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
     {
@@ -968,7 +968,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
     #region Join
     public IQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery($"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -1014,7 +1014,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -1030,7 +1030,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -1068,7 +1068,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
     public IGroupingQuery<T1, T2, T3, T4, T5, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, TGrouping>(this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
     {
@@ -1277,7 +1277,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery($"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -1323,7 +1323,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -1339,7 +1339,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -1377,7 +1377,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>(this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
     {
@@ -1586,7 +1586,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery($"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -1632,7 +1632,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -1648,7 +1648,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -1686,7 +1686,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>(this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr)
     {
@@ -1895,7 +1895,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery($"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -1941,7 +1941,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -1957,7 +1957,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -1995,7 +1995,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>(this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr)
     {
@@ -2204,7 +2204,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery($"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -2250,7 +2250,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -2266,7 +2266,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -2304,7 +2304,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>(this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr)
     {
@@ -2513,7 +2513,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery($"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -2559,7 +2559,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -2575,7 +2575,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -2613,7 +2613,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>(this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr)
     {
@@ -2822,7 +2822,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery($"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -2868,7 +2868,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -2884,7 +2884,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -2922,7 +2922,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>(this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr)
     {
@@ -3131,7 +3131,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery($"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -3177,7 +3177,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -3193,7 +3193,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -3231,7 +3231,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>(this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr)
     {
@@ -3440,7 +3440,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery($"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -3486,7 +3486,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -3502,7 +3502,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -3540,7 +3540,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>(this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr)
     {
@@ -3749,7 +3749,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery($"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -3795,7 +3795,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -3811,7 +3811,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -3849,7 +3849,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>(this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr)
     {
@@ -4058,7 +4058,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery($"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -4104,7 +4104,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -4120,7 +4120,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -4158,7 +4158,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr)
     {
@@ -4390,7 +4390,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -4406,7 +4406,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery($"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -4434,7 +4434,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr)
     {

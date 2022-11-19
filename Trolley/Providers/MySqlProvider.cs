@@ -3,8 +3,6 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 
@@ -48,13 +46,13 @@ public class MySqlProvider : BaseOrmProvider
         methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("LongCount", 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"COUNT({arguments[0]})");
         methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("LongCountDistinct", 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"COUNT(DISTINCT {arguments[0]})");
         methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("Sum", 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"SUM({arguments[0]})");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("SumAs", 2, new Type[] { Type.MakeGenericMethodParameter(0), Type.MakeGenericMethodParameter(1) }), (target, deferredExprs, arguments) => $"SUM({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("SumAs", 2, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"SUM({arguments[0]})");
         methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("Avg", 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"AVG({arguments[0]})");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("AvgAs", 2, new Type[] { Type.MakeGenericMethodParameter(0), Type.MakeGenericMethodParameter(1) }), (target, deferredExprs, arguments) => $"AVG({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("AvgAs", 2, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"AVG({arguments[0]})");
         methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("Max", 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"MAX({arguments[0]})");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("MaxAs", 2, new Type[] { Type.MakeGenericMethodParameter(0), Type.MakeGenericMethodParameter(1) }), (target, deferredExprs, arguments) => $"MAX({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("MaxAs", 2, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"MAX({arguments[0]})");
         methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("Min", 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"MIN({arguments[0]})");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("MinAs", 2, new Type[] { Type.MakeGenericMethodParameter(0), Type.MakeGenericMethodParameter(1) }), (target, deferredExprs, arguments) => $"MIN({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod("MinAs", 2, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"MIN({arguments[0]})");
     }
     public override IDbConnection CreateConnection(string connectionString)
         => createNativeConnectonDelegate.Invoke(connectionString);

@@ -9,6 +9,7 @@
 	<ItemGroup>
 		<Compile Remove="Ifaces\IJoinQuery.cs" />
 		<Compile Remove="Impls\JoinQuery.cs" />
+		<Compile Remove="OrmDbFactoryBuilder.cs" />
 		<Compile Remove="Providers\NpgsqlProvider.cs" />
 		<Compile Remove="Providers\OracleProvider.cs" />
 		<Compile Remove="Providers\SqLiteProvider.cs" />

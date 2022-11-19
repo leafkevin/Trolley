@@ -12,23 +12,55 @@ namespace Trolley;
 
 class GroupingQuery<T, TGrouping> : IGroupingQuery<T, TGrouping>
 {
+    private readonly IOrmDbFactory dbFactory;
+    private readonly TheaConnection connection;
+    private readonly IDbTransaction transaction;
     private readonly QueryVisitor visitor;
 
-    public GroupingQuery(QueryVisitor visitor)
+    public GroupingQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
+        this.dbFactory = dbFactory;
+        this.connection = connection;
+        this.transaction = transaction;
         this.visitor = visitor;
     }
     public IGroupingQuery<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
     {
+        this.visitor.Having(predicate);
         return this;
     }
-    public IGroupingQuery<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate) { throw new NotImplementedException(); }
-    public IGroupingQuery<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr) { throw new NotImplementedException(); }
-    public IGroupingQuery<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr) { throw new NotImplementedException(); }
-
-    public IQuery<TGrouping> Select() { throw new NotImplementedException(); }
-    public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr) { throw new NotImplementedException(); }
-    public string ToSql() { throw new NotImplementedException(); }
+    public IGroupingQuery<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
+    {
+        if (condition) this.visitor.Having(predicate);
+        return this;
+    }
+    public IGroupingQuery<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+    {
+        this.visitor.OrderBy("ASC", fieldsExpr);
+        return this;
+    }
+    public IGroupingQuery<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+    {
+        this.visitor.OrderBy("DESC", fieldsExpr);
+        return this;
+    }
+    public IQuery<TGrouping> Select()
+    {
+        Expression<Func<TGrouping, TGrouping>> defaultExpr = f => f;
+        this.visitor.Select(null, defaultExpr);
+        return new Query<TGrouping>(dbFactory, connection, transaction, visitor);
+    }
+    public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
+    {
+        Expression<Func<TGrouping, TGrouping>> defaultExpr = f => f;
+        this.visitor.Select(null, fieldsExpr);
+        return new Query<TTarget>(dbFactory, connection, transaction, visitor);
+    }
+    public string ToSql()
+    {
+        Expression<Func<TGrouping, TGrouping>> defaultExpr = f => f;
+        return this.visitor.BuildSql(defaultExpr, out _, out _);
+    }
 }
 <#
     var count = 16;
@@ -39,35 +71,81 @@ class GroupingQuery<T, TGrouping> : IGroupingQuery<T, TGrouping>
 #>
 class GroupingQuery<<#=tables#>, TGrouping> : IGroupingQuery<<#=tables#>, TGrouping>
 {
+    private readonly IOrmDbFactory dbFactory;
+    private readonly TheaConnection connection;
+    private readonly IDbTransaction transaction;
     private readonly QueryVisitor visitor;
 
-    public GroupingQuery(QueryVisitor visitor)
+    public GroupingQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
+        this.dbFactory = dbFactory;
+        this.connection = connection;
+        this.transaction = transaction;
         this.visitor = visitor;
     }
     public IGroupingQuery<<#=tables#>, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
     {
+        this.visitor.Having(predicate);
         return this;
     }
-    public IGroupingQuery<<#=tables#>, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate) { throw new NotImplementedException(); }
-    public IGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr) { throw new NotImplementedException(); }
-    public IGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr) { throw new NotImplementedException(); }
-
-    public IQuery<TGrouping> Select() { throw new NotImplementedException(); }
-    public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr) { throw new NotImplementedException(); }
-    public string ToSql() { throw new NotImplementedException(); }
+    public IGroupingQuery<<#=tables#>, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
+    {
+        if (condition) this.visitor.Having(predicate);
+        return this;
+    }
+    public IGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
+    {
+        this.visitor.OrderBy("ASC", fieldsExpr);
+        return this;
+    }
+    public IGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
+    {
+        this.visitor.OrderBy("DESC", fieldsExpr);
+        return this;
+    }
+    public IQuery<TGrouping> Select()
+    {
+        Expression<Func<TGrouping, TGrouping>> defaultExpr = f => f;
+        this.visitor.Select(null, defaultExpr);
+        return new Query<TGrouping>(dbFactory, connection, transaction, visitor);
+    }
+    public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
+    {
+        this.visitor.Select(null, fieldsExpr);
+        return new Query<TTarget>(dbFactory, connection, transaction, visitor);
+    }
+    public string ToSql()
+    {
+        Expression<Func<TGrouping, TGrouping>> defaultExpr = f => f;
+        return this.visitor.BuildSql(defaultExpr, out _, out _);
+    }
 }
 <#  }
     tables += $", T{count}";
 #>
 class GroupingQuery<<#=tables#>, TGrouping> : IGroupingQuery<<#=tables#>, TGrouping>
 {
+    private readonly IOrmDbFactory dbFactory;
+    private readonly TheaConnection connection;
+    private readonly IDbTransaction transaction;
     private readonly QueryVisitor visitor;
 
-    public GroupingQuery(QueryVisitor visitor)
+    public GroupingQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
+        this.dbFactory = dbFactory;
+        this.connection = connection;
+        this.transaction = transaction;
         this.visitor = visitor;
     }
-    public IQuery<TGrouping> Select() { throw new NotImplementedException(); }
-    public string ToSql() { throw new NotImplementedException(); }
+    public IQuery<TGrouping> Select()
+    {
+        Expression<Func<TGrouping, TGrouping>> defaultExpr = f => f;
+        this.visitor.Select(null, defaultExpr);
+        return new Query<TGrouping>(dbFactory, connection, transaction, visitor);
+    }
+    public string ToSql()
+    {
+        Expression<Func<TGrouping, TGrouping>> defaultExpr = f => f;
+        return this.visitor.BuildSql(defaultExpr, out _, out _);
+    }
 }

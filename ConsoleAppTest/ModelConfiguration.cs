@@ -21,6 +21,7 @@ class ModelConfiguration : IModelConfiguration
         builder.Entity<Order>(f =>
         {
             f.ToTable("sys_order").Key(t => t.Id);
+            f.HasOne(t => t.Buyer).HasForeignKey(t => t.BuyerId);
             f.HasMany(t => t.Details).HasForeignKey(t => t.OrderId);
         });
         builder.Entity<OrderDetail>(f =>

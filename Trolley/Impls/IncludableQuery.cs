@@ -10,7 +10,6 @@ class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember>
     private readonly IOrmDbFactory dbFactory;
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
 
     public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
         : base(dbFactory, connection, transaction, visitor) { }

@@ -136,7 +136,6 @@ public static class TrolleyExtensions
         List<MemberBinding> bindings = null;
         List<Expression> ctorArguments = null;
 
-        var buildInfos = new Stack<EntityBuildInfo>();
         var ctor = entityType.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
         if (ctor != null)
         {
@@ -166,7 +165,7 @@ public static class TrolleyExtensions
         {
             var readerFieldInfo = readerFields[index];
             //先处理上一个导航属性值
-            if (readerFieldInfo.ReaderIndex != lastReaderFieldInfo.ReaderIndex)
+            if (lastReaderFieldInfo == null || readerFieldInfo.ReaderIndex != lastReaderFieldInfo.ReaderIndex)
             {
                 if (current.Parent == null)
                 {
@@ -203,9 +202,22 @@ public static class TrolleyExtensions
             }
             if (readerFieldInfo.TableIndex != lastReaderFieldInfo.TableIndex)
             {
-                var parent = current;
-                buildInfos.Push(current);
+                //Select语句，更换了一个新的导航属性，从最底层的导航属性一直往上层赋值，直到Select语句
+                while (current.Parent != null)
+                {
+                    //创建子对象，并赋值给父对象的属性,直到Select语句
+                    if (current.IsDefault)
+                        readerValueExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
+                    else readerValueExpr = Expression.New(current.Constructor, current.Arguments);
 
+                    //赋值给父对象的属性
+                    if (current.Parent.IsDefault)
+                        current.Parent.Bindings.Add(Expression.Bind(current.FromMember, readerValueExpr));
+                    else current.Parent.Arguments.Add(readerValueExpr);
+                    current = current.Parent;
+                }
+
+                var parent = current;
                 var targetType = readerFieldInfo.TableSegment.EntityType;
                 ctor = targetType.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
                 if (ctor != null)
@@ -233,11 +245,31 @@ public static class TrolleyExtensions
             //处理当前字段值
             fieldType = reader.GetFieldType(index);
             readerValueExpr = GetReaderValue(readerExpr, Expression.Constant(index), readerFieldInfo.MemberMapper.MemberType, fieldType);
-            if (current.IsDefault) current.Bindings.Add(Expression.Bind(readerFieldInfo.FromMember, readerValueExpr));
+
+            MemberInfo fromMember = null;
+            if (readerFieldInfo.TableIndex > 1)
+                fromMember = readerFieldInfo.MemberMapper.Member;
+            else fromMember = readerFieldInfo.FromMember;
+
+            if (current.IsDefault) current.Bindings.Add(Expression.Bind(fromMember, readerValueExpr));
             else current.Arguments.Add(readerValueExpr);
 
             lastReaderFieldInfo = readerFieldInfo;
             index++;
+        }
+        //Select语句，更换了一个新的导航属性，从最底层的导航属性一直往上层赋值，直到Select语句
+        while (current.Parent != null)
+        {
+            //创建子对象，并赋值给父对象的属性,直到Select语句
+            if (current.IsDefault)
+                readerValueExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
+            else readerValueExpr = Expression.New(current.Constructor, current.Arguments);
+
+            //赋值给父对象的属性
+            if (current.Parent.IsDefault)
+                current.Parent.Bindings.Add(Expression.Bind(current.FromMember, readerValueExpr));
+            else current.Parent.Arguments.Add(readerValueExpr);
+            current = current.Parent;
         }
 
         var resultLabelExpr = Expression.Label(entityType);
@@ -254,7 +286,7 @@ public static class TrolleyExtensions
         var underlyingType = Nullable.GetUnderlyingType(targetType);
         bool isNullable = underlyingType != null;
         underlyingType ??= targetType;
-        var methodInfo = typeof(IDataReader).GetMethod(nameof(IDataReader.GetValue), new Type[] { typeof(int) });
+        var methodInfo = typeof(IDataRecord).GetMethod(nameof(IDataRecord.GetValue), new Type[] { typeof(int) });
         var valueExpr = Expression.Call(readerExpr, methodInfo, indexExpr);
         Expression typedValueExpr = null;
 

@@ -29,14 +29,14 @@ public class QueryReader : IQueryReader
         var entityType = typeof(TEntity);
         var result = default(TEntity);
 
-        while (reader.Read())
-        {
-            reader.To<TEntity>();
-            var objResult = func?.Invoke(reader);
-            if (objResult == null || objResult is TEntity) result = (TEntity)objResult;
-            else result = (TEntity)Convert.ChangeType(objResult, entityType, CultureInfo.InvariantCulture);
-        }
-        this.ReadNextResult();
+        //while (reader.Read())
+        //{
+        //    reader.To<TEntity>();
+        //    var objResult = func?.Invoke(reader);
+        //    if (objResult == null || objResult is TEntity) result = (TEntity)objResult;
+        //    else result = (TEntity)Convert.ChangeType(objResult, entityType, CultureInfo.InvariantCulture);
+        //}
+        //this.ReadNextResult();
         return result;
     }
     public List<TEntity> ReadList<TEntity>()
