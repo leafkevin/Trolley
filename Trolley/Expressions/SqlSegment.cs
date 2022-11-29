@@ -9,6 +9,7 @@ public class SqlSegment
 {
     public static SqlSegment None = new SqlSegment { isFixValue = true, Value = string.Empty };
     public static SqlSegment True = new SqlSegment { isFixValue = true, Value = true };
+    public static SqlSegment False = new SqlSegment { isFixValue = true, Value = false };
     public static SqlSegment Null = new SqlSegment { isFixValue = true, Value = "NULL" };
     private bool isFixValue = false;
 

@@ -11,7 +11,7 @@ class ModelConfiguration : IModelConfiguration
             f.ToTable("sys_user").Key(t => t.Id);
 
             f.HasOne(t => t.Company).HasForeignKey(t => t.CompanyId).MapTo<Company>();
-            f.HasMany(t => t.Orders).HasForeignKey(t => t.BuyerId).MapTo<Order>();
+            f.HasMany(t => t.Orders).HasForeignKey(t => t.BuyerId);
         });
         builder.Entity<Company>(f =>
         {
@@ -22,6 +22,7 @@ class ModelConfiguration : IModelConfiguration
         {
             f.ToTable("sys_order").Key(t => t.Id);
             f.HasOne(t => t.Buyer).HasForeignKey(t => t.BuyerId);
+            f.HasOne(t => t.Seller).HasForeignKey(t => t.SellerId).MapTo<User>();
             f.HasMany(t => t.Details).HasForeignKey(t => t.OrderId);
         });
         builder.Entity<OrderDetail>(f =>

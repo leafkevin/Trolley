@@ -25,10 +25,10 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -36,7 +36,6 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include
@@ -337,10 +336,10 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -348,7 +347,6 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include

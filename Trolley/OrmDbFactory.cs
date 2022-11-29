@@ -63,7 +63,7 @@ public class OrmDbFactory : IOrmDbFactory
     //        }
     //    }
     //}
-    public void BuildModel(Action<ModelBuilder> modelInitializer)
+    public void Configure(Action<ModelBuilder> modelInitializer)
     {
         var builder = new ModelBuilder(this);
         modelInitializer.Invoke(builder);

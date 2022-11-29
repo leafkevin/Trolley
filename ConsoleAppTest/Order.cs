@@ -9,6 +9,7 @@ public class Order
     public string OrderNo { get; set; }
     public double TotalAmount { get; set; }
     public int BuyerId { get; set; }
+    public int SellerId { get; set; }
     public bool IsEnabled { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -16,6 +17,7 @@ public class Order
     public DateTime UpdatedAt { get; set; }
 
     public User Buyer { get; set; }
+    public UserInfo Seller { get; set; }
     public List<OrderDetail> Details { get; set; }
 }
 public class OrderInfo

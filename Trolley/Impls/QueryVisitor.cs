@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Trolley;
 
@@ -115,6 +115,7 @@ class QueryVisitor
         {
             foreach (var tableInfo in this.tables)
             {
+                if (!tableInfo.IsUsed) continue;
                 var tableName = tableInfo.Body;
                 if (string.IsNullOrEmpty(tableName))
                 {
@@ -123,7 +124,9 @@ class QueryVisitor
                     tableName = this.ormProvider.GetTableName(tableInfo.Mapper.TableName);
                 }
                 if (builder.Length > 0) builder.Append(' ');
-                builder.Append($"{tableInfo.NodeType} {tableName} {tableInfo.AliasName}");
+                if (!string.IsNullOrEmpty(tableInfo.NodeType))
+                    builder.Append($"{tableInfo.NodeType} ");
+                builder.Append($"{tableName} {tableInfo.AliasName}");
 
                 if (!string.IsNullOrEmpty(tableInfo.OnExpr))
                     builder.Append($" ON {tableInfo.OnExpr}");
@@ -214,7 +217,7 @@ class QueryVisitor
     {
         var lambdaExpr = memberSelector as LambdaExpression;
         var memberExpr = lambdaExpr.Body as MemberExpression;
-        this.InitTableAlias(memberSelector);
+        this.InitTableAlias(lambdaExpr);
         var tableSegment = this.AddIncludeTables(memberExpr);
         //TODO: 1:N关联条件的alias表，获取会有问题，待测试
         if (filter != null)
@@ -222,81 +225,62 @@ class QueryVisitor
     }
     public void Join(string joinType, Expression joinOn)
     {
-        this.tableAlias.Clear();
         var lambdaExpr = joinOn as LambdaExpression;
-        //参数顺序和刨除include表外的表顺序一致
-        this.tableAlias.Clear();
-        var joinTables = this.tables.FindAll(f => !f.IsInclude);
-        for (int i = 0; i < lambdaExpr.Parameters.Count; i++)
+        var joinTableSegment = this.InitTableAlias(lambdaExpr);
+        var joinOnExpr = this.VisitConditionExpr(lambdaExpr.Body);
+        if (this.tableAlias.Count == 2)
         {
-            var parameterName = lambdaExpr.Parameters[i].Name;
-            this.tableAlias.Add(parameterName, joinTables[i]);
+            joinTableSegment.NodeType = joinType;
+            joinTableSegment.OnExpr = joinOnExpr;
         }
-        var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = joinOn });
-        var joinSegment = this.tables.Last(f => !f.IsInclude);
-        joinSegment.NodeType = joinType;
-        joinSegment.OnExpr = sqlSegment.ToString();
     }
     public void Select(string sqlFormat, Expression selectExpr = null)
     {
         string body = null;
         if (selectExpr != null)
         {
-            this.InitTableAlias(selectExpr);
+            this.readerFields = new List<MemberSegment>();
             var lambdaExpr = selectExpr as LambdaExpression;
-            var sqlSegment = new SqlSegment
-            {
-                NodeType = SqlSegmentType.Select,
-                Expression = lambdaExpr.Body
-            };
+            this.InitTableAlias(lambdaExpr);
             var builder = new StringBuilder();
             switch (lambdaExpr.Body.NodeType)
             {
                 case ExpressionType.New:
-                case ExpressionType.MemberInit:
-                case ExpressionType.Parameter:
-                    sqlSegment = this.Visit(sqlSegment);
-                    if (sqlSegment.Value is List<MemberSegment> memberSegments)
+                    var newExpr = lambdaExpr.Body as NewExpression;
+                    for (int i = 0; i < newExpr.Arguments.Count; i++)
                     {
-                        this.readerFields = memberSegments;
-                        int readerIndex = 0;
-                        int tableIndex = 0;
-                        TableSegment lastTableSegment = null;
-                        foreach (var memberSegment in this.readerFields)
-                        {
-                            if (memberSegment.TableSegment != lastTableSegment)
-                            {
-                                lastTableSegment = memberSegment.TableSegment;
-                                lastTableSegment.IsUsed = true;
-                                if (lastTableSegment.IncludedFrom != null)
-                                {
-                                    lastTableSegment.ReaderIndex = lastTableSegment.IncludedFrom.ReaderIndex;
-                                    readerIndex = lastTableSegment.ReaderIndex;
-                                    tableIndex++;
-                                    lastTableSegment.TableIndex = tableIndex;
-                                }
-                                else
-                                {
-                                    readerIndex++;
-                                    tableIndex++;
-                                    lastTableSegment.ReaderIndex = readerIndex;
-                                    lastTableSegment.TableIndex = tableIndex;
-                                }
-                            }
-                            memberSegment.ReaderIndex = readerIndex;
-                            memberSegment.TableIndex = tableIndex;
-                            if (builder.Length > 0)
-                                builder.Append(", ");
-                            builder.Append(memberSegment.Body);
-                            if (memberSegment.IsNeedAlias)
-                                builder.Append($" AS {memberSegment.FromMember.Name}");
-                        }
+                        this.AddSelectElement(newExpr.Arguments[i], newExpr.Members[i], i + 1, this.readerFields);
                     }
-                    body = sqlSegment.Change(builder.ToString()).ToString();
+                    foreach (var memberSegment in this.readerFields)
+                    {
+                        if (builder.Length > 0)
+                            builder.Append(", ");
+                        builder.Append(memberSegment.Body);
+                        if (memberSegment.IsNeedAlias)
+                            builder.Append($" AS {memberSegment.FromMember.Name}");
+                    }
+                    body = builder.ToString();
+                    break;
+                case ExpressionType.MemberInit:
+                    var memberInitExpr = lambdaExpr.Body as MemberInitExpression;
+                    for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
+                    {
+                        var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
+                        this.AddSelectElement(memberAssignment.Expression, memberAssignment.Member, i + 1, this.readerFields);
+                    }
+                    foreach (var memberSegment in this.readerFields)
+                    {
+                        if (builder.Length > 0)
+                            builder.Append(", ");
+                        builder.Append(memberSegment.Body);
+                        if (memberSegment.IsNeedAlias)
+                            builder.Append($" AS {memberSegment.FromMember.Name}");
+                    }
+                    body = builder.ToString();
                     break;
                 default:
                     //单值
-                    body = this.Visit(sqlSegment).ToString();
+                    body = this.Visit(new SqlSegment { Expression = lambdaExpr.Body }).ToString();
                     break;
             }
         }
@@ -306,22 +290,23 @@ class QueryVisitor
     }
     public void GroupBy(Expression expr)
     {
-        this.InitTableAlias(expr);
-        this.groupBySql = this.VisitList(expr, string.Empty);
+        var lambdaExpr = expr as LambdaExpression;
+        this.InitTableAlias(lambdaExpr);
+        this.groupBySql = this.VisitList(lambdaExpr, string.Empty);
     }
     public void OrderBy(string orderType, Expression expr)
     {
-        this.InitTableAlias(expr);
-        var orderBy = this.VisitList(expr, orderType == "DESC" ? " DESC" : string.Empty);
+        var lambdaExpr = expr as LambdaExpression;
+        this.InitTableAlias(lambdaExpr);
+        var orderBy = this.VisitList(lambdaExpr, orderType == "DESC" ? " DESC" : string.Empty);
         if (string.IsNullOrEmpty(this.orderBySql))
             this.orderBySql = orderBy;
         else this.orderBySql += "," + orderBy;
     }
     public void Having(Expression havingExpr)
     {
-        this.nodeType = SqlSegmentType.Where;
-        this.InitTableAlias(havingExpr);
         var lambdaExpr = havingExpr as LambdaExpression;
+        this.InitTableAlias(lambdaExpr);
         this.havingSql = this.VisitConditionExpr(lambdaExpr.Body);
     }
     public QueryVisitor Page(int pageIndex, int pageSize)
@@ -343,9 +328,8 @@ class QueryVisitor
     }
     public void Where(Expression whereExpr)
     {
-        this.nodeType = SqlSegmentType.Where;
-        this.InitTableAlias(whereExpr);
         var lambdaExpr = whereExpr as LambdaExpression;
+        this.InitTableAlias(lambdaExpr);
         this.whereSql = " WHERE " + this.VisitConditionExpr(lambdaExpr.Body);
     }
     public void Distinct() => this.isDistinct = true;
@@ -357,13 +341,12 @@ class QueryVisitor
             return SqlSegment.None;
 
         SqlSegment result = null;
-        var currentExpr = sqlSegment.Expression;
-        while (currentExpr != null)
+        while (sqlSegment.Expression != null)
         {
-            switch (currentExpr.NodeType)
+            switch (sqlSegment.Expression.NodeType)
             {
                 case ExpressionType.Lambda:
-                    var lambdaExpr = currentExpr as LambdaExpression;
+                    var lambdaExpr = sqlSegment.Expression as LambdaExpression;
                     sqlSegment.Expression = lambdaExpr.Body;
                     continue;
                 case ExpressionType.Negate:
@@ -431,8 +414,6 @@ class QueryVisitor
                     break;
                     //default: return nextExpr.ToString();
             }
-            if (!result.IsCompleted)
-                continue;
             return result;
         }
         return result;
@@ -443,15 +424,13 @@ class QueryVisitor
         switch (unaryExpr.NodeType)
         {
             case ExpressionType.Not:
-                //TODO:待测试
-                //if (sqlSegment.NodeType == SqlSegmentType.Where)
                 if (unaryExpr.Type == typeof(bool))
                 {
                     if (unaryExpr.Operand.IsParameter(out _))
                     {
                         //目前只有Not，一元/二元 bool类型才有延时处理,到参数表达式再统一处理
                         sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Not });
-                        return sqlSegment.Next(unaryExpr.Operand);
+                        return this.Visit(sqlSegment.Next(unaryExpr.Operand));
                     }
                     //TODO:测试Value赋值
                     return sqlSegment.Next(unaryExpr.Operand, $"NOT ({this.Visit(sqlSegment)})");
@@ -462,12 +441,12 @@ class QueryVisitor
                 {
                     //TODO:测试类型转换
                     if (unaryExpr.Operand.IsParameter(out _))
-                        return sqlSegment.Next(unaryExpr.Operand);
+                        return this.Visit(sqlSegment.Next(unaryExpr.Operand));
                     return this.Evaluate(unaryExpr);
                 }
                 break;
         }
-        return sqlSegment.Next(unaryExpr.Operand);
+        return this.Visit(sqlSegment.Next(unaryExpr.Operand));
     }
     private SqlSegment VisitBinary(SqlSegment sqlSegment)
     {
@@ -551,7 +530,7 @@ class QueryVisitor
                         return sqlSegment.Merge(leftSegment);
                     }
                 }
-                return sqlSegment.Merge(leftSegment.Merge(rightSegment), $"{this.GetSqlValue(leftSegment)}{operators}{this.GetSqlValue(rightSegment)}");
+                return sqlSegment.Merge(leftSegment.Merge(rightSegment, $"{this.GetSqlValue(leftSegment)}{operators}{this.GetSqlValue(rightSegment)}"));
             case ExpressionType.ArrayIndex:
                 break;
             case ExpressionType.Coalesce:
@@ -611,8 +590,10 @@ class QueryVisitor
                     var fromSegment = this.FindTableSegment(parameterName, path);
                     if (fromSegment == null)
                         throw new Exception($"使用导航属性前，要先使用Include方法包含进来，访问路径:{path}");
+                    if (fromSegment.Mapper == null)
+                        fromSegment.Mapper = this.dbFactory.GetEntityMap(fromSegment.EntityType);
 
-                    var vavigationMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
+                    var vavigationMapper = fromSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
                     if (!vavigationMapper.IsNavigation)
                         throw new Exception($"类{tableSegment.EntityType.FullName}属性{memberExpr.Member.Name}未配置为导航属性");
 
@@ -621,7 +602,7 @@ class QueryVisitor
                     if (tableSegment == null)
                         throw new Exception($"使用导航属性前，要先使用Include方法包含进来，访问路径:{path}");
 
-                    var memberSegments = this.GetTableFields(tableSegment, tableSegment.FromMember);
+                    var memberSegments = this.GetTableFields(tableSegment, 1, tableSegment.FromMember);
                     return new SqlSegment
                     {
                         IsCompleted = true,
@@ -637,14 +618,31 @@ class QueryVisitor
                     tableSegment = this.FindTableSegment(parameterName, path);
                     if (tableSegment == null)
                         throw new Exception($"使用导航属性前，要先使用Include方法包含进来，访问路径:{path}");
+                    if (tableSegment.Mapper == null)
+                        tableSegment.Mapper = this.dbFactory.GetEntityMap(tableSegment.EntityType);
 
                     var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
                     var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
+                    if (sqlSegment.HasDeferred)
+                    {
+                        return this.VisitBooleanDeferred(new SqlSegment
+                        {
+                            IsCompleted = true,
+                            Expression = null,
+                            HasField = true,
+                            TableSegment = tableSegment,
+                            MemberMapper = memberMapper,
+                            OperationType = sqlSegment.OperationType,
+                            DeferredExprs = sqlSegment.DeferredExprs,
+                            Value = $"{tableSegment.AliasName}.{fieldName}"
+                        });
+                    }
                     return new SqlSegment
                     {
                         IsCompleted = true,
                         Expression = null,
                         HasField = true,
+                        OperationType = sqlSegment.OperationType,
                         TableSegment = tableSegment,
                         MemberMapper = memberMapper,
                         Value = $"{tableSegment.AliasName}.{fieldName}"
@@ -677,16 +675,8 @@ class QueryVisitor
 
         //处理Include表字段
         var fromSegment = this.tableAlias[parameterExpr.Name];
-        var tableSegment = fromSegment;
         //参数的FromMeber没有设置，在Select的时候设置
         var memberSegments = this.GetTableFields(fromSegment);
-        while (true)
-        {
-            var childSegment = this.tables.Find(f => f.IncludedFrom == tableSegment);
-            if (childSegment == null) break;
-            memberSegments.AddRange(this.GetTableFields(childSegment, childSegment.FromMember));
-            tableSegment = childSegment;
-        }
         return new SqlSegment
         {
             HasField = true,
@@ -740,55 +730,10 @@ class QueryVisitor
         var newExpr = sqlSegment.Expression as NewExpression;
         if (newExpr.Type.Name.StartsWith("<>"))
         {
-            var arguments = new List<SqlSegment>();
             var memberSegments = new List<MemberSegment>();
-            foreach (var argumentExpr in newExpr.Arguments)
+            for (int i = 0; i < newExpr.Arguments.Count; i++)
             {
-                var argumentSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
-                arguments.Add(argumentSegment);
-            }
-            for (int i = 0; i < arguments.Count; i++)
-            {
-                var argumentExpr = newExpr.Arguments[i];
-                var argumentSegment = arguments[i];
-                if (argumentSegment.Value is List<MemberSegment> tableMemberSegments)
-                {
-                    int tableIndex = i;
-                    var path = tableMemberSegments[0].Path;
-                    var memberInfo = newExpr.Members[i];
-                    foreach (var memberSegment in tableMemberSegments)
-                    {
-                        memberSegment.ReaderIndex = i;
-                        if (memberSegment.Path != path)
-                        {
-                            tableIndex++;
-                            path = memberSegment.Path;
-                        }
-                        memberSegment.TableIndex = tableIndex;
-                        if (tableIndex == i)
-                            memberSegment.FromMember = memberInfo;
-                        memberSegment.Body = $"{memberSegment.TableSegment.AliasName}.{this.ormProvider.GetFieldName(memberSegment.MemberMapper.FieldName)}";
-                        memberSegment.Path = memberSegment.TableSegment.Path + "." + memberSegment.MemberMapper.MemberName;
-                    }
-                }
-                else
-                {
-                    var memberInfo = newExpr.Members[i];
-                    var isNeedAlias = argumentSegment.IsParameter || argumentSegment.IsMethodCall || argumentSegment.MemberMapper.MemberName != memberInfo.Name;
-                    memberSegments.Add(new MemberSegment
-                    {
-                        ReaderIndex = i,
-                        TableIndex = i,
-                        Expression = argumentExpr,
-                        FromMember = memberInfo,
-                        MemberMapper = argumentSegment.MemberMapper,
-                        TableSegment = argumentSegment.TableSegment,
-                        Body = argumentSegment.ToString(),
-                        IsNeedAlias = isNeedAlias,
-                        IsTarget = true,
-                        Path = argumentSegment.TableSegment.AliasName + argumentSegment.ToString()[1..]
-                    });
-                }
+                this.AddSelectElement(newExpr.Arguments[i], newExpr.Members[i], i + 1, memberSegments);
             }
             return sqlSegment.Change(memberSegments);
         }
@@ -806,59 +751,14 @@ class QueryVisitor
     }
     private SqlSegment VisitMemberInit(SqlSegment sqlSegment)
     {
-        int index = 0;
         var memberInitExpr = sqlSegment.Expression as MemberInitExpression;
         var memberSegments = new List<MemberSegment>();
-        foreach (var memberBinding in memberInitExpr.Bindings)
+        for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
         {
-            if (memberBinding.BindingType != MemberBindingType.Assignment)
+            if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)
                 throw new Exception("暂时不支持除MemberBindingType.Assignment类型外的成员绑定表达式");
-
-            var bindingExpr = ((MemberAssignment)memberBinding).Expression;
-            var bindingSegment = this.VisitAndDeferred(new SqlSegment { Expression = bindingExpr });
-            if (bindingSegment.Value is List<TableSegment> tableSegments)
-            {
-                int fromIndex = 0;
-                foreach (var tableSegment in tableSegments)
-                {
-                    foreach (var memberMapper in tableSegment.Mapper.MemberMaps)
-                    {
-                        MemberInfo memberInfo = null;
-                        if (fromIndex == tableSegments.Count - 1)
-                            memberInfo = memberBinding.Member;
-                        else memberInfo = tableSegment.FromMember;
-                        memberSegments.Add(new MemberSegment
-                        {
-                            TableIndex = index,
-                            Expression = bindingExpr,
-                            FromMember = memberInfo,
-                            MemberMapper = memberMapper,
-                            TableSegment = tableSegment,
-                            Body = bindingSegment.ToString(),
-                            IsNeedAlias = false,
-                            Path = memberBinding.Member.Name + tableSegment.Path[1..]
-                        });
-                        index++;
-                    }
-                }
-            }
-            else
-            {
-                var memberInfo = memberBinding.Member;
-                var isNeedAlias = bindingSegment.IsParameter || bindingSegment.IsMethodCall || bindingSegment.MemberMapper.MemberName != memberBinding.Member.Name;
-                memberSegments.Add(new MemberSegment
-                {
-                    TableIndex = index,
-                    Expression = bindingExpr,
-                    FromMember = memberInfo,
-                    MemberMapper = bindingSegment.MemberMapper,
-                    TableSegment = bindingSegment.TableSegment,
-                    Body = bindingSegment.ToString(),
-                    IsNeedAlias = isNeedAlias,
-                    Path = memberBinding.Member.Name + bindingSegment.ToString()[1..]
-                });
-                index++;
-            }
+            var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
+            this.AddSelectElement(memberAssignment.Expression, memberAssignment.Member, i + 1, memberSegments);
         }
         return sqlSegment.Change(memberSegments);
     }
@@ -876,9 +776,22 @@ class QueryVisitor
     }
     private SqlSegment VisitConditional(SqlSegment sqlSegment)
     {
-        //var conditionalExpr = sqlSegment.Expression as ConditionalExpression;
-        //this.Visit(conditionalExpr.Test);
-        //return conditionalExpr.Test;
+        var conditionalExpr = sqlSegment.Expression as ConditionalExpression;
+        sqlSegment = this.Visit(sqlSegment.Next(conditionalExpr.Test));
+        var ifTrue = this.Visit(new SqlSegment { Expression = conditionalExpr.IfTrue });
+        var ifFalse = this.Visit(new SqlSegment { Expression = conditionalExpr.IfFalse });
+        if (sqlSegment.HasField && conditionalExpr.Test.Type == typeof(bool))
+        {
+            sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.True });
+            sqlSegment = this.VisitBooleanDeferred(sqlSegment);
+            return sqlSegment.Complete($"CASE WHEN {sqlSegment} THEN {this.GetSqlValue(ifTrue)} ELSE {this.GetSqlValue(ifFalse)} END");
+        }
+        if (sqlSegment.Value is bool)
+        {
+            if ((bool)sqlSegment.Value)
+                return sqlSegment.Complete($"CASE WHEN {this.GetSqlValue(ifTrue)} THEN {this.ormProvider.GetQuotedValue(true)} ELSE {this.ormProvider.GetQuotedValue(false)} END");
+            else return sqlSegment.Complete($"CASE WHEN {this.GetSqlValue(ifFalse)} THEN {this.ormProvider.GetQuotedValue(true)} ELSE {this.ormProvider.GetQuotedValue(false)} END");
+        }
         return sqlSegment;
     }
     private SqlSegment VisitBooleanDeferred(SqlSegment fieldSegment)
@@ -978,10 +891,7 @@ class QueryVisitor
             var sqlSegments = this.VisitLogicBinaryExpr(conditionExpr);
             for (int i = 0; i < sqlSegments.Count; i++)
             {
-                var sqlSegment = this.Visit(sqlSegments[i]);
-                if (sqlSegment.HasDeferred)
-                    sqlSegment = this.VisitBooleanDeferred(sqlSegment);
-
+                var sqlSegment = this.VisitAndDeferred(sqlSegments[i]);
                 var separator = sqlSegment.OperationType == OperationType.And ? " AND " : " OR ";
                 if (i > 0)
                 {
@@ -1021,7 +931,7 @@ class QueryVisitor
             }
             return builder.ToString();
         }
-        return this.Visit(new SqlSegment { Expression = conditionExpr }).ToString();
+        return this.VisitAndDeferred(new SqlSegment { Expression = conditionExpr }).ToString();
     }
     private List<SqlSegment> VisitLogicBinaryExpr(Expression expr)
     {
@@ -1045,21 +955,27 @@ class QueryVisitor
             var isRightLeaf = isLogicBinary(binaryExpr.Right);
             if (isLeftLeaf)
             {
-                completedSegements.Add(new SqlSegment
+                var leftSegment = new SqlSegment
                 {
                     OperationType = operationType,
                     Expression = binaryExpr.Left,
                     Deep = deep
-                });
+                };
+                if (binaryExpr.Left.NodeType == ExpressionType.MemberAccess)
+                    leftSegment.DeferredExprs.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.True });
+                completedSegements.Add(leftSegment);
             }
             if (isRightLeaf)
             {
-                deferredExprs.Push(new SqlSegment
+                var rightSegment = new SqlSegment
                 {
                     OperationType = operationType,
                     Expression = binaryExpr.Right,
                     Deep = deep
-                });
+                };
+                if (binaryExpr.Right.NodeType == ExpressionType.MemberAccess)
+                    rightSegment.DeferredExprs.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.True });
+                deferredExprs.Push(rightSegment);
             }
             Expression nextExpr = null;
             if (isLeftLeaf && isRightLeaf) break;
@@ -1076,9 +992,67 @@ class QueryVisitor
         }
         return completedSegements;
     }
-    private string VisitList(Expression expr, string suffix)
+    private void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, int readerIndex, List<MemberSegment> result)
     {
-        var lambdaExpr = expr as LambdaExpression;
+        bool isNeedAlias = false;
+        switch (elementExpr.NodeType)
+        {
+            case ExpressionType.Parameter:
+            case ExpressionType.MemberAccess:
+                var sqlSegment = this.Visit(new SqlSegment { Expression = elementExpr });
+                if (elementExpr.Type.IsEntityType())
+                {
+                    var argumentSegments = sqlSegment.Value as List<MemberSegment>;
+                    argumentSegments.ForEach(f =>
+                    {
+                        f.ReaderIndex = readerIndex;
+                        f.TableSegment.IsUsed = true;
+                    });
+                    if (elementExpr.NodeType == ExpressionType.Parameter)
+                    {
+                        argumentSegments.ForEach(f => f.FromMember = memberInfo);
+                    }
+                    result.AddRange(argumentSegments);
+                }
+                else
+                {
+                    isNeedAlias = sqlSegment.IsParameter || sqlSegment.IsMethodCall || sqlSegment.MemberMapper.MemberName != memberInfo.Name;
+                    sqlSegment.TableSegment.IsUsed = true;
+                    result.Add(new MemberSegment
+                    {
+                        ReaderIndex = readerIndex,
+                        TableIndex = 1,
+                        Expression = elementExpr,
+                        FromMember = memberInfo,
+                        MemberMapper = sqlSegment.MemberMapper,
+                        TableSegment = sqlSegment.TableSegment,
+                        Body = sqlSegment.ToString(),
+                        IsNeedAlias = isNeedAlias,
+                        IsTarget = true
+                    });
+                }
+                break;
+            default:
+                sqlSegment = this.Visit(new SqlSegment { Expression = elementExpr });
+                sqlSegment.TableSegment.IsUsed = true;
+                isNeedAlias = sqlSegment.IsParameter || sqlSegment.IsMethodCall || sqlSegment.MemberMapper.MemberName != memberInfo.Name;
+                result.Add(new MemberSegment
+                {
+                    ReaderIndex = readerIndex,
+                    TableIndex = 1,
+                    Expression = elementExpr,
+                    FromMember = memberInfo,
+                    MemberMapper = sqlSegment.MemberMapper,
+                    TableSegment = sqlSegment.TableSegment,
+                    Body = sqlSegment.ToString(),
+                    IsNeedAlias = isNeedAlias,
+                    IsTarget = true
+                });
+                break;
+        }
+    }
+    private string VisitList(LambdaExpression lambdaExpr, string suffix)
+    {
         if (lambdaExpr.Body is NewExpression newExpr)
         {
             var builder = new StringBuilder();
@@ -1092,19 +1066,32 @@ class QueryVisitor
             }
             return builder.ToString();
         }
-        else return this.Visit(new SqlSegment { Expression = expr }).ToString();
+        else return this.Visit(new SqlSegment { Expression = lambdaExpr.Body }).ToString();
     }
-    private void InitTableAlias(Expression expr)
+    private TableSegment InitTableAlias(LambdaExpression lambdaExpr)
     {
+        TableSegment tableSegment = null;
         this.tableAlias.Clear();
-        var lambdaExpr = expr as LambdaExpression;
-        //参数顺序和刨除include表外的表顺序一致 
-        var joinTables = this.tables.FindAll(f => !f.IsInclude);
-        for (int i = 0; i < lambdaExpr.Parameters.Count; i++)
+        lambdaExpr.Body.GetParameters(out var parameters);
+        if (lambdaExpr.Parameters.Count == 1)
+        //ThenInclude场景
         {
-            var parameterName = lambdaExpr.Parameters[i].Name;
-            this.tableAlias.Add(parameterName, joinTables[i]);
+            tableSegment = this.tables.Last();
+            this.tableAlias.Add(parameters[0], tableSegment);
         }
+        else
+        {
+            var joinTables = this.tables.FindAll(f => !f.IsInclude);
+            for (int i = 0; i < lambdaExpr.Parameters.Count; i++)
+            {
+                var parameterName = lambdaExpr.Parameters[i].Name;
+                if (!parameters.Contains(parameterName))
+                    continue;
+                this.tableAlias.Add(parameterName, joinTables[i]);
+                tableSegment = joinTables[i];
+            }
+        }
+        return tableSegment;
     }
     private TableSegment AddIncludeTables(MemberExpression memberExpr)
     {
@@ -1206,13 +1193,35 @@ class QueryVisitor
     private TableSegment FindTableSegment(string parameterName, string path)
     {
         var index = path.IndexOf(".");
-        path = parameterName + path.Substring(index);
-        return this.tables.Find(f => f.Path == path);
+        if (index > 0)
+        {
+            var rootTableSegment = this.tableAlias[parameterName];
+            path = path.Replace(parameterName + ".", rootTableSegment.AliasName + ".");
+            return this.tables.Find(f => f.Path == path);
+        }
+        else return this.tableAlias[parameterName];
     }
-    private List<MemberSegment> GetTableFields(TableSegment fromSegment, MemberInfo fromMember = null)
+    private List<MemberSegment> GetTableFields(TableSegment fromSegment, int tableIndex = 1, MemberInfo fromMember = null)
+    {
+        var memberSegments = new List<MemberSegment>();
+        this.AddTableFields(fromSegment, memberSegments, tableIndex, fromMember);
+        var fromTables = new List<TableSegment>();
+        fromTables.Add(fromSegment);
+        foreach (var tableSegment in this.tables)
+        {
+            if (tableSegment == fromSegment) continue;
+            if (fromTables.Contains(tableSegment.IncludedFrom))
+            {
+                tableIndex++;
+                fromTables.Add(tableSegment);
+                this.AddTableFields(tableSegment, memberSegments, tableIndex, tableSegment.FromMember);
+            }
+        }
+        return memberSegments;
+    }
+    private void AddTableFields(TableSegment fromSegment, List<MemberSegment> memberSegments, int tableIndex, MemberInfo fromMember)
     {
         var memberMappers = fromSegment.Mapper.GetMembers();
-        var memberSegments = new List<MemberSegment>();
         foreach (var memberInfo in memberMappers)
         {
             if (memberInfo.GetMemberType().IsEntityType())
@@ -1226,10 +1235,9 @@ class QueryVisitor
                 TableSegment = fromSegment,
                 Body = $"{fromSegment.AliasName}.{this.ormProvider.GetFieldName(memberMapper.FieldName)}",
                 IsNeedAlias = false,
-                Path = fromSegment.Path + "." + memberInfo.Name
+                TableIndex = tableIndex
             });
         }
-        return memberSegments;
     }
     //private bool IsExpressionFor(Expression expr, ExpressionType exprType)
     //{

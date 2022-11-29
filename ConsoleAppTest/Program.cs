@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using MySqlConnector;
 using System;
 using System.Linq.Expressions;
 using Trolley;
@@ -49,7 +48,7 @@ class Program
             //var connectionString = "Server=bj-cdb-o9bbr5vl.sql.tencentcdb.com;Port=63227;Database=fengling;Uid=root;password=Siia@TxDb582e4sdf;charset=utf8mb4;";
             var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
             dbFactory.Register("fengling", true, f => f.Add<MySqlProvider>(connectionString, true));
-            dbFactory.BuildModel(f => new ModelConfiguration().OnModelCreating(f));
+            dbFactory.Configure(f => new ModelConfiguration().OnModelCreating(f));
             return dbFactory;
         });
         var serviceProvider = services.BuildServiceProvider();
@@ -62,7 +61,12 @@ class Program
         ////到ToList,First才开始解析，前面只生成方便解析的结构
         ////Stack<>
         var rep = dbFactory.Create();
-        var result = rep.From<Order>().Include(f => f.Buyer).First();
+        var result = rep.From<Order, User>()
+            .Include((a, b) => a.Buyer)
+            //.ThenInclude(f => f.Company)
+            .InnerJoin((x, y) => x.SellerId == y.Id && x.IsEnabled && y.IsEnabled)
+            .Select((a, b) => new { a.OrderNo, a.Buyer, Seller = b })
+            .First();
 
 
         //rep.From<Order>().Include(f => f.Buyer).Include(f => f.Details)

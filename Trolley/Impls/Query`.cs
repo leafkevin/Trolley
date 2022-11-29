@@ -12,10 +12,10 @@ class Query<T1, T2> : IQuery<T1, T2>
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -23,7 +23,6 @@ class Query<T1, T2> : IQuery<T1, T2>
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include
@@ -321,10 +320,10 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -332,7 +331,6 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include
@@ -630,10 +628,10 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -641,7 +639,6 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include
@@ -939,10 +936,10 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -950,7 +947,6 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include
@@ -1248,10 +1244,10 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -1259,7 +1255,6 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include
@@ -1557,10 +1552,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -1568,7 +1563,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include
@@ -1866,10 +1860,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -1877,7 +1871,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include
@@ -2175,10 +2168,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -2186,7 +2179,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include
@@ -2484,10 +2476,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -2495,7 +2487,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include
@@ -2793,10 +2784,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -2804,7 +2795,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include
@@ -3102,10 +3092,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -3113,7 +3103,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include
@@ -3411,10 +3400,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -3422,7 +3411,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include
@@ -3720,10 +3708,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -3731,7 +3719,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include
@@ -4029,10 +4016,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -4040,7 +4027,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include
@@ -4338,10 +4324,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
@@ -4349,7 +4335,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-        visitor.From(typeof(T1), typeof(T2));
     }
 
     #region Include

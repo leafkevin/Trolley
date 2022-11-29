@@ -7,11 +7,6 @@ namespace Trolley;
 
 class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
-
     public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
         : base(dbFactory, connection, transaction, visitor) { }
 
@@ -28,11 +23,6 @@ class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember>
 }
 class IncludableQuery<T1, T2, TMember> : Query<T1, T2>, IIncludableQuery<T1, T2, TMember>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
-
     public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
         : base(dbFactory, connection, transaction, visitor) { }
 
@@ -49,11 +39,6 @@ class IncludableQuery<T1, T2, TMember> : Query<T1, T2>, IIncludableQuery<T1, T2,
 }
 class IncludableQuery<T1, T2, T3, TMember> : Query<T1, T2, T3>, IIncludableQuery<T1, T2, T3, TMember>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
-
     public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
         : base(dbFactory, connection, transaction, visitor) { }
 
@@ -70,11 +55,6 @@ class IncludableQuery<T1, T2, T3, TMember> : Query<T1, T2, T3>, IIncludableQuery
 }
 class IncludableQuery<T1, T2, T3, T4, TMember> : Query<T1, T2, T3, T4>, IIncludableQuery<T1, T2, T3, T4, TMember>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
-
     public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
         : base(dbFactory, connection, transaction, visitor) { }
 
@@ -91,11 +71,6 @@ class IncludableQuery<T1, T2, T3, T4, TMember> : Query<T1, T2, T3, T4>, IIncluda
 }
 class IncludableQuery<T1, T2, T3, T4, T5, TMember> : Query<T1, T2, T3, T4, T5>, IIncludableQuery<T1, T2, T3, T4, T5, TMember>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
-
     public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
         : base(dbFactory, connection, transaction, visitor) { }
 
@@ -112,11 +87,6 @@ class IncludableQuery<T1, T2, T3, T4, T5, TMember> : Query<T1, T2, T3, T4, T5>, 
 }
 class IncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : Query<T1, T2, T3, T4, T5, T6>, IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
-
     public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
         : base(dbFactory, connection, transaction, visitor) { }
 
@@ -133,11 +103,6 @@ class IncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : Query<T1, T2, T3, T4, T
 }
 class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : Query<T1, T2, T3, T4, T5, T6, T7>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
-
     public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
         : base(dbFactory, connection, transaction, visitor) { }
 
@@ -154,11 +119,6 @@ class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : Query<T1, T2, T3, T
 }
 class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
-
     public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
         : base(dbFactory, connection, transaction, visitor) { }
 
@@ -175,11 +135,6 @@ class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : Query<T1, T2, T
 }
 class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8, T9>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
-
     public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
         : base(dbFactory, connection, transaction, visitor) { }
 
@@ -196,11 +151,6 @@ class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> : Query<T1, T
 }
 class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
-
     public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
         : base(dbFactory, connection, transaction, visitor) { }
 
@@ -217,11 +167,6 @@ class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> : Query<
 }
 class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
-
     public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
         : base(dbFactory, connection, transaction, visitor) { }
 
@@ -238,11 +183,6 @@ class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> : Q
 }
 class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
-
     public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
         : base(dbFactory, connection, transaction, visitor) { }
 
@@ -259,11 +199,6 @@ class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember
 }
 class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
-
     public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
         : base(dbFactory, connection, transaction, visitor) { }
 
@@ -280,11 +215,6 @@ class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TM
 }
 class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
-
     public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
         : base(dbFactory, connection, transaction, visitor) { }
 
@@ -301,11 +231,6 @@ class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T1
 }
 class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
-
     public IncludableQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
         : base(dbFactory, connection, transaction, visitor) { }
 

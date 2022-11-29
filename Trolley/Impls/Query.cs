@@ -13,9 +13,9 @@ class Query<T> : IQuery<T>
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
+    protected readonly IOrmDbFactory dbFactory;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
     public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)

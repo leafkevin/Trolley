@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.VisualBasic.FileIO;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
@@ -6,6 +7,9 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
+using System.Runtime.CompilerServices;
 
 namespace Trolley;
 
@@ -92,10 +96,22 @@ public static class TrolleyExtensions
         visitor.Visit(expr);
         if (visitor.IsParameter)
         {
-            parameterName = visitor.ParameterName;
+            parameterName = visitor.LastParameterName;
             return visitor.IsParameter;
         }
         parameterName = null;
+        return false;
+    }
+    public static bool GetParameters(this Expression expr, out List<string> parameterNames)
+    {
+        var visitor = new TestVisitor();
+        visitor.Visit(expr);
+        if (visitor.IsParameter)
+        {
+            parameterNames = visitor.ParameterNames;
+            return visitor.IsParameter;
+        }
+        parameterNames = null;
         return false;
     }
     public static bool IsConstant(this Expression expr)
@@ -127,151 +143,109 @@ public static class TrolleyExtensions
     }
     private static Delegate CreateReaderDeserializer(TheaConnection connection, IDataReader reader, Type entityType, List<MemberSegment> readerFields)
     {
-        var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
         var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
 
-        bool isDefaultCtor = false;
-        NewExpression entityExpr = null;
-        List<MemberBinding> bindings = null;
-        List<Expression> ctorArguments = null;
-
-        var ctor = entityType.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
-        if (ctor != null)
-        {
-            entityExpr = Expression.New(ctor);
-            bindings = new List<MemberBinding>();
-            isDefaultCtor = true;
-        }
-        else
-        {
-            ctor = entityType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).OrderBy(f => f.IsPublic ? 0 : (f.IsPrivate ? 2 : 1)).First();
-            ctorArguments = new List<Expression>();
-        }
-
         int index = 0;
+        bool isReaderEntitiyType = false;
         MemberSegment lastReaderFieldInfo = null;
-        var current = new EntityBuildInfo
-        {
-            IsDefault = isDefaultCtor,
-            Constructor = ctor,
-            Bindings = bindings,
-            Arguments = ctorArguments
-        };
-        Type fieldType = null;
-        Expression readerValueExpr = null;
+        var current = NewBuildInfo(entityType);
 
         while (index < reader.FieldCount)
         {
             var readerFieldInfo = readerFields[index];
-            //先处理上一个导航属性值
-            if (lastReaderFieldInfo == null || readerFieldInfo.ReaderIndex != lastReaderFieldInfo.ReaderIndex)
-            {
-                if (current.Parent == null)
-                {
-                    //处理当前字段值
-                    fieldType = reader.GetFieldType(index);
-                    readerValueExpr = GetReaderValue(readerExpr, Expression.Constant(index), readerFieldInfo.MemberMapper.MemberType, fieldType);
-                    if (current.IsDefault) current.Bindings.Add(Expression.Bind(readerFieldInfo.FromMember, readerValueExpr));
-                    else current.Arguments.Add(readerValueExpr);
-
-                    lastReaderFieldInfo = readerFieldInfo;
-                    index++;
-                    continue;
-                }
-
-                //Select语句，更换了一个新的导航属性，从最底层的导航属性一直往上层赋值，直到Select语句
-                while (current.Parent != null)
-                {
-                    //创建子对象，并赋值给父对象的属性,直到Select语句
-                    if (current.IsDefault)
-                        readerValueExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
-                    else readerValueExpr = Expression.New(current.Constructor, current.Arguments);
-
-                    var parent = current.Parent;
-                    //赋值给父对象的属性
-                    if (parent.IsDefault)
-                        parent.Bindings.Add(Expression.Bind(current.FromMember, readerValueExpr));
-                    else parent.Arguments.Add(readerValueExpr);
-                    current = parent;
-                }
-
-                lastReaderFieldInfo = readerFieldInfo;
-                index++;
-                continue;
-            }
-            if (readerFieldInfo.TableIndex != lastReaderFieldInfo.TableIndex)
-            {
-                //Select语句，更换了一个新的导航属性，从最底层的导航属性一直往上层赋值，直到Select语句
-                while (current.Parent != null)
-                {
-                    //创建子对象，并赋值给父对象的属性,直到Select语句
-                    if (current.IsDefault)
-                        readerValueExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
-                    else readerValueExpr = Expression.New(current.Constructor, current.Arguments);
-
-                    //赋值给父对象的属性
-                    if (current.Parent.IsDefault)
-                        current.Parent.Bindings.Add(Expression.Bind(current.FromMember, readerValueExpr));
-                    else current.Parent.Arguments.Add(readerValueExpr);
-                    current = current.Parent;
-                }
-
-                var parent = current;
-                var targetType = readerFieldInfo.TableSegment.EntityType;
-                ctor = targetType.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
-                if (ctor != null)
-                {
-                    entityExpr = Expression.New(ctor);
-                    bindings = new List<MemberBinding>();
-                    isDefaultCtor = true;
-                }
-                else
-                {
-                    ctor = targetType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).OrderBy(f => f.IsPublic ? 0 : (f.IsPrivate ? 2 : 1)).First();
-                    ctorArguments = new List<Expression>();
-                }
-                current = new EntityBuildInfo
-                {
-                    IsDefault = isDefaultCtor,
-                    Constructor = ctor,
-                    Bindings = bindings,
-                    Arguments = ctorArguments,
-                    FromMember = readerFieldInfo.FromMember,
-                    Parent = parent
-                };
-            }
-
             //处理当前字段值
-            fieldType = reader.GetFieldType(index);
-            readerValueExpr = GetReaderValue(readerExpr, Expression.Constant(index), readerFieldInfo.MemberMapper.MemberType, fieldType);
+            var fieldType = reader.GetFieldType(index);
+            var readerValueExpr = GetReaderValue(readerExpr, Expression.Constant(index), readerFieldInfo.MemberMapper.MemberType, fieldType);
 
-            MemberInfo fromMember = null;
-            if (readerFieldInfo.TableIndex > 1)
-                fromMember = readerFieldInfo.MemberMapper.Member;
-            else fromMember = readerFieldInfo.FromMember;
+            //readerIndex不相等，换了一个实体，如果上一个reader是实体，就生成上一个实体的实例，并添加到对应的参数或是bings中
+            //当前FromMember是实体，就要生成一个current为一个新buildInfo
+            //之后，就连续把当前readerIndex,tableIndex下的所有字段进行处理
 
-            if (current.IsDefault) current.Bindings.Add(Expression.Bind(fromMember, readerValueExpr));
-            else current.Arguments.Add(readerValueExpr);
+            if (index == 0 || readerFieldInfo.ReaderIndex == lastReaderFieldInfo.ReaderIndex)
+            {
+                //readerIndex相同，肯定是实体                
+                if (index > 0 && isReaderEntitiyType && readerFieldInfo.TableIndex != lastReaderFieldInfo.TableIndex)
+                {
+                    var parent = current;
+                    if (readerFieldInfo.TableSegment.IncludedFrom != lastReaderFieldInfo.TableSegment)
+                    {
+                        //创建子对象，并赋值给父对象的属性,直到Select语句
+                        Expression instanceExpr = null;
+                        if (current.IsDefault)
+                            instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
+                        else instanceExpr = Expression.New(current.Constructor, current.Arguments);
+                        //赋值给父对象的属性
+                        if (current.Parent.IsDefault)
+                            current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
+                        else current.Parent.Arguments.Add(instanceExpr);
+                        parent = current.Parent;
+                    }
+                    var targetType = readerFieldInfo.FromMember.GetMemberType();
+                    current = NewBuildInfo(targetType, readerFieldInfo.FromMember, parent);
+                }
+                //处理当前值
+                MemberInfo fromMember = null;
+                if (isReaderEntitiyType)
+                    fromMember = readerFieldInfo.MemberMapper.Member;
+                else fromMember = readerFieldInfo.FromMember;
+                if (current.IsDefault) current.Bindings.Add(Expression.Bind(fromMember, readerValueExpr));
+                else current.Arguments.Add(readerValueExpr);
+                isReaderEntitiyType = readerFieldInfo.FromMember.GetMemberType().IsEntityType();
+            }
+            else
+            {
+                //处理上一个实体，并结尾
+                if (isReaderEntitiyType)
+                {
+                    while (current.Parent != null)
+                    {
+                        //创建子对象，并赋值给父对象的属性,直到Select语句
+                        Expression instanceExpr = null;
+                        if (current.IsDefault)
+                            instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
+                        else instanceExpr = Expression.New(current.Constructor, current.Arguments);
+                        //赋值给父对象的属性
 
+                        if (current.Parent.IsDefault)
+                            current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
+                        else current.Parent.Arguments.Add(instanceExpr);
+                        current = current.Parent;
+                    }
+                }
+                var targetType = readerFieldInfo.FromMember.GetMemberType();
+                isReaderEntitiyType = targetType.IsEntityType();
+                MemberInfo fromMember = null;
+                if (isReaderEntitiyType)
+                {
+                    current = NewBuildInfo(targetType, readerFieldInfo.FromMember, current);
+                    fromMember = readerFieldInfo.MemberMapper.Member;
+                }
+                else fromMember = readerFieldInfo.FromMember;
+                //处理当前值
+                if (current.IsDefault) current.Bindings.Add(Expression.Bind(fromMember, readerValueExpr));
+                else current.Arguments.Add(readerValueExpr);
+            }
             lastReaderFieldInfo = readerFieldInfo;
             index++;
         }
-        //Select语句，更换了一个新的导航属性，从最底层的导航属性一直往上层赋值，直到Select语句
-        while (current.Parent != null)
+        if (isReaderEntitiyType)
         {
-            //创建子对象，并赋值给父对象的属性,直到Select语句
-            if (current.IsDefault)
-                readerValueExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
-            else readerValueExpr = Expression.New(current.Constructor, current.Arguments);
+            while (current.Parent != null)
+            {
+                //创建子对象，并赋值给父对象的属性,直到Select语句
+                Expression instanceExpr = null;
+                if (current.IsDefault)
+                    instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
+                else instanceExpr = Expression.New(current.Constructor, current.Arguments);
+                //赋值给父对象的属性
 
-            //赋值给父对象的属性
-            if (current.Parent.IsDefault)
-                current.Parent.Bindings.Add(Expression.Bind(current.FromMember, readerValueExpr));
-            else current.Parent.Arguments.Add(readerValueExpr);
-            current = current.Parent;
+                if (current.Parent.IsDefault)
+                    current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
+                else current.Parent.Arguments.Add(instanceExpr);
+                current = current.Parent;
+            }
         }
-
         var resultLabelExpr = Expression.Label(entityType);
         Expression returnExpr = null;
         if (current.IsDefault) returnExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
@@ -375,6 +349,87 @@ public static class TrolleyExtensions
             typedValueExpr = Expression.Convert(typedValueExpr, targetType);
         var isNullExpr = Expression.TypeIs(valueExpr, typeof(DBNull));
         return Expression.Condition(isNullExpr, Expression.Default(targetType), typedValueExpr);
+    }
+    private static void AddEntityReader(Expression readerValueExpr, IDataReader reader, int index, ParameterExpression readerExpr, EntityBuildInfo current, MemberSegment readerFieldInfo)
+    {
+        if (current.IsDefault) current.Bindings.Add(Expression.Bind(readerFieldInfo.FromMember, readerValueExpr));
+        else current.Arguments.Add(readerValueExpr);
+
+        if (readerFieldInfo.FromMember.GetMemberType().IsEntityType())
+        {
+            var parent = current;
+            var targetType = readerFieldInfo.TableSegment.EntityType;
+            bool isDefaultCtor = false;
+            List<MemberBinding> bindings = null;
+            List<Expression> ctorArguments = null;
+
+            var ctor = targetType.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+            if (ctor != null)
+            {
+                bindings = new List<MemberBinding>();
+                isDefaultCtor = true;
+            }
+            else
+            {
+                ctor = targetType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).OrderBy(f => f.IsPublic ? 0 : (f.IsPrivate ? 2 : 1)).First();
+                ctorArguments = new List<Expression>();
+            }
+            current = new EntityBuildInfo
+            {
+                IsDefault = isDefaultCtor,
+                Constructor = ctor,
+                Bindings = bindings,
+                Arguments = ctorArguments,
+                FromMember = readerFieldInfo.FromMember,
+                Parent = parent
+            };
+
+            //循环处理当前实体下的所有字段
+            int lastReaderIndex = readerFieldInfo.ReaderIndex;
+            int lastTableIndex = readerFieldInfo.TableIndex;
+            while (readerFieldInfo.ReaderIndex == lastReaderIndex)
+            {
+                //处理当前值
+                if (current.IsDefault) current.Bindings.Add(Expression.Bind(readerFieldInfo.FromMember, readerValueExpr));
+                else current.Arguments.Add(readerValueExpr);
+
+                //readerIndex或者tableIndex不一样，isLastEntity
+                if (readerFieldInfo.TableIndex != lastTableIndex)
+                {
+
+
+
+                }
+            }
+
+        }
+    }
+    private static EntityBuildInfo NewBuildInfo(Type targetType, MemberInfo fromMember = null, EntityBuildInfo parent = null)
+    {
+        bool isDefaultCtor = false;
+        List<MemberBinding> bindings = null;
+        List<Expression> ctorArguments = null;
+
+        var ctor = targetType.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+        if (ctor != null)
+        {
+            bindings = new List<MemberBinding>();
+            isDefaultCtor = true;
+        }
+        else
+        {
+            ctor = targetType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).OrderBy(f => f.IsPublic ? 0 : (f.IsPrivate ? 2 : 1)).First();
+            ctorArguments = new List<Expression>();
+        }
+        return new EntityBuildInfo
+        {
+            IsDefault = isDefaultCtor,
+            Constructor = ctor,
+            Bindings = bindings,
+            Arguments = ctorArguments,
+            FromMember = fromMember,
+            Parent = parent
+        };
     }
     private static Delegate CreateReaderValueConverter(Type targetType, Type fieldType)
     {

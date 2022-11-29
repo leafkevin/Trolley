@@ -23,5 +23,4 @@ class MemberSegment
     public string Body { get; set; }
     public bool IsNeedAlias { get; set; }
     public bool IsTarget { get; set; }
-    public string Path { get; set; }
 }
