@@ -5,7 +5,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Trolley;
 
@@ -1162,7 +1161,6 @@ class QueryVisitor
                     FromMember = memberMapper.Member,
                     OnExpr = $"{fromSegment.AliasName}.{this.ormProvider.GetFieldName(memberMapper.ForeignKey)}={rightAlias}.{this.ormProvider.GetFieldName(entityMapper.KeyFields[0])}",
                     IsInclude = true,
-                    IsSelectAll = true,
                     Path = path
                 });
             }
@@ -1181,7 +1179,6 @@ class QueryVisitor
                     FromMember = memberMapper.Member,
                     OnExpr = $"{this.ormProvider.GetFieldName(targetMemberMapper.FieldName)} IN ({{0}})",
                     IsInclude = true,
-                    IsSelectAll = true,
                     Path = path
                 });
             }

@@ -7,15 +7,13 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Reflection.Metadata;
-using System.Reflection.PortableExecutable;
-using System.Runtime.CompilerServices;
 
 namespace Trolley;
 
 public static class TrolleyExtensions
 {
-    private static readonly ConcurrentDictionary<int, Delegate> readerDeserializerCache = new();
+    private static readonly ConcurrentDictionary<int, Delegate> typeReaderDeserializerCache = new();
+    private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
 
     public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
@@ -130,18 +128,64 @@ public static class TrolleyExtensions
         var deserializer = (Func<IDataReader, int, TValue>)converter;
         return deserializer.Invoke(reader, columnIndex);
     }
+    internal static TEntity To<TEntity>(this IDataReader reader, IOrmDbFactory dbFactory, TheaConnection connection)
+    {
+        var entityType = typeof(TEntity);
+        var cacheKey = GetReaderKey(entityType, connection, reader);
+        if (!typeReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
+        {
+            deserializer = CreateReaderDeserializer(reader, dbFactory, entityType);
+            typeReaderDeserializerCache.TryAdd(cacheKey, deserializer);
+        }
+        return ((Func<IDataReader, TEntity>)deserializer).Invoke(reader);
+    }
     internal static TEntity To<TEntity>(this IDataReader reader, TheaConnection connection, List<MemberSegment> readerFields)
     {
         var entityType = typeof(TEntity);
         var cacheKey = GetReaderKey(entityType, connection, reader);
-        if (!readerDeserializerCache.TryGetValue(cacheKey, out var deserializer))
+        if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
         {
-            deserializer = CreateReaderDeserializer(connection, reader, entityType, readerFields);
-            readerDeserializerCache.TryAdd(cacheKey, deserializer);
+            deserializer = CreateReaderDeserializer(reader, entityType, readerFields);
+            queryReaderDeserializerCache.TryAdd(cacheKey, deserializer);
         }
         return ((Func<IDataReader, TEntity>)deserializer).Invoke(reader);
     }
-    private static Delegate CreateReaderDeserializer(TheaConnection connection, IDataReader reader, Type entityType, List<MemberSegment> readerFields)
+    internal static Delegate GetReaderValueConverter(this IDataReader reader, Type targetType, Type fieldType)
+    {
+        var hashCode = HashCode.Combine(targetType, fieldType);
+        if (!readerValueConverterCache.TryGetValue(hashCode, out var converter))
+            readerValueConverterCache.TryAdd(hashCode, converter = CreateReaderValueConverter(targetType, fieldType));
+        return converter;
+    }
+    private static Delegate CreateReaderDeserializer(IDataReader reader, IOrmDbFactory dbFactory, Type entityType)
+    {
+        var blockBodies = new List<Expression>();
+        var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
+        var entityMapper = dbFactory.GetEntityMap(entityType);
+        var index = 0;
+        var target = NewBuildInfo(entityType);
+        foreach (var memberMapper in entityMapper.MemberMaps)
+        {
+            if (memberMapper.IsIgnore || memberMapper.IsNavigation)
+                continue;
+
+            var fieldType = reader.GetFieldType(index);
+            var readerValueExpr = GetReaderValue(readerExpr, Expression.Constant(index), memberMapper.MemberType, fieldType);
+
+            if (target.IsDefault)
+                target.Bindings.Add(Expression.Bind(memberMapper.Member, readerValueExpr));
+            else target.Arguments.Add(readerValueExpr);
+        }
+        var resultLabelExpr = Expression.Label(entityType);
+        Expression returnExpr = null;
+        if (target.IsDefault) returnExpr = Expression.MemberInit(Expression.New(target.Constructor), target.Bindings);
+        else returnExpr = Expression.New(target.Constructor, target.Arguments);
+
+        blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
+        blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Constant(null, entityType)));
+        return Expression.Lambda(returnExpr, readerExpr).Compile();
+    }
+    private static Delegate CreateReaderDeserializer(IDataReader reader, Type entityType, List<MemberSegment> readerFields)
     {
         var blockBodies = new List<Expression>();
         var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");

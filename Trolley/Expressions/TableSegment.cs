@@ -12,8 +12,7 @@ public class TableSegment
     public MemberInfo FromMember { get; set; }
     public string Body { get; set; }
     public EntityMap Mapper { get; set; }
-    public bool IsInclude { get; set; }
-    public bool IsSelectAll { get; set; }
+    public bool IsInclude { get; set; } 
     public string Path { get; set; }
     public string Filter { get; set; }
     public string OnExpr { get; set; }
