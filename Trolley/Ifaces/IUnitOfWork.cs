@@ -2,7 +2,7 @@
 
 public interface IUnitOfWork
 {
-    void Begin();
+    void BeginTransaction();
     void Commit();
     void Rollback();
 }

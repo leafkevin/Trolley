@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Data;
 using System.Linq.Expressions;
 using System.Threading;
@@ -37,6 +38,8 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     #region Create
     int Create<TEntity>(object entity);
     Task<int> CreateAsync<TEntity>(object entity, CancellationToken cancellationToken = default);
+    int Create<TEntity>(IEnumerable entities, int bulkCount = 500);
+    Task<int> CreateAsync<TEntity>(IEnumerable entities, int bulkCount = 500, CancellationToken cancellationToken = default);
     ICreate<T> Create<T>();
     #endregion
 

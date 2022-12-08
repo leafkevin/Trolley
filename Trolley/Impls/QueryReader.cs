@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -62,6 +63,11 @@ public class QueryReader : IQueryReader
         var recordsTotal = this.Read<int>();
         return new PagedList<TEntity>(recordsTotal, this.ReadList<TEntity>());
     }
+    public Dictionary<TKey, TElement> ToDictionary<TEntity, TKey, TElement>(Func<TEntity, TKey> keySelector, Func<TEntity, TElement> valueSelector) where TKey : notnull
+    {
+        var list = this.ReadList<TEntity>();
+        return list.ToDictionary(keySelector, valueSelector);
+    }
     private void ReadNextResult()
     {
         if (!this.reader.NextResult())
@@ -120,6 +126,11 @@ public class QueryReader : IQueryReader
         var recordsTotal = await this.ReadAsync<int>(cancellationToken);
         return new PagedList<TEntity>(recordsTotal, await this.ReadListAsync<TEntity>(cancellationToken));
     }
+    public async Task<Dictionary<TKey, TElement>> ToDictionaryAsync<TEntity, TKey, TElement>(Func<TEntity, TKey> keySelector, Func<TEntity, TElement> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull
+    {
+        var list = await this.ReadListAsync<TEntity>(cancellationToken);
+        return list.ToDictionary(keySelector, valueSelector);
+    }
     public async Task ReadNextResultAsync(DbDataReader dbReader, CancellationToken cancellationToken = default)
     {
         if (!await dbReader.NextResultAsync(cancellationToken))
@@ -128,7 +139,7 @@ public class QueryReader : IQueryReader
             await this.DisposeAsync();
         }
     }
-    private async ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (this.reader is not DbDataReader dbReader)
             throw new Exception("当前数据库驱动不支持异步Reader操作");
