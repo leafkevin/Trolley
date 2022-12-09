@@ -56,7 +56,7 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     {
         var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
-        var sql = query.ToSql(out var dbDataParameters);
+        var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
         return new Query<<#=tables#>, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
@@ -96,13 +96,13 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     public IQuery<<#=tables#>> Union<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         var dbParameters = new List<IDbDataParameter>();
-        var sql = this.ToSql(out var parameters);
+        var sql = this.ToSql(out var parameters, out _);
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
         var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
-        sql += " UNION " + query.ToSql(out parameters);
+        sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
@@ -112,13 +112,13 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     public IQuery<<#=tables#>> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         var dbParameters = new List<IDbDataParameter>();
-        var sql = this.ToSql(out var parameters);
+        var sql = this.ToSql(out var parameters, out _);
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
         var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
-        sql += " UNION ALL " + query.ToSql(out parameters);
+        sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
@@ -271,8 +271,8 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         var castTo = this.connection.OrmProvider.CastTo(typeof(TTarget));
         return await this.QueryFirstValueAsync<TTarget>($"MIN(CAST({{0}} AS {castTo}))", fieldExpr, cancellationToken);
     }
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(null, out dbParameters, out _);
+    public string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields)
+        => this.visitor.BuildSql(null, out dbParameters, out readerFields);
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -384,13 +384,13 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     public IQuery<<#=tables#>> Union<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         var dbParameters = new List<IDbDataParameter>();
-        var sql = this.ToSql(out var parameters);
+        var sql = this.ToSql(out var parameters, out _);
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
         var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
-        sql += " UNION " + query.ToSql(out parameters);
+        sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
@@ -400,13 +400,13 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     public IQuery<<#=tables#>> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         var dbParameters = new List<IDbDataParameter>();
-        var sql = this.ToSql(out var parameters);
+        var sql = this.ToSql(out var parameters, out _);
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
         var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
-        sql += " UNION ALL " + query.ToSql(out parameters);
+        sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
@@ -544,8 +544,8 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         var castTo = this.connection.OrmProvider.CastTo(typeof(TTarget));
         return await this.QueryFirstValueAsync<TTarget>($"MIN(CAST({{0}} AS {castTo}))", fieldExpr, cancellationToken);
     }
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(null, out dbParameters, out _);
+    public string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields)
+        => this.visitor.BuildSql(null, out dbParameters, out readerFields);
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,7 +7,7 @@ namespace Trolley;
 public interface ICreate<T>
 {
     ICreate<T> WithBy<TInsertObject>(TInsertObject insertObjs, int bulkCount = 500);
-    ICreate<T> From<TEntity>(Expression<Func<TEntity, T>> fields, Expression<Func<TEntity, bool>> predicate);
+    ICreate<T> From(Func<IFromQuery, IQuery<T>> subQuery);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     string ToSql();

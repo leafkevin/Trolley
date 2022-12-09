@@ -44,7 +44,7 @@ class Query<T> : IQuery<T>
     {
         var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
-        var sql = query.ToSql(out var dbDataParameters);
+        var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
         return new Query<T, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
@@ -84,13 +84,13 @@ class Query<T> : IQuery<T>
     public IQuery<T> Union<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         var dbParameters = new List<IDbDataParameter>();
-        var sql = this.ToSql(out var parameters);
+        var sql = this.ToSql(out var parameters, out _);
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
         var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
-        sql += " UNION " + query.ToSql(out parameters);
+        sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
@@ -100,13 +100,13 @@ class Query<T> : IQuery<T>
     public IQuery<T> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         var dbParameters = new List<IDbDataParameter>();
-        var sql = this.ToSql(out var parameters);
+        var sql = this.ToSql(out var parameters, out _);
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
         var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
-        sql += " UNION ALL " + query.ToSql(out parameters);
+        sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
@@ -420,10 +420,10 @@ class Query<T> : IQuery<T>
         var list = await this.ToListAsync(cancellationToken);
         return list.ToDictionary(keySelector, valueSelector);
     }
-    public string ToSql(out List<IDbDataParameter> dbParameters)
+    public string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> memberSegments)
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        return this.visitor.BuildSql(defaultExpr, out dbParameters, out _);
+        return this.visitor.BuildSql(defaultExpr, out dbParameters, out memberSegments);
     }
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {

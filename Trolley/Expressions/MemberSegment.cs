@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace Trolley;
 
-class MemberSegment
+public class MemberSegment
 {
     public int ReaderIndex { get; set; }
     public int TableIndex { get; set; }
@@ -19,8 +19,6 @@ class MemberSegment
     /// 字段来源表
     /// </summary>
     public TableSegment TableSegment { get; set; }
-    public Expression Expression { get; set; }
     public string Body { get; set; }
     public bool IsNeedAlias { get; set; }
-    public bool IsTarget { get; set; }
 }

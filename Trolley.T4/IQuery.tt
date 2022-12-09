@@ -122,7 +122,7 @@ public interface IQuery<T>
     Task<IPagedList<T>> ToPageListAsync(int pageIndex, int pageSize, CancellationToken cancellationToken = default);
     Dictionary<TKey, TElement> ToDictionary<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> valueSelector) where TKey : notnull;
     Task<Dictionary<TKey, TElement>> ToDictionaryAsync<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull;
-    string ToSql(out List<IDbDataParameter> dbParameters);
+    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
 }
 <#
     var count = 16;
@@ -194,7 +194,7 @@ public interface IQuery<<#=tables#>>
     TTarget MinAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters);
+    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
 }
 <#  }
     tables += $", T{count}";
@@ -255,5 +255,5 @@ public interface IQuery<<#=tables#>>
     TTarget MinAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters);
+    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
 }

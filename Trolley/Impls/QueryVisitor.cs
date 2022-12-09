@@ -1021,13 +1021,11 @@ class QueryVisitor
                     {
                         ReaderIndex = readerIndex,
                         TableIndex = 1,
-                        Expression = elementExpr,
                         FromMember = memberInfo,
                         MemberMapper = sqlSegment.MemberMapper,
                         TableSegment = sqlSegment.TableSegment,
                         Body = sqlSegment.ToString(),
-                        IsNeedAlias = isNeedAlias,
-                        IsTarget = true
+                        IsNeedAlias = isNeedAlias
                     });
                 }
                 break;
@@ -1039,13 +1037,11 @@ class QueryVisitor
                 {
                     ReaderIndex = readerIndex,
                     TableIndex = 1,
-                    Expression = elementExpr,
                     FromMember = memberInfo,
                     MemberMapper = sqlSegment.MemberMapper,
                     TableSegment = sqlSegment.TableSegment,
                     Body = sqlSegment.ToString(),
-                    IsNeedAlias = isNeedAlias,
-                    IsTarget = true
+                    IsNeedAlias = isNeedAlias
                 });
                 break;
         }
