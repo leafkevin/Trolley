@@ -5,27 +5,33 @@ using System.Threading;
 
 namespace Trolley;
 
-public interface IUpdate<T>
+public interface IUpdate<TEntity>
 {
-    IUpdate<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> predicate);
-    IUpdate<T> WithBy<TUpdateObject>(TUpdateObject updateObjs);
-    IUpdate<T> Set<TSetObject>(Expression<Func<T, TSetObject>> setExpr);
-    IUpdate<T> Where(Expression<Func<T, bool>> predicate);
-    IUpdate<T> Where(bool condition, Expression<Func<T, bool>> predicate);
+    IUpdate<TEntity> RawSql(string rawSql);
+    IUpdate<TEntity> SetByKey<TUpdateObject>(TUpdateObject updateObjs, int bulkCount = 500);
+    IUpdate<TEntity> Set<TMember>(Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+
+    IUpdate<TEntity, T> From<T>(Expression<Func<TEntity, T, bool>> joinOn);
+    IUpdate<TEntity, T1, T2> From<T1, T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn);
+    IUpdate<TEntity, T1, T2, T3> From<T1, T2, T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn);
+    IUpdate<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn);
+    IUpdate<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn);
+
+    IUpdate<TEntity, T> InnerJoin<T>(Expression<Func<TEntity, T, bool>> joinOn);
+    IUpdate<TEntity, T1, T2> InnerJoin<T1, T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn);
+    IUpdate<TEntity, T1, T2, T3> InnerJoin<T1, T2, T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn);
+    IUpdate<TEntity, T1, T2, T3, T4> InnerJoin<T1, T2, T3, T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn);
+    IUpdate<TEntity, T1, T2, T3, T4, T5> InnerJoin<T1, T2, T3, T4, T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn);
+
+    IUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
+    IUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     string ToSql();
 }
-public interface IUpdate<T, T1>
+public interface IUpdate<TEntity, T>
 {
-    IUpdate<T, T1, TOther> InnerJoin<TOther>(Expression<Func<T, T1, TOther, bool>> predicate);
-    IUpdate<T, T1> WithBy<TUpdateObject>(TUpdateObject updateObjs);
-    IUpdate<T, T1> Set<TSetObject>(Expression<Func<T, T1, TSetObject>> setExpr);
-    IUpdate<T, T1> Where(Expression<Func<T, T1, bool>> predicate);
-    IUpdate<T, T1> Where(bool condition, Expression<Func<T, T1, bool>> predicate);
-    int Execute();
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    IUpdate<TEntity> Set<TSetObject>(Expression<Func<TEntity, T, TSetObject>> setExpr);
 }
 public interface IUpdate<T, T1, T2>
 {

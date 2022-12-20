@@ -62,12 +62,14 @@ class Program
         ////Stack<>
         var rep = dbFactory.Create();
         var result = rep.From<Order, User>()
-            .Include((a, b) => a.Buyer)
+            .Include((a, b) => a.Buyer.Company)
             //.ThenInclude(f => f.Company)
             .InnerJoin((x, y) => x.SellerId == y.Id && x.IsEnabled && y.IsEnabled)
-            .Select((a, b) => new { a.OrderNo, a.Buyer, Seller = b })
+            .Select((a, b) => new { a.OrderNo, BuyerName = a.Buyer.Name, Seller = b })
             .First();
-
+        rep.Update<Order>().Set(f => new { OrderName = "ddd" }).Where(f => f.Id == 3);
+        rep.Update<Order>().From<User, Company>((a, b, c) => a.BuyerId == b.Id && b.CompanyId == c.Id && c.Name == "pa")
+            .Set((x, y, z) => new { OrderNo = "Order_" + y.Name + Guid.NewGuid().ToString() });
 
         //rep.From<Order>().Include(f => f.Buyer).Include(f => f.Details)
         //    .InnerJoin(f => f.BuyerId == f.Buyer.Id)

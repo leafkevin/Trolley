@@ -36,10 +36,6 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     #endregion
 
     #region Create
-    int Create<TEntity>(object entity);
-    Task<int> CreateAsync<TEntity>(object entity, CancellationToken cancellationToken = default);
-    int Create<TEntity>(IEnumerable entities, int bulkCount = 500);
-    Task<int> CreateAsync<TEntity>(IEnumerable entities, int bulkCount = 500, CancellationToken cancellationToken = default);
     ICreate<T> Create<T>();
     #endregion
 

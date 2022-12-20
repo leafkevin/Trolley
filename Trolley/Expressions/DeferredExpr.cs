@@ -14,7 +14,7 @@ public enum OperationType
 /// <summary>
 /// 针对当前操作数的延时表达式处理
 /// </summary>
-public class DeferredExpr
+public struct DeferredExpr
 {
     /// <summary>
     /// 操作符：And/Or/Concat/Equals/NotEquals/Convert/Comma

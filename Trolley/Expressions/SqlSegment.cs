@@ -32,6 +32,7 @@ public class SqlSegment
     /// 是否有SQL参数，如：@p1,@p2
     /// </summary>
     public bool IsParameter { get; set; }
+    public string ParameterName { get; set; }
     /// <summary>
     /// 是否有函数调用
     /// </summary>
@@ -76,14 +77,6 @@ public class SqlSegment
     public SqlSegment Next(Expression nextExpr, object value)
     {
         this.Expression = nextExpr;
-        this.isFixValue = false;
-        this.Value = value;
-        return this;
-    }
-    public SqlSegment Complete(object value)
-    {
-        this.Expression = null;
-        this.IsCompleted = true;
         this.isFixValue = false;
         this.Value = value;
         return this;

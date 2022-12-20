@@ -1,5 +1,5 @@
-﻿using Microsoft.VisualBasic.FileIO;
-using System;
+﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
@@ -7,6 +7,8 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Trolley;
 
@@ -15,6 +17,15 @@ public static class TrolleyExtensions
     private static readonly ConcurrentDictionary<int, Delegate> typeReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
+
+    public static int Create<TEntity>(this Repository repository, object parameter)
+        => repository.Create<TEntity>().WithBy(parameter).Execute();
+    public static async Task<int> CreateAsync<TEntity>(this Repository repository, object parameter, CancellationToken cancellationToken = default)
+        => await repository.Create<TEntity>().WithBy(parameter).ExecuteAsync(cancellationToken);
+    public static int Create<TEntity>(this Repository repository, IEnumerable entities, int bulkCount = 500)
+        => repository.Create<TEntity>().WithBy(entities, bulkCount).Execute();
+    public static async Task<int> CreateAsync<TEntity>(this Repository repository, IEnumerable entities, int bulkCount = 500, CancellationToken cancellationToken = default)
+        => await repository.Create<TEntity>().WithBy(entities, bulkCount).ExecuteAsync(cancellationToken);
 
     public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
     {

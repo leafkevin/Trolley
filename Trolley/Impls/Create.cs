@@ -1,27 +1,23 @@
-﻿using Microsoft.Extensions.Primitives;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Data;
 using System.Data.Common;
 using System.Linq.Expressions;
-using System.Reflection.Metadata;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Trolley;
 
-class Create<T> : ICreate<T>
+class Create<TEntity> : ICreate<TEntity>
 {
     private static ConcurrentDictionary<int, object> commandInitializerCache = new();
     private readonly IOrmDbFactory dbFactory;
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private bool isWithBy = false;
-    private IQuery<T> query = null;
+    private CreateVisitor visitor = null;
     private object parameters = null;
     private int? bulkCount = null;
 
@@ -31,113 +27,108 @@ class Create<T> : ICreate<T>
         this.connection = connection;
         this.transaction = transaction;
     }
-    public ICreate<T> WithBy<TInsertObject>(TInsertObject insertObjs, int bulkCount = 500)
+    public ICreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObjs, int bulkCount = 500)
     {
-        this.isWithBy = true;
         this.parameters = insertObjs;
         this.bulkCount = bulkCount;
         return this;
     }
-    public ICreate<T> From(Func<IFromQuery, IQuery<T>> subQuery)
+    public ICreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector)
     {
-        this.isWithBy = false;
-        var fromQuery = new FromQuery(this.dbFactory, this.connection);
-        this.query = subQuery.Invoke(fromQuery);
-        return this;
+        var entityType = typeof(TEntity);
+        this.visitor = new CreateVisitor(this.dbFactory, this.connection.OrmProvider, entityType).From(fieldSelector);
+        return new Create<TEntity, TSource>(this.connection, this.transaction, this.visitor);
+    }
+    public ICreate<TEntity, T1, T2> From<T1, T2>(Expression<Func<T1, T2, object>> fieldSelector)
+    {
+        var entityType = typeof(TEntity);
+        this.visitor = new CreateVisitor(this.dbFactory, this.connection.OrmProvider, entityType).From(fieldSelector);
+        return new Create<TEntity, T1, T2>(this.connection, this.transaction, this.visitor);
+    }
+    public ICreate<TEntity, T1, T2, T3> From<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> fieldSelector)
+    {
+        var entityType = typeof(TEntity);
+        this.visitor = new CreateVisitor(this.dbFactory, this.connection.OrmProvider, entityType).From(fieldSelector);
+        return new Create<TEntity, T1, T2, T3>(this.connection, this.transaction, this.visitor);
+    }
+    public ICreate<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, object>> fieldSelector)
+    {
+        var entityType = typeof(TEntity);
+        this.visitor = new CreateVisitor(this.dbFactory, this.connection.OrmProvider, entityType).From(fieldSelector);
+        return new Create<TEntity, T1, T2, T3, T4>(this.connection, this.transaction, this.visitor);
+    }
+    public ICreate<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, object>> fieldSelector)
+    {
+        var entityType = typeof(TEntity);
+        this.visitor = new CreateVisitor(this.dbFactory, this.connection.OrmProvider, entityType).From(fieldSelector);
+        return new Create<TEntity, T1, T2, T3, T4, T5>(this.connection, this.transaction, this.visitor);
     }
     public int Execute()
     {
-        if (this.isWithBy)
+        bool isMulti = false;
+        bool isDictionary = false;
+        var entityType = typeof(TEntity);
+        Type parameterType = null;
+        IEnumerable entities = null;
+        if (this.parameters is Dictionary<string, object> dict)
+            isDictionary = true;
+        else if (this.parameters is IEnumerable)
         {
-            bool isMulti = false;
-            bool isDictionary = false;
-            var entityType = typeof(T);
-            Type parameterType = null;
-            IEnumerable entities = null;
-            if (this.parameters is Dictionary<string, object> dict)
-                isDictionary = true;
-            else if (this.parameters is IEnumerable)
+            isMulti = true;
+            entities = this.parameters as IEnumerable;
+            foreach (var entity in entities)
             {
-                isMulti = true;
-                entities = this.parameters as IEnumerable;
-                foreach (var entity in entities)
-                {
-                    if (entity is Dictionary<string, object>)
-                        isDictionary = true;
-                    else parameterType = entity.GetType();
-                    break;
-                }
+                if (entity is Dictionary<string, object>)
+                    isDictionary = true;
+                else parameterType = entity.GetType();
+                break;
             }
-            if (isMulti)
-            {
-                Action<IDbCommand, IOrmProvider, StringBuilder, int, object> commandInitializer = null;
-                if (isDictionary)
-                    commandInitializer = this.BuildBatchCommandInitializer(entityType);
-                else commandInitializer = this.BuildBatchCommandInitializer(entityType, parameterType);
+        }
+        if (isMulti)
+        {
+            Action<IDbCommand, IOrmProvider, StringBuilder, int, object> commandInitializer = null;
+            if (isDictionary)
+                commandInitializer = this.BuildBatchCommandInitializer(entityType);
+            else commandInitializer = this.BuildBatchCommandInitializer(entityType, parameterType);
 
-                this.bulkCount ??= 500;
-                int result = 0, index = 0;
-                var sqlBuilder = new StringBuilder();
-                var command = this.connection.CreateCommand();
-                foreach (var entity in entities)
-                {
-                    commandInitializer.Invoke(command, this.connection.OrmProvider, sqlBuilder, index, entity);
-                    if (index >= this.bulkCount)
-                    {
-                        command.CommandText = sqlBuilder.ToString();
-                        command.CommandType = CommandType.Text;
-                        this.connection.Open();
-                        result += command.ExecuteNonQuery();
-                        sqlBuilder.Clear();
-                        index = 0;
-                        continue;
-                    }
-                    index++;
-                }
-                if (index > 0)
+            this.bulkCount ??= 500;
+            int result = 0, index = 0;
+            var sqlBuilder = new StringBuilder();
+            var command = this.connection.CreateCommand();
+            foreach (var entity in entities)
+            {
+                commandInitializer.Invoke(command, this.connection.OrmProvider, sqlBuilder, index, entity);
+                if (index >= this.bulkCount)
                 {
                     command.CommandText = sqlBuilder.ToString();
                     command.CommandType = CommandType.Text;
                     this.connection.Open();
                     result += command.ExecuteNonQuery();
+                    sqlBuilder.Clear();
+                    index = 0;
+                    continue;
                 }
-                return result;
+                index++;
             }
-            else
+            if (index > 0)
             {
-                Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
-                if (isDictionary)
-                    commandInitializer = this.BuildCommandInitializer(entityType);
-                else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
-                var command = this.connection.CreateCommand();
-                command.CommandText = commandInitializer?.Invoke(command, this.connection.OrmProvider, this.parameters);
+                command.CommandText = sqlBuilder.ToString();
                 command.CommandType = CommandType.Text;
-                command.Transaction = this.transaction;
-
-                connection.Open();
-                return command.ExecuteNonQuery();
+                this.connection.Open();
+                result += command.ExecuteNonQuery();
             }
+            return result;
         }
         else
         {
-            var sql = query.ToSql(out var dbParameters, out var readerFields);
-            var builder = new StringBuilder("INSERT INTO (");
-            for (int i = 0; i < readerFields.Count; i++)
-            {
-                var readerField = readerFields[i];
-                var fieldName = this.connection.OrmProvider.GetFieldName(readerField.MemberMapper.FieldName);
-                if (i > 0) builder.Append(',');
-                builder.Append(fieldName);
-            }
-            builder.Append(") ");
-            builder.Append(sql);
+            Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
+            if (isDictionary)
+                commandInitializer = this.BuildCommandInitializer(entityType);
+            else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
             var command = this.connection.CreateCommand();
-            command.CommandText = builder.ToString();
+            command.CommandText = commandInitializer.Invoke(command, this.connection.OrmProvider, this.parameters);
             command.CommandType = CommandType.Text;
             command.Transaction = this.transaction;
-
-            if (dbParameters != null && dbParameters.Count > 0)
-                dbParameters.ForEach(f => command.Parameters.Add(f));
 
             connection.Open();
             return command.ExecuteNonQuery();
@@ -145,179 +136,132 @@ class Create<T> : ICreate<T>
     }
     public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        if (this.isWithBy)
+        bool isMulti = false;
+        bool isDictionary = false;
+        var entityType = typeof(TEntity);
+        Type parameterType = null;
+        IEnumerable entities = null;
+        if (this.parameters is Dictionary<string, object> dict)
+            isDictionary = true;
+        else if (this.parameters is IEnumerable)
         {
-            bool isMulti = false;
-            bool isDictionary = false;
-            var entityType = typeof(T);
-            Type parameterType = null;
-            IEnumerable entities = null;
-            if (this.parameters is Dictionary<string, object> dict)
-                isDictionary = true;
-            else if (this.parameters is IEnumerable)
+            isMulti = true;
+            entities = this.parameters as IEnumerable;
+            foreach (var entity in entities)
             {
-                isMulti = true;
-                entities = this.parameters as IEnumerable;
-                foreach (var entity in entities)
-                {
-                    if (entity is Dictionary<string, object>)
-                        isDictionary = true;
-                    else parameterType = entity.GetType();
-                    break;
-                }
+                if (entity is Dictionary<string, object>)
+                    isDictionary = true;
+                else parameterType = entity.GetType();
+                break;
             }
-            if (isMulti)
+        }
+        if (isMulti)
+        {
+            Action<IDbCommand, IOrmProvider, StringBuilder, int, object> commandInitializer = null;
+            if (isDictionary)
+                commandInitializer = this.BuildBatchCommandInitializer(entityType);
+            else commandInitializer = this.BuildBatchCommandInitializer(entityType, parameterType);
+
+            this.bulkCount ??= 500;
+            int result = 0, index = 0;
+            var sqlBuilder = new StringBuilder();
+
+            var cmd = this.connection.CreateCommand();
+            if (cmd is not DbCommand command)
+                throw new Exception("当前数据库驱动不支持异步SQL查询");
+
+            foreach (var entity in entities)
             {
-                Action<IDbCommand, IOrmProvider, StringBuilder, int, object> commandInitializer = null;
-                if (isDictionary)
-                    commandInitializer = this.BuildBatchCommandInitializer(entityType);
-                else commandInitializer = this.BuildBatchCommandInitializer(entityType, parameterType);
-
-                this.bulkCount ??= 500;
-                int result = 0, index = 0;
-                var sqlBuilder = new StringBuilder();
-
-                var cmd = this.connection.CreateCommand();
-                if (cmd is not DbCommand command)
-                    throw new Exception("当前数据库驱动不支持异步SQL查询");
-
-                foreach (var entity in entities)
-                {
-                    commandInitializer.Invoke(command, this.connection.OrmProvider, sqlBuilder, index, entity);
-                    if (index >= this.bulkCount)
-                    {
-                        command.CommandText = sqlBuilder.ToString();
-                        command.CommandType = CommandType.Text;
-                        await this.connection.OpenAsync(cancellationToken);
-                        result += await command.ExecuteNonQueryAsync(cancellationToken);
-                        sqlBuilder.Clear();
-                        index = 0;
-                        continue;
-                    }
-                    index++;
-                }
-                if (index > 0)
+                commandInitializer.Invoke(command, this.connection.OrmProvider, sqlBuilder, index, entity);
+                if (index >= this.bulkCount)
                 {
                     command.CommandText = sqlBuilder.ToString();
                     command.CommandType = CommandType.Text;
                     await this.connection.OpenAsync(cancellationToken);
                     result += await command.ExecuteNonQueryAsync(cancellationToken);
+                    sqlBuilder.Clear();
+                    index = 0;
+                    continue;
                 }
-                return result;
+                index++;
             }
-            else
+            if (index > 0)
             {
-                Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
-                if (isDictionary)
-                    commandInitializer = this.BuildCommandInitializer(entityType);
-                else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
-
-                var cmd = this.connection.CreateCommand();
-                cmd.Transaction = this.transaction;
-                if (cmd is not DbCommand command)
-                    throw new Exception("当前数据库驱动不支持异步SQL查询");
-
+                command.CommandText = sqlBuilder.ToString();
                 command.CommandType = CommandType.Text;
-                command.CommandText = commandInitializer?.Invoke(command, this.connection.OrmProvider, this.parameters);
                 await this.connection.OpenAsync(cancellationToken);
-                return await command.ExecuteNonQueryAsync(cancellationToken);
+                result += await command.ExecuteNonQueryAsync(cancellationToken);
             }
+            return result;
         }
         else
         {
-            var sql = this.query.ToSql(out var dbParameters, out var readerFields);
-            var builder = new StringBuilder("INSERT INTO (");
-            for (int i = 0; i < readerFields.Count; i++)
-            {
-                var readerField = readerFields[i];
-                var fieldName = this.connection.OrmProvider.GetFieldName(readerField.MemberMapper.FieldName);
-                if (i > 0) builder.Append(',');
-                builder.Append(fieldName);
-            }
-            builder.Append(") ");
-            builder.Append(sql);
+            Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
+            if (isDictionary)
+                commandInitializer = this.BuildCommandInitializer(entityType);
+            else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
+
             var cmd = this.connection.CreateCommand();
             cmd.Transaction = this.transaction;
             if (cmd is not DbCommand command)
                 throw new Exception("当前数据库驱动不支持异步SQL查询");
 
-            command.CommandText = builder.ToString();
             command.CommandType = CommandType.Text;
-            if (dbParameters != null && dbParameters.Count > 0)
-                dbParameters.ForEach(f => command.Parameters.Add(f));
-
+            command.CommandText = commandInitializer?.Invoke(command, this.connection.OrmProvider, this.parameters);
             await this.connection.OpenAsync(cancellationToken);
             return await command.ExecuteNonQueryAsync(cancellationToken);
         }
     }
     public string ToSql()
     {
-        if (this.isWithBy)
+        bool isMulti = false;
+        bool isDictionary = false;
+        var entityType = typeof(TEntity);
+        Type parameterType = null;
+        IEnumerable entities = null;
+        if (this.parameters is Dictionary<string, object> dict)
+            isDictionary = true;
+        else if (this.parameters is IEnumerable)
         {
-            bool isMulti = false;
-            bool isDictionary = false;
-            var entityType = typeof(T);
-            Type parameterType = null;
-            IEnumerable entities = null;
-            if (this.parameters is Dictionary<string, object> dict)
-                isDictionary = true;
-            else if (this.parameters is IEnumerable)
+            isMulti = true;
+            entities = this.parameters as IEnumerable;
+            foreach (var entity in entities)
             {
-                isMulti = true;
-                entities = this.parameters as IEnumerable;
-                foreach (var entity in entities)
-                {
-                    if (entity is Dictionary<string, object>)
-                        isDictionary = true;
-                    else parameterType = entity.GetType();
-                    break;
-                }
+                if (entity is Dictionary<string, object>)
+                    isDictionary = true;
+                else parameterType = entity.GetType();
+                break;
             }
-            if (isMulti)
+        }
+        if (isMulti)
+        {
+            Action<IDbCommand, IOrmProvider, StringBuilder, int, object> commandInitializer = null;
+            if (isDictionary)
+                commandInitializer = this.BuildBatchCommandInitializer(entityType);
+            else commandInitializer = this.BuildBatchCommandInitializer(entityType, parameterType);
+            this.bulkCount ??= 500;
+            int index = 0;
+            var sqlBuilder = new StringBuilder();
+            var command = this.connection.CreateCommand();
+            foreach (var entity in entities)
             {
-                Action<IDbCommand, IOrmProvider, StringBuilder, int, object> commandInitializer = null;
-                if (isDictionary)
-                    commandInitializer = this.BuildBatchCommandInitializer(entityType);
-                else commandInitializer = this.BuildBatchCommandInitializer(entityType, parameterType);
-                this.bulkCount ??= 500;
-                int index = 0;
-                var sqlBuilder = new StringBuilder();
-                var command = this.connection.CreateCommand();
-                foreach (var entity in entities)
-                {
-                    commandInitializer.Invoke(command, this.connection.OrmProvider, sqlBuilder, index, entity);
-                    if (index >= this.bulkCount)
-                        return sqlBuilder.ToString();
-                    index++;
-                }
-                if (index > 0)
+                commandInitializer.Invoke(command, this.connection.OrmProvider, sqlBuilder, index, entity);
+                if (index >= this.bulkCount)
                     return sqlBuilder.ToString();
-                return null;
+                index++;
             }
-            else
-            {
-                Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
-                if (isDictionary)
-                    commandInitializer = this.BuildCommandInitializer(entityType);
-                else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
-                var command = this.connection.CreateCommand();
-                return commandInitializer?.Invoke(command, this.connection.OrmProvider, this.parameters);
-            }
+            if (index > 0)
+                return sqlBuilder.ToString();
+            return null;
         }
         else
         {
-            var sql = this.query.ToSql(out var dbParameters, out var readerFields);
-            var builder = new StringBuilder("INSERT INTO (");
-            for (int i = 0; i < readerFields.Count; i++)
-            {
-                var readerField = readerFields[i];
-                var fieldName = this.connection.OrmProvider.GetFieldName(readerField.MemberMapper.FieldName);
-                if (i > 0) builder.Append(',');
-                builder.Append(fieldName);
-            }
-            builder.Append(") ");
-            builder.Append(sql);
-            return builder.ToString();
+            Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
+            if (isDictionary)
+                commandInitializer = this.BuildCommandInitializer(entityType);
+            else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
+            var command = this.connection.CreateCommand();
+            return commandInitializer?.Invoke(command, this.connection.OrmProvider, this.parameters);
         }
     }
     private Action<IDbCommand, IOrmProvider, StringBuilder, int, object> BuildBatchCommandInitializer(Type entityType, Type parameterType)
@@ -370,7 +314,7 @@ class Create<T> : ICreate<T>
                 var suffixExpr = Expression.Call(indexExpr, typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes));
                 var parameterNameExpr = Expression.Call(methodInfo4, Expression.Constant(parameterName), suffixExpr);
                 blockBodies.Add(Expression.Call(valuesBuilderExpr, methodInfo2, parameterNameExpr));
-                RepositoryHelper.AddWhereParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, parameterMemberMapper.MemberName, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, parameterMemberMapper.MemberName, blockBodies);
                 columnIndex++;
             }
             blockBodies.Add(Expression.Call(insertBuilderExpr, methodInfo1, Expression.Constant(')')));
@@ -421,7 +365,7 @@ class Create<T> : ICreate<T>
                 var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
                 valuesBuilder.Append(parameterName);
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddWhereParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, parameterMemberMapper.MemberName, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, parameterMemberMapper.MemberName, blockBodies);
                 columnIndex++;
             }
             insertBuilder.Append(')');
@@ -508,5 +452,100 @@ class Create<T> : ICreate<T>
                 valuesBuilder.AppendFormat(connection.OrmProvider.SelectIdentitySql, entityMapper.AutoIncrementField);
             return insertBuilder.ToString() + valuesBuilder.ToString();
         };
+    }
+}
+class CreateBase
+{
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly CreateVisitor visitor;
+
+    public CreateBase(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+    {
+        this.connection = connection;
+        this.transaction = transaction;
+        this.visitor = visitor;
+    }
+    public int Execute()
+    {
+        var sql = this.visitor.BuildSql(out var dbParameters);
+        var command = this.connection.CreateCommand();
+        command.CommandText = sql;
+        command.CommandType = CommandType.Text;
+        command.Transaction = this.transaction;
+
+        if (dbParameters != null && dbParameters.Count > 0)
+            dbParameters.ForEach(f => command.Parameters.Add(f));
+
+        connection.Open();
+        return command.ExecuteNonQuery();
+    }
+    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
+    {
+        var sql = this.visitor.BuildSql(out var dbParameters);
+        var cmd = this.connection.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.CommandType = CommandType.Text;
+        cmd.Transaction = this.transaction;
+
+        if (cmd is not DbCommand command)
+            throw new Exception("当前数据库驱动不支持异步SQL查询");
+
+        if (dbParameters != null && dbParameters.Count > 0)
+            dbParameters.ForEach(f => command.Parameters.Add(f));
+
+        await this.connection.OpenAsync(cancellationToken);
+        return await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+    public string ToSql() => this.visitor.BuildSql(out _);
+}
+class Create<TEntity, TSource> : CreateBase, ICreate<TEntity, TSource>
+{
+    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+       : base(connection, transaction, visitor) { }
+    public ICreate<TEntity, TSource> Where(Expression<Func<TSource, bool>> predicate)
+    {
+        this.visitor.Where(predicate);
+        return this;
+    }
+}
+class Create<TEntity, T1, T2> : CreateBase, ICreate<TEntity, T1, T2>
+{
+    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+      : base(connection, transaction, visitor) { }
+    public ICreate<TEntity, T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
+    {
+        this.visitor.Where(predicate);
+        return this;
+    }
+}
+class Create<TEntity, T1, T2, T3> : CreateBase, ICreate<TEntity, T1, T2, T3>
+{
+    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+       : base(connection, transaction, visitor) { }
+    public ICreate<TEntity, T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
+    {
+        this.visitor.Where(predicate);
+        return this;
+    }
+}
+class Create<TEntity, T1, T2, T3, T4> : CreateBase, ICreate<TEntity, T1, T2, T3, T4>
+{
+    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+       : base(connection, transaction, visitor) { }
+    public ICreate<TEntity, T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
+    {
+        this.visitor.Where(predicate);
+        return this;
+    }
+}
+class Create<TEntity, T1, T2, T3, T4, T5> : CreateBase, ICreate<TEntity, T1, T2, T3, T4, T5>
+{
+    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+      : base(connection, transaction, visitor) { }
+    public ICreate<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
+    {
+        this.visitor.Where(predicate);
+        return this;
     }
 }

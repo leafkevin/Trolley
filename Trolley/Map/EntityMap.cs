@@ -19,12 +19,13 @@ public class EntityMap
     public Type UnderlyingType { get; set; }
     public bool IsAutoIncrement { get; set; }
 
-    public List<string> KeyFields { get; set; }
+    public List<MemberMap> KeyMembers { get; set; }
     public ICollection<MemberMap> MemberMaps => this.memberMaps.Values;
     public string AutoIncrementField { get; set; }
 
     public void SetKeys(params MemberInfo[] memberInfos)
     {
+        this.KeyMembers = new List<MemberMap>();
         foreach (var memberInfo in memberInfos)
         {
             if (!this.memberMaps.TryGetValue(memberInfo.Name, out var memberMap))
@@ -32,6 +33,7 @@ public class EntityMap
                 memberMap = new MemberMap(this, this.FieldPrefix, memberInfo);
                 this.memberMaps.TryAdd(memberInfo.Name, memberMap);
             }
+            this.KeyMembers.Add(memberMap);
             memberMap.IsKey = true;
         }
     }
@@ -85,12 +87,12 @@ public class EntityMap
         //}
         if (this.memberMaps.Count > 0)
         {
-            this.KeyFields = new List<string>();
+            this.KeyMembers = new List<MemberMap>();
             foreach (var memberMapper in this.memberMaps.Values)
             {
                 var fieldName = $"{this.FieldPrefix}{memberMapper.FieldName}";
                 if (memberMapper.IsKey)
-                    this.KeyFields.Add(fieldName);
+                    this.KeyMembers.Add(memberMapper);
                 if (memberMapper.IsAutoIncrement)
                     this.AutoIncrementField = fieldName;
             }
@@ -111,7 +113,6 @@ public class EntityMap
                 mapper.UnderlyingType = entityType;
 
             isValueTuple = mapper.UnderlyingType.FullName.StartsWith("System.ValueTuple`");
-
         }
         MemberInfo[] memberInfos = null;
         if (isValueTuple)
@@ -141,7 +142,7 @@ public class EntityMap
         mapper.FieldPrefix = mapTo.FieldPrefix;
         mapper.TableName = mapTo.TableName;
         mapper.IsAutoIncrement = mapTo.IsAutoIncrement;
-        mapper.KeyFields = mapTo.KeyFields;
+        mapper.KeyMembers = mapTo.KeyMembers;
         mapper.AutoIncrementField = mapTo.AutoIncrementField;
 
         bool isValueTuple = false;
