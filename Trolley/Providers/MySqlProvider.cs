@@ -16,7 +16,10 @@ public class MySqlProvider : BaseOrmProvider
     private static ConcurrentDictionary<MethodInfo, MethodCallSqlFormatter> methodCallSqlFormatterCahe = new();
     private static Dictionary<Type, int> nativeDbTypes = new();
     private static Dictionary<Type, string> castTos = new();
+
+    public override DatabaseType DatabaseType => DatabaseType.MySql;
     public override string SelectIdentitySql => ";SELECT LAST_INSERT_ID()";
+
     public MySqlProvider()
     {
         var connectionType = Type.GetType("MySqlConnector.MySqlConnection, MySqlConnector, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d33d3e53aa5f8c92");
@@ -148,7 +151,7 @@ public class MySqlProvider : BaseOrmProvider
                             string fieldName = null;
                             if (args[1] is SqlSegment targetSegment)
                             {
-                                if (targetSegment.HasField || targetSegment.IsParameter)
+                                if (targetSegment.HasField || targetSegment.IsParameter || targetSegment.IsMethodCall)
                                     fieldName = targetSegment.ToString();
                                 else fieldName = this.GetQuotedValue(targetSegment.Value);
                             }
@@ -205,7 +208,7 @@ public class MySqlProvider : BaseOrmProvider
                             string fieldName = null;
                             if (args[0] is SqlSegment fieldSegment)
                             {
-                                if (fieldSegment.HasField || fieldSegment.IsParameter)
+                                if (fieldSegment.HasField || fieldSegment.IsParameter || fieldSegment.IsMethodCall)
                                     fieldName = fieldSegment.ToString();
                                 else fieldName = this.GetQuotedValue(fieldSegment.Value);
                             }
@@ -244,9 +247,9 @@ public class MySqlProvider : BaseOrmProvider
                             string leftField = null;
                             if (target is SqlSegment leftSegment)
                             {
-                                if (leftSegment.HasField || leftSegment.IsParameter)
+                                if (leftSegment.HasField || leftSegment.IsParameter || leftSegment.IsMethodCall)
                                     leftField = leftSegment.ToString();
-                                else leftField = this.GetQuotedValue(leftSegment.Value);
+                                else leftField = this.GetQuotedValue(typeof(string), leftSegment.Value);
                             }
                             else leftField = target.ToString();
 
@@ -269,7 +272,6 @@ public class MySqlProvider : BaseOrmProvider
                                 }
                             }
                             string notString = notIndex % 2 > 0 ? " NOT" : "";
-
                             return $"{leftField}{notString} LIKE {rightValue}";
                         });
                         result = true;
@@ -298,13 +300,13 @@ public class MySqlProvider : BaseOrmProvider
                                     foreach (var element in enumerable)
                                     {
                                         if (builder.Length > 0)
-                                            builder.Append(", ");
+                                            builder.Append(',');
 
                                         if (element is SqlSegment sqlSegment)
                                         {
-                                            if (sqlSegment.HasField || sqlSegment.IsParameter)
+                                            if (sqlSegment.HasField || sqlSegment.IsParameter || sqlSegment.IsMethodCall)
                                                 builder.Append(sqlSegment.Value);
-                                            else builder.Append(this.GetQuotedValue(sqlSegment.Value));
+                                            else builder.Append(this.GetQuotedValue(typeof(string), sqlSegment.Value));
                                         }
                                         else builder.Append(element);
                                     }
@@ -312,13 +314,13 @@ public class MySqlProvider : BaseOrmProvider
                                 else
                                 {
                                     if (builder.Length > 0)
-                                        builder.Append(", ");
+                                        builder.Append(',');
 
                                     if (arg is SqlSegment sqlSegment)
                                     {
-                                        if (sqlSegment.HasField || sqlSegment.IsParameter)
+                                        if (sqlSegment.HasField || sqlSegment.IsParameter || sqlSegment.IsMethodCall)
                                             builder.Append(sqlSegment.Value);
-                                        else builder.Append(this.GetQuotedValue(sqlSegment.Value));
+                                        else builder.Append(this.GetQuotedValue(typeof(string), sqlSegment.Value));
                                     }
                                     else builder.Append(arg);
                                 }
@@ -344,7 +346,7 @@ public class MySqlProvider : BaseOrmProvider
                         {
                             var parameters = new List<object>(args);
                             parameters.RemoveAt(0);
-
+                            //直接计算
                             return string.Format(args[0] as string, parameters.ToArray());
                         });
                         result = true;
@@ -364,20 +366,20 @@ public class MySqlProvider : BaseOrmProvider
                                 string leftArgument = null;
                                 if (args[0] is SqlSegment leftSegment)
                                 {
-                                    if (leftSegment.HasField || leftSegment.IsParameter)
+                                    if (leftSegment.HasField || leftSegment.IsParameter || leftSegment.IsMethodCall)
                                         leftArgument = leftSegment.ToString();
-                                    else leftArgument = this.GetQuotedValue(leftSegment.Value);
+                                    else leftArgument = this.GetQuotedValue(typeof(string), leftSegment.Value);
                                 }
-                                else leftArgument = this.GetQuotedValue(args[0]);
+                                else leftArgument = this.GetQuotedValue(typeof(string), args[0]);
 
                                 string rightArgument = null;
                                 if (args[1] is SqlSegment rightSegment)
                                 {
-                                    if (rightSegment.HasField || rightSegment.IsParameter)
+                                    if (rightSegment.HasField || rightSegment.IsParameter || rightSegment.IsMethodCall)
                                         rightArgument = rightSegment.ToString();
-                                    else rightArgument = this.GetQuotedValue(rightSegment.Value);
+                                    else rightArgument = this.GetQuotedValue(typeof(string), rightSegment.Value);
                                 }
-                                else rightArgument = this.GetQuotedValue(args[1]);
+                                else rightArgument = this.GetQuotedValue(typeof(string), args[1]);
 
                                 return $"(CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END)";
                             });
@@ -396,20 +398,20 @@ public class MySqlProvider : BaseOrmProvider
                                 string leftArgument = null;
                                 if (args[0] is SqlSegment leftSegment)
                                 {
-                                    if (leftSegment.HasField || leftSegment.IsParameter)
+                                    if (leftSegment.HasField || leftSegment.IsParameter || leftSegment.IsMethodCall)
                                         leftArgument = leftSegment.ToString();
-                                    else leftArgument = this.GetQuotedValue(leftSegment.Value);
+                                    else leftArgument = this.GetQuotedValue(typeof(string), leftSegment.Value);
                                 }
-                                else leftArgument = this.GetQuotedValue(args[0]);
+                                else leftArgument = this.GetQuotedValue(typeof(string), args[0]);
 
                                 string rightArgument = null;
                                 if (args[1] is SqlSegment rightSegment)
                                 {
-                                    if (rightSegment.HasField || rightSegment.IsParameter)
+                                    if (rightSegment.HasField || rightSegment.IsParameter || rightSegment.IsMethodCall)
                                         rightArgument = rightSegment.ToString();
-                                    else rightArgument = this.GetQuotedValue(rightSegment.Value);
+                                    else rightArgument = this.GetQuotedValue(typeof(string), rightSegment.Value);
                                 }
-                                else rightArgument = this.GetQuotedValue(args[1]);
+                                else rightArgument = this.GetQuotedValue(typeof(string), args[1]);
 
                                 return $"(CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END)";
                             });
@@ -431,7 +433,7 @@ public class MySqlProvider : BaseOrmProvider
                             string leftArgument = null;
                             if (target is SqlSegment leftSegment)
                             {
-                                if (leftSegment.HasField || leftSegment.IsParameter)
+                                if (leftSegment.HasField || leftSegment.IsParameter || leftSegment.IsMethodCall)
                                     leftArgument = leftSegment.ToString();
                                 else leftArgument = this.GetQuotedValue(leftSegment.Value);
                             }
@@ -440,7 +442,7 @@ public class MySqlProvider : BaseOrmProvider
                             string rightArgument = null;
                             if (args[0] is SqlSegment rightSegment)
                             {
-                                if (rightSegment.HasField || rightSegment.IsParameter)
+                                if (rightSegment.HasField || rightSegment.IsParameter || rightSegment.IsMethodCall)
                                     rightArgument = rightSegment.ToString();
                                 else rightArgument = this.GetQuotedValue(rightSegment.Value);
                             }
@@ -482,7 +484,7 @@ public class MySqlProvider : BaseOrmProvider
                         string leftTarget = null;
                         if (target is SqlSegment targetSeqment)
                         {
-                            if (targetSeqment.HasField || targetSeqment.IsParameter)
+                            if (targetSeqment.HasField || targetSeqment.IsParameter || targetSeqment.IsMethodCall)
                                 leftTarget = targetSeqment.ToString();
                             else leftTarget = this.GetQuotedValue(targetSeqment.Value);
                         }
@@ -491,7 +493,7 @@ public class MySqlProvider : BaseOrmProvider
                         string rightValue = null;
                         if (args[0] is SqlSegment rightSeqment)
                         {
-                            if (rightSeqment.HasField || rightSeqment.IsParameter)
+                            if (rightSeqment.HasField || rightSeqment.IsParameter || rightSeqment.IsMethodCall)
                                 rightValue = rightSeqment.ToString();
                             else rightValue = this.GetQuotedValue(rightSeqment.Value);
                         }
@@ -506,7 +508,6 @@ public class MySqlProvider : BaseOrmProvider
                             }
                         }
                         string equalsString = notIndex % 2 > 0 ? "<>" : "=";
-
                         return $"{leftTarget}{equalsString}{rightValue}";
                     });
                     result = true;
@@ -517,14 +518,14 @@ public class MySqlProvider : BaseOrmProvider
                         string leftField = null;
                         if (target is SqlSegment leftSegment)
                         {
-                            if (leftSegment.HasField || leftSegment.IsParameter)
+                            if (leftSegment.HasField || leftSegment.IsParameter || leftSegment.IsMethodCall)
                                 leftField = leftSegment.ToString();
-                            else leftField = this.GetQuotedValue(leftSegment.Value);
+                            else leftField = this.GetQuotedValue(typeof(string), leftSegment.Value);
                         }
                         else leftField = target.ToString();
 
                         string rightValue = null;
-                        if (args[0] is SqlSegment rightSegment && rightSegment.IsParameter)
+                        if (args[0] is SqlSegment rightSegment && (rightSegment.HasField || rightSegment.IsParameter || rightSegment.IsMethodCall))
                         {
                             var concatMethodInfo = typeof(string).GetMethod("Concat", BindingFlags.Public | BindingFlags.Static, new Type[] { typeof(string), typeof(string), typeof(string) });
                             if (this.TryGetMethodCallSqlFormatter(concatMethodInfo, out var concatFormatter))
@@ -542,7 +543,6 @@ public class MySqlProvider : BaseOrmProvider
                             }
                         }
                         string notString = notIndex % 2 > 0 ? " NOT" : "";
-
                         return $"{leftField}{notString} LIKE {rightValue}";
                     });
                     result = true;
@@ -553,14 +553,14 @@ public class MySqlProvider : BaseOrmProvider
                         string leftField = null;
                         if (target is SqlSegment leftSegment)
                         {
-                            if (leftSegment.HasField || leftSegment.IsParameter)
+                            if (leftSegment.HasField || leftSegment.IsParameter || leftSegment.IsMethodCall)
                                 leftField = leftSegment.ToString();
                             else leftField = this.GetQuotedValue(leftSegment.Value);
                         }
                         else leftField = target.ToString();
 
                         string rightValue = null;
-                        if (args[0] is SqlSegment rightSegment && rightSegment.IsParameter)
+                        if (args[0] is SqlSegment rightSegment && (rightSegment.HasField || rightSegment.IsParameter || rightSegment.IsMethodCall))
                         {
                             var concatMethodInfo = typeof(string).GetMethod("Concat", BindingFlags.Public | BindingFlags.Static, new Type[] { typeof(string), typeof(string), typeof(string) });
                             if (this.TryGetMethodCallSqlFormatter(concatMethodInfo, out var concatFormatter))
@@ -578,7 +578,6 @@ public class MySqlProvider : BaseOrmProvider
                             }
                         }
                         string notString = notIndex % 2 > 0 ? " NOT" : "";
-
                         return $"{leftField}{notString} LIKE {rightValue}";
                     });
                     result = true;

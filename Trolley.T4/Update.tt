@@ -1,4 +1,11 @@
-﻿using System;
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
+<#@ output extension=".cs" #>
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -724,7 +731,17 @@ class UpdateSetting<TEntity> : IUpdateSetting<TEntity>
     }
     public string ToSql() => this.visitor.BuildSql(out _);
 }
-class UpdateFrom<TEntity, T1> : IUpdateFrom<TEntity, T1>
+<#
+    var count = 5;
+    var tables = "";    
+    for (int i = 1; i < count; i++)
+    {
+        if(tables.Length > 0)
+            tables += ", ";
+        tables += $"T{i}";
+        var nextTable = $"T{i+1}";
+#>
+class UpdateFrom<TEntity, <#=tables#>> : IUpdateFrom<TEntity, <#=tables#>>
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
@@ -736,12 +753,12 @@ class UpdateFrom<TEntity, T1> : IUpdateFrom<TEntity, T1>
         this.transaction = transaction;
         this.visitor = visitor;
     }
-    public IUpdateFrom<TEntity, T1> Set<TSetObject>(Expression<Func<TEntity, T1, TSetObject>> setExpr)
+    public IUpdateFrom<TEntity, <#=tables#>> Set<TSetObject>(Expression<Func<TEntity, <#=tables#>, TSetObject>> setExpr)
     {
         this.visitor.Set(setExpr);
         return this;
     }
-    public IUpdateFrom<TEntity, T1> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default)
+    public IUpdateFrom<TEntity, <#=tables#>> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
@@ -750,12 +767,12 @@ class UpdateFrom<TEntity, T1> : IUpdateFrom<TEntity, T1>
             this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateFrom<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate)
+    public IUpdateFrom<TEntity, <#=tables#>> Where(Expression<Func<TEntity, <#=tables#>, bool>> predicate)
     {
         this.visitor.Where(predicate);
         return this;
     }
-    public IUpdateFrom<TEntity, T1> Where(bool condition, Expression<Func<TEntity, T1, bool>> predicate)
+    public IUpdateFrom<TEntity, <#=tables#>> Where(bool condition, Expression<Func<TEntity, <#=tables#>, bool>> predicate)
     {
         if (condition)
             this.visitor.Where(predicate);
@@ -794,7 +811,7 @@ class UpdateFrom<TEntity, T1> : IUpdateFrom<TEntity, T1>
     }
     public string ToSql() => this.visitor.BuildSql(out _);
 }
-class UpdateJoin<TEntity, T1> : IUpdateJoin<TEntity, T1>
+class UpdateJoin<TEntity, <#=tables#>> : IUpdateJoin<TEntity, <#=tables#>>
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
@@ -806,22 +823,22 @@ class UpdateJoin<TEntity, T1> : IUpdateJoin<TEntity, T1>
         this.transaction = transaction;
         this.visitor = visitor;
     }
-    public IUpdateJoin<TEntity, T1, T2> InnerJoin<T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn)
+    public IUpdateJoin<TEntity, <#=tables#>, <#=nextTable#>> InnerJoin<<#=nextTable#>>(Expression<Func<TEntity, <#=tables#>, <#=nextTable#>, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", typeof(T2), joinOn);
-        return new UpdateJoin<TEntity, T1, T2>(this.connection, this.transaction, visitor);
+        this.visitor.Join("INNER JOIN", typeof(<#=nextTable#>), joinOn); 
+        return new UpdateJoin<TEntity, <#=tables#>, <#=nextTable#>>(this.connection, this.transaction, visitor);
     }
-    public IUpdateJoin<TEntity, T1, T2> LeftJoin<T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn)
+    public IUpdateJoin<TEntity, <#=tables#>, <#=nextTable#>> LeftJoin<<#=nextTable#>>(Expression<Func<TEntity, <#=tables#>, <#=nextTable#>, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", typeof(T2), joinOn);
-        return new UpdateJoin<TEntity, T1, T2>(this.connection, this.transaction, visitor);
+        this.visitor.Join("LEFT JOIN", typeof(<#=nextTable#>), joinOn); 
+        return new UpdateJoin<TEntity, <#=tables#>, <#=nextTable#>>(this.connection, this.transaction, visitor);
     }
-    public IUpdateJoin<TEntity, T1> Set<TSetObject>(Expression<Func<TEntity, T1, TSetObject>> setExpr)
+    public IUpdateJoin<TEntity, <#=tables#>> Set<TSetObject>(Expression<Func<TEntity, <#=tables#>, TSetObject>> setExpr)
     {
         this.visitor.Set(setExpr);
         return this;
     }
-    public IUpdateJoin<TEntity, T1> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default)
+    public IUpdateJoin<TEntity, <#=tables#>> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
@@ -830,12 +847,12 @@ class UpdateJoin<TEntity, T1> : IUpdateJoin<TEntity, T1>
             this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateJoin<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate)
+    public IUpdateJoin<TEntity, <#=tables#>> Where(Expression<Func<TEntity, <#=tables#>, bool>> predicate)
     {
         this.visitor.Where(predicate);
         return this;
     }
-    public IUpdateJoin<TEntity, T1> Where(bool condition, Expression<Func<TEntity, T1, bool>> predicate)
+    public IUpdateJoin<TEntity, <#=tables#>> Where(bool condition, Expression<Func<TEntity, <#=tables#>, bool>> predicate)
     {
         if (condition)
             this.visitor.Where(predicate);
@@ -874,456 +891,7 @@ class UpdateJoin<TEntity, T1> : IUpdateJoin<TEntity, T1>
     }
     public string ToSql() => this.visitor.BuildSql(out _);
 }
-class UpdateFrom<TEntity, T1, T2> : IUpdateFrom<TEntity, T1, T2>
-{
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor = null;
-
-    public UpdateFrom(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-    public IUpdateFrom<TEntity, T1, T2> Set<TSetObject>(Expression<Func<TEntity, T1, T2, TSetObject>> setExpr)
-    {
-        this.visitor.Set(setExpr);
-        return this;
-    }
-    public IUpdateFrom<TEntity, T1, T2> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        if (condition)
-            this.visitor.Set(fieldExpr, fieldValue);
-        return this;
-    }
-    public IUpdateFrom<TEntity, T1, T2> Where(Expression<Func<TEntity, T1, T2, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
-    public IUpdateFrom<TEntity, T1, T2> Where(bool condition, Expression<Func<TEntity, T1, T2, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.Where(predicate);
-        return this;
-    }
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        command.Dispose();
-        return result;
-    }
-    public string ToSql() => this.visitor.BuildSql(out _);
-}
-class UpdateJoin<TEntity, T1, T2> : IUpdateJoin<TEntity, T1, T2>
-{
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor = null;
-
-    public UpdateJoin(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3> InnerJoin<T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn)
-    {
-        this.visitor.Join("INNER JOIN", typeof(T3), joinOn);
-        return new UpdateJoin<TEntity, T1, T2, T3>(this.connection, this.transaction, visitor);
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3> LeftJoin<T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn)
-    {
-        this.visitor.Join("LEFT JOIN", typeof(T3), joinOn);
-        return new UpdateJoin<TEntity, T1, T2, T3>(this.connection, this.transaction, visitor);
-    }
-    public IUpdateJoin<TEntity, T1, T2> Set<TSetObject>(Expression<Func<TEntity, T1, T2, TSetObject>> setExpr)
-    {
-        this.visitor.Set(setExpr);
-        return this;
-    }
-    public IUpdateJoin<TEntity, T1, T2> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        if (condition)
-            this.visitor.Set(fieldExpr, fieldValue);
-        return this;
-    }
-    public IUpdateJoin<TEntity, T1, T2> Where(Expression<Func<TEntity, T1, T2, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
-    public IUpdateJoin<TEntity, T1, T2> Where(bool condition, Expression<Func<TEntity, T1, T2, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.Where(predicate);
-        return this;
-    }
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        command.Dispose();
-        return result;
-    }
-    public string ToSql() => this.visitor.BuildSql(out _);
-}
-class UpdateFrom<TEntity, T1, T2, T3> : IUpdateFrom<TEntity, T1, T2, T3>
-{
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor = null;
-
-    public UpdateFrom(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3> Set<TSetObject>(Expression<Func<TEntity, T1, T2, T3, TSetObject>> setExpr)
-    {
-        this.visitor.Set(setExpr);
-        return this;
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        if (condition)
-            this.visitor.Set(fieldExpr, fieldValue);
-        return this;
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3> Where(Expression<Func<TEntity, T1, T2, T3, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.Where(predicate);
-        return this;
-    }
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        command.Dispose();
-        return result;
-    }
-    public string ToSql() => this.visitor.BuildSql(out _);
-}
-class UpdateJoin<TEntity, T1, T2, T3> : IUpdateJoin<TEntity, T1, T2, T3>
-{
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor = null;
-
-    public UpdateJoin(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3, T4> InnerJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn)
-    {
-        this.visitor.Join("INNER JOIN", typeof(T4), joinOn);
-        return new UpdateJoin<TEntity, T1, T2, T3, T4>(this.connection, this.transaction, visitor);
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3, T4> LeftJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn)
-    {
-        this.visitor.Join("LEFT JOIN", typeof(T4), joinOn);
-        return new UpdateJoin<TEntity, T1, T2, T3, T4>(this.connection, this.transaction, visitor);
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3> Set<TSetObject>(Expression<Func<TEntity, T1, T2, T3, TSetObject>> setExpr)
-    {
-        this.visitor.Set(setExpr);
-        return this;
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        if (condition)
-            this.visitor.Set(fieldExpr, fieldValue);
-        return this;
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3> Where(Expression<Func<TEntity, T1, T2, T3, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.Where(predicate);
-        return this;
-    }
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        command.Dispose();
-        return result;
-    }
-    public string ToSql() => this.visitor.BuildSql(out _);
-}
-class UpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateFrom<TEntity, T1, T2, T3, T4>
-{
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor = null;
-
-    public UpdateFrom(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TSetObject>(Expression<Func<TEntity, T1, T2, T3, T4, TSetObject>> setExpr)
-    {
-        this.visitor.Set(setExpr);
-        return this;
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        if (condition)
-            this.visitor.Set(fieldExpr, fieldValue);
-        return this;
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4> Where(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.Where(predicate);
-        return this;
-    }
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        command.Dispose();
-        return result;
-    }
-    public string ToSql() => this.visitor.BuildSql(out _);
-}
-class UpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateJoin<TEntity, T1, T2, T3, T4>
-{
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor = null;
-
-    public UpdateJoin(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> InnerJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn)
-    {
-        this.visitor.Join("INNER JOIN", typeof(T5), joinOn);
-        return new UpdateJoin<TEntity, T1, T2, T3, T4, T5>(this.connection, this.transaction, visitor);
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> LeftJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn)
-    {
-        this.visitor.Join("LEFT JOIN", typeof(T5), joinOn);
-        return new UpdateJoin<TEntity, T1, T2, T3, T4, T5>(this.connection, this.transaction, visitor);
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TSetObject>(Expression<Func<TEntity, T1, T2, T3, T4, TSetObject>> setExpr)
-    {
-        this.visitor.Set(setExpr);
-        return this;
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        if (condition)
-            this.visitor.Set(fieldExpr, fieldValue);
-        return this;
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3, T4> Where(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.Where(predicate);
-        return this;
-    }
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        command.Dispose();
-        return result;
-    }
-    public string ToSql() => this.visitor.BuildSql(out _);
-}
+<#  }#>
 class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateFrom<TEntity, T1, T2, T3, T4, T5>
 {
     private readonly TheaConnection connection;

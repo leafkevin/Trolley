@@ -29,7 +29,23 @@ class RepositoryHelper
         var addParameterExpr = Expression.Call(parametersExpr, methodInfo, dbParameterExpr);
         blockBodies.Add(addParameterExpr);
     }
-    public static object GetMemberValue(MemberMap memberMapper, object entity)
+    public static void AddDbParameter(ParameterExpression dbParametersExpr, ParameterExpression ormProviderExpr,
+         Expression typedParameterExpr, Expression parameterNameExpr, string parameterMemberName, List<Expression> blockBodies)
+    {
+        //var parameter = ormProvider.CreateParameter("@Parameter", whereObj.Name);
+        Expression whereObjValueExpr = Expression.PropertyOrField(typedParameterExpr, parameterMemberName);
+        whereObjValueExpr = Expression.Convert(whereObjValueExpr, typeof(object));
+        var methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object) });
+        Expression dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, whereObjValueExpr);
+        dbParameterExpr = Expression.Convert(dbParameterExpr, typeof(object));
+
+        //dbParameters.Add(parameter);
+        methodInfo = typeof(List<IDbDataParameter>).GetMethod(nameof(IDbCommand.Parameters.Add));
+        var addParameterExpr = Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr);
+        blockBodies.Add(addParameterExpr);
+    }
+
+   public static object GetMemberValue(MemberMap memberMapper, object entity)
     {
         var cacheKey = HashCode.Combine(memberMapper.Parent.EntityType, memberMapper.MemberName);
         if (!memberGetterCache.TryGetValue(cacheKey, out var memberGetter))

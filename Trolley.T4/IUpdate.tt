@@ -7,85 +7,89 @@
 <#@ output extension=".cs" #>
 using System;
 using System.Linq.Expressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Trolley;
 
-public interface IUpdate<T>
+public interface IUpdate<TEntity>
 {
-    IUpdate<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> predicate);
-    IUpdate<T> WithBy<TUpdateObject>(TUpdateObject updateObjs);
-    IUpdate<T> Set<TSetObject>(Expression<Func<T, TSetObject>> setExpr);
-    IUpdate<T> Where(Expression<Func<T, bool>> predicate);
-    IUpdate<T> Where(bool condition, Expression<Func<T, bool>> predicate);
-    int Execute();
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
-}
-<#
-    var count = 6;
-    var tables = "T";
-    for (int i = 1; i < count; i++)
-    {
-        tables += $", T{i}";
-#>
-public interface IUpdate<<#=tables#>>
-{
-    IUpdate<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> predicate);
-    IUpdate<<#=tables#>> WithBy<TUpdateObject>(TUpdateObject updateObjs);
-    IUpdate<<#=tables#>> Set<TSetObject>(Expression<Func<<#=tables#>, TSetObject>> setExpr);
-    IUpdate<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
-    IUpdate<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> predicate);
-    int Execute();
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
-}
-<#  }
-    var nextTable = tables + $", T{count}";
-#>
-public interface IUpdate<<#=nextTable#>>
-{
-    IUpdate<<#=nextTable#>> WithBy<TUpdateObject>(TUpdateObject updateObjs);
-    IUpdate<<#=nextTable#>> Set<TSetObject>(Expression<Func<<#=nextTable#>, TSetObject>> setExpr);
-    IUpdate<<#=nextTable#>> Where(Expression<Func<<#=nextTable#>, bool>> predicate);
-    IUpdate<<#=nextTable#>> Where(bool condition, Expression<Func<<#=nextTable#>, bool>> predicate);
-    int Execute();
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
-}
+    IUpdateSet<TEntity> RawSql(string rawSql, object parameters);
+    IUpdateSet<TEntity> WithBy<TUpdateObject>(TUpdateObject updateObjs, int bulkCount = 500);
+    IUpdateSetting<TEntity> Set<TMember>(Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateSetting<TEntity> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateFrom<TEntity, T> From<T>();
+    IUpdateFrom<TEntity, T1, T2> From<T1, T2>();
+    IUpdateFrom<TEntity, T1, T2, T3> From<T1, T2, T3>();
+    IUpdateFrom<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>();
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
 
-public interface IMultiUpdate<T>
+    IUpdateJoin<TEntity, T> InnerJoin<T>(Expression<Func<TEntity, T, bool>> joinOn);
+    IUpdateJoin<TEntity, T> LeftJoin<T>(Expression<Func<TEntity, T, bool>> joinOn);
+}
+public interface IUpdateSet<TEntity>
 {
-    IMultiUpdate<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> predicate);
-    IMultiUpdate<T> WithBy<TUpdateObject>(TUpdateObject updateObjs);
-    IMultiUpdate<T> Set<TSetObject>(Expression<Func<T, TSetObject>> setExpr);
-    IMultiUpdate<T> Where(Expression<Func<T, bool>> predicate);
-    IMultiUpdate<T> Where(bool condition, Expression<Func<T, bool>> predicate);
-    IMultiQuery Execute();
+    int Execute();
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     string ToSql();
 }
+public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
+{
+    IUpdateSetting<TEntity> Set<TMember>(Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateSetting<TEntity> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateSet<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
+    IUpdateSet<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> predicate);
+}
 <#
-    tables = "T";
+    var count = 5;
+    var tables = "";    
     for (int i = 1; i < count; i++)
     {
-        tables += $", T{i}";
+        if(tables.Length > 0)
+            tables += ", ";
+        tables += $"T{i}";
+        var nextTable = $"T{i+1}";
 #>
-public interface IMultiUpdate<<#=tables#>>
+public interface IUpdateFrom<TEntity, <#=tables#>>
 {
-    IMultiUpdate<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> predicate);
-    IMultiUpdate<<#=tables#>> WithBy<TUpdateObject>(TUpdateObject updateObjs);
-    IMultiUpdate<<#=tables#>> Set<TSetObject>(Expression<Func<<#=tables#>, TSetObject>> setExpr);
-    IMultiUpdate<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
-    IMultiUpdate<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> predicate);
-    IMultiQuery Execute();
+    IUpdateFrom<TEntity, <#=tables#>> Set<TSetObject>(Expression<Func<TEntity, <#=tables#>, TSetObject>> setExpr);
+    IUpdateFrom<TEntity, <#=tables#>> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateFrom<TEntity, <#=tables#>> Where(Expression<Func<TEntity, <#=tables#>, bool>> predicate);
+    IUpdateFrom<TEntity, <#=tables#>> Where(bool condition, Expression<Func<TEntity, <#=tables#>, bool>> predicate);
+    int Execute();
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    string ToSql();
+}
+public interface IUpdateJoin<TEntity, <#=tables#>>
+{
+    IUpdateJoin<TEntity, <#=tables#>, <#=nextTable#>> InnerJoin<<#=nextTable#>>(Expression<Func<TEntity, <#=tables#>, <#=nextTable#>, bool>> joinOn);
+    IUpdateJoin<TEntity, <#=tables#>, <#=nextTable#>> LeftJoin<<#=nextTable#>>(Expression<Func<TEntity, <#=tables#>, <#=nextTable#>, bool>> joinOn);
+    IUpdateJoin<TEntity, <#=tables#>> Set<TSetObject>(Expression<Func<TEntity, <#=tables#>, TSetObject>> setExpr);
+    IUpdateJoin<TEntity, <#=tables#>> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateJoin<TEntity, <#=tables#>> Where(Expression<Func<TEntity, <#=tables#>, bool>> predicate);
+    IUpdateJoin<TEntity, <#=tables#>> Where(bool condition, Expression<Func<TEntity, <#=tables#>, bool>> predicate);
+    int Execute();
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     string ToSql();
 }
 <#  }#>
-public interface IMultiUpdate<<#=nextTable#>>
+public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5>
 {
-    IMultiUpdate<<#=nextTable#>> WithBy<TUpdateObject>(TUpdateObject updateObjs);
-    IMultiUpdate<<#=nextTable#>> Set<TSetObject>(Expression<Func<<#=nextTable#>, TSetObject>> setExpr);
-    IMultiUpdate<<#=nextTable#>> Where(Expression<Func<<#=nextTable#>, bool>> predicate);
-    IMultiUpdate<<#=nextTable#>> Where(bool condition, Expression<Func<<#=nextTable#>, bool>> predicate);
-    IMultiQuery Execute();
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TSetObject>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TSetObject>> setExpr);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, bool>> predicate);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<TEntity, bool>> predicate);
+    int Execute();
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    string ToSql();
+}
+public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5>
+{
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TSetObject>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TSetObject>> setExpr);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
+    int Execute();
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     string ToSql();
 }

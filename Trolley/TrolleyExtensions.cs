@@ -22,6 +22,10 @@ public static class TrolleyExtensions
         => repository.Create<TEntity>().WithBy(parameter).Execute();
     public static async Task<int> CreateAsync<TEntity>(this Repository repository, object parameter, CancellationToken cancellationToken = default)
         => await repository.Create<TEntity>().WithBy(parameter).ExecuteAsync(cancellationToken);
+    public static int Create<TEntity>(this Repository repository, string sql, object parameter)
+        => repository.Create<TEntity>().RawSql(sql, parameter).Execute();
+    public static async Task<int> CreateAsync<TEntity>(this Repository repository, string sql, object parameter, CancellationToken cancellationToken = default)
+        => await repository.Create<TEntity>().RawSql(sql, parameter).ExecuteAsync(cancellationToken);
     public static int Create<TEntity>(this Repository repository, IEnumerable entities, int bulkCount = 500)
         => repository.Create<TEntity>().WithBy(entities, bulkCount).Execute();
     public static async Task<int> CreateAsync<TEntity>(this Repository repository, IEnumerable entities, int bulkCount = 500, CancellationToken cancellationToken = default)
@@ -91,7 +95,7 @@ public static class TrolleyExtensions
                 var fieldInfo = member as FieldInfo;
                 return fieldInfo.FieldType;
         }
-        throw new Exception("成员member，不是属性也不是字段");
+        throw new NotSupportedException("成员member，不是属性也不是字段");
     }
     public static bool TryPop<T>(this Stack<T> stack, Func<T, bool> filter, out T element)
     {

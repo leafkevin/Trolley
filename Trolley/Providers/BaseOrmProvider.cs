@@ -10,6 +10,7 @@ public delegate IDbConnection CreateNativeDbConnectionDelegate(string connection
 public delegate IDbDataParameter CreateNativeParameterDelegate(string name, int nativeDbType, object value);
 public abstract class BaseOrmProvider : IOrmProvider
 {
+    public abstract DatabaseType DatabaseType { get; }
     public virtual string ParameterPrefix => "@";
     public virtual string SelectIdentitySql => ";SELECT @@IDENTITY";
     public virtual bool IsSupportArrayParameter => false;

@@ -7,8 +7,16 @@ namespace Trolley;
 
 public delegate string MemberAccessSqlFormatter(object target);
 public delegate string MethodCallSqlFormatter(object target, Stack<DeferredExpr> deferredExprs, params object[] arguments);
+public enum DatabaseType
+{
+    MySql = 1,
+    MsSql = 2,
+    Oracle = 3,
+    Postgresql = 4
+}
 public interface IOrmProvider
 {
+    DatabaseType DatabaseType { get; }
     string ParameterPrefix { get; }
     string SelectIdentitySql { get; }
     bool IsSupportArrayParameter { get; }

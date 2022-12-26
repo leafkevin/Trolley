@@ -11,34 +11,21 @@ namespace Trolley;
 class QueryVisitor : SqlVisitor
 {
     private static readonly MethodInfo concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(object[]) });
-    private readonly IOrmDbFactory dbFactory;
-    private readonly IOrmProvider ormProvider;
     private List<MemberSegment> readerFields;
-    private SqlSegmentType nodeType = SqlSegmentType.None;
-    private List<IDbDataParameter> dbParameters;
 
     private string selectSql = string.Empty;
     private string whereSql = string.Empty;
     private string groupBySql = string.Empty;
     private string havingSql = string.Empty;
     private string orderBySql = string.Empty;
-    private bool isDistinct = false;
     private int? skip = null;
     private int? limit = null;
+    private bool isDistinct = false;
     private bool isUnion = false;
-    private string parameterPrefix;
+    private readonly List<TableSegment> includeTables = new();
 
-    private bool isMultiTable = false;
-    private List<TableSegment> tables = new();
-    private Dictionary<string, TableSegment> tableAlias = new();
-    private List<TableSegment> includeTables = new();
     public QueryVisitor(IOrmDbFactory dbFactory, IOrmProvider ormProvider, string parameterPrefix = "p")
-        : base(dbFactory, ormProvider, parameterPrefix)
-    {
-        this.dbFactory = dbFactory;
-        this.ormProvider = ormProvider;
-        this.parameterPrefix = parameterPrefix;
-    }
+        : base(dbFactory, ormProvider, parameterPrefix) { }
     public string BuildSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields)
     {
         var builder = new StringBuilder();
@@ -51,12 +38,11 @@ class QueryVisitor : SqlVisitor
                 var tableName = tableSegment.Body;
                 if (string.IsNullOrEmpty(tableName))
                 {
-                    if (tableSegment.Mapper == null)
-                        tableSegment.Mapper = this.dbFactory.GetEntityMap(tableSegment.EntityType);
+                    tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
                     tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
                 }
                 if (builder.Length > 0) builder.Append(' ');
-                builder.Append($"{tableSegment.NodeType} {tableName} {tableSegment.AliasName}");
+                builder.Append($"{tableSegment.JoinType} {tableName} {tableSegment.AliasName}");
 
                 if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                     builder.Append($" ON {tableSegment.OnExpr}");
@@ -114,29 +100,28 @@ class QueryVisitor : SqlVisitor
 
         if (this.tables.Count > 0)
         {
-            foreach (var tableInfo in this.tables)
+            foreach (var tableSegment in this.tables)
             {
-                if (!tableInfo.IsUsed) continue;
-                var tableName = tableInfo.Body;
+                if (!tableSegment.IsUsed) continue;
+                var tableName = tableSegment.Body;
                 if (string.IsNullOrEmpty(tableName))
                 {
-                    if (tableInfo.Mapper == null)
-                        tableInfo.Mapper = this.dbFactory.GetEntityMap(tableInfo.EntityType);
-                    tableName = this.ormProvider.GetTableName(tableInfo.Mapper.TableName);
+                    tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
+                    tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
                 }
                 if (builder.Length > 0) builder.Append(' ');
-                if (!string.IsNullOrEmpty(tableInfo.NodeType))
-                    builder.Append($"{tableInfo.NodeType} ");
-                builder.Append($"{tableName} {tableInfo.AliasName}");
+                if (!string.IsNullOrEmpty(tableSegment.JoinType))
+                    builder.Append($"{tableSegment.JoinType} ");
+                builder.Append($"{tableName} {tableSegment.AliasName}");
 
-                if (!string.IsNullOrEmpty(tableInfo.OnExpr))
-                    builder.Append($" ON {tableInfo.OnExpr}");
+                if (!string.IsNullOrEmpty(tableSegment.OnExpr))
+                    builder.Append($" ON {tableSegment.OnExpr}");
 
-                if (!string.IsNullOrEmpty(tableInfo.Filter))
+                if (!string.IsNullOrEmpty(tableSegment.Filter))
                 {
-                    if (!string.IsNullOrEmpty(tableInfo.OnExpr))
+                    if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                         builder.Append(" AND ");
-                    builder.Append(tableInfo.Filter);
+                    builder.Append(tableSegment.Filter);
                 }
             }
             tableSql = builder.ToString();
@@ -176,7 +161,6 @@ class QueryVisitor : SqlVisitor
     public QueryVisitor From(params Type[] entityTypes)
     {
         char tableIndex = 'a';
-        this.isMultiTable = entityTypes.Length > 0;
         for (int i = 0; i < entityTypes.Length; i++)
         {
             this.tables.Add(new TableSegment
@@ -197,7 +181,7 @@ class QueryVisitor : SqlVisitor
 
         this.tables.Add(new TableSegment
         {
-            NodeType = joinType,
+            JoinType = joinType,
             EntityType = entityType,
             AliasName = $"{tableIndex}",
             Body = $"({body})",
@@ -233,7 +217,7 @@ class QueryVisitor : SqlVisitor
         var joinOnExpr = this.VisitConditionExpr(lambdaExpr.Body);
         if (this.tableAlias.Count == 2)
         {
-            joinTableSegment.NodeType = joinType;
+            joinTableSegment.JoinType = joinType;
             joinTableSegment.OnExpr = joinOnExpr;
         }
     }
@@ -337,29 +321,7 @@ class QueryVisitor : SqlVisitor
         return this;
     }
     public void Distinct() => this.isDistinct = true;
-    protected override SqlSegment VisitParameter(SqlSegment sqlSegment)
-    {
-        //业务场景：方法调用Target对象/参数，Select实体
-        var parameterExpr = sqlSegment.Expression as ParameterExpression;
-        if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
-            return new SqlSegment { Value = parameterExpr.Name };
-        if (typeof(IWhereSql).IsAssignableFrom(parameterExpr.Type))
-            return new SqlSegment { Value = parameterExpr.Name };
-
-        //处理Include表字段
-        var fromSegment = this.tableAlias[parameterExpr.Name];
-        //参数的FromMeber没有设置，在Select的时候设置
-        var memberSegments = this.GetTableFields(fromSegment);
-        return new SqlSegment
-        {
-            HasField = true,
-            IsCompleted = true,
-            TableSegment = fromSegment,
-            Expression = parameterExpr,
-            Value = memberSegments
-        };
-    }
-    protected override SqlSegment VisitNew(SqlSegment sqlSegment)
+    public override SqlSegment VisitNew(SqlSegment sqlSegment)
     {
         var newExpr = sqlSegment.Expression as NewExpression;
         if (newExpr.Type.Name.StartsWith("<>"))
@@ -373,7 +335,7 @@ class QueryVisitor : SqlVisitor
         }
         return this.EvaluateAndParameter(sqlSegment);
     }
-    protected override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
+    public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
     {
         var memberInitExpr = sqlSegment.Expression as MemberInitExpression;
         var memberSegments = new List<MemberSegment>();
@@ -544,7 +506,7 @@ class QueryVisitor : SqlVisitor
                 this.tables.Add(tableSegment = new TableSegment
                 {
                     //默认外联
-                    NodeType = "LEFT JOIN",
+                    JoinType = "LEFT JOIN",
                     EntityType = entityType,
                     Mapper = entityMapper,
                     AliasName = rightAlias,
@@ -577,54 +539,5 @@ class QueryVisitor : SqlVisitor
             fromType = memberMapper.NavigationType;
         }
         return tableSegment;
-    }
-    private TableSegment FindTableSegment(string parameterName, string path)
-    {
-        var index = path.IndexOf(".");
-        if (index > 0)
-        {
-            var rootTableSegment = this.tableAlias[parameterName];
-            path = path.Replace(parameterName + ".", rootTableSegment.AliasName + ".");
-            return this.tables.Find(f => f.Path == path);
-        }
-        else return this.tableAlias[parameterName];
-    }
-    private List<MemberSegment> GetTableFields(TableSegment fromSegment, int tableIndex = 1, MemberInfo fromMember = null)
-    {
-        var memberSegments = new List<MemberSegment>();
-        this.AddTableFields(fromSegment, memberSegments, tableIndex, fromMember);
-        var fromTables = new List<TableSegment>();
-        fromTables.Add(fromSegment);
-        foreach (var tableSegment in this.tables)
-        {
-            if (tableSegment == fromSegment) continue;
-            if (fromTables.Contains(tableSegment.IncludedFrom))
-            {
-                tableIndex++;
-                fromTables.Add(tableSegment);
-                this.AddTableFields(tableSegment, memberSegments, tableIndex, tableSegment.FromMember);
-            }
-        }
-        return memberSegments;
-    }
-    private void AddTableFields(TableSegment fromSegment, List<MemberSegment> memberSegments, int tableIndex, MemberInfo fromMember)
-    {
-        var memberMappers = fromSegment.Mapper.GetMembers();
-        foreach (var memberInfo in memberMappers)
-        {
-            if (memberInfo.GetMemberType().IsEntityType())
-                continue;
-            var memberMapper = fromSegment.Mapper.GetMemberMap(memberInfo.Name);
-            memberSegments.Add(new MemberSegment
-            {
-                //此处FromIndex,FromMember,Body不做处理，不知道是否作为Select内容
-                FromMember = fromMember ?? memberInfo,
-                MemberMapper = memberMapper,
-                TableSegment = fromSegment,
-                Body = $"{fromSegment.AliasName}.{this.ormProvider.GetFieldName(memberMapper.FieldName)}",
-                IsNeedAlias = false,
-                TableIndex = tableIndex
-            });
-        }
     }
 }

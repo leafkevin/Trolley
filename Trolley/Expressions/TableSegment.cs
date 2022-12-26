@@ -5,7 +5,7 @@ namespace Trolley;
 
 public class TableSegment
 {
-    public string NodeType { get; set; }
+    public string JoinType { get; set; }
     public Type EntityType { get; set; }
     public string AliasName { get; set; }
     public TableSegment IncludedFrom { get; set; }

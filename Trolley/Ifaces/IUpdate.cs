@@ -1,88 +1,142 @@
 ﻿using System;
 using System.Linq.Expressions;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Trolley;
 
 public interface IUpdate<TEntity>
 {
-    IUpdate<TEntity> RawSql(string rawSql);
-    IUpdate<TEntity> SetByKey<TUpdateObject>(TUpdateObject updateObjs, int bulkCount = 500);
-    IUpdate<TEntity> Set<TMember>(Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateSet<TEntity> RawSql(string rawSql, object parameters);
+    IUpdateSet<TEntity> WithBy<TUpdateObject>(TUpdateObject updateObjs, int bulkCount = 500);
+    IUpdateSetting<TEntity> Set<TMember>(Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateSetting<TEntity> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateFrom<TEntity, T> From<T>();
+    IUpdateFrom<TEntity, T1, T2> From<T1, T2>();
+    IUpdateFrom<TEntity, T1, T2, T3> From<T1, T2, T3>();
+    IUpdateFrom<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>();
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
 
-    IUpdate<TEntity, T> From<T>(Expression<Func<TEntity, T, bool>> joinOn);
-    IUpdate<TEntity, T1, T2> From<T1, T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn);
-    IUpdate<TEntity, T1, T2, T3> From<T1, T2, T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn);
-    IUpdate<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn);
-    IUpdate<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn);
-
-    IUpdate<TEntity, T> InnerJoin<T>(Expression<Func<TEntity, T, bool>> joinOn);
-    IUpdate<TEntity, T1, T2> InnerJoin<T1, T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn);
-    IUpdate<TEntity, T1, T2, T3> InnerJoin<T1, T2, T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn);
-    IUpdate<TEntity, T1, T2, T3, T4> InnerJoin<T1, T2, T3, T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn);
-    IUpdate<TEntity, T1, T2, T3, T4, T5> InnerJoin<T1, T2, T3, T4, T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn);
-
-    IUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
-    IUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> predicate);
+    IUpdateJoin<TEntity, T> InnerJoin<T>(Expression<Func<TEntity, T, bool>> joinOn);
+    IUpdateJoin<TEntity, T> LeftJoin<T>(Expression<Func<TEntity, T, bool>> joinOn);
+}
+public interface IUpdateSet<TEntity>
+{
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     string ToSql();
 }
-public interface IUpdate<TEntity, T>
+public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
 {
-    IUpdate<TEntity> Set<TSetObject>(Expression<Func<TEntity, T, TSetObject>> setExpr);
+    IUpdateSetting<TEntity> Set<TMember>(Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateSetting<TEntity> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateSet<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
+    IUpdateSet<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> predicate);
 }
-public interface IUpdate<T, T1, T2>
+public interface IUpdateFrom<TEntity, T1>
 {
-    IUpdate<T, T1, T2, TOther> InnerJoin<TOther>(Expression<Func<T, T1, T2, TOther, bool>> predicate);
-    IUpdate<T, T1, T2> WithBy<TUpdateObject>(TUpdateObject updateObjs);
-    IUpdate<T, T1, T2> Set<TSetObject>(Expression<Func<T, T1, T2, TSetObject>> setExpr);
-    IUpdate<T, T1, T2> Where(Expression<Func<T, T1, T2, bool>> predicate);
-    IUpdate<T, T1, T2> Where(bool condition, Expression<Func<T, T1, T2, bool>> predicate);
+    IUpdateFrom<TEntity, T1> Set<TSetObject>(Expression<Func<TEntity, T1, TSetObject>> setExpr);
+    IUpdateFrom<TEntity, T1> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateFrom<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate);
+    IUpdateFrom<TEntity, T1> Where(bool condition, Expression<Func<TEntity, T1, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     string ToSql();
 }
-public interface IUpdate<T, T1, T2, T3>
+public interface IUpdateJoin<TEntity, T1>
 {
-    IUpdate<T, T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<T, T1, T2, T3, TOther, bool>> predicate);
-    IUpdate<T, T1, T2, T3> WithBy<TUpdateObject>(TUpdateObject updateObjs);
-    IUpdate<T, T1, T2, T3> Set<TSetObject>(Expression<Func<T, T1, T2, T3, TSetObject>> setExpr);
-    IUpdate<T, T1, T2, T3> Where(Expression<Func<T, T1, T2, T3, bool>> predicate);
-    IUpdate<T, T1, T2, T3> Where(bool condition, Expression<Func<T, T1, T2, T3, bool>> predicate);
+    IUpdateJoin<TEntity, T1, T2> InnerJoin<T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn);
+    IUpdateJoin<TEntity, T1, T2> LeftJoin<T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn);
+    IUpdateJoin<TEntity, T1> Set<TSetObject>(Expression<Func<TEntity, T1, TSetObject>> setExpr);
+    IUpdateJoin<TEntity, T1> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateJoin<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate);
+    IUpdateJoin<TEntity, T1> Where(bool condition, Expression<Func<TEntity, T1, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     string ToSql();
 }
-public interface IUpdate<T, T1, T2, T3, T4>
+public interface IUpdateFrom<TEntity, T1, T2>
 {
-    IUpdate<T, T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<T, T1, T2, T3, T4, TOther, bool>> predicate);
-    IUpdate<T, T1, T2, T3, T4> WithBy<TUpdateObject>(TUpdateObject updateObjs);
-    IUpdate<T, T1, T2, T3, T4> Set<TSetObject>(Expression<Func<T, T1, T2, T3, T4, TSetObject>> setExpr);
-    IUpdate<T, T1, T2, T3, T4> Where(Expression<Func<T, T1, T2, T3, T4, bool>> predicate);
-    IUpdate<T, T1, T2, T3, T4> Where(bool condition, Expression<Func<T, T1, T2, T3, T4, bool>> predicate);
+    IUpdateFrom<TEntity, T1, T2> Set<TSetObject>(Expression<Func<TEntity, T1, T2, TSetObject>> setExpr);
+    IUpdateFrom<TEntity, T1, T2> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateFrom<TEntity, T1, T2> Where(Expression<Func<TEntity, T1, T2, bool>> predicate);
+    IUpdateFrom<TEntity, T1, T2> Where(bool condition, Expression<Func<TEntity, T1, T2, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     string ToSql();
 }
-public interface IUpdate<T, T1, T2, T3, T4, T5>
+public interface IUpdateJoin<TEntity, T1, T2>
 {
-    IUpdate<T, T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<T, T1, T2, T3, T4, T5, TOther, bool>> predicate);
-    IUpdate<T, T1, T2, T3, T4, T5> WithBy<TUpdateObject>(TUpdateObject updateObjs);
-    IUpdate<T, T1, T2, T3, T4, T5> Set<TSetObject>(Expression<Func<T, T1, T2, T3, T4, T5, TSetObject>> setExpr);
-    IUpdate<T, T1, T2, T3, T4, T5> Where(Expression<Func<T, T1, T2, T3, T4, T5, bool>> predicate);
-    IUpdate<T, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T, T1, T2, T3, T4, T5, bool>> predicate);
+    IUpdateJoin<TEntity, T1, T2, T3> InnerJoin<T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn);
+    IUpdateJoin<TEntity, T1, T2, T3> LeftJoin<T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn);
+    IUpdateJoin<TEntity, T1, T2> Set<TSetObject>(Expression<Func<TEntity, T1, T2, TSetObject>> setExpr);
+    IUpdateJoin<TEntity, T1, T2> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateJoin<TEntity, T1, T2> Where(Expression<Func<TEntity, T1, T2, bool>> predicate);
+    IUpdateJoin<TEntity, T1, T2> Where(bool condition, Expression<Func<TEntity, T1, T2, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     string ToSql();
 }
-public interface IUpdate<T, T1, T2, T3, T4, T5, T6>
+public interface IUpdateFrom<TEntity, T1, T2, T3>
 {
-    IUpdate<T, T1, T2, T3, T4, T5, T6> WithBy<TUpdateObject>(TUpdateObject updateObjs);
-    IUpdate<T, T1, T2, T3, T4, T5, T6> Set<TSetObject>(Expression<Func<T, T1, T2, T3, T4, T5, T6, TSetObject>> setExpr);
-    IUpdate<T, T1, T2, T3, T4, T5, T6> Where(Expression<Func<T, T1, T2, T3, T4, T5, T6, bool>> predicate);
-    IUpdate<T, T1, T2, T3, T4, T5, T6> Where(bool condition, Expression<Func<T, T1, T2, T3, T4, T5, T6, bool>> predicate);
+    IUpdateFrom<TEntity, T1, T2, T3> Set<TSetObject>(Expression<Func<TEntity, T1, T2, T3, TSetObject>> setExpr);
+    IUpdateFrom<TEntity, T1, T2, T3> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateFrom<TEntity, T1, T2, T3> Where(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
+    IUpdateFrom<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
+    int Execute();
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    string ToSql();
+}
+public interface IUpdateJoin<TEntity, T1, T2, T3>
+{
+    IUpdateJoin<TEntity, T1, T2, T3, T4> InnerJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn);
+    IUpdateJoin<TEntity, T1, T2, T3, T4> LeftJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn);
+    IUpdateJoin<TEntity, T1, T2, T3> Set<TSetObject>(Expression<Func<TEntity, T1, T2, T3, TSetObject>> setExpr);
+    IUpdateJoin<TEntity, T1, T2, T3> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateJoin<TEntity, T1, T2, T3> Where(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
+    IUpdateJoin<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
+    int Execute();
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    string ToSql();
+}
+public interface IUpdateFrom<TEntity, T1, T2, T3, T4>
+{
+    IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TSetObject>(Expression<Func<TEntity, T1, T2, T3, T4, TSetObject>> setExpr);
+    IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateFrom<TEntity, T1, T2, T3, T4> Where(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
+    IUpdateFrom<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
+    int Execute();
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    string ToSql();
+}
+public interface IUpdateJoin<TEntity, T1, T2, T3, T4>
+{
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> InnerJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> LeftJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn);
+    IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TSetObject>(Expression<Func<TEntity, T1, T2, T3, T4, TSetObject>> setExpr);
+    IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateJoin<TEntity, T1, T2, T3, T4> Where(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
+    IUpdateJoin<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
+    int Execute();
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    string ToSql();
+}
+public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5>
+{
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TSetObject>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TSetObject>> setExpr);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
+    int Execute();
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    string ToSql();
+}
+public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5>
+{
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TSetObject>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TSetObject>> setExpr);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     string ToSql();

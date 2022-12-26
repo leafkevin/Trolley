@@ -14,16 +14,11 @@ public class SqlSegment
     private bool isFixValue = false;
 
     /// <summary>
-    /// 表达返回类型，同时代表了可能的操作
-    /// </summary>
-    public SqlSegmentType NodeType { get; set; }
-    /// <summary>
     /// 操作符:And/Or/Concat/Equals/NotEquals/Convert/,
     /// </summary>
     public OperationType OperationType { get; set; } = OperationType.None;
     public Stack<DeferredExpr> DeferredExprs { get; set; } = new Stack<DeferredExpr>();
     public int Deep { get; set; }
-    public bool IsCompleted { get; set; }
     /// <summary>
     /// 是否有字段
     /// </summary>

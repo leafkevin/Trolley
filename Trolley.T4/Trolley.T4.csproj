@@ -33,45 +33,12 @@
 		  <Generator>TextTemplatingFileGenerator</Generator>
 		  <LastGenOutput>GroupingQuery.cs</LastGenOutput>
 		</None>
+		<None Update="Update.tt">
+		  <Generator>TextTemplatingFileGenerator</Generator>
+		  <LastGenOutput>Update.cs</LastGenOutput>
+		</None>
 	</ItemGroup>
 	<ItemGroup>
 		<Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
-	</ItemGroup>
-	<ItemGroup>
-		<Compile Update="IGroupingQuery.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>IGroupingQuery.tt</DependentUpon>
-		</Compile>
-		<Compile Update="IIncludableQuery.cs">
-		  <DesignTime>True</DesignTime>
-		  <AutoGen>True</AutoGen>
-		  <DependentUpon>IIncludableQuery.tt</DependentUpon>
-		</Compile>
-		<Compile Update="IQuery.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>IQuery.tt</DependentUpon>
-		</Compile>
-		<Compile Update="IUpdate.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>IUpdate.tt</DependentUpon>
-		</Compile>
-		<Compile Update="IncludableQuery.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>IncludableQuery.tt</DependentUpon>
-		</Compile>
-		<Compile Update="Query`.cs">
-		  <DesignTime>True</DesignTime>
-		  <AutoGen>True</AutoGen>
-		  <DependentUpon>Query`.tt</DependentUpon>
-		</Compile>
-		<Compile Update="GroupingQuery.cs">
-		  <DesignTime>True</DesignTime>
-		  <AutoGen>True</AutoGen>
-		  <DependentUpon>GroupingQuery.tt</DependentUpon>
-		</Compile>
 	</ItemGroup>
 </Project>
