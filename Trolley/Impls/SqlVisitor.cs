@@ -12,8 +12,8 @@ public class SqlVisitor
     protected readonly IOrmDbFactory dbFactory;
     protected readonly IOrmProvider ormProvider;
     protected readonly string parameterPrefix;
-    protected readonly List<TableSegment> tables = new();
-    protected readonly Dictionary<string, TableSegment> tableAlias = new();
+    protected List<TableSegment> tables;
+    protected Dictionary<string, TableSegment> tableAlias;
     protected List<IDbDataParameter> dbParameters;
 
     public SqlVisitor(IOrmDbFactory dbFactory, IOrmProvider ormProvider, string parameterPrefix = "p")
@@ -191,10 +191,10 @@ public class SqlVisitor
             case ExpressionType.LeftShift:
                 //字符串连接单独处理
                 if (binaryExpr.NodeType == ExpressionType.Add && binaryExpr.Left.Type == typeof(string) && binaryExpr.Right.Type == typeof(string))
-                    return sqlSegment.Change(this.VisitConcatAndDeferred(binaryExpr));
+                    return this.VisitConcatAndDeferred(sqlSegment);
 
                 var leftSegment = this.Visit(sqlSegment.Next(binaryExpr.Left));
-                var rightSegment = this.Visit(sqlSegment.Next(binaryExpr.Right));
+                var rightSegment = this.Visit(new SqlSegment { Expression = binaryExpr.Right });
                 var operators = this.GetOperator(binaryExpr.NodeType);
 
                 if (binaryExpr.NodeType == ExpressionType.Modulo || binaryExpr.NodeType == ExpressionType.Coalesce)
@@ -236,6 +236,7 @@ public class SqlVisitor
     public virtual SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
         var memberExpr = sqlSegment.Expression as MemberExpression;
+        MemberAccessSqlFormatter formatter = null;
         if (memberExpr.Expression != null)
         {
             //Where(f=>... && !f.OrderId.HasValue && ...)
@@ -255,13 +256,13 @@ public class SqlVisitor
                 else throw new ArgumentException($"不支持的MemberAccess操作，表达式'{memberExpr}'返回值不是boolean类型");
             }
 
-            //各种类型值的属性访问，如：DateTime,TimeSpan,String.Length,List.Count,
-            if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out var formatter))
+            //各种类型值的属性访问，如：DateTime,TimeSpan,String.Length,List.Count
+            if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
             {
-                //Where(f=>... && f.OrderNo.Length==10 && ...)
+                //Where(f=>... && f.CreatedAt.Month<5 && ...)
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
                 var targetSegment = this.Visit(sqlSegment.Next(memberExpr.Expression));
-                return sqlSegment.Change(formatter.Invoke(targetSegment));
+                return sqlSegment.Change(formatter.Invoke(targetSegment), false);
             }
 
             if (memberExpr.IsParameter(out var parameterName))
@@ -300,6 +301,7 @@ public class SqlVisitor
                     return new SqlSegment
                     {
                         HasField = true,
+                        IsConstantValue = false,
                         TableSegment = tableSegment,
                         Value = memberSegments
                     };
@@ -318,12 +320,14 @@ public class SqlVisitor
                     if (sqlSegment.HasDeferred)
                     {
                         sqlSegment.HasField = true;
+                        sqlSegment.IsConstantValue = false;
                         sqlSegment.TableSegment = tableSegment;
                         sqlSegment.MemberMapper = memberMapper;
                         sqlSegment.Value = $"{tableSegment.AliasName}.{fieldName}";
                         return this.VisitBooleanDeferred(sqlSegment);
                     }
                     sqlSegment.HasField = true;
+                    sqlSegment.IsConstantValue = false;
                     sqlSegment.TableSegment = tableSegment;
                     sqlSegment.MemberMapper = memberMapper;
                     sqlSegment.Value = $"{tableSegment.AliasName}.{fieldName}";
@@ -331,6 +335,10 @@ public class SqlVisitor
                 }
             }
         }
+        //各种类型的常量或是静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
+        if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
+            return sqlSegment.Change(formatter(null), false);
+
         //访问局部变量或是成员变量，当作常量处理,直接计算，如果是字符串变成参数@p
         //var orderIds=new List<int>{1,2,3}; Where(f=>orderIds.Contains(f.OrderId)); orderIds
         //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
@@ -353,6 +361,7 @@ public class SqlVisitor
 
         object target = null;
         object[] args = null;
+
         //如果方法对象是聚合查询，不做任何处理
         if (methodCallExpr.Object != null)
         {
@@ -366,7 +375,7 @@ public class SqlVisitor
                     && argumentExpr.NodeType == ExpressionType.MemberAccess && argumentExpr.Type.GenericTypeArguments[0].IsEntityType())
                     throw new Exception($"聚合查询方法{methodCallExpr.Method.Name}，参数必须是字段，不能是导航属性实体，或者使用无参数聚合函数");
             }
-            else target = this.Visit(sqlSegment.Next(methodCallExpr.Object));
+            else target = this.Visit(new SqlSegment { Expression = methodCallExpr.Object });
         }
         //TODO:字符串连接单独特殊处理
         if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
@@ -482,12 +491,20 @@ public class SqlVisitor
 
         return fieldSegment.Merge(sqlSegment, $"{fieldSegment} {strOperator} {this.GetSqlValue(sqlSegment)}");
     }
-    public virtual string VisitConcatAndDeferred(Expression concatExpr)
+    public virtual SqlSegment VisitConcatAndDeferred(SqlSegment sqlSegment)
     {
-        var concatSegments = this.VisitConcatExpr(concatExpr);
+        var concatSegments = this.VisitConcatExpr(sqlSegment.Expression);
+        bool isEvaluable = true;
+        foreach (var segment in concatSegments)
+        {
+            if (!segment.IsConstantValue)
+                isEvaluable = false;
+        }
+        if (isEvaluable)
+            return sqlSegment.Change(string.Concat(concatSegments));
         var concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(object[]) });
         this.ormProvider.TryGetMethodCallSqlFormatter(concatMethodInfo, out var formater);
-        return formater.Invoke(null, null, concatSegments);
+        return sqlSegment.Change(formater.Invoke(null, null, concatSegments), false);
     }
     public virtual List<SqlSegment> VisitConcatExpr(Expression concatExpr)
     {
@@ -660,7 +677,7 @@ public class SqlVisitor
     }
     public virtual string GetSqlValue(SqlSegment sqlSegment)
     {
-        if (sqlSegment == SqlSegment.Null || sqlSegment.HasField || sqlSegment.IsParameter)
+        if (sqlSegment == SqlSegment.Null || !sqlSegment.IsConstantValue)
             return sqlSegment.ToString();
         return this.ormProvider.GetQuotedValue(sqlSegment.Value);
     }
@@ -692,7 +709,7 @@ public class SqlVisitor
             if (!string.IsNullOrEmpty(sqlSegment.ParameterName)) parameterName = sqlSegment.ParameterName;
             else parameterName = $"{this.ormProvider.ParameterPrefix}{this.parameterPrefix}{this.dbParameters.Count + 1}";
             this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, objValue));
-            return sqlSegment.Change(parameterName);
+            return sqlSegment.Change(parameterName, false);
         }
         return sqlSegment.Change(objValue);
     }

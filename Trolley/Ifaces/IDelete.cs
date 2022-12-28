@@ -5,23 +5,31 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public interface IDelete<T>
+public interface IDelete<TEntity>
 {
-    IDelete<T> Where(Expression<Func<T, bool>> predicate);
-    IDelete<T> Where(bool condition, Expression<Func<T, bool>> predicate);
-    IDelete<T> Where(object keys);
-    IDelete<T> Where(bool condition, object keys);
+    IDeleted<TEntity> RawSql(string rawSql, object parameters);
+    IDeleted<TEntity> Where(object keys);
+    IDeleting<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
+}
+public interface IDeleted<TEntity>
+{
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     string ToSql();
 }
-
-public interface IMultiDelete<T>
+public interface IDeleting<TEntity>
 {
-    IMultiDelete<T> Where(Expression<Func<T, bool>> predicate);
-    IMultiDelete<T> Where(bool condition, Expression<Func<T, bool>> predicate);
-    IMultiDelete<T> Where(object keys);
-    IMultiDelete<T> Where(bool condition, object keys);
-    //IMultiQuery Execute();
+    IDeleting<TEntity> And(bool condition, Expression<Func<TEntity, bool>> predicate);
+    int Execute();
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     string ToSql();
 }
+//public interface IMultiDelete<T>
+//{
+//    IMultiDelete<T> Where(Expression<Func<T, bool>> predicate);
+//    IMultiDelete<T> Where(bool condition, Expression<Func<T, bool>> predicate);
+//    IMultiDelete<T> Where(object keys);
+//    IMultiDelete<T> Where(bool condition, object keys);
+//    //IMultiQuery Execute();
+//    string ToSql();
+//}

@@ -59,7 +59,9 @@ public interface IQuery<T>
 
     #region Where
     IQuery<T> Where(Expression<Func<T, bool>> predicate);
-    IQuery<T> Where(bool condition, Expression<Func<T, bool>> predicate);
+    IQuery<T> Where(Expression<Func<IWhereSql, T, bool>> predicate);
+    IQuery<T> And(bool condition, Expression<Func<T, bool>> predicate);
+    IQuery<T> And(bool condition, Expression<Func<IWhereSql, T, bool>> predicate);
     #endregion
 
     #region GroupBy/OrderBy

@@ -15,6 +15,8 @@ class UpdateVisitor : SqlVisitor
     public UpdateVisitor(IOrmDbFactory dbFactory, IOrmProvider ormProvider, Type entityType)
         : base(dbFactory, ormProvider)
     {
+        this.tables = new();
+        this.tableAlias = new();
         this.tables.Add(new TableSegment
         {
             EntityType = entityType,
@@ -63,7 +65,7 @@ class UpdateVisitor : SqlVisitor
                 break;
             case DatabaseType.MsSql:
                 builder.Append("SET ");
-                builder.Append(this.setSql); 
+                builder.Append(this.setSql);
                 builder.Append(" FROM ");
                 for (var i = 1; i < this.tables.Count; i++)
                 {
@@ -78,7 +80,7 @@ class UpdateVisitor : SqlVisitor
                 }
                 break;
             case DatabaseType.Oracle:
-                throw new NotSupportedException("Oracle暂时不支持UPDATE FROM语句"); 
+                throw new NotSupportedException("Oracle暂时不支持UPDATE FROM语句");
         }
         if (!string.IsNullOrEmpty(this.whereSql))
             builder.Append(this.whereSql);
@@ -166,7 +168,7 @@ class UpdateVisitor : SqlVisitor
     {
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
-        this.whereSql = this.VisitConditionExpr(lambdaExpr.Body);
+        this.whereSql = " WHERE " + this.VisitConditionExpr(lambdaExpr.Body);
         return this;
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)

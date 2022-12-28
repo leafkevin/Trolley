@@ -6,13 +6,14 @@ class FromQuery : IFromQuery
 {
     private readonly IOrmDbFactory dbFactory;
     private readonly TheaConnection connection;
-    private IDbTransaction transaction;
-    private string parameterPrefix = "p";
+    private readonly IDbTransaction transaction;
+    private readonly string parameterPrefix = "p";
 
-    public FromQuery(IOrmDbFactory dbFactory, TheaConnection connection, string parameterPrefix = "p")
+    public FromQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, string parameterPrefix = "p")
     {
         this.dbFactory = dbFactory;
         this.connection = connection;
+        this.transaction = transaction;
         this.parameterPrefix = parameterPrefix;
     }
 

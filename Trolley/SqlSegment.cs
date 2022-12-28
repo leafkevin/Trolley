@@ -27,6 +27,10 @@ public class SqlSegment
     /// 是否有SQL参数，如：@p1,@p2
     /// </summary>
     public bool IsParameter { get; set; }
+    /// <summary>
+    /// 是否是常量值
+    /// </summary>
+    public bool IsConstantValue { get; set; }
     public string ParameterName { get; set; }
     /// <summary>
     /// 是否有函数调用
@@ -58,9 +62,10 @@ public class SqlSegment
         this.Value = value;
         return this;
     }
-    public SqlSegment Change(object value)
+    public SqlSegment Change(object value, bool isConstantValue = true)
     {
         this.isFixValue = false;
+        this.IsConstantValue = isConstantValue;
         this.Value = value;
         return this;
     }

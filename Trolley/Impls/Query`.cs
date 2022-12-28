@@ -41,7 +41,7 @@ class Query<T1, T2> : IQuery<T1, T2>
     #region Join
     public IQuery<T1, T2, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -87,7 +87,7 @@ class Query<T1, T2> : IQuery<T1, T2>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -103,7 +103,7 @@ class Query<T1, T2> : IQuery<T1, T2>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -349,7 +349,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
     #region Join
     public IQuery<T1, T2, T3, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -395,7 +395,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -411,7 +411,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -657,7 +657,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     #region Join
     public IQuery<T1, T2, T3, T4, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -703,7 +703,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -719,7 +719,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -965,7 +965,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
     #region Join
     public IQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -1011,7 +1011,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -1027,7 +1027,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -1273,7 +1273,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -1319,7 +1319,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -1335,7 +1335,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -1581,7 +1581,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -1627,7 +1627,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -1643,7 +1643,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -1889,7 +1889,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -1935,7 +1935,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -1951,7 +1951,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -2197,7 +2197,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -2243,7 +2243,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -2259,7 +2259,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -2505,7 +2505,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -2551,7 +2551,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -2567,7 +2567,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -2813,7 +2813,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -2859,7 +2859,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -2875,7 +2875,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -3121,7 +3121,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -3167,7 +3167,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -3183,7 +3183,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -3429,7 +3429,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -3475,7 +3475,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -3491,7 +3491,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -3737,7 +3737,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -3783,7 +3783,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -3799,7 +3799,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -4045,7 +4045,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -4091,7 +4091,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -4107,7 +4107,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -4376,7 +4376,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -4392,7 +4392,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)

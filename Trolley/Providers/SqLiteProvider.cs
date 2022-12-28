@@ -1,9 +1,10 @@
 ﻿using System.Data;
 
-namespace Trolley;.Providers;
+namespace Trolley;
 
 public class SqLiteProvider : BaseOrmProvider
 {
+    public override string SelectIdentitySql => ";SELECT LAST_INSERT_ROWID()";
     public override IDbConnection CreateConnection(string connString)
     {
         var assemblyQualifiedName = "System.Data.SQLite.SQLiteFactory, System.Data.SqlClient, Culture=neutral, PublicKeyToken=db937bc2d44ff139";

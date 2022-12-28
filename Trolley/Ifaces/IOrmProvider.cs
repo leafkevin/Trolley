@@ -19,7 +19,6 @@ public interface IOrmProvider
     DatabaseType DatabaseType { get; }
     string ParameterPrefix { get; }
     string SelectIdentitySql { get; }
-    bool IsSupportArrayParameter { get; }
     IDbConnection CreateConnection(string connectionString);
     IDbDataParameter CreateParameter(string parameterName, object value);
     string GetTableName(string entityName);

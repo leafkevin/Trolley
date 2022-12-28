@@ -42,7 +42,7 @@ class Query<T> : IQuery<T>
     #region Join
     public IQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.withIndex++}w");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters, out _);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
@@ -88,7 +88,7 @@ class Query<T> : IQuery<T>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -104,7 +104,7 @@ class Query<T> : IQuery<T>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, $"p{this.unionIndex++}u");
+        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL " + query.ToSql(out parameters, out _);
         if (parameters != null && parameters.Count > 0)
@@ -126,12 +126,12 @@ class Query<T> : IQuery<T>
         this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T> Where(bool condition, Expression<Func<T, bool>> predicate)
+    public IQuery<T> And(bool condition, Expression<Func<T, bool>> predicate)
     {
         if (condition) this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T> Where(bool condition, Expression<Func<IWhereSql, T, bool>> predicate)
+    public IQuery<T> And(bool condition, Expression<Func<IWhereSql, T, bool>> predicate)
     {
         if (condition) this.visitor.Where(predicate);
         return this;

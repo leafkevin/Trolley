@@ -25,7 +25,11 @@ class QueryVisitor : SqlVisitor
     private readonly List<TableSegment> includeTables = new();
 
     public QueryVisitor(IOrmDbFactory dbFactory, IOrmProvider ormProvider, string parameterPrefix = "p")
-        : base(dbFactory, ormProvider, parameterPrefix) { }
+        : base(dbFactory, ormProvider, parameterPrefix)
+    {
+        this.tables = new();
+        this.tableAlias = new();
+    }
     public string BuildSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields)
     {
         var builder = new StringBuilder();

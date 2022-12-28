@@ -1,20 +1,24 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Reflection;
 using System.Text;
-using Thea.Orm;
-using Trolley.Interfaces;
 
-namespace Trolley;.Providers;
+namespace Trolley;
 
 public class NpgSqlProvider : BaseOrmProvider
 {
-    private static Func<string, IDbConnection> createNativeConnectonDelegate = null;
-    private static Func<string, int, object, IDbDataParameter> createNativeParameterDelegate = null;
+    private static CreateNativeDbConnectionDelegate createNativeConnectonDelegate = null;
+    private static CreateNativeParameterDelegate createNativeParameterDelegate = null;
+    private static ConcurrentDictionary<MemberInfo, MemberAccessSqlFormatter> memberAccessSqlFormatterCahe = new();
     private static ConcurrentDictionary<MethodInfo, MethodCallSqlFormatter> methodCallSqlFormatterCahe = new();
+    private static Dictionary<Type, int> nativeDbTypes = new();
+    private static Dictionary<Type, string> castTos = new();
 
+    public override DatabaseType DatabaseType => DatabaseType.Postgresql;
     public override string SelectIdentitySql => " RETURNING {0}";
     public NpgSqlProvider()
     {
@@ -24,6 +28,128 @@ public class NpgSqlProvider : BaseOrmProvider
         var dbParameterType = Type.GetType("Npgsql.NpgsqlParameter, Npgsql, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7");
         var dbTypePropertyInfo = dbParameterType.GetProperty("NpgsqlDbType");
         createNativeParameterDelegate = base.CreateParameterDelegate(dbTypeType, dbParameterType, dbTypePropertyInfo);
+
+
+        nativeDbTypes[typeof(bool)] = 2;
+        nativeDbTypes[typeof(sbyte)] = 18;
+        nativeDbTypes[typeof(byte)] = 18;
+        nativeDbTypes[typeof(char)] = 6;
+        nativeDbTypes[typeof(short)] = 18;
+        nativeDbTypes[typeof(int)] = 9;
+        nativeDbTypes[typeof(uint)] = 41;//NpgsqlDbType.Oid
+        nativeDbTypes[typeof(long)] = 1;
+        nativeDbTypes[typeof(ulong)] = 1;
+        nativeDbTypes[typeof(float)] = 17;
+        nativeDbTypes[typeof(double)] = 8;
+        nativeDbTypes[typeof(TimeSpan)] = 20;
+        nativeDbTypes[typeof(DateTime)] = 21;
+        nativeDbTypes[typeof(string)] = 22;
+        nativeDbTypes[typeof(Guid)] = 27;
+        nativeDbTypes[typeof(decimal)] = 13;
+        nativeDbTypes[typeof(byte[])] = 4;
+
+        nativeDbTypes[typeof(bool?)] = 2;
+        nativeDbTypes[typeof(sbyte?)] = 18;
+        nativeDbTypes[typeof(byte?)] = 18;
+        nativeDbTypes[typeof(char?)] = 6;
+        nativeDbTypes[typeof(ushort?)] = 18;
+        nativeDbTypes[typeof(short?)] = 18;
+        nativeDbTypes[typeof(int?)] = 9;
+        nativeDbTypes[typeof(uint?)] = 41;
+        nativeDbTypes[typeof(long?)] = 1;
+        nativeDbTypes[typeof(ulong?)] = 1;
+        nativeDbTypes[typeof(float?)] = 17;
+        nativeDbTypes[typeof(double?)] = 8;
+        nativeDbTypes[typeof(TimeSpan?)] = 20;
+        nativeDbTypes[typeof(DateTime?)] = 21;
+        nativeDbTypes[typeof(Guid?)] = 27;
+        nativeDbTypes[typeof(decimal?)] = 13;
+
+        //Npgsql支持数据类型，值为各自值|int.MinValue
+        //如, int[]类型: int.MinValue | NpgsqlDbType.Integer
+
+        castTos[typeof(string)] = "VARCHAR";
+        castTos[typeof(sbyte)] = "SMALLINT";
+        castTos[typeof(byte)] = "SMALLINT";
+        castTos[typeof(short)] = "SMALLINT";
+        castTos[typeof(ushort)] = "SMALLINT";
+        castTos[typeof(int)] = "INTEGER";
+        castTos[typeof(uint)] = "INTEGER";
+        castTos[typeof(long)] = "BIGINT";
+        castTos[typeof(ulong)] = "BIGINT";
+        castTos[typeof(float)] = "DECIMAL";
+        castTos[typeof(double)] = "DECIMAL";
+        castTos[typeof(decimal)] = "DECIMAL";
+        castTos[typeof(bool)] = "BOOLEAN";
+        castTos[typeof(DateTime)] = "TIMESTAMP";
+
+        castTos[typeof(sbyte?)] = "SMALLINT";
+        castTos[typeof(byte?)] = "SMALLINT";
+        castTos[typeof(short?)] = "SMALLINT";
+        castTos[typeof(ushort?)] = "SMALLINT";
+        castTos[typeof(int?)] = "INTEGER";
+        castTos[typeof(uint?)] = "INTEGER";
+        castTos[typeof(long?)] = "BIGINT";
+        castTos[typeof(ulong?)] = "BIGINT";
+        castTos[typeof(float?)] = "DECIMAL";
+        castTos[typeof(double?)] = "DECIMAL";
+        castTos[typeof(decimal?)] = "DECIMAL";
+        castTos[typeof(bool?)] = "BOOLEAN";
+        castTos[typeof(DateTime?)] = "TIMESTAMP";
+
+        memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetMember(nameof(string.Empty))[0], target => "''");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetProperty(nameof(string.Length)), target => $"LENGTH({this.GetQuotedValue(target)})");
+
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.Now))[0], target => "NOW()");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.UtcNow))[0], target => "NOW() at time zone 'utc'");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.Today))[0], target => "CURRENT_DATE");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.MinValue))[0], target => "'0001-01-01 00:00:00'");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.MaxValue))[0], target => "'9999-12-31 23:59:59'");
+
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Date)), target => $"({this.GetQuotedValue(target)})::DATE");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.TimeOfDay)), target => $"(EXTRACT(EPOCH FROM({this.GetQuotedValue(target)})::TIME)*1000000)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.DayOfWeek)), target => $"EXTRACT(DOW FROM({this.GetQuotedValue(target)})::TIMESTAMP)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Day)), target => $"EXTRACT(DAY FROM({this.GetQuotedValue(target)})::TIMESTAMP)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.DayOfYear)), target => $"EXTRACT(DOY FROM({this.GetQuotedValue(target)})::TIMESTAMP)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Month)), target => $"EXTRACT(MONTH FROM({this.GetQuotedValue(target)})::TIMESTAMP)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Year)), target => $"EXTRACT(YEAR FROM({this.GetQuotedValue(target)})::TIMESTAMP)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Hour)), target => $"EXTRACT(HOUR FROM({this.GetQuotedValue(target)})::TIMESTAMP)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Minute)), target => $"EXTRACT(MINUTE FROM({this.GetQuotedValue(target)})::TIMESTAMP)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Second)), target => $"EXTRACT(SECOND FROM({this.GetQuotedValue(target)})::TIMESTAMP)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Millisecond)), target => $"(EXTRACT(MILLISECONDS FROM({this.GetQuotedValue(target)})::TIMESTAMP)-EXTRACT(SECOND FROM({this.GetQuotedValue(target)})::TIMESTAMP)*1000)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Ticks)), target => $"(EXTRACT(EPOCH FROM({this.GetQuotedValue(target)})::TIMESTAMP)*10000000+621355968000000000)");
+
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetMember(nameof(TimeSpan.Zero))[0], target => "0");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetMember(nameof(TimeSpan.MinValue))[0], target => "-922337203685477580");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetMember(nameof(TimeSpan.MaxValue))[0], target => "922337203685477580");
+
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Days)), target => $"floor(({this.GetQuotedValue(target)})/{(long)1000000 * 60 * 60 * 24})");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Hours)), target => $"floor(({this.GetQuotedValue(target)})/{(long)1000000 * 60 * 60}%24)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Milliseconds)), target => $"(floor(({this.GetQuotedValue(target)})/1000)::int8%1000)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Minutes)), target => $"(floor(({this.GetQuotedValue(target)})/{(long)1000000 * 60})::int8%60)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Seconds)), target => $"(floor(({this.GetQuotedValue(target)})/1000000)::int8%60)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Ticks)), target => $"(({this.GetQuotedValue(target)})*10)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalDays)), target => $"(({this.GetQuotedValue(target)})/{(long)1000000 * 60 * 60 * 24})");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalHours)), target => $"(({this.GetQuotedValue(target)})/{(long)1000000 * 60 * 60})");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalMilliseconds)), target => $"(({this.GetQuotedValue(target)})/1000)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalMinutes)), target => $"(({this.GetQuotedValue(target)})/{(long)1000000 * 60})");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalSeconds)), target => $"(({this.GetQuotedValue(target)})/1000000)");
+
+
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.Count), Type.EmptyTypes), (target, deferredExprs, arguments) => "COUNT(1)");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.LongCount), Type.EmptyTypes), (target, deferredExprs, arguments) => "COUNT(1)");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.Count), 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"COUNT({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.CountDistinct), 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"COUNT(DISTINCT {arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.LongCount), 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"COUNT({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.LongCountDistinct), 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"COUNT(DISTINCT {arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.Sum), 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"SUM({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.SumAs), 2, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"SUM({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.Avg), 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"AVG({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.AvgAs), 2, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"AVG({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.Max), 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"MAX({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.MaxAs), 2, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"MAX({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.Min), 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"MIN({arguments[0]})");
+        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.MinAs), 2, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"MIN({arguments[0]})");
     }
 
     public override IDbConnection CreateConnection(string connectionString)
@@ -35,32 +161,28 @@ public class NpgSqlProvider : BaseOrmProvider
     }
     public override string GetFieldName(string propertyName) => "\"" + propertyName + "\"";
     public override string GetTableName(string entityName) => "\"" + entityName + "\"";
-    public override int GetNativeDbType(Type itemType)
+    public override int GetNativeDbType(Type type)
     {
-        var typeCode = Type.GetTypeCode(itemType);
-        switch (typeCode)
+        if (nativeDbTypes.TryGetValue(type, out var dbType))
+            return dbType;
+
+        //数组类型
+        if (typeof(IEnumerable).IsAssignableFrom(type))
         {
-            case TypeCode.Boolean: return int.MinValue | 2;//boolean
-            case TypeCode.Byte: return int.MinValue | 18;//smallint
-            case TypeCode.SByte: return int.MinValue | 18;//smallint
-            case TypeCode.Int16: return int.MinValue | 18;//smallint
-            case TypeCode.UInt16: return int.MinValue | 9;//integer
-            case TypeCode.Int32: return int.MinValue | 9;//integer
-            case TypeCode.UInt32: return int.MinValue | 1;//bigint
-            case TypeCode.Int64: return int.MinValue | 1;//bigint
-            case TypeCode.UInt64: return int.MinValue | 8;//double TODO
-            case TypeCode.Single: return int.MinValue | 17;//real
-            case TypeCode.Double: return int.MinValue | 8;//double
-            case TypeCode.Decimal: return int.MinValue | 13;//numeric
-            case TypeCode.DateTime: return int.MinValue | 21;//timestamp
-            case TypeCode.String: return int.MinValue | 22;//varchar
-            default:
-                if (itemType == typeof(DateTimeOffset)) return int.MinValue | 26;//timestamptz
-                if (itemType == typeof(Guid)) return int.MinValue | 27;//uuid
-                if (itemType == typeof(TimeSpan)) return int.MinValue | 20;//time
-                return int.MinValue | 40;//unknown 
+            var genericType = type.GetGenericArguments().FirstOrDefault();
+            if (nativeDbTypes.TryGetValue(genericType, out dbType))
+                return int.MinValue | dbType;
         }
+        return 0;
     }
+    public override string CastTo(Type type)
+    {
+        if (castTos.TryGetValue(type, out var dbType))
+            return dbType;
+        return type.ToString().ToLower();
+    }
+    public override bool TryGetMemberAccessSqlFormatter(MemberInfo memberInfo, out MemberAccessSqlFormatter formatter)
+       => memberAccessSqlFormatterCahe.TryGetValue(memberInfo, out formatter);
     public override bool TryGetMethodCallSqlFormatter(MethodInfo methodInfo, out MethodCallSqlFormatter formatter)
     {
         if (!methodCallSqlFormatterCahe.TryGetValue(methodInfo, out formatter))
@@ -72,53 +194,93 @@ public class NpgSqlProvider : BaseOrmProvider
                 case "Contains":
                     //public static bool Contains<TSource>(this IEnumerable<TSource> source, TSource value);
                     //public static bool Contains<TSource>(this IEnumerable<TSource> source, TSource value, IEqualityComparer<TSource>? comparer);
-                    if (methodInfo.IsStatic && parameterInfos.Length >= 2 && parameterInfos[0].ParameterType.IsAssignableFrom(typeof(IEnumerable)))
+                    if (methodInfo.IsStatic && parameterInfos.Length >= 2 && parameterInfos[0].ParameterType.GenericTypeArguments.Length > 0
+                        && parameterInfos[0].ParameterType.IsAssignableFrom(typeof(IEnumerable<>).MakeGenericType(parameterInfos[0].ParameterType.GenericTypeArguments[0])))
                     {
-                        //数组调用                        
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, args) =>
+                        //数组调用
+                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
                         {
                             var builder = new StringBuilder();
-                            var enumerable = args[0] as IEnumerable;
+                            IEnumerable enumerable = null;
+                            if (args[0] is SqlSegment argsSegment)
+                                enumerable = argsSegment.Value as IEnumerable;
+                            else enumerable = args[0] as IEnumerable;
+
                             foreach (var element in enumerable)
                             {
                                 if (builder.Length > 0)
-                                    builder.Append(",");
-                                builder.Append(element);
+                                    builder.Append(',');
+                                //目前数组元素有SqlSegment包装
+                                builder.Append(this.GetQuotedValue(element));
                             }
-                            var fieldName = args[1] as string;
+
+                            var fieldName = this.GetQuotedValue(args[1]);
+                            int notIndex = 0;
+                            if (deferExprs != null)
+                            {
+                                while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
+                                {
+                                    notIndex++;
+                                }
+                            }
+                            string notString = notIndex % 2 > 0 ? " NOT" : "";
+
                             if (builder.Length > 0)
                             {
-                                builder.Insert(0, fieldName + " IN (");
-                                builder.Append(")");
+                                builder.Insert(0, fieldName + $"{notString} IN (");
+                                builder.Append(')');
                             }
-                            //TODO:如果数组没有数据，抛出异常
-                            //else builder.Append(fieldName + " IN (NULL)");
+                            //TODO:如果数组没有数据，空数据
+                            else builder.Append(fieldName + " IN (NULL)");
                             return builder.ToString();
                         });
                         result = true;
                     }
                     //IEnumerable<T>,List<T>
                     //public bool Contains(T item);
-                    if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType.IsAssignableFrom(typeof(IEnumerable)))
+                    if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
+                        && methodInfo.DeclaringType.IsAssignableFrom(typeof(IEnumerable<>).MakeGenericType(methodInfo.DeclaringType.GenericTypeArguments[0])))
                     {
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, args) =>
+                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
                         {
                             var builder = new StringBuilder();
-                            var enumerable = target as IEnumerable;
+                            IEnumerable enumerable = null;
+                            if (target is SqlSegment argsSegment)
+                                enumerable = argsSegment.Value as IEnumerable;
+                            else enumerable = target as IEnumerable;
+
                             foreach (var element in enumerable)
                             {
                                 if (builder.Length > 0)
-                                    builder.Append(",");
+                                    builder.Append(',');
+                                //目前数组元素是原来的值，没有SqlSegment包装
+                                builder.Append(this.GetQuotedValue(element));
+                            }
+
+                            foreach (var element in enumerable)
+                            {
+                                if (builder.Length > 0)
+                                    builder.Append(',');
                                 builder.Append(element);
                             }
-                            var fieldName = args[0] as string;
+                            var fieldName = this.GetQuotedValue(args[0]);
+                            int notIndex = 0;
+                            if (deferExprs != null)
+                            {
+                                while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
+                                {
+                                    notIndex++;
+                                }
+                            }
+                            string notString = notIndex % 2 > 0 ? " NOT" : "";
+
                             if (builder.Length > 0)
                             {
-                                builder.Insert(0, fieldName + " IN (");
-                                builder.Append(")");
+                                builder.Insert(0, fieldName + $"{notString} IN (");
+                                builder.Append(')');
                             }
-                            //TODO:如果数组没有数据，抛出异常
-                            //else builder.Append(fieldName + " IN (NULL)");
+                            //TODO:如果数组没有数据，空数据
+                            else builder.Append(fieldName + " IN (NULL)");
                             return builder.ToString();
                         });
                         return true;
@@ -128,11 +290,32 @@ public class NpgSqlProvider : BaseOrmProvider
                     //public bool Contains(char value, StringComparison comparisonType);
                     //public bool Contains(String value);
                     //public bool Contains(String value, StringComparison comparisonType);
-                    if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType.IsAssignableFrom(typeof(string)))
+                    if (!methodInfo.IsStatic && parameterInfos.Length >= 1 && methodInfo.DeclaringType.IsAssignableFrom(typeof(string)))
                     {
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, args) =>
-                            $"{target} LIKE '%{args[0]}%'"
-                        );
+                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
+                        {
+                            var leftField = this.GetQuotedValue(target);
+                            string rightValue = null;
+                            if (args[0] is SqlSegment rightSegment && rightSegment.IsParameter)
+                            {
+                                var concatMethodInfo = typeof(string).GetMethod("Concat", BindingFlags.Public | BindingFlags.Static, new Type[] { typeof(string), typeof(string), typeof(string) });
+                                if (this.TryGetMethodCallSqlFormatter(concatMethodInfo, out var concatFormatter))
+                                    //自己调用字符串连接，参数直接是字符串
+                                    rightValue = concatFormatter.Invoke(null, deferExprs, "'%'", rightSegment.Value.ToString(), "'%'");
+                            }
+                            else rightValue = $"'%{args[0]}%'";
+
+                            int notIndex = 0;
+                            if (deferExprs != null)
+                            {
+                                while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
+                                {
+                                    notIndex++;
+                                }
+                            }
+                            string notString = notIndex % 2 > 0 ? " NOT" : "";
+                            return $"{leftField}{notString} LIKE {rightValue}";
+                        });
                         result = true;
                     }
                     break;
@@ -149,7 +332,7 @@ public class NpgSqlProvider : BaseOrmProvider
                         //public static String Concat(ReadOnlySpan<char> str0, ReadOnlySpan<char> str1, ReadOnlySpan<char> str2, ReadOnlySpan<char> str3);
                         //public static IEnumerable<TSource> Concat<TSource>(this IEnumerable<TSource> first, IEnumerable<TSource> second);
                         //TODO:测试一下IEnumerable<TSource> Concat<TSource>(this IEnumerable<TSource> first, IEnumerable<TSource> second)
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, args) =>
+                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
                         {
                             var builder = new StringBuilder();
                             foreach (var arg in args)
@@ -159,110 +342,374 @@ public class NpgSqlProvider : BaseOrmProvider
                                     foreach (var element in enumerable)
                                     {
                                         if (builder.Length > 0)
-                                            builder.Append(",");
-                                        builder.Append(element);
+                                            builder.Append(" || ");
+                                        builder.Append(this.GetQuotedValue(element));
                                     }
                                 }
-                                else builder.Append(arg);
-                            }
-                            if (builder.Length > 0)
-                            {
-                                builder.Insert(0, "CONCAT(");
-                                builder.Append(")");
+                                else
+                                {
+                                    if (builder.Length > 0)
+                                        builder.Append(" || ");
+                                    builder.Append(this.GetQuotedValue(arg));
+                                }
                             }
                             return builder.ToString();
                         });
                         result = true;
                     }
                     break;
-                case "Compare":
-                    //String.Compare  不区分大小写
-                    if (methodInfo.IsStatic && parameterInfos.Length >= 2 && parameterInfos.Length <= 4)
+                case "Format":
+                    if (methodInfo.IsStatic && methodInfo.DeclaringType == typeof(string))
                     {
-                        //public static int Compare(String? strA, String? strB, bool ignoreCase, CultureInfo? culture);
-                        //public static int Compare(String? strA, String? strB, bool ignoreCase);
-                        //public static int Compare(String? strA, String? strB);
-                        formatter = (target, args) => $"(CASE WHEN {args[0]}={args[1]} THEN 0 WHEN {args[0]}>{args[1]} THEN 1 ELSE -1 END)";
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                        //public static String Format(String format, object? arg0);
+                        //public static String Format(String format, object? arg0, object? arg1); 
+                        //public static String Format(String format, object? arg0, object? arg1, object? arg2); 
+                        //public static String Format(String format, params object?[] args);
+                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
+                        {
+                            var parameters = new List<object>(args);
+                            parameters.RemoveAt(0);
+                            //直接计算
+                            return string.Format(args[0] as string, parameters.ToArray());
+                        });
                         result = true;
                     }
                     break;
+                case "Compare":
+                    if (methodInfo.IsStatic && methodInfo.DeclaringType == typeof(string))
+                    {
+                        //String.Compare  不区分大小写
+                        //public static int Compare(String? strA, String? strB);
+                        //public static int Compare(String? strA, String? strB, bool ignoreCase);
+                        //public static int Compare(String? strA, String? strB, bool ignoreCase, CultureInfo? culture);
+                        if (parameterInfos.Length >= 2 && parameterInfos.Length <= 4)
+                        {
+                            methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
+                            {
+                                var leftArgument = this.GetQuotedValue(args[0]);
+                                var rightArgument = this.GetQuotedValue(args[1]);
+                                return $"(CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END)";
+                            });
+                            result = true;
+                        }
+                    }
+                    break;
                 case "CompareOrdinal":
-                    if (methodInfo.IsStatic && parameterInfos.Length == 2)
+                    if (methodInfo.IsStatic && methodInfo.DeclaringType == typeof(string))
                     {
                         //public static int CompareOrdinal(String? strA, String? strB);
-                        formatter = (target, args) => $"(CASE WHEN {args[0]}={args[1]} THEN 0 WHEN {args[0]}>{args[1]} THEN 1 ELSE -1 END)";
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                        result = true;
+                        if (parameterInfos.Length == 2)
+                        {
+                            methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
+                            {
+                                var leftArgument = this.GetQuotedValue(args[0]);
+                                var rightArgument = this.GetQuotedValue(args[1]);
+                                return $"(CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END)";
+                            });
+                            result = true;
+                        }
                     }
                     break;
                 case "CompareTo":
                     if (!methodCallSqlFormatterCahe.TryGetValue(methodInfo, out formatter))
                     {
-                        //public static int CompareOrdinal(String? strA, String? strB);
-                        formatter = (target, args) => $"(CASE WHEN {target}={args[0]} THEN 0 WHEN {target}>{args[0]} THEN 1 ELSE -1 END)";
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                        //各种类型都有CompareTo方法
+                        //public int CompareTo(Boolean value);
+                        //public int CompareTo(Int32 value);
+                        //public int CompareTo(Double value);
+                        //public int CompareTo(DateTime value);
+                        //public int CompareTo(object? value);
+                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
+                        {
+                            var leftArgument = this.GetQuotedValue(target);
+                            var rightArgument = this.GetQuotedValue(args[0]);
+                            return $"(CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END)";
+                        });
                         result = true;
                     }
                     break;
                 case "Trim":
-                    formatter = (target, args) => $"ltrim(rtrim({target}))";
+                    formatter = (target, deferExprs, args) => $"ltrim(rtrim({target}))";
                     methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
                     result = true;
                     break;
                 case "LTrim":
-                    formatter = (target, args) => $"ltrim({target})";
+                    formatter = (target, deferExprs, args) => $"ltrim({target})";
                     methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
                     result = true;
                     break;
                 case "RTrim":
-                    formatter = (target, args) => $"rtrim({target})";
+                    formatter = (target, deferExprs, args) => $"rtrim({target})";
                     methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
                     result = true;
                     break;
                 case "ToUpper":
-                    formatter = (target, args) => $"upper({target})";
+                    formatter = (target, deferExprs, args) => $"upper({target})";
                     methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
                     result = true;
                     break;
                 case "ToLower":
-                    formatter = (target, args) => $"lower({target})";
+                    formatter = (target, deferExprs, args) => $"lower({target})";
                     methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
                     result = true;
                     break;
                 case "Equals":
-                    formatter = (target, args) => $"{target}={this.GetQuotedValue(args[0])}";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
+                    {
+                        var leftTarget = this.GetQuotedValue(target);
+                        var rightValue = this.GetQuotedValue(args[0]);
+                        int notIndex = 0;
+                        if (deferExprs != null)
+                        {
+                            while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
+                            {
+                                notIndex++;
+                            }
+                        }
+                        string equalsString = notIndex % 2 > 0 ? "<>" : "=";
+                        return $"{leftTarget}{equalsString}{rightValue}";
+                    });
                     result = true;
                     break;
                 case "StartsWith":
-                    formatter = (target, args) => $"{target} LIKE '{args[0]}%'";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
+                    {
+                        var leftField = this.GetQuotedValue(target);
+                        var rightValue = $"'{args[0]}%'";
+                        int notIndex = 0;
+                        if (deferExprs != null)
+                        {
+                            while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
+                            {
+                                notIndex++;
+                            }
+                        }
+                        string notString = notIndex % 2 > 0 ? " NOT" : "";
+                        return $"{leftField}{notString} LIKE {rightValue}";
+                    });
                     result = true;
                     break;
                 case "EndsWith":
-                    formatter = (target, args) => $"{target} LIKE '%{args[0]}'";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
+                    {
+                        var leftField = this.GetQuotedValue(target);
+                        var rightValue = $"'%{args[0]}'";
+                        int notIndex = 0;
+                        if (deferExprs != null)
+                        {
+                            while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
+                            {
+                                notIndex++;
+                            }
+                        }
+                        string notString = notIndex % 2 > 0 ? " NOT" : "";
+                        return $"{leftField}{notString} LIKE {rightValue}";
+                    });
                     result = true;
                     break;
                 case "Substring":
                     if (parameterInfos.Length > 1)
-                        formatter = (target, args) => $"substring({target} from {(int)(args[0]) + 1} for {args[1]})";
-                    else formatter = (target, args) => $"substring({target} from {(int)(args[0]) + 1}";
+                        formatter = (target, deferExprs, args) => $"SUBSTR({target},{args[0]},{args[1]})";
+                    else formatter = (target, deferExprs, args) => $"SUBSTR({target},{args[0]})";
                     result = true;
                     break;
                 case "ToString":
-                    if (methodInfo.DeclaringType == typeof(string))
-                        formatter = (target, args) => target.ToString();
-                    else formatter = (target, args) => $"CAST({target} AS VARCHAR(1000))";
+                    if (methodInfo.IsStatic)
+                    {
+                        formatter = (target, deferExprs, args) =>
+                        {
+                            if (args[0] is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
+                                return $"CAST({sqlSegment} AS {this.CastTo(typeof(string))})";
+                            return args[0].ToString();
+                        };
+                    }
+                    else
+                    {
+                        formatter = (target, deferExprs, args) =>
+                        {
+                            if (target is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
+                                return $"CAST({sqlSegment} AS {this.CastTo(typeof(string))})";
+                            return target.ToString();
+                        };
+                    }
                     methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
                     result = true;
                     break;
+                case "Parse":
+                case "TryParse":
+                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(methodInfo.DeclaringType)})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+
+                case "ToBoolean":
+                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(typeof(bool))})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "ToByte":
+                    formatter = (target, deferExprs, args) => $"({args[0]})::int2";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "ToChar":
+                    formatter = (target, deferExprs, args) => $"SUBSTR(({args[0]})::char,1,1)";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "ToDateTime":
+                    formatter = (target, deferExprs, args) => $"({args[0]})::timestamp";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "ToDecimal":
+                    formatter = (target, deferExprs, args) => $"({args[0]})::numeric";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "ToDouble":
+                    formatter = (target, deferExprs, args) => $"({args[0]})::float8";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "ToInt16":
+                    formatter = (target, deferExprs, args) => $"({args[0]})::int2";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "ToInt32":
+                    formatter = (target, deferExprs, args) => $"({args[0]})::int4";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "ToInt64":
+                    formatter = (target, deferExprs, args) => $"({args[0]})::int8";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "ToSByte":
+                    formatter = (target, deferExprs, args) => $"({args[0]})::int2";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "ToSingle":
+                    formatter = (target, deferExprs, args) => $"({args[0]})::float4";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "ToUInt16":
+                    formatter = (target, deferExprs, args) => $"({args[0]})::int2";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "ToUInt32":
+                    formatter = (target, deferExprs, args) => $"({args[0]})::int4";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "ToUInt64":
+                    formatter = (target, deferExprs, args) => $"({args[0]})::int8";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+
+                case "Abs":
+                    formatter = (target, deferExprs, args) => $"ABS({args[0]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Sign":
+                    formatter = (target, deferExprs, args) => $"SIGN({args[0]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Floor":
+                    formatter = (target, deferExprs, args) => $"FLOOR({args[0]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Ceiling":
+                    formatter = (target, deferExprs, args) => $"CEILING({args[0]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Round":
+                    if (parameterInfos.Length > 1 && parameterInfos[1].ParameterType == typeof(int))
+                        formatter = (target, deferExprs, args) => $"ROUND({args[0]},{args[1]})";
+                    formatter = (target, deferExprs, args) => $"ROUND({args[0]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Exp":
+                    formatter = (target, deferExprs, args) => $"EXP({args[0]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Log":
+                    formatter = (target, deferExprs, args) => $"LOG({args[0]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Log10":
+                    formatter = (target, deferExprs, args) => $"LOG10({args[0]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Pow":
+                    formatter = (target, deferExprs, args) => $"POW({args[0]},{args[1]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Sqrt":
+                    formatter = (target, deferExprs, args) => $"SQRT({args[0]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Cos":
+                    formatter = (target, deferExprs, args) => $"COS({args[0]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Sin":
+                    formatter = (target, deferExprs, args) => $"SIN({args[0]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Tan":
+                    formatter = (target, deferExprs, args) => $"TAN({args[0]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Acos":
+                    formatter = (target, deferExprs, args) => $"ACOS({args[0]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Asin":
+                    formatter = (target, deferExprs, args) => $"ASIN({args[0]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Atan":
+                    formatter = (target, deferExprs, args) => $"ATAN({args[0]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Atan2":
+                    formatter = (target, deferExprs, args) => $"ATAN2({args[0]},{args[1]})";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+                case "Truncate":
+                    formatter = (target, deferExprs, args) => $"TRUNC({args[0]},0)";
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                    result = true;
+                    break;
+
+                default: formatter = null; result = false; break;
             }
             return result;
         }
-        formatter = null;
-        return false;
+        return true;
     }
 }
-

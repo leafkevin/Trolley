@@ -7,62 +7,31 @@ using System.Text;
 
 namespace Trolley;
 
-class CreateVisitor : SqlVisitor
+class DeleteVisitor : SqlVisitor
 {
-    private string selectSql = null;
-    private string whereSql = null;
+    private Type entityType;
+    private string whereSql = string.Empty;
 
-    public CreateVisitor(IOrmDbFactory dbFactory, IOrmProvider ormProvider, Type entityType)
+    public DeleteVisitor(IOrmDbFactory dbFactory, IOrmProvider ormProvider, Type entityType)
         : base(dbFactory, ormProvider)
     {
-        this.tables = new();
-        this.tableAlias = new();
-        this.tables.Add(new TableSegment
-        {
-            EntityType = entityType,
-            Mapper = this.dbFactory.GetEntityMap(entityType)
-        });
+        this.entityType = entityType;
     }
     public string BuildSql(out List<IDbDataParameter> dbParameters)
     {
-        var entityTableName = this.ormProvider.GetTableName(this.tables[0].Mapper.TableName);
-        var builder = new StringBuilder($"INSERT INTO {entityTableName} {this.selectSql} FROM ");
-        for (var i = 1; i < this.tables.Count; i++)
-        {
-            var tableSegment = this.tables[i];
-            var tableName = tableSegment.Body;
-            if (string.IsNullOrEmpty(tableName))
-            {
-                tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
-                tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
-            }
-            if (i > 1) builder.Append(',');
-            builder.Append($"{tableName} {tableSegment.AliasName}");
-        }
+        var entityMapper = this.dbFactory.GetEntityMap(this.entityType);
+        var entityTableName = this.ormProvider.GetTableName(entityMapper.TableName);
+        var builder = new StringBuilder($"DELETE FROM {entityTableName}");
+
         if (!string.IsNullOrEmpty(this.whereSql))
             builder.Append(this.whereSql);
         dbParameters = this.dbParameters;
         return builder.ToString();
     }
-    public CreateVisitor From(Expression fieldSelector)
-    {
-        var lambdaExpr = fieldSelector as LambdaExpression;
-        this.InitTableAlias(lambdaExpr);
-        var sqlSegment = new SqlSegment { Expression = lambdaExpr.Body };
-        sqlSegment = lambdaExpr.Body.NodeType switch
-        {
-            ExpressionType.New => this.VisitNew(sqlSegment),
-            ExpressionType.MemberInit => this.VisitMemberInit(sqlSegment),
-            _ => throw new NotImplementedException("不支持的表达式，只支持New或MemberInit表达式，如: new { a.Id, b.Name + &quot;xxx&quot; } 或是new User { Id = a.Id, Name = b.Name + &quot;xxx&quot; }")
-        };
-        this.selectSql = sqlSegment.ToString();
-        return this;
-    }
-    public CreateVisitor Where(Expression whereExpr)
+    public DeleteVisitor Where(Expression whereExpr)
     {
         var lambdaExpr = whereExpr as LambdaExpression;
-        this.InitTableAlias(lambdaExpr);
-        this.whereSql = this.VisitConditionExpr(lambdaExpr.Body);
+        this.whereSql = " WHERE " + this.VisitConditionExpr(lambdaExpr.Body);
         return this;
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
@@ -117,13 +86,13 @@ class CreateVisitor : SqlVisitor
                     sqlSegment.HasField = true;
                     sqlSegment.TableSegment = tableSegment;
                     sqlSegment.MemberMapper = memberMapper;
-                    sqlSegment.Value = $"{tableSegment.AliasName}.{fieldName}";
+                    sqlSegment.Value = fieldName;
                     return this.VisitBooleanDeferred(sqlSegment);
                 }
                 sqlSegment.HasField = true;
                 sqlSegment.TableSegment = tableSegment;
                 sqlSegment.MemberMapper = memberMapper;
-                sqlSegment.Value = $"{tableSegment.AliasName}.{fieldName}";
+                sqlSegment.Value = fieldName;
                 return sqlSegment;
             }
         }
@@ -139,26 +108,23 @@ class CreateVisitor : SqlVisitor
         var newExpr = sqlSegment.Expression as NewExpression;
         if (newExpr.Type.Name.StartsWith("<>"))
         {
-            var insertBuilder = new StringBuilder("(");
-            var fromBuilder = new StringBuilder(") SELECT ");
+            var builder = new StringBuilder();
             var entityMapper = this.tables[0].Mapper;
             for (int i = 0; i < newExpr.Arguments.Count; i++)
             {
                 var memberInfo = newExpr.Members[i];
                 if (!entityMapper.TryGetMemberMap(memberInfo.Name, out _))
                     continue;
-                this.AddMemberElement(i, sqlSegment.Next(newExpr.Arguments[i]), memberInfo, insertBuilder, fromBuilder);
+                this.AddMemberElement(sqlSegment.Next(newExpr.Arguments[i]), memberInfo, builder);
             }
-            insertBuilder.Append(fromBuilder);
-            return sqlSegment.Change(insertBuilder.ToString());
+            return sqlSegment.Change(builder.ToString());
         }
         return this.EvaluateAndParameter(sqlSegment);
     }
     public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
     {
         var memberInitExpr = sqlSegment.Expression as MemberInitExpression;
-        var insertBuilder = new StringBuilder("(");
-        var fromBuilder = new StringBuilder(") SELECT ");
+        var builder = new StringBuilder();
         var entityMapper = this.tables[0].Mapper;
         for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
         {
@@ -167,51 +133,29 @@ class CreateVisitor : SqlVisitor
             var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
             if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out _))
                 continue;
-            this.AddMemberElement(i, sqlSegment.Next(memberAssignment.Expression), memberAssignment.Member, insertBuilder, fromBuilder);
+            this.AddMemberElement(sqlSegment.Next(memberAssignment.Expression), memberAssignment.Member, builder);
         }
-        insertBuilder.Append(fromBuilder);
-        return sqlSegment.Change(insertBuilder.ToString());
+        return sqlSegment.Change(builder.ToString());
     }
-    private void InitTableAlias(LambdaExpression lambdaExpr)
-    {
-        char tableIndex = 'a';
-        this.tableAlias.Clear();
-        for (int i = 0; i < lambdaExpr.Parameters.Count - 1; i++)
-        {
-            var parameterExpr = lambdaExpr.Parameters[i];
-            var tableSegment = new TableSegment
-            {
-                EntityType = parameterExpr.Type,
-                //可以省略
-                //Mapper = this.dbFactory.GetEntityMap(parameterExpr.Type),
-                AliasName = $"{(char)(tableIndex + i)}"
-            };
-            this.tables.Add(tableSegment);
-            this.tableAlias.Add(parameterExpr.Name, tableSegment);
-        }
-    }
-    private void AddMemberElement(int index, SqlSegment sqlSegment, MemberInfo memberInfo, StringBuilder insertBuilder, StringBuilder fromBuilder)
+    private void AddMemberElement(SqlSegment sqlSegment, MemberInfo memberInfo, StringBuilder builder)
     {
         var parameterName = this.ormProvider.ParameterPrefix + memberInfo.Name;
         sqlSegment.ParameterName = parameterName;
         sqlSegment = this.VisitAndDeferred(sqlSegment);
         var entityMapper = this.tables[0].Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberInfo.Name);
-        if (index > 0)
-        {
-            insertBuilder.Append(',');
-            fromBuilder.Append(',');
-        }
-        insertBuilder.Append(this.ormProvider.GetFieldName(memberMapper.FieldName));
+        if (builder.Length > 0)
+            builder.Append(',');
+        builder.Append(this.ormProvider.GetFieldName(memberMapper.FieldName) + "=");
         if (sqlSegment == SqlSegment.Null)
-            fromBuilder.Append("NULL");
+            builder.Append("NULL");
         else
         {
             if (sqlSegment.HasField)
-                fromBuilder.Append(sqlSegment.ToString());
+                builder.Append(sqlSegment.ToString());
             else
             {
-                fromBuilder.Append(parameterName);
+                builder.Append(parameterName);
                 if (!sqlSegment.IsParameter)
                     this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, sqlSegment.Value));
             }

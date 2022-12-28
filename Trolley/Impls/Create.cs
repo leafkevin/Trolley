@@ -339,50 +339,50 @@ class Created<TEntity> : ICreated<TEntity>
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");
 
             var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
-            var insertBuilderExpr = Expression.Variable(typeof(StringBuilder), "insertBuilder");
-            var valuesBuilderExpr = Expression.Variable(typeof(StringBuilder), "valuesBuilderExpr");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
             blockParameters.Add(typedParameterExpr);
-            blockParameters.Add(insertBuilderExpr);
-            blockParameters.Add(valuesBuilderExpr);
             blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
 
-            var ctor = typeof(StringBuilder).GetConstructor(new Type[] { typeof(string) });
-            var insertSqlExpr = Expression.Constant($"INSERT INTO {ormProvider.GetTableName(entityMapper.TableName)} (");
-            blockBodies.Add(Expression.Assign(insertBuilderExpr, Expression.New(ctor, insertSqlExpr)));
-            blockBodies.Add(Expression.Assign(valuesBuilderExpr, Expression.New(ctor, Expression.Constant(" VALUES("))));
-
-            var methodInfo1 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(char) });
-            var methodInfo2 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
-            var methodInfo3 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(StringBuilder) });
-            var methodInfo4 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
+            var insertBuilder = new StringBuilder($"INSERT INTO {ormProvider.GetTableName(entityMapper.TableName)} (");
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
                 if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper) || propMapper.IsIgnore || propMapper.IsNavigation)
                     continue;
 
                 if (columnIndex > 0)
-                {
-                    blockBodies.Add(Expression.Call(insertBuilderExpr, methodInfo1, Expression.Constant(',')));
-                    blockBodies.Add(Expression.Call(valuesBuilderExpr, methodInfo1, Expression.Constant(',')));
-                }
-                blockBodies.Add(Expression.Call(insertBuilderExpr, methodInfo2, Expression.Constant(ormProvider.GetFieldName(propMapper.FieldName))));
+                    insertBuilder.Append(',');
+                insertBuilder.Append(ormProvider.GetFieldName(propMapper.FieldName));
+                columnIndex++;
+            }
+            insertBuilder.Append(") VALUES ");
+
+            var methodInfo1 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(char) });
+            var methodInfo2 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
+            var methodInfo3 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
+
+            //添加INSERT INTO xxx() VALUES
+            var addInsertExpr = Expression.Call(builderExpr, methodInfo2, Expression.Constant(insertBuilder.ToString()));
+            var addCommaExpr = Expression.Call(builderExpr, methodInfo1, Expression.Constant(';'));
+            var greatThenExpr = Expression.GreaterThan(Expression.Property(builderExpr, nameof(StringBuilder.Length)), Expression.Constant(0, typeof(int)));
+            blockBodies.Add(Expression.IfThenElse(greatThenExpr, addCommaExpr, addInsertExpr));
+
+            foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
+            {
+                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper) || propMapper.IsIgnore || propMapper.IsNavigation)
+                    continue;
+
+                if (columnIndex > 0)
+                    blockBodies.Add(Expression.Call(builderExpr, methodInfo1, Expression.Constant(',')));
 
                 var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
                 var suffixExpr = Expression.Call(indexExpr, typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes));
-                var parameterNameExpr = Expression.Call(methodInfo4, Expression.Constant(parameterName), suffixExpr);
-                blockBodies.Add(Expression.Call(valuesBuilderExpr, methodInfo2, parameterNameExpr));
+                var parameterNameExpr = Expression.Call(methodInfo3, Expression.Constant(parameterName), suffixExpr);
+                blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
                 RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, parameterMemberMapper.MemberName, blockBodies);
                 columnIndex++;
             }
-            blockBodies.Add(Expression.Call(insertBuilderExpr, methodInfo1, Expression.Constant(')')));
-            blockBodies.Add(Expression.Call(valuesBuilderExpr, methodInfo1, Expression.Constant(')')));
-
-            var greatThenExpr = Expression.GreaterThan(Expression.Property(builderExpr, nameof(StringBuilder.Length)), Expression.Constant(0, typeof(int)));
-            blockBodies.Add(Expression.IfThen(greatThenExpr, Expression.Call(builderExpr, methodInfo1, Expression.Constant(';'))));
-            blockBodies.Add(Expression.Call(builderExpr, methodInfo3, insertBuilderExpr));
-            blockBodies.Add(Expression.Call(builderExpr, methodInfo3, valuesBuilderExpr));
+            blockBodies.Add(Expression.Call(builderExpr, methodInfo1, Expression.Constant(')')));
 
             commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, StringBuilder, int, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
             commandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);

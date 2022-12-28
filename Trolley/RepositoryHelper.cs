@@ -29,6 +29,7 @@ class RepositoryHelper
         var addParameterExpr = Expression.Call(parametersExpr, methodInfo, dbParameterExpr);
         blockBodies.Add(addParameterExpr);
     }
+
     public static void AddDbParameter(ParameterExpression dbParametersExpr, ParameterExpression ormProviderExpr,
          Expression typedParameterExpr, Expression parameterNameExpr, string parameterMemberName, List<Expression> blockBodies)
     {
@@ -45,7 +46,7 @@ class RepositoryHelper
         blockBodies.Add(addParameterExpr);
     }
 
-   public static object GetMemberValue(MemberMap memberMapper, object entity)
+    public static object GetMemberValue(MemberMap memberMapper, object entity)
     {
         var cacheKey = HashCode.Combine(memberMapper.Parent.EntityType, memberMapper.MemberName);
         if (!memberGetterCache.TryGetValue(cacheKey, out var memberGetter))
