@@ -20,26 +20,6 @@ class Program
     }
     static void Main(string[] args)
     {
-        //var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
-        //var connection = new MySqlConnection(connectionString);
-        //var command = new MySqlCommand("select Name from sys_user where Id=3", connection);
-        //connection.Open();
-        //var reader = command.ExecuteReader();
-        //if (reader.Read())
-        //{
-        //    var readerValue = reader.GetValue(0);
-        //    int sfdsfsdf = 0;
-        //}
-
-        //Init(() => new Order
-        //{
-        //    OrderNo = "ddd",
-        //    TotalAmount = 5 + amount,
-        //    Buyer = new User { Age = 40, Name = "leafkevin" },
-        //    Details = new List<OrderDetail>() { new OrderDetail { Price = 2, Amount = 3 } }
-        //});
-        //Init(f => f.TotalAmount == 456 + 15);
-
         var services = new ServiceCollection();
         services.AddSingleton<IOrmProvider, MySqlProvider>();
         services.AddSingleton<IOrmDbFactory, OrmDbFactory>(f =>

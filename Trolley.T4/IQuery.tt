@@ -66,7 +66,9 @@ public interface IQuery<T>
 
     #region Where
     IQuery<T> Where(Expression<Func<T, bool>> predicate);
-    IQuery<T> Where(bool condition, Expression<Func<T, bool>> predicate);
+    IQuery<T> Where(Expression<Func<IWhereSql, T, bool>> predicate);
+    IQuery<T> And(bool condition, Expression<Func<T, bool>> predicate);    
+    IQuery<T> And(bool condition, Expression<Func<IWhereSql, T, bool>> predicate);    
     #endregion
 
     #region GroupBy/OrderBy
@@ -122,7 +124,7 @@ public interface IQuery<T>
     Task<IPagedList<T>> ToPageListAsync(int pageIndex, int pageSize, CancellationToken cancellationToken = default);
     Dictionary<TKey, TElement> ToDictionary<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> valueSelector) where TKey : notnull;
     Task<Dictionary<TKey, TElement>> ToDictionaryAsync<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull;
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 <#
     var count = 16;
@@ -149,8 +151,8 @@ public interface IQuery<<#=tables#>>
 
     IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
     IQuery<<#=tables#>> Where(Expression<Func<IWhereSql, <#=tables#>, bool>> predicate);
-    IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> predicate);
-    IQuery<<#=tables#>> Where(bool condition, Expression<Func<IWhereSql, <#=tables#>, bool>> predicate);
+    IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate);
+    IQuery<<#=tables#>> And(bool condition, Expression<Func<IWhereSql, <#=tables#>, bool>> predicate);
 
     IGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr);
     IQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
@@ -194,7 +196,7 @@ public interface IQuery<<#=tables#>>
     TTarget MinAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 <#  }
     tables += $", T{count}";
@@ -212,7 +214,7 @@ public interface IQuery<<#=tables#>>
     IQuery<<#=tables#>> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
 
     IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
-    IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> predicate);
+    IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate);
 
     IGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr);
     IQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
@@ -255,5 +257,5 @@ public interface IQuery<<#=tables#>>
     TTarget MinAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }

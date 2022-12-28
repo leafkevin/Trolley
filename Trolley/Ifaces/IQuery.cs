@@ -117,7 +117,7 @@ public interface IQuery<T>
     Task<IPagedList<T>> ToPageListAsync(int pageIndex, int pageSize, CancellationToken cancellationToken = default);
     Dictionary<TKey, TElement> ToDictionary<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> valueSelector) where TKey : notnull;
     Task<Dictionary<TKey, TElement>> ToDictionaryAsync<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull;
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2>
 {
@@ -137,8 +137,8 @@ public interface IQuery<T1, T2>
 
     IQuery<T1, T2> Where(Expression<Func<T1, T2, bool>> predicate);
     IQuery<T1, T2> Where(Expression<Func<IWhereSql, T1, T2, bool>> predicate);
-    IQuery<T1, T2> Where(bool condition, Expression<Func<T1, T2, bool>> predicate);
-    IQuery<T1, T2> Where(bool condition, Expression<Func<IWhereSql, T1, T2, bool>> predicate);
+    IQuery<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> predicate);
+    IQuery<T1, T2> And(bool condition, Expression<Func<IWhereSql, T1, T2, bool>> predicate);
 
     IGroupingQuery<T1, T2, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, TGrouping>> groupingExpr);
     IQuery<T1, T2> OrderBy<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr);
@@ -182,7 +182,7 @@ public interface IQuery<T1, T2>
     TTarget MinAs<TField, TTarget>(Expression<Func<T1, T2, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3>
 {
@@ -202,8 +202,8 @@ public interface IQuery<T1, T2, T3>
 
     IQuery<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate);
     IQuery<T1, T2, T3> Where(Expression<Func<IWhereSql, T1, T2, T3, bool>> predicate);
-    IQuery<T1, T2, T3> Where(bool condition, Expression<Func<T1, T2, T3, bool>> predicate);
-    IQuery<T1, T2, T3> Where(bool condition, Expression<Func<IWhereSql, T1, T2, T3, bool>> predicate);
+    IQuery<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> predicate);
+    IQuery<T1, T2, T3> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, bool>> predicate);
 
     IGroupingQuery<T1, T2, T3, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3> OrderBy<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr);
@@ -247,7 +247,7 @@ public interface IQuery<T1, T2, T3>
     TTarget MinAs<TField, TTarget>(Expression<Func<T1, T2, T3, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4>
 {
@@ -267,8 +267,8 @@ public interface IQuery<T1, T2, T3, T4>
 
     IQuery<T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate);
     IQuery<T1, T2, T3, T4> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, bool>> predicate);
-    IQuery<T1, T2, T3, T4> Where(bool condition, Expression<Func<T1, T2, T3, T4, bool>> predicate);
-    IQuery<T1, T2, T3, T4> Where(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, bool>> predicate);
+    IQuery<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> predicate);
+    IQuery<T1, T2, T3, T4> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, bool>> predicate);
 
     IGroupingQuery<T1, T2, T3, T4, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr);
@@ -312,7 +312,7 @@ public interface IQuery<T1, T2, T3, T4>
     TTarget MinAs<TField, TTarget>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5>
 {
@@ -332,8 +332,8 @@ public interface IQuery<T1, T2, T3, T4, T5>
 
     IQuery<T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, bool>> predicate);
 
     IGroupingQuery<T1, T2, T3, T4, T5, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr);
@@ -377,7 +377,7 @@ public interface IQuery<T1, T2, T3, T4, T5>
     TTarget MinAs<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6>
 {
@@ -397,8 +397,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6>
 
     IQuery<T1, T2, T3, T4, T5, T6> Where(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6> Where(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, bool>> predicate);
 
     IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
@@ -442,7 +442,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6>
     TTarget MinAs<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7>
 {
@@ -462,8 +462,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7>
 
     IQuery<T1, T2, T3, T4, T5, T6, T7> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7> Where(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, bool>> predicate);
 
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
@@ -507,7 +507,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7>
     TTarget MinAs<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
 {
@@ -527,8 +527,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Where(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate);
 
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
@@ -572,7 +572,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
     TTarget MinAs<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
 {
@@ -592,8 +592,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate);
 
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
@@ -637,7 +637,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
     TTarget MinAs<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
 {
@@ -657,8 +657,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate);
 
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
@@ -702,7 +702,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
     TTarget MinAs<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
 {
@@ -722,8 +722,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate);
 
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
@@ -767,7 +767,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
     TTarget MinAs<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
 {
@@ -787,8 +787,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate);
 
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
@@ -832,7 +832,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
     TTarget MinAs<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
 {
@@ -852,8 +852,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate);
 
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
@@ -897,7 +897,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
     TTarget MinAs<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
 {
@@ -917,8 +917,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate);
 
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
@@ -962,7 +962,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     TTarget MinAs<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
 {
@@ -982,8 +982,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate);
 
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
@@ -1027,7 +1027,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     TTarget MinAs<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>
 {
@@ -1042,7 +1042,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate);
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate);
 
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr);
@@ -1085,5 +1085,5 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     TTarget MinAs<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr);
     Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
-    string ToSql(out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields);
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
