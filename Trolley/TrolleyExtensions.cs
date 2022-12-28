@@ -19,7 +19,7 @@ public static class TrolleyExtensions
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
 
     public static int Create<TEntity>(this Repository repository, object parameter)
-        => repository.Create<TEntity>().WithBy(parameter).Execute();
+      => repository.Create<TEntity>().WithBy(parameter).Execute();
     public static async Task<int> CreateAsync<TEntity>(this Repository repository, object parameter, CancellationToken cancellationToken = default)
         => await repository.Create<TEntity>().WithBy(parameter).ExecuteAsync(cancellationToken);
     public static int Create<TEntity>(this Repository repository, string sql, object parameter)
