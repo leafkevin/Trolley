@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 
-namespace Trolley.Providers;
+namespace Trolley;
 
 public delegate IDbConnection CreateNativeDbConnectionDelegate(string connectionString);
 public delegate IDbDataParameter CreateNativeParameterDelegate(string name, int nativeDbType, object value);
@@ -13,8 +13,6 @@ public abstract class BaseOrmProvider : IOrmProvider
     public abstract DatabaseType DatabaseType { get; }
     public virtual string ParameterPrefix => "@";
     public virtual string SelectIdentitySql => ";SELECT @@IDENTITY";
-    public virtual bool IsSupportArrayParameter => false;
-
 
     public abstract IDbConnection CreateConnection(string connectionString);
     public abstract IDbDataParameter CreateParameter(string parameterName, object value);
@@ -39,7 +37,11 @@ public abstract class BaseOrmProvider : IOrmProvider
         if (fieldType == typeof(DateTime))
             return $"'{value:yyyy-MM-dd HH:mm:ss}'";
         if (value is SqlSegment sqlSegment)
+        {
+            if (!sqlSegment.IsConstantValue)
+                return sqlSegment.Value.ToString();
             return this.GetQuotedValue(sqlSegment.Value);
+        }
         return value.ToString();
     }
     public abstract bool TryGetMemberAccessSqlFormatter(MemberInfo memberInfo, out MemberAccessSqlFormatter formatter);

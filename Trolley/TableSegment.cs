@@ -16,7 +16,5 @@ public class TableSegment
     public string Path { get; set; }
     public string Filter { get; set; }
     public string OnExpr { get; set; }
-    public int ReaderIndex { get; set; }
-    public int TableIndex { get; set; }
     public bool IsUsed { get; set; }
 }

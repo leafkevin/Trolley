@@ -16,11 +16,11 @@ public class MemberBuilder
         this.mapper.FieldName = fieldName;
         return this;
     }
-    public virtual MemberBuilder DbType(DbType dbType)
-    {
-        this.mapper.DbType = dbType;
-        return this;
-    }
+    //public virtual MemberBuilder DbType(DbType dbType)
+    //{
+    //    this.mapper.DbType = dbType;
+    //    return this;
+    //}
     public virtual MemberBuilder NativeDbType(int nativeDbType)
     {
         this.mapper.NativeDbType = nativeDbType;
@@ -48,11 +48,11 @@ public class MemberBuilder<TMember>
         this.mapper.FieldName = fieldName;
         return this;
     }
-    public virtual MemberBuilder<TMember> DbType(DbType dbType)
-    {
-        this.mapper.DbType = dbType;
-        return this;
-    }
+    //public virtual MemberBuilder<TMember> DbType(DbType dbType)
+    //{
+    //    this.mapper.DbType = dbType;
+    //    return this;
+    //}
     public virtual MemberBuilder<TMember> NativeDbType(int nativeDbType)
     {
         this.mapper.NativeDbType = nativeDbType;

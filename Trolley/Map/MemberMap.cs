@@ -17,7 +17,7 @@ public class MemberMap
     public bool IsKey { get; set; }
     public bool IsAutoIncrement { get; set; }
     public string FieldName { get; set; }
-    public DbType DbType { get; set; }
+    //public DbType DbType { get; set; }
     public int? NativeDbType { get; set; }
     public bool IsIgnore { get; set; }
 
@@ -53,7 +53,6 @@ public class MemberMap
                 this.MemberType = propertyInfo.PropertyType;
                 break;
         }
-        this.DbType = DbTypeMap.FindDbType(this.MemberType);
         this.UnderlyingType = this.MemberType;
         if (this.MemberType.IsValueType)
         {
@@ -85,7 +84,6 @@ public class MemberMap
                 result.MemberType = propertyInfo.PropertyType;
                 break;
         }
-        result.DbType = this.DbType;
         result.NativeDbType = this.NativeDbType;
         result.UnderlyingType = result.MemberType;
         if (result.MemberType.IsValueType)

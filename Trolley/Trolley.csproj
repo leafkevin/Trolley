@@ -7,14 +7,8 @@
 		<Description>一款轻量级高性能的ORM，支持模型映射，导航属性，值对象属性，表达式，分页，事务，多种数据库终端支持，支持同步/异步。</Description>
 	</PropertyGroup>
 	<ItemGroup>
-		<Compile Remove="Ifaces\IJoinQuery.cs" />
-		<Compile Remove="Impls\JoinQuery.cs" />
-		<Compile Remove="OrmDbFactoryBuilder.cs" />
-		<Compile Remove="Providers\NpgsqlProvider.cs" />
-		<Compile Remove="Providers\OracleProvider.cs" />
-		<Compile Remove="Providers\SqLiteProvider.cs" />
-		<Compile Remove="Providers\SqlServerProvider.cs" />
-		<Compile Remove="Repository1.cs" />
+	  <Compile Remove="Providers\OracleProvider.cs" />
+	  <Compile Remove="Providers\SqLiteProvider.cs" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="6.0.0" />
