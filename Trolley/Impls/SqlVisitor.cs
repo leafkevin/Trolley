@@ -4,11 +4,10 @@ using System.Data;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using System.Xml.Linq;
 
 namespace Trolley;
 
-public class SqlVisitor
+class SqlVisitor
 {
     protected readonly IOrmDbFactory dbFactory;
     protected readonly IOrmProvider ormProvider;
@@ -25,7 +24,7 @@ public class SqlVisitor
     }
 
     public virtual SqlSegment VisitAndDeferred(SqlSegment sqlSegment)
-      => this.VisitBooleanDeferred(this.Visit(sqlSegment));
+        => this.VisitBooleanDeferred(this.Visit(sqlSegment));
     public virtual SqlSegment Visit(SqlSegment sqlSegment)
     {
         if (sqlSegment == SqlSegment.None)
