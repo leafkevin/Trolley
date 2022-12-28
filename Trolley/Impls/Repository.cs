@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
@@ -180,7 +179,7 @@ public class Repository : IRepository
 
                     var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
                     var parameterNameExpr = Expression.Constant(parameterName, typeof(string));
-                    AddWhereParameter(commandExpr, ormProviderExpr, typedWhereObjExpr, parameterNameExpr, whereObjPropMapper.MemberName, blockBodies);
+                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedWhereObjExpr, parameterNameExpr, whereObjPropMapper.MemberName, blockBodies);
                     if (index > 0) builder.Append(" AND ");
                     builder.Append($"{ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
                     index++;
@@ -298,7 +297,7 @@ public class Repository : IRepository
 
                     var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
                     var parameterNameExpr = Expression.Constant(parameterName, typeof(string));
-                    AddWhereParameter(commandExpr, ormProviderExpr, typedWhereObjExpr, parameterNameExpr, whereObjPropMapper.MemberName, blockBodies);
+                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedWhereObjExpr, parameterNameExpr, whereObjPropMapper.MemberName, blockBodies);
                     if (index > 0) builder.Append(" AND ");
                     builder.Append($"{ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
                     index++;
@@ -420,7 +419,7 @@ public class Repository : IRepository
 
                     var parameterName = $"{ormProvider.ParameterPrefix}{propMapper.MemberName}";
                     var parameterNameExpr = Expression.Constant(parameterName, typeof(string));
-                    AddWhereParameter(commandExpr, ormProviderExpr, typedWhereObjExpr, parameterNameExpr, whereObjPropMapper.MemberName, blockBodies);
+                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedWhereObjExpr, parameterNameExpr, whereObjPropMapper.MemberName, blockBodies);
                     if (index > 0) builder.Append(" AND ");
                     builder.Append($"{ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
                     index++;
@@ -538,7 +537,7 @@ public class Repository : IRepository
 
                     var parameterName = $"{ormProvider.ParameterPrefix}{propMapper.MemberName}";
                     var parameterNameExpr = Expression.Constant(parameterName, typeof(string));
-                    AddWhereParameter(commandExpr, ormProviderExpr, typedWhereObjExpr, parameterNameExpr, whereObjPropMapper.MemberName, blockBodies);
+                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedWhereObjExpr, parameterNameExpr, whereObjPropMapper.MemberName, blockBodies);
                     if (index > 0) builder.Append(" AND ");
                     builder.Append($"{ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
                     index++;
@@ -681,7 +680,7 @@ public class Repository : IRepository
 
                     var parameterName = $"{ormProvider.ParameterPrefix}{propMapper.MemberName}";
                     var parameterNameExpr = Expression.Constant(parameterName, typeof(string));
-                    AddWhereParameter(commandExpr, ormProviderExpr, typedWhereObjExpr, parameterNameExpr, whereObjPropMapper.MemberName, blockBodies);
+                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedWhereObjExpr, parameterNameExpr, whereObjPropMapper.MemberName, blockBodies);
                     index++;
                 }
                 commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, whereObjExpr).Compile();
@@ -793,7 +792,7 @@ public class Repository : IRepository
 
                     var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
                     var parameterNameExpr = Expression.Constant(parameterName, typeof(string));
-                    AddWhereParameter(commandExpr, ormProviderExpr, typedWhereObjExpr, parameterNameExpr, whereObjPropMapper.MemberName, blockBodies);
+                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedWhereObjExpr, parameterNameExpr, whereObjPropMapper.MemberName, blockBodies);
                     index++;
                 }
                 commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, whereObjExpr).Compile();
@@ -960,49 +959,13 @@ public class Repository : IRepository
     #endregion
 
     #region Others
-    public void Close()
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task CloseAsync()
-    {
-        throw new NotImplementedException();
-    }
-
-    public void Timeout(int timeout)
-    {
-        throw new NotImplementedException();
-    }
+    public void Close() => this.connection?.Close();
+    public async Task CloseAsync() => await this.connection?.CloseAsync();
+    public void Timeout(int timeout) => this.connection.CommandTimeout = timeout;
     public void BeginTransaction() => this.transaction = this.Connection.BeginTransaction();
     public void Commit() => this.transaction.Commit();
     public void Rollback() => this.transaction.Rollback();
-    public void Dispose()
-    {
-        throw new NotImplementedException();
-    }
-
-    public ValueTask DisposeAsync()
-    {
-        throw new NotImplementedException();
-    }
+    public void Dispose() => this.connection?.Dispose();
+    public async ValueTask DisposeAsync() => await this.connection?.DisposeAsync();
     #endregion
-
-    private static void AddWhereParameter(ParameterExpression commandExpr, ParameterExpression ormProviderExpr,
-        Expression typedWhereObjExpr, Expression parameterNameExpr, string whereObjMemberName, List<Expression> blockBodies)
-    {
-        //var parameter = ormProvider.CreateParameter("@Parameter", whereObj.Name);
-        Expression whereObjValueExpr = Expression.PropertyOrField(typedWhereObjExpr, whereObjMemberName);
-        whereObjValueExpr = Expression.Convert(whereObjValueExpr, typeof(object));
-        var methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object) });
-        Expression dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, whereObjValueExpr);
-        dbParameterExpr = Expression.Convert(dbParameterExpr, typeof(object));
-
-        //command.Parameters.Add(parameter);
-        var propertyInfo = typeof(IDbCommand).GetProperty(nameof(IDbCommand.Parameters));
-        var parametersExpr = Expression.MakeMemberAccess(commandExpr, propertyInfo);
-        methodInfo = typeof(IList).GetMethod(nameof(IDbCommand.Parameters.Add));
-        var addParameterExpr = Expression.Call(parametersExpr, methodInfo, dbParameterExpr);
-        blockBodies.Add(addParameterExpr);
-    }
 }

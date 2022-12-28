@@ -59,9 +59,8 @@ public class EntityMap
         var memberInfos = this.EntityType.GetMember(memberName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
         if (memberInfos == null || memberInfos.Length <= 0)
             throw new Exception($"不存在名为{memberName}的成员");
-        //this.AddMemberMap(memberName, mapper = new MemberMap(this, this.FieldPrefix, memberInfos[0]));
-        //除了指定映射，其他成员映射不做缓存，根据成员信息现生成映射
-        return new MemberMap(this, this.FieldPrefix, memberInfos[0]);
+        this.AddMemberMap(memberName, mapper = new MemberMap(this, this.FieldPrefix, memberInfos[0]));
+        return mapper;
     }
 
     public void AddMemberMap(string memberName, MemberMap mapper)
@@ -78,13 +77,12 @@ public class EntityMap
             if (!this.IsNullable)
                 this.UnderlyingType = this.EntityType;
         }
-        //不补充其他未配置的列映射，在生成SQL的时候，动态获取，减少映射内存占用
-        //var memberInfos = this.GetMembers();
-        //foreach (var memberInfo in memberInfos)
-        //{
-        //    if (!this.TryGetMemberMap(memberInfo.Name, out _))
-        //        this.AddMemberMap(memberInfo.Name, new MemberMap(this, this.FieldPrefix, memberInfo));
-        //}
+        var memberInfos = this.GetMembers();
+        foreach (var memberInfo in memberInfos)
+        {
+            if (!this.TryGetMemberMap(memberInfo.Name, out _))
+                this.AddMemberMap(memberInfo.Name, new MemberMap(this, this.FieldPrefix, memberInfo));
+        }
         if (this.memberMaps.Count > 0)
         {
             this.KeyMembers = new List<MemberMap>();

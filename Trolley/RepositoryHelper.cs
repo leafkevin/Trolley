@@ -29,9 +29,8 @@ class RepositoryHelper
         var addParameterExpr = Expression.Call(parametersExpr, methodInfo, dbParameterExpr);
         blockBodies.Add(addParameterExpr);
     }
-
     public static void AddDbParameter(ParameterExpression dbParametersExpr, ParameterExpression ormProviderExpr,
-         Expression typedParameterExpr, Expression parameterNameExpr, string parameterMemberName, List<Expression> blockBodies)
+        Expression typedParameterExpr, Expression parameterNameExpr, string parameterMemberName, List<Expression> blockBodies)
     {
         //var parameter = ormProvider.CreateParameter("@Parameter", whereObj.Name);
         Expression whereObjValueExpr = Expression.PropertyOrField(typedParameterExpr, parameterMemberName);
@@ -45,7 +44,6 @@ class RepositoryHelper
         var addParameterExpr = Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr);
         blockBodies.Add(addParameterExpr);
     }
-
     public static object GetMemberValue(MemberMap memberMapper, object entity)
     {
         var cacheKey = HashCode.Combine(memberMapper.Parent.EntityType, memberMapper.MemberName);

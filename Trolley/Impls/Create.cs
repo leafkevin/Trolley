@@ -171,6 +171,12 @@ class Created<TEntity> : ICreated<TEntity>
             command.CommandType = CommandType.Text;
             command.Transaction = this.transaction;
             connection.Open();
+            var entityMapper = this.dbFactory.GetEntityMap(entityType);
+            if (entityMapper.IsAutoIncrement)
+            {
+                var reader = command.ExecuteReader();
+                if (reader.Read()) return reader.To<int>();
+            }
             return command.ExecuteNonQuery();
         }
     }
@@ -262,6 +268,12 @@ class Created<TEntity> : ICreated<TEntity>
                 throw new Exception("当前数据库驱动不支持异步SQL查询");
 
             await this.connection.OpenAsync(cancellationToken);
+            var entityMapper = this.dbFactory.GetEntityMap(entityType);
+            if (entityMapper.IsAutoIncrement)
+            {
+                var reader = await command.ExecuteReaderAsync(cancellationToken);
+                if (await reader.ReadAsync()) return reader.To<int>();
+            }
             return await command.ExecuteNonQueryAsync(cancellationToken);
         }
     }
@@ -347,7 +359,7 @@ class Created<TEntity> : ICreated<TEntity>
             var insertBuilder = new StringBuilder($"INSERT INTO {ormProvider.GetTableName(entityMapper.TableName)} (");
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
-                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper) || propMapper.IsIgnore || propMapper.IsNavigation)
+                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper) || propMapper.IsIgnore || propMapper.IsAutoIncrement || propMapper.IsNavigation)
                     continue;
 
                 if (columnIndex > 0)
@@ -363,13 +375,14 @@ class Created<TEntity> : ICreated<TEntity>
 
             //添加INSERT INTO xxx() VALUES
             var addInsertExpr = Expression.Call(builderExpr, methodInfo2, Expression.Constant(insertBuilder.ToString()));
-            var addCommaExpr = Expression.Call(builderExpr, methodInfo1, Expression.Constant(';'));
-            var greatThenExpr = Expression.GreaterThan(Expression.Property(builderExpr, nameof(StringBuilder.Length)), Expression.Constant(0, typeof(int)));
+            var addCommaExpr = Expression.Call(builderExpr, methodInfo1, Expression.Constant(','));
+            var greatThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0, typeof(int)));
             blockBodies.Add(Expression.IfThenElse(greatThenExpr, addCommaExpr, addInsertExpr));
-
+            blockBodies.Add(Expression.Call(builderExpr, methodInfo1, Expression.Constant('(')));
+            columnIndex = 0;
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
-                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper) || propMapper.IsIgnore || propMapper.IsNavigation)
+                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper) || propMapper.IsIgnore || propMapper.IsAutoIncrement || propMapper.IsNavigation)
                     continue;
 
                 if (columnIndex > 0)
@@ -384,7 +397,7 @@ class Created<TEntity> : ICreated<TEntity>
             }
             blockBodies.Add(Expression.Call(builderExpr, methodInfo1, Expression.Constant(')')));
 
-            commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, StringBuilder, int, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
+            commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, StringBuilder, int, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, builderExpr, indexExpr, parameterExpr).Compile();
             commandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
         }
         return (Action<IDbCommand, IOrmProvider, StringBuilder, int, object>)commandInitializerDelegate;
@@ -412,7 +425,7 @@ class Created<TEntity> : ICreated<TEntity>
             var valuesBuilder = new StringBuilder(" VALUES(");
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
-                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper) || propMapper.IsIgnore || propMapper.IsNavigation)
+                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper) || propMapper.IsIgnore || propMapper.IsAutoIncrement || propMapper.IsNavigation)
                     continue;
 
                 if (columnIndex > 0)
@@ -482,31 +495,37 @@ class Created<TEntity> : ICreated<TEntity>
             int columnIndex = 0;
             var dict = parameter as Dictionary<string, object>;
             var entityMapper = this.dbFactory.GetEntityMap(entityType);
-            var insertBuilder = new StringBuilder($"INSERT INTO {ormProvider.GetTableName(entityMapper.TableName)} (");
-            var valuesBuilder = new StringBuilder(" VALUES(");
+            if (index == 0)
+            {
+                builder.Append($"INSERT INTO {ormProvider.GetTableName(entityMapper.TableName)} (");
+                foreach (var item in dict)
+                {
+                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || propMapper.IsIgnore || propMapper.IsAutoIncrement || propMapper.IsNavigation)
+                        continue;
+                    if (columnIndex > 0)
+                        builder.Append(',');
+                    builder.Append(ormProvider.GetFieldName(propMapper.FieldName));
+                    columnIndex++;
+                }
+                builder.Append(") VALUES ");
+            }
+            else builder.Append(',');
+            columnIndex = 0;
+            builder.Append('(');
             foreach (var item in dict)
             {
-                if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || !propMapper.IsKey)
+                if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || propMapper.IsIgnore || propMapper.IsAutoIncrement || propMapper.IsNavigation)
                     continue;
 
-                var parameterName = ormProvider.ParameterPrefix + item.Key + index.ToString();
-                var dbParameter = ormProvider.CreateParameter(parameterName, dict[item.Key]);
+                var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName + index.ToString();
+                var dbParameter = ormProvider.CreateParameter(parameterName, dict[propMapper.MemberName]);
                 if (columnIndex > 0)
-                {
-                    insertBuilder.Append(',');
-                    valuesBuilder.Append(',');
-                }
-                insertBuilder.Append(ormProvider.GetFieldName(propMapper.FieldName));
-                valuesBuilder.Append(parameterName);
+                    builder.Append(',');
+                builder.Append(parameterName);
                 command.Parameters.Add(dbParameter);
                 columnIndex++;
             }
-            insertBuilder.Append(')');
-            valuesBuilder.Append(')');
-            if (builder.Length > 0)
-                builder.Append(';');
-            builder.Append(insertBuilder);
-            builder.Append(valuesBuilder);
+            builder.Append(')');
         };
     }
     private Func<IDbCommand, IOrmProvider, object, string> BuildCommandInitializer(Type entityType)
@@ -520,7 +539,7 @@ class Created<TEntity> : ICreated<TEntity>
             var valuesBuilder = new StringBuilder(" VALUES(");
             foreach (var item in dict)
             {
-                if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || !propMapper.IsKey)
+                if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || propMapper.IsIgnore || propMapper.IsAutoIncrement || propMapper.IsNavigation)
                     continue;
 
                 var parameterName = ormProvider.ParameterPrefix + item.Key;

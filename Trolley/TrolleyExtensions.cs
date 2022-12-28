@@ -421,60 +421,6 @@ public static class TrolleyExtensions
         var isNullExpr = Expression.TypeIs(valueExpr, typeof(DBNull));
         return Expression.Condition(isNullExpr, Expression.Default(targetType), typedValueExpr);
     }
-    private static void AddEntityReader(Expression readerValueExpr, IDataReader reader, int index, ParameterExpression readerExpr, EntityBuildInfo current, MemberSegment readerFieldInfo)
-    {
-        if (current.IsDefault) current.Bindings.Add(Expression.Bind(readerFieldInfo.FromMember, readerValueExpr));
-        else current.Arguments.Add(readerValueExpr);
-
-        if (readerFieldInfo.FromMember.GetMemberType().IsEntityType())
-        {
-            var parent = current;
-            var targetType = readerFieldInfo.TableSegment.EntityType;
-            bool isDefaultCtor = false;
-            List<MemberBinding> bindings = null;
-            List<Expression> ctorArguments = null;
-
-            var ctor = targetType.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
-            if (ctor != null)
-            {
-                bindings = new List<MemberBinding>();
-                isDefaultCtor = true;
-            }
-            else
-            {
-                ctor = targetType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).OrderBy(f => f.IsPublic ? 0 : (f.IsPrivate ? 2 : 1)).First();
-                ctorArguments = new List<Expression>();
-            }
-            current = new EntityBuildInfo
-            {
-                IsDefault = isDefaultCtor,
-                Constructor = ctor,
-                Bindings = bindings,
-                Arguments = ctorArguments,
-                FromMember = readerFieldInfo.FromMember,
-                Parent = parent
-            };
-
-            //循环处理当前实体下的所有字段
-            int lastReaderIndex = readerFieldInfo.ReaderIndex;
-            int lastTableIndex = readerFieldInfo.TableIndex;
-            while (readerFieldInfo.ReaderIndex == lastReaderIndex)
-            {
-                //处理当前值
-                if (current.IsDefault) current.Bindings.Add(Expression.Bind(readerFieldInfo.FromMember, readerValueExpr));
-                else current.Arguments.Add(readerValueExpr);
-
-                //readerIndex或者tableIndex不一样，isLastEntity
-                if (readerFieldInfo.TableIndex != lastTableIndex)
-                {
-
-
-
-                }
-            }
-
-        }
-    }
     private static EntityBuildInfo NewBuildInfo(Type targetType, MemberInfo fromMember = null, EntityBuildInfo parent = null)
     {
         bool isDefaultCtor = false;
@@ -507,7 +453,7 @@ public static class TrolleyExtensions
         var blockBodies = new List<Expression>();
         var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
         var indexExpr = Expression.Parameter(typeof(int), "index");
-        var resultLabelExpr = Expression.Label(fieldType);
+        var resultLabelExpr = Expression.Label(targetType);
         var bodyExpr = GetReaderValue(readerExpr, indexExpr, targetType, fieldType);
         blockBodies.Add(Expression.Return(resultLabelExpr, bodyExpr));
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(targetType)));
