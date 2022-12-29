@@ -89,6 +89,7 @@ public class OrderDetail
     public DateTime UpdatedAt { get; set; }
 
     public Order Order { get; set; }
+    public Product Product { get; set; }
 }
 public class Product
 {
@@ -96,7 +97,7 @@ public class Product
     public string ProductNo { get; set; }
     public string Name { get; set; }
     public int BrandId { get; set; }
-    public int CategoryId { get; set; }   
+    public int CategoryId { get; set; }
     public bool IsEnabled { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }

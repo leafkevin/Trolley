@@ -275,7 +275,7 @@ class Deleting<TEntity> : IDeleting<TEntity>
     public IDeleting<TEntity> And(bool condition, Expression<Func<TEntity, bool>> predicate)
     {
         if (condition)
-            this.visitor.Where(predicate);
+            this.visitor.And(predicate);
         return this;
     }
     public int Execute()

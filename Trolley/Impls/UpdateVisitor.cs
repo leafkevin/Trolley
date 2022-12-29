@@ -136,6 +136,7 @@ class UpdateVisitor : SqlVisitor
                 if (this.ormProvider.DatabaseType == DatabaseType.MySql)
                     builder.Append("a.");
                 builder.Append($"{ormProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+                this.dbParameters ??= new();
                 this.dbParameters.Add(ormProvider.CreateParameter(parameterName, fieldValue));
                 break;
             case ExpressionType.New:
@@ -164,11 +165,75 @@ class UpdateVisitor : SqlVisitor
         this.setSql = builder.ToString();
         return this;
     }
+    public UpdateVisitor Set<TField>(Expression setExpr, IQuery<TField> subQuery)
+    {
+        if (setExpr == null)
+            throw new ArgumentNullException(nameof(setExpr));
+        var lambdaExpr = setExpr as LambdaExpression;
+
+        var entityMapper = this.tables[0].Mapper;
+        var builder = new StringBuilder();
+        switch (lambdaExpr.Body.NodeType)
+        {
+            case ExpressionType.MemberAccess:
+                if (subQuery == null)
+                    throw new ArgumentNullException(nameof(subQuery));
+
+                if (!string.IsNullOrEmpty(this.setSql))
+                    builder.Append(this.setSql);
+                var memberExpr = lambdaExpr.Body as MemberExpression;
+                var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
+                if (builder.Length > 0)
+                    builder.Append(',');
+                if (this.ormProvider.DatabaseType == DatabaseType.MySql)
+                    builder.Append("a.");
+                builder.Append($"{ormProvider.GetFieldName(memberMapper.FieldName)}=");
+                var sql = subQuery.ToSql(out var dbDataParameters);
+                builder.Append($"({sql})");
+                this.dbParameters ??= new();
+                if (dbDataParameters != null && dbDataParameters.Count > 0)
+                    dbDataParameters.ForEach(f => this.dbParameters.Add(f));
+                break;
+            case ExpressionType.New:
+                this.InitTableAlias(lambdaExpr);
+                var newExpr = lambdaExpr.Body as NewExpression;
+                for (int i = 0; i < newExpr.Arguments.Count; i++)
+                {
+                    var memberInfo = newExpr.Members[i];
+                    if (!entityMapper.TryGetMemberMap(memberInfo.Name, out _))
+                        continue;
+                    this.AddMemberElement(new SqlSegment { Expression = newExpr.Arguments[i] }, memberInfo, builder);
+                }
+                break;
+            case ExpressionType.MemberInit:
+                this.InitTableAlias(lambdaExpr);
+                var memberInitExpr = lambdaExpr.Body as MemberInitExpression;
+                for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
+                {
+                    var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
+                    if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out _))
+                        continue;
+                    this.AddMemberElement(new SqlSegment { Expression = memberAssignment.Expression }, memberAssignment.Member, builder);
+                }
+                break;
+            default:
+                throw new NotSupportedException("只支持MemberAccess类型表达式");
+        }
+        this.setSql = builder.ToString();
+        return this;
+    }
     public UpdateVisitor Where(Expression whereExpr)
     {
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
         this.whereSql = " WHERE " + this.VisitConditionExpr(lambdaExpr.Body);
+        return this;
+    }
+    public UpdateVisitor And(Expression whereExpr)
+    {
+        var lambdaExpr = whereExpr as LambdaExpression;
+        this.InitTableAlias(lambdaExpr);
+        this.whereSql += " AND " + this.VisitConditionExpr(lambdaExpr.Body);
         return this;
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)

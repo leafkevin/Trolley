@@ -324,6 +324,13 @@ class QueryVisitor : SqlVisitor
         this.whereSql = " WHERE " + this.VisitConditionExpr(lambdaExpr.Body);
         return this;
     }
+    public QueryVisitor And(Expression whereExpr)
+    {
+        var lambdaExpr = whereExpr as LambdaExpression;
+        this.InitTableAlias(lambdaExpr);
+        this.whereSql += " AND " + this.VisitConditionExpr(lambdaExpr.Body);
+        return this;
+    }
     public void Distinct() => this.isDistinct = true;
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
     {

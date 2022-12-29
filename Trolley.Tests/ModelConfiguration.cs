@@ -27,6 +27,7 @@ class ModelConfiguration : IModelConfiguration
         {
             f.ToTable("sys_order_detail").Key(f => f.Id);
             f.HasOne(t => t.Order).HasForeignKey(t => t.OrderId);
+            f.HasOne(t => t.Product).HasForeignKey(t => t.ProductId);
         });
         builder.Entity<Product>(f =>
         {

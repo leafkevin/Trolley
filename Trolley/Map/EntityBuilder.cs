@@ -113,7 +113,10 @@ public class EntityBuilder<TEntity> where TEntity : class
             this.mapper.AddMemberMap(memberName, memberMapper = new MemberMap(this.mapper, this.mapper.FieldPrefix, memberExpr.Member));
         return new MemberBuilder<TMember>(memberMapper);
     }
-
+    public virtual Navigation<TEntity> Navigation<TMember>(Expression<Func<TEntity, TMember>> memberSelector) where TMember : class
+        => this.HasOne(memberSelector);
+    public virtual Navigation<TElement> Navigation<TElement>(Expression<Func<TEntity, IEnumerable<TElement>>> memberSelector) where TElement : class
+        => this.HasMany(memberSelector);
     public virtual Navigation<TEntity> HasOne<TMember>(Expression<Func<TEntity, TMember>> memberSelector) where TMember : class
     {
         var memberExpr = memberSelector.Body as MemberExpression;

@@ -140,12 +140,14 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     }
     public IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition) 
+            this.visitor.And(predicate);
         return this;
     }
     public IQuery<<#=tables#>> And(bool condition, Expression<Func<IWhereSql, <#=tables#>, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition) 
+            this.visitor.And(predicate);
         return this;
     }
     #endregion
@@ -423,7 +425,8 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     }
     public IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition) 
+            this.visitor.And(predicate);
         return this;
     }
     #endregion

@@ -127,12 +127,14 @@ class Query<T1, T2> : IQuery<T1, T2>
     }
     public IQuery<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     public IQuery<T1, T2> And(bool condition, Expression<Func<IWhereSql, T1, T2, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     #endregion
@@ -435,12 +437,14 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
     }
     public IQuery<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     public IQuery<T1, T2, T3> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     #endregion
@@ -743,12 +747,14 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     }
     public IQuery<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     public IQuery<T1, T2, T3, T4> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     #endregion
@@ -1051,12 +1057,14 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
     }
     public IQuery<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     #endregion
@@ -1359,12 +1367,14 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
     }
     public IQuery<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     #endregion
@@ -1667,12 +1677,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     #endregion
@@ -1975,12 +1987,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     #endregion
@@ -2283,12 +2297,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     #endregion
@@ -2591,12 +2607,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     #endregion
@@ -2899,12 +2917,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     #endregion
@@ -3207,12 +3227,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     #endregion
@@ -3515,12 +3537,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     #endregion
@@ -3823,12 +3847,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     #endregion
@@ -4131,12 +4157,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     #endregion
@@ -4411,7 +4439,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     #endregion

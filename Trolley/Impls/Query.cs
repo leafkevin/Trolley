@@ -128,12 +128,14 @@ class Query<T> : IQuery<T>
     }
     public IQuery<T> And(bool condition, Expression<Func<T, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     public IQuery<T> And(bool condition, Expression<Func<IWhereSql, T, bool>> predicate)
     {
-        if (condition) this.visitor.Where(predicate);
+        if (condition)
+            this.visitor.And(predicate);
         return this;
     }
     #endregion

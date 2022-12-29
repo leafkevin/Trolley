@@ -34,6 +34,12 @@ class DeleteVisitor : SqlVisitor
         this.whereSql = " WHERE " + this.VisitConditionExpr(lambdaExpr.Body);
         return this;
     }
+    public DeleteVisitor And(Expression whereExpr)
+    {
+        var lambdaExpr = whereExpr as LambdaExpression;
+        this.whereSql += " AND " + this.VisitConditionExpr(lambdaExpr.Body);
+        return this;
+    }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
         var memberExpr = sqlSegment.Expression as MemberExpression;
