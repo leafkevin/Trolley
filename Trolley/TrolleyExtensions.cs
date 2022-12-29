@@ -18,6 +18,15 @@ public static class TrolleyExtensions
     private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
 
+    public static TEntity QueryFirst<TEntity>(this Repository repository, Expression<Func<TEntity, bool>> predicate)
+        => repository.From<TEntity>().Where(predicate).First();
+    public static async Task<TEntity> QueryFirstAsync<TEntity>(this Repository repository, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+        => await repository.From<TEntity>().Where(predicate).FirstAsync(cancellationToken);
+    public static List<TEntity> Query<TEntity>(this Repository repository, Expression<Func<TEntity, bool>> predicate)
+        => repository.From<TEntity>().Where(predicate).ToList();
+    public static async Task<List<TEntity>> QueryAsync<TEntity>(this Repository repository, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+        => await repository.From<TEntity>().Where(predicate).ToListAsync(cancellationToken);
+
     public static int Create<TEntity>(this Repository repository, object parameter)
         => repository.Create<TEntity>().WithBy(parameter).Execute();
     public static async Task<int> CreateAsync<TEntity>(this Repository repository, object parameter, CancellationToken cancellationToken = default)
@@ -31,18 +40,29 @@ public static class TrolleyExtensions
     public static async Task<int> CreateAsync<TEntity>(this Repository repository, IEnumerable entities, int bulkCount = 500, CancellationToken cancellationToken = default)
         => await repository.Create<TEntity>().WithBy(entities, bulkCount).ExecuteAsync(cancellationToken);
 
-    public static int Update<TEntity>(this Repository repository, object parameter)
-        => repository.Update<TEntity>().WithBy(parameter).Execute();
-    public static async Task<int> UpdateAsync<TEntity>(this Repository repository, object parameter, CancellationToken cancellationToken = default)
-        => await repository.Update<TEntity>().WithBy(parameter).ExecuteAsync(cancellationToken);
-    public static int Update<TEntity>(this Repository repository, string sql, object parameter)
-        => repository.Update<TEntity>().RawSql(sql, parameter).Execute();
-    public static async Task<int> UpdateAsync<TEntity>(this Repository repository, string sql, object parameter, CancellationToken cancellationToken = default)
-        => await repository.Update<TEntity>().RawSql(sql, parameter).ExecuteAsync(cancellationToken);
+    public static int Update<TEntity>(this Repository repository, object parameters)
+        => repository.Update<TEntity>().WithBy(parameters).Execute();
+    public static async Task<int> UpdateAsync<TEntity>(this Repository repository, object parameters, CancellationToken cancellationToken = default)
+        => await repository.Update<TEntity>().WithBy(parameters).ExecuteAsync(cancellationToken);
+    public static int Update<TEntity>(this Repository repository, string rawSql, object parameters)
+        => repository.Update<TEntity>().RawSql(rawSql, parameters).Execute();
+    public static async Task<int> UpdateAsync<TEntity>(this Repository repository, string rawSql, object parameters, CancellationToken cancellationToken = default)
+        => await repository.Update<TEntity>().RawSql(rawSql, parameters).ExecuteAsync(cancellationToken);
     public static int Update<TEntity>(this Repository repository, IEnumerable entities, int bulkCount = 500)
         => repository.Update<TEntity>().WithBy(entities, bulkCount).Execute();
     public static async Task<int> UpdateAsync<TEntity>(this Repository repository, IEnumerable entities, int bulkCount = 500, CancellationToken cancellationToken = default)
         => await repository.Update<TEntity>().WithBy(entities, bulkCount).ExecuteAsync(cancellationToken);
+    public static int Update<TEntity, TFields>(this Repository repository, Expression<Func<TEntity, TFields>> updateFields, Expression<Func<TEntity, bool>> predicate)
+        => repository.Update<TEntity>().Set(updateFields).Where(predicate).Execute();
+    public static async Task<int> UpdateAsync<TEntity, TFields>(this Repository repository, Expression<Func<TEntity, TFields>> updateFields, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+        => await repository.Update<TEntity>().Set(updateFields).Where(predicate).ExecuteAsync(cancellationToken);
+
+
+    public static int Delete<TEntity>(this Repository repository, Expression<Func<TEntity, bool>> predicate)
+        => repository.Delete<TEntity>().Where(predicate).Execute();
+    public static async Task<int> DeleteAsync<TEntity>(this Repository repository, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+        => await repository.Delete<TEntity>().Where(predicate).ExecuteAsync(cancellationToken);
+
     public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
     {
         if (value == null) return "null";

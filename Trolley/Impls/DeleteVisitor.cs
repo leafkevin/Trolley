@@ -9,17 +9,21 @@ namespace Trolley;
 
 class DeleteVisitor : SqlVisitor
 {
-    private Type entityType;
+    private readonly TableSegment tableSegment;
     private string whereSql = string.Empty;
 
     public DeleteVisitor(IOrmDbFactory dbFactory, IOrmProvider ormProvider, Type entityType)
         : base(dbFactory, ormProvider)
     {
-        this.entityType = entityType;
+        this.tableSegment = new TableSegment
+        {
+            EntityType = entityType,
+            Mapper = dbFactory.GetEntityMap(entityType)
+        };
     }
     public string BuildSql(out List<IDbDataParameter> dbParameters)
     {
-        var entityMapper = this.dbFactory.GetEntityMap(this.entityType);
+        var entityMapper = this.tableSegment.Mapper;
         var entityTableName = this.ormProvider.GetTableName(entityMapper.TableName);
         var builder = new StringBuilder($"DELETE FROM {entityTableName}");
 
@@ -71,7 +75,7 @@ class DeleteVisitor : SqlVisitor
                 return sqlSegment.Change(formatter.Invoke(targetSegment));
             }
 
-            if (memberExpr.IsParameter(out var parameterName))
+            if (memberExpr.IsParameter(out _))
             {
                 //Where(f=>... && f.Amount>5 && ...)
                 //Include(f=>f.Buyer); 或是 IncludeMany(f=>f.Orders)
@@ -82,21 +86,19 @@ class DeleteVisitor : SqlVisitor
                 //GroupBy(f=>new {f.Order.OrderId, ...})
                 //GroupBy(f=>f.Order.OrderId)
                 //OrderBy(f=>new {f.Order.OrderId, ...})
-                //OrderBy(f=>f.Order.OrderId)
-                var tableSegment = this.tableAlias[parameterName];
-                tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
-                var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
+                //OrderBy(f=>f.Order.OrderId)                
+                var memberMapper = this.tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
                 var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
                 if (sqlSegment.HasDeferred)
                 {
                     sqlSegment.HasField = true;
-                    sqlSegment.TableSegment = tableSegment;
+                    sqlSegment.TableSegment = this.tableSegment;
                     sqlSegment.MemberMapper = memberMapper;
                     sqlSegment.Value = fieldName;
                     return this.VisitBooleanDeferred(sqlSegment);
                 }
                 sqlSegment.HasField = true;
-                sqlSegment.TableSegment = tableSegment;
+                sqlSegment.TableSegment = this.tableSegment;
                 sqlSegment.MemberMapper = memberMapper;
                 sqlSegment.Value = fieldName;
                 return sqlSegment;
@@ -115,7 +117,7 @@ class DeleteVisitor : SqlVisitor
         if (newExpr.Type.Name.StartsWith("<>"))
         {
             var builder = new StringBuilder();
-            var entityMapper = this.tables[0].Mapper;
+            var entityMapper = this.tableSegment.Mapper;
             for (int i = 0; i < newExpr.Arguments.Count; i++)
             {
                 var memberInfo = newExpr.Members[i];
@@ -131,7 +133,7 @@ class DeleteVisitor : SqlVisitor
     {
         var memberInitExpr = sqlSegment.Expression as MemberInitExpression;
         var builder = new StringBuilder();
-        var entityMapper = this.tables[0].Mapper;
+        var entityMapper = this.tableSegment.Mapper;
         for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
         {
             if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)
@@ -148,7 +150,7 @@ class DeleteVisitor : SqlVisitor
         var parameterName = this.ormProvider.ParameterPrefix + memberInfo.Name;
         sqlSegment.ParameterName = parameterName;
         sqlSegment = this.VisitAndDeferred(sqlSegment);
-        var entityMapper = this.tables[0].Mapper;
+        var entityMapper = this.tableSegment.Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberInfo.Name);
         if (builder.Length > 0)
             builder.Append(',');

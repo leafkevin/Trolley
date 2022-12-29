@@ -1,8 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Update="IGroupingQuery.tt">
@@ -10,8 +8,8 @@
 			<LastGenOutput>IGroupingQuery.cs</LastGenOutput>
 		</None>
 		<None Update="IIncludableQuery.tt">
-		  <Generator>TextTemplatingFileGenerator</Generator>
-		  <LastGenOutput>IIncludableQuery.cs</LastGenOutput>
+			<Generator>TextTemplatingFileGenerator</Generator>
+			<LastGenOutput>IIncludableQuery.cs</LastGenOutput>
 		</None>
 		<None Update="IQuery.tt">
 			<Generator>TextTemplatingFileGenerator</Generator>
@@ -26,31 +24,19 @@
 			<LastGenOutput>IncludableQuery.cs</LastGenOutput>
 		</None>
 		<None Update="Query`.tt">
-		  <Generator>TextTemplatingFileGenerator</Generator>
-		  <LastGenOutput>Query`.cs</LastGenOutput>
+			<Generator>TextTemplatingFileGenerator</Generator>
+			<LastGenOutput>Query`.cs</LastGenOutput>
 		</None>
 		<None Update="GroupingQuery.tt">
-		  <Generator>TextTemplatingFileGenerator</Generator>
-		  <LastGenOutput>GroupingQuery.cs</LastGenOutput>
+			<Generator>TextTemplatingFileGenerator</Generator>
+			<LastGenOutput>GroupingQuery.cs</LastGenOutput>
 		</None>
 		<None Update="Update.tt">
-		  <Generator>TextTemplatingFileGenerator</Generator>
-		  <LastGenOutput>Update.cs</LastGenOutput>
+			<Generator>TextTemplatingFileGenerator</Generator>
+			<LastGenOutput>Update.cs</LastGenOutput>
 		</None>
 	</ItemGroup>
 	<ItemGroup>
 		<Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
-	</ItemGroup>
-	<ItemGroup>
-	  <Compile Update="IUpdate.cs">
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	    <DependentUpon>IUpdate.tt</DependentUpon>
-	  </Compile>
-	  <Compile Update="Update.cs">
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	    <DependentUpon>Update.tt</DependentUpon>
-	  </Compile>
 	</ItemGroup>
 </Project>

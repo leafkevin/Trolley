@@ -147,13 +147,12 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
     {
         bool isMulti = false;
         bool isDictionary = false;
-        Type parameterType = null;
-        IEnumerable entities = null;
         var entityType = typeof(TEntity);
-
+        var parameterType = this.parameters.GetType();
+        IEnumerable entities = null;
         if (this.parameters is Dictionary<string, object> dict)
             isDictionary = true;
-        else if (this.parameters is IEnumerable)
+        else if (this.parameters is IEnumerable && parameterType != typeof(string))
         {
             isMulti = true;
             entities = this.parameters as IEnumerable;
@@ -165,6 +164,8 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 break;
             }
         }
+        else parameterType = this.parameters.GetType();
+
         if (isMulti)
         {
             Action<IDbCommand, IOrmProvider, StringBuilder, int, object> commandInitializer = null;
@@ -217,12 +218,12 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             }
             else
             {
+                sql = this.rawSql;
                 Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
                 if (isDictionary)
                     commandInitializer = this.BuildCommandInitializer(sql);
                 else commandInitializer = this.BuildCommandInitializer(sql, entityType, parameterType);
                 commandInitializer.Invoke(command, this.connection.OrmProvider, this.parameters);
-                sql = this.rawSql;
             }
             command.CommandText = sql;
             command.CommandType = CommandType.Text;
@@ -238,11 +239,11 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         bool isMulti = false;
         bool isDictionary = false;
         var entityType = typeof(TEntity);
-        Type parameterType = null;
+        var parameterType = this.parameters.GetType();
         IEnumerable entities = null;
         if (this.parameters is Dictionary<string, object> dict)
             isDictionary = true;
-        else if (this.parameters is IEnumerable)
+        else if (this.parameters is IEnumerable && parameterType != typeof(string))
         {
             isMulti = true;
             entities = this.parameters as IEnumerable;
@@ -254,6 +255,8 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 break;
             }
         }
+        else parameterType = this.parameters.GetType();
+
         if (isMulti)
         {
             Action<IDbCommand, IOrmProvider, StringBuilder, int, object> commandInitializer = null;
@@ -308,12 +311,12 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             }
             else
             {
+                sql = this.rawSql;
                 Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
                 if (isDictionary)
                     commandInitializer = this.BuildCommandInitializer(sql);
                 else commandInitializer = this.BuildCommandInitializer(sql, entityType, parameterType);
                 commandInitializer.Invoke(cmd, this.connection.OrmProvider, this.parameters);
-                sql = this.rawSql;
             }
             cmd.CommandText = sql;
             cmd.CommandType = CommandType.Text;
@@ -332,11 +335,11 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         bool isMulti = false;
         bool isDictionary = false;
         var entityType = typeof(TEntity);
-        Type parameterType = null;
+        var parameterType = this.parameters.GetType();
         IEnumerable entities = null;
         if (this.parameters is Dictionary<string, object> dict)
             isDictionary = true;
-        else if (this.parameters is IEnumerable)
+        else if (this.parameters is IEnumerable && parameterType != typeof(string))
         {
             isMulti = true;
             entities = this.parameters as IEnumerable;
@@ -348,6 +351,8 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 break;
             }
         }
+        else parameterType = this.parameters.GetType();
+
         if (isMulti)
         {
             Action<IDbCommand, IOrmProvider, StringBuilder, int, object> commandInitializer = null;

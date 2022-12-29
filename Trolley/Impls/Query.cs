@@ -274,12 +274,8 @@ class Query<T> : IQuery<T>
         T result = default;
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
-        while (reader.Read())
-        {
-            result = reader.To<T>(connection, readerFields);
-        }
-        while (reader.NextResult()) { }
+        using var reader = command.ExecuteReader(behavior);
+        if (reader.Read()) result = reader.To<T>(connection, readerFields);
         reader.Close();
         reader.Dispose();
         return result;
@@ -303,13 +299,9 @@ class Query<T> : IQuery<T>
         T result = default;
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.To<T>(connection, readerFields);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         return result;
@@ -330,12 +322,11 @@ class Query<T> : IQuery<T>
         var result = new List<T>();
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         while (reader.Read())
         {
             result.Add(reader.To<T>(connection, readerFields));
         }
-        while (reader.NextResult()) { }
         reader.Close();
         reader.Dispose();
         return result;
@@ -359,8 +350,7 @@ class Query<T> : IQuery<T>
         var result = new List<T>();
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess;
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
             result.Add(reader.To<T>(connection, readerFields));
@@ -385,7 +375,7 @@ class Query<T> : IQuery<T>
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         var queryReader = new QueryReader(this.dbFactory, connection, command, reader);
         var result = queryReader.ReadPageList<T>();
         reader.Close();
@@ -408,7 +398,7 @@ class Query<T> : IQuery<T>
 
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         var queryReader = new QueryReader(this.dbFactory, connection, command, reader);
         var result = await queryReader.ReadPageListAsync<T>(cancellationToken);
         reader.Close();
@@ -441,13 +431,9 @@ class Query<T> : IQuery<T>
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
         object result = null;
-        while (reader.Read())
-        {
-            result = reader.GetValue(0);
-        }
-        while (reader.NextResult()) { }
+        using var reader = command.ExecuteReader(behavior);
+        if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -471,12 +457,9 @@ class Query<T> : IQuery<T>
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         if (result is DBNull) return default;

@@ -79,7 +79,7 @@ class QueryVisitor : SqlVisitor
         string others = builder.ToString();
         string orderBy = null;
         if (!string.IsNullOrEmpty(this.orderBySql))
-            orderBy = $"ORDER BY {this.orderBySql}";
+            orderBy = $" ORDER BY {this.orderBySql}";
 
         dbParameters = this.dbParameters;
         readerFields = this.readerFields;
@@ -92,7 +92,7 @@ class QueryVisitor : SqlVisitor
             pageSql = pageSql.Replace("/**conditions**/", this.whereSql);
             return $"SELECT COUNT(*) FROM {tableSql};{pageSql}{others}";
         }
-        else return $"SELECT {this.selectSql} FROM {tableSql} WHERE {this.whereSql}{others} {orderBy}";
+        else return $"SELECT {this.selectSql} FROM {tableSql}{this.whereSql}{others}{orderBy}";
     }
     public string BuildSql(Expression defaultExpr, out List<IDbDataParameter> dbParameters, out List<MemberSegment> readerFields)
     {
@@ -230,7 +230,7 @@ class QueryVisitor : SqlVisitor
         string body = null;
         if (selectExpr != null)
         {
-            this.readerFields = new List<MemberSegment>();
+            this.readerFields ??= new List<MemberSegment>();
             var lambdaExpr = selectExpr as LambdaExpression;
             this.InitTableAlias(lambdaExpr);
             var builder = new StringBuilder();

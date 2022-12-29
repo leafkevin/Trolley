@@ -27,8 +27,8 @@ public class MySqlUnitTest1
     public async void Insert_WithBy_AnonymousObject()
     {
         using var repository = this.dbFactory.Create();
-        repository.Delete<User>().Where(f => f.Id == 1).Execute();
-        var count = await repository.Create<User>()
+        var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
+        count = await repository.Create<User>()
             .WithBy(new
             {
                 Id = 1,
@@ -52,21 +52,21 @@ public class MySqlUnitTest1
         var id = repository.Create<Company>()
             .WithBy(new Dictionary<string, object>()
             {
-                { "Id", 1},
-                { "Name","Œ¢»Ì"},
+                { "Name","Œ¢»Ì11"},
                 { "IsEnabled", true},
                 { "CreatedAt", DateTime.Now},
                 { "CreatedBy", 1},
                 { "UpdatedAt", DateTime.Now},
                 { "UpdatedBy", 1}
             }).Execute();
-        Assert.Equal(1, id);
+        var maxId = repository.From<Company>().Max(f => f.Id);
+        Assert.Equal(maxId, id);
     }
     [Fact]
     public async void Insert_WithBy_Batch_AnonymousObjects()
     {
         using var repository = this.dbFactory.Create();
-        await repository.Delete<Product>().Where(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } }).ExecuteAsync();
+        await repository.Delete<Product>().Where(new int[] { 1, 2, 3 }).ExecuteAsync();
         var count = repository.Create<Product>()
             .WithBy(new[]
             {

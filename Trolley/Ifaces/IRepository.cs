@@ -39,17 +39,9 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     ICreate<T> Create<T>();
     #endregion
 
-    #region Update
-    int UpdateByKey<TEntity>(object entities);
-    Task<int> UpdateByKeyAsync<TEntity>(object entities, CancellationToken cancellationToken = default);
-    int Update<TEntity, TFields>(object updateObj, object whereObj);
-    Task<int> UpdateAsync<TEntity, TFields>(object updateObj, object whereObj, CancellationToken cancellationToken = default);
-    int Update<TEntity>(object updateOnly, Expression<Func<TEntity, bool>> wherePredicate);
-    Task<int> UpdateAsync<TEntity>(object updateOnly, Expression<Func<TEntity, bool>> wherePredicate, CancellationToken cancellationToken = default);
-    int Update<TEntity, TFields>(object updateObj, string[] updateFields, Expression<Func<TEntity, bool>> wherePredicate);
-    Task<int> UpdateAsync<TEntity, TFields>(object updateObj, string[] updateFields, Expression<Func<TEntity, bool>> wherePredicate, CancellationToken cancellationToken = default);
-    int Update<TEntity, TFields>(object updateObj, Expression<Func<TEntity, TFields>> updateFields, Expression<Func<TEntity, bool>> wherePredicate);
-    Task<int> UpdateAsync<TEntity, TFields>(object updateObj, Expression<Func<TEntity, TFields>> updateFields, Expression<Func<TEntity, bool>> wherePredicate, CancellationToken cancellationToken = default);
+    #region Update  
+    int Update<TEntity>(object updateObj, object whereObj);
+    Task<int> UpdateAsync<TEntity>(object updateObj, object whereObj, CancellationToken cancellationToken = default);
     IUpdate<T> Update<T>();
     #endregion
 
@@ -58,8 +50,6 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     Task<int> DeleteByKeyAsync<TEntity>(object keys, CancellationToken cancellationToken = default);
     int Delete<TEntity>(object whereObj);
     Task<int> DeleteAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default);
-    int Delete<TEntity>(Expression<Func<TEntity, bool>> wherePredicate);
-    Task<int> DeleteAsync<TEntity>(Expression<Func<TEntity, bool>> wherePredicate, CancellationToken cancellationToken = default);
     IDelete<T> Delete<T>();
     #endregion
 
