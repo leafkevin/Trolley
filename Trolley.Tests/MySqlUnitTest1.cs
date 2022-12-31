@@ -52,6 +52,7 @@ public class MySqlUnitTest1
         var id = repository.Create<Company>()
             .WithBy(new Dictionary<string, object>()
             {
+                //{ "Id", 1},
                 { "Name","Œ¢»Ì11"},
                 { "IsEnabled", true},
                 { "CreatedAt", DateTime.Now},

@@ -366,7 +366,8 @@ class Created<TEntity> : ICreated<TEntity>
             var insertBuilder = new StringBuilder($"INSERT INTO {ormProvider.GetTableName(entityMapper.TableName)} (");
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
-                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper) || propMapper.IsIgnore || propMapper.IsNavigation)
+                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper)
+                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                     continue;
 
                 if (columnIndex > 0)
@@ -389,7 +390,8 @@ class Created<TEntity> : ICreated<TEntity>
             columnIndex = 0;
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
-                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper) || propMapper.IsIgnore || propMapper.IsNavigation)
+                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper)
+                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                     continue;
 
                 if (columnIndex > 0)
@@ -432,7 +434,8 @@ class Created<TEntity> : ICreated<TEntity>
             var valuesBuilder = new StringBuilder(" VALUES(");
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
-                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper) || propMapper.IsIgnore || propMapper.IsNavigation)
+                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper)
+                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                     continue;
 
                 if (columnIndex > 0)
@@ -507,7 +510,8 @@ class Created<TEntity> : ICreated<TEntity>
                 builder.Append($"INSERT INTO {ormProvider.GetTableName(entityMapper.TableName)} (");
                 foreach (var item in dict)
                 {
-                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || propMapper.IsIgnore || propMapper.IsNavigation)
+                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper)
+                        || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                         continue;
                     if (columnIndex > 0)
                         builder.Append(',');
@@ -521,7 +525,8 @@ class Created<TEntity> : ICreated<TEntity>
             builder.Append('(');
             foreach (var item in dict)
             {
-                if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || propMapper.IsIgnore || propMapper.IsNavigation)
+                if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper)
+                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                     continue;
 
                 var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName + index.ToString();
@@ -546,7 +551,8 @@ class Created<TEntity> : ICreated<TEntity>
             var valuesBuilder = new StringBuilder(" VALUES(");
             foreach (var item in dict)
             {
-                if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || propMapper.IsIgnore || propMapper.IsNavigation)
+                if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper)
+                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                     continue;
 
                 var parameterName = ormProvider.ParameterPrefix + item.Key;

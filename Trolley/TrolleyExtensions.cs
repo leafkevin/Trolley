@@ -18,50 +18,55 @@ public static class TrolleyExtensions
     private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
 
-    public static TEntity QueryFirst<TEntity>(this Repository repository, Expression<Func<TEntity, bool>> predicate)
+    public static TEntity QueryFirst<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate)
         => repository.From<TEntity>().Where(predicate).First();
-    public static async Task<TEntity> QueryFirstAsync<TEntity>(this Repository repository, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    public static async Task<TEntity> QueryFirstAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
         => await repository.From<TEntity>().Where(predicate).FirstAsync(cancellationToken);
-    public static List<TEntity> Query<TEntity>(this Repository repository, Expression<Func<TEntity, bool>> predicate)
+    public static List<TEntity> Query<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate)
         => repository.From<TEntity>().Where(predicate).ToList();
-    public static async Task<List<TEntity>> QueryAsync<TEntity>(this Repository repository, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    public static async Task<List<TEntity>> QueryAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
         => await repository.From<TEntity>().Where(predicate).ToListAsync(cancellationToken);
 
-    public static int Create<TEntity>(this Repository repository, object parameter)
+    public static int Create<TEntity>(this IRepository repository, object parameter)
         => repository.Create<TEntity>().WithBy(parameter).Execute();
-    public static async Task<int> CreateAsync<TEntity>(this Repository repository, object parameter, CancellationToken cancellationToken = default)
+    public static async Task<int> CreateAsync<TEntity>(this IRepository repository, object parameter, CancellationToken cancellationToken = default)
         => await repository.Create<TEntity>().WithBy(parameter).ExecuteAsync(cancellationToken);
-    public static int Create<TEntity>(this Repository repository, string sql, object parameter)
+    public static int Create<TEntity>(this IRepository repository, string sql, object parameter)
         => repository.Create<TEntity>().RawSql(sql, parameter).Execute();
-    public static async Task<int> CreateAsync<TEntity>(this Repository repository, string sql, object parameter, CancellationToken cancellationToken = default)
+    public static async Task<int> CreateAsync<TEntity>(this IRepository repository, string sql, object parameter, CancellationToken cancellationToken = default)
         => await repository.Create<TEntity>().RawSql(sql, parameter).ExecuteAsync(cancellationToken);
-    public static int Create<TEntity>(this Repository repository, IEnumerable entities, int bulkCount = 500)
+    public static int Create<TEntity>(this IRepository repository, IEnumerable entities, int bulkCount = 500)
         => repository.Create<TEntity>().WithBy(entities, bulkCount).Execute();
-    public static async Task<int> CreateAsync<TEntity>(this Repository repository, IEnumerable entities, int bulkCount = 500, CancellationToken cancellationToken = default)
+    public static async Task<int> CreateAsync<TEntity>(this IRepository repository, IEnumerable entities, int bulkCount = 500, CancellationToken cancellationToken = default)
         => await repository.Create<TEntity>().WithBy(entities, bulkCount).ExecuteAsync(cancellationToken);
 
-    public static int Update<TEntity>(this Repository repository, object parameters)
+    public static int Update<TEntity>(this IRepository repository, object parameters)
         => repository.Update<TEntity>().WithBy(parameters).Execute();
-    public static async Task<int> UpdateAsync<TEntity>(this Repository repository, object parameters, CancellationToken cancellationToken = default)
+    public static async Task<int> UpdateAsync<TEntity>(this IRepository repository, object parameters, CancellationToken cancellationToken = default)
         => await repository.Update<TEntity>().WithBy(parameters).ExecuteAsync(cancellationToken);
-    public static int Update<TEntity>(this Repository repository, string rawSql, object parameters)
+    public static int Update<TEntity>(this IRepository repository, string rawSql, object parameters)
         => repository.Update<TEntity>().RawSql(rawSql, parameters).Execute();
-    public static async Task<int> UpdateAsync<TEntity>(this Repository repository, string rawSql, object parameters, CancellationToken cancellationToken = default)
+    public static async Task<int> UpdateAsync<TEntity>(this IRepository repository, string rawSql, object parameters, CancellationToken cancellationToken = default)
         => await repository.Update<TEntity>().RawSql(rawSql, parameters).ExecuteAsync(cancellationToken);
-    public static int Update<TEntity>(this Repository repository, IEnumerable entities, int bulkCount = 500)
+    public static int Update<TEntity>(this IRepository repository, IEnumerable entities, int bulkCount = 500)
         => repository.Update<TEntity>().WithBy(entities, bulkCount).Execute();
-    public static async Task<int> UpdateAsync<TEntity>(this Repository repository, IEnumerable entities, int bulkCount = 500, CancellationToken cancellationToken = default)
+    public static async Task<int> UpdateAsync<TEntity>(this IRepository repository, IEnumerable entities, int bulkCount = 500, CancellationToken cancellationToken = default)
         => await repository.Update<TEntity>().WithBy(entities, bulkCount).ExecuteAsync(cancellationToken);
-    public static int Update<TEntity, TFields>(this Repository repository, Expression<Func<TEntity, TFields>> updateFields, Expression<Func<TEntity, bool>> predicate)
+    public static int Update<TEntity, TFields>(this IRepository repository, Expression<Func<TEntity, TFields>> updateFields, Expression<Func<TEntity, bool>> predicate)
         => repository.Update<TEntity>().Set(updateFields).Where(predicate).Execute();
-    public static async Task<int> UpdateAsync<TEntity, TFields>(this Repository repository, Expression<Func<TEntity, TFields>> updateFields, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    public static async Task<int> UpdateAsync<TEntity, TFields>(this IRepository repository, Expression<Func<TEntity, TFields>> updateFields, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
         => await repository.Update<TEntity>().Set(updateFields).Where(predicate).ExecuteAsync(cancellationToken);
 
 
-    public static int Delete<TEntity>(this Repository repository, Expression<Func<TEntity, bool>> predicate)
+    public static int Delete<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate)
         => repository.Delete<TEntity>().Where(predicate).Execute();
-    public static async Task<int> DeleteAsync<TEntity>(this Repository repository, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    public static async Task<int> DeleteAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
         => await repository.Delete<TEntity>().Where(predicate).ExecuteAsync(cancellationToken);
+    public static int Delete<TEntity>(this IRepository repository, object keys)
+        => repository.Delete<TEntity>().Where(keys).Execute();
+    public static async Task<int> DeleteAsync<TEntity>(this IRepository repository, object keys, CancellationToken cancellationToken = default)
+        => await repository.Delete<TEntity>().Where(keys).ExecuteAsync(cancellationToken);
+
 
     public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
     {
@@ -186,7 +191,7 @@ public static class TrolleyExtensions
         }
         return ((Func<IDataReader, TEntity>)deserializer).Invoke(reader);
     }
-    internal static TEntity To<TEntity>(this IDataReader reader, TheaConnection connection, List<MemberSegment> readerFields)
+    internal static TEntity To<TEntity>(this IDataReader reader, TheaConnection connection, List<ReaderField> readerFields)
     {
         var entityType = typeof(TEntity);
         var cacheKey = GetReaderKey(entityType, connection, reader);
@@ -213,7 +218,7 @@ public static class TrolleyExtensions
         var target = NewBuildInfo(entityType);
         foreach (var memberMapper in entityMapper.MemberMaps)
         {
-            if (memberMapper.IsIgnore || memberMapper.IsNavigation)
+            if (memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.MemberType.IsEntityType())
                 continue;
 
             var fieldType = reader.GetFieldType(index);
@@ -222,6 +227,7 @@ public static class TrolleyExtensions
             if (target.IsDefault)
                 target.Bindings.Add(Expression.Bind(memberMapper.Member, readerValueExpr));
             else target.Arguments.Add(readerValueExpr);
+            index++;
         }
         var resultLabelExpr = Expression.Label(entityType);
         Expression returnExpr = null;
@@ -232,115 +238,74 @@ public static class TrolleyExtensions
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Constant(null, entityType)));
         return Expression.Lambda(returnExpr, readerExpr).Compile();
     }
-    private static Delegate CreateReaderDeserializer(IDataReader reader, Type entityType, List<MemberSegment> readerFields)
+    private static Delegate CreateReaderDeserializer(IDataReader reader, Type entityType, List<ReaderField> readerFields)
     {
         var blockBodies = new List<Expression>();
         var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
 
-        int index = 0;
-        bool isReaderEntitiyType = false;
-        MemberSegment lastReaderFieldInfo = null;
-        var current = NewBuildInfo(entityType);
-
-        while (index < reader.FieldCount)
+        int index = 0, readerIndex = 0;
+        var root = NewBuildInfo(entityType);
+        var current = root;
+        var readerBuilders = new Dictionary<int, EntityBuildInfo>();
+        foreach (var readerField in readerFields)
         {
-            var readerFieldInfo = readerFields[index];
-            //处理当前字段值
-            var fieldType = reader.GetFieldType(index);
-            var readerValueExpr = GetReaderValue(readerExpr, Expression.Constant(index), readerFieldInfo.MemberMapper.MemberType, fieldType);
-
-            //readerIndex不相等，换了一个实体，如果上一个reader是实体，就生成上一个实体的实例，并添加到对应的参数或是bings中
-            //当前FromMember是实体，就要生成一个current为一个新buildInfo
-            //之后，就连续把当前readerIndex,tableIndex下的所有字段进行处理
-
-            if (index == 0 || readerFieldInfo.ReaderIndex == lastReaderFieldInfo.ReaderIndex)
+            if (readerField.Type == ReaderFieldType.Entity)
             {
-                //readerIndex相同，肯定是实体                
-                if (index > 0 && isReaderEntitiyType && readerFieldInfo.TableIndex != lastReaderFieldInfo.TableIndex)
+                //第一个是实体，如果是entityType类型，则是Parameter类型表达式访问
+                //如果不是entityType类型，就是子类型，则是New或是MemeberInit类型表达式访问
+                bool isTarget = false;
+                if (readerIndex == 0)
+                    isTarget = readerField.TableSegment.EntityType == entityType;
+
+                EntityBuildInfo parent = null;
+                if (!isTarget)
                 {
-                    var parent = current;
-                    if (readerFieldInfo.TableSegment.IncludedFrom != lastReaderFieldInfo.TableSegment)
-                    {
-                        //创建子对象，并赋值给父对象的属性,直到Select语句
-                        Expression instanceExpr = null;
-                        if (current.IsDefault)
-                            instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
-                        else instanceExpr = Expression.New(current.Constructor, current.Arguments);
-                        //赋值给父对象的属性
-                        if (current.Parent.IsDefault)
-                            current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
-                        else current.Parent.Arguments.Add(instanceExpr);
-                        parent = current.Parent;
-                    }
-                    var targetType = readerFieldInfo.FromMember.GetMemberType();
-                    current = NewBuildInfo(targetType, readerFieldInfo.FromMember, parent);
+                    if (readerField.ParentIndex.HasValue)
+                        parent = readerBuilders[readerField.ParentIndex.Value];
+                    else parent = root;
+                    current = NewBuildInfo(readerField.TableSegment.EntityType, readerField.FromMember, parent);
                 }
-                //处理当前值
-                MemberInfo fromMember = null;
-                if (isReaderEntitiyType)
-                    fromMember = readerFieldInfo.MemberMapper.Member;
-                else fromMember = readerFieldInfo.FromMember;
-                if (current.IsDefault) current.Bindings.Add(Expression.Bind(fromMember, readerValueExpr));
-                else current.Arguments.Add(readerValueExpr);
-                isReaderEntitiyType = readerFieldInfo.FromMember.GetMemberType().IsEntityType();
+                readerBuilders.Add(readerField.Index, current);
+
+                var memberMappers = readerField.TableSegment.Mapper.MemberMaps;
+                foreach (var memberMapper in memberMappers)
+                {
+                    if (memberMapper.IsNavigation || memberMapper.MemberType.IsEntityType())
+                        continue;
+                    var fieldType = reader.GetFieldType(index);
+                    var readerValueExpr = GetReaderValue(readerExpr, Expression.Constant(index), memberMapper.MemberType, fieldType);
+                    if (current.IsDefault) current.Bindings.Add(Expression.Bind(memberMapper.Member, readerValueExpr));
+                    else current.Arguments.Add(readerValueExpr);
+                    index++;
+                }
+                if (!isTarget)
+                {
+                    //创建子对象，并赋值给父对象的属性,直到Select语句
+                    Expression instanceExpr = null;
+                    if (current.IsDefault)
+                        instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
+                    else instanceExpr = Expression.New(current.Constructor, current.Arguments);
+                    //赋值给父对象的属性
+                    if (parent.IsDefault)
+                        parent.Bindings.Add(Expression.Bind(readerField.FromMember, instanceExpr));
+                    else parent.Arguments.Add(instanceExpr);
+                }
             }
             else
             {
-                //处理上一个实体，并结尾
-                if (isReaderEntitiyType)
-                {
-                    while (current.Parent != null)
-                    {
-                        //创建子对象，并赋值给父对象的属性,直到Select语句
-                        Expression instanceExpr = null;
-                        if (current.IsDefault)
-                            instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
-                        else instanceExpr = Expression.New(current.Constructor, current.Arguments);
-                        //赋值给父对象的属性
-
-                        if (current.Parent.IsDefault)
-                            current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
-                        else current.Parent.Arguments.Add(instanceExpr);
-                        current = current.Parent;
-                    }
-                }
-                var targetType = readerFieldInfo.FromMember.GetMemberType();
-                isReaderEntitiyType = targetType.IsEntityType();
-                MemberInfo fromMember = null;
-                if (isReaderEntitiyType)
-                {
-                    current = NewBuildInfo(targetType, readerFieldInfo.FromMember, current);
-                    fromMember = readerFieldInfo.MemberMapper.Member;
-                }
-                else fromMember = readerFieldInfo.FromMember;
-                //处理当前值
-                if (current.IsDefault) current.Bindings.Add(Expression.Bind(fromMember, readerValueExpr));
+                var fieldType = reader.GetFieldType(index);
+                var readerValueExpr = GetReaderValue(readerExpr, Expression.Constant(index), readerField.FromMember.GetMemberType(), fieldType);
+                if (current.IsDefault) current.Bindings.Add(Expression.Bind(readerField.FromMember, readerValueExpr));
                 else current.Arguments.Add(readerValueExpr);
+                index++;
             }
-            lastReaderFieldInfo = readerFieldInfo;
-            index++;
-        }
-        if (isReaderEntitiyType)
-        {
-            while (current.Parent != null)
-            {
-                //创建子对象，并赋值给父对象的属性,直到Select语句
-                Expression instanceExpr = null;
-                if (current.IsDefault)
-                    instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
-                else instanceExpr = Expression.New(current.Constructor, current.Arguments);
-                //赋值给父对象的属性
-
-                if (current.Parent.IsDefault)
-                    current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
-                else current.Parent.Arguments.Add(instanceExpr);
-                current = current.Parent;
-            }
+            readerIndex++;
         }
         var resultLabelExpr = Expression.Label(entityType);
         Expression returnExpr = null;
-        if (current.IsDefault) returnExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
-        else returnExpr = Expression.New(current.Constructor, current.Arguments);
+        if (root.IsDefault)
+            returnExpr = Expression.MemberInit(Expression.New(root.Constructor), root.Bindings);
+        else returnExpr = Expression.New(root.Constructor, root.Arguments);
 
         blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Constant(null, entityType)));

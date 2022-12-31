@@ -19,6 +19,7 @@ public class SqlSegment
     public OperationType OperationType { get; set; } = OperationType.None;
     public Stack<DeferredExpr> DeferredExprs { get; set; } = new Stack<DeferredExpr>();
     public int Deep { get; set; }
+    public int ReaderIndex { get; set; }
     /// <summary>
     /// 是否有字段
     /// </summary>

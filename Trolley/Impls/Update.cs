@@ -421,7 +421,8 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
 
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
-                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper) || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.IsKey)
+                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper)
+                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.IsNavigation || propMapper.IsKey || propMapper.MemberType.IsEntityType())
                     continue;
 
                 var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
@@ -490,7 +491,8 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             var sqlBuilder = new StringBuilder($"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ");
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
-                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper) || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.IsKey)
+                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper)
+                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.IsKey || propMapper.MemberType.IsEntityType())
                     continue;
 
                 //生成SQL

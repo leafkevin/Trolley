@@ -113,7 +113,7 @@ public class Repository : IRepository
             var builder = new StringBuilder("SELECT ");
             foreach (var propMapper in entityMapper.MemberMaps)
             {
-                if (propMapper.IsIgnore || propMapper.IsNavigation)
+                if (propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                     continue;
 
                 if (index > 0) builder.Append(',');
@@ -138,7 +138,8 @@ public class Repository : IRepository
                 int index = 0;
                 foreach (var item in dict)
                 {
-                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || propMapper.IsIgnore)
+                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper)
+                        || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                         continue;
 
                     var parameterName = ormProvider.ParameterPrefix + item.Key;
@@ -175,7 +176,8 @@ public class Repository : IRepository
                 var builder = new StringBuilder(" WHERE ");
                 foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
                 {
-                    if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore)
+                    if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper)
+                        || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                         continue;
 
                     var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
@@ -228,7 +230,7 @@ public class Repository : IRepository
             var builder = new StringBuilder("SELECT ");
             foreach (var propMapper in entityMapper.MemberMaps)
             {
-                if (propMapper.IsIgnore || propMapper.IsNavigation)
+                if (propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                     continue;
 
                 if (index > 0) builder.Append(',');
@@ -253,7 +255,8 @@ public class Repository : IRepository
                 int index = 0;
                 foreach (var item in dict)
                 {
-                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || propMapper.IsIgnore)
+                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper)
+                        || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                         continue;
 
                     var parameterName = ormProvider.ParameterPrefix + item.Key;
@@ -290,7 +293,8 @@ public class Repository : IRepository
                 var builder = new StringBuilder(" WHERE ");
                 foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
                 {
-                    if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore)
+                    if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper)
+                        || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                         continue;
 
                     var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
@@ -347,7 +351,7 @@ public class Repository : IRepository
             var builder = new StringBuilder("SELECT ");
             foreach (var propMapper in entityMapper.MemberMaps)
             {
-                if (propMapper.IsIgnore || propMapper.IsNavigation)
+                if (propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                     continue;
 
                 if (index > 0) builder.Append(',');
@@ -372,7 +376,8 @@ public class Repository : IRepository
                 int index = 0;
                 foreach (var item in dict)
                 {
-                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || propMapper.IsIgnore)
+                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper)
+                        || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                         continue;
 
                     var parameterName = ormProvider.ParameterPrefix + item.Key;
@@ -409,7 +414,8 @@ public class Repository : IRepository
                 var builder = new StringBuilder(" WHERE ");
                 foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
                 {
-                    if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore)
+                    if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper)
+                        || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                         continue;
 
                     var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
@@ -465,7 +471,7 @@ public class Repository : IRepository
             var builder = new StringBuilder("SELECT ");
             foreach (var propMapper in entityMapper.MemberMaps)
             {
-                if (propMapper.IsIgnore || propMapper.IsNavigation)
+                if (propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                     continue;
 
                 if (index > 0) builder.Append(',');
@@ -490,7 +496,8 @@ public class Repository : IRepository
                 int index = 0;
                 foreach (var item in dict)
                 {
-                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || propMapper.IsIgnore)
+                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper)
+                        || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                         continue;
 
                     var parameterName = ormProvider.ParameterPrefix + item.Key;
@@ -527,7 +534,8 @@ public class Repository : IRepository
                 var builder = new StringBuilder(" WHERE ");
                 foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
                 {
-                    if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper) || propMapper.IsIgnore)
+                    if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper)
+                        || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                         continue;
 
                     var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
@@ -604,7 +612,7 @@ public class Repository : IRepository
             var builder = new StringBuilder("SELECT ");
             foreach (var propMapper in entityMapper.MemberMaps)
             {
-                if (propMapper.IsIgnore || propMapper.IsNavigation)
+                if (propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                     continue;
 
                 if (index > 0) builder.Append(',');
@@ -710,7 +718,7 @@ public class Repository : IRepository
             var builder = new StringBuilder("SELECT ");
             foreach (var propMapper in entityMapper.MemberMaps)
             {
-                if (propMapper.IsIgnore || propMapper.IsNavigation)
+                if (propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                     continue;
 
                 if (index > 0) builder.Append(',');
@@ -825,27 +833,6 @@ public class Repository : IRepository
     #endregion
 
     #region Delete
-    public int DeleteByKey<TEntity>(object keys)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<int> DeleteByKeyAsync<TEntity>(object keys, CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-
-    public int Delete<TEntity>(object whereObj)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<int> DeleteAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-
-
     public IDelete<T> Delete<T>() => new Delete<T>(this.dbFactory, this.connection, this.transaction);
     #endregion
 

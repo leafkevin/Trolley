@@ -98,6 +98,7 @@ public class Product
     public string Name { get; set; }
     public int BrandId { get; set; }
     public int CategoryId { get; set; }
+    public int CompanyId { get; set; }
     public bool IsEnabled { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -105,12 +106,14 @@ public class Product
     public DateTime UpdatedAt { get; set; }
 
     public BrandInfo Brand { get; set; }
+    public CompanyInfo Company { get; set; }
 }
 public class Brand
 {
     public int Id { get; set; }
     public string BrandNo { get; set; }
     public string Name { get; set; }
+    public int CompanyId { get; set; }
     public bool IsEnabled { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -118,10 +121,11 @@ public class Brand
     public DateTime UpdatedAt { get; set; }
 
     public List<Product> Products { get; set; }
+    public CompanyInfo Company { get; set; }
 }
 public class BrandInfo
 {
     public int Id { get; set; }
-    public string Code { get; set; }
+    public string BrandNo { get; set; }
     public string Name { get; set; }
 }

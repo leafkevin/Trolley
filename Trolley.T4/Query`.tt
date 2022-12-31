@@ -62,32 +62,32 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     }
     public IQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<<#=tables#>, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<<#=tables#>, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<<#=tables#>, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     #endregion
@@ -367,17 +367,17 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     #region Join
     public IQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     #endregion

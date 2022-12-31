@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 
 namespace Trolley;
@@ -297,7 +296,7 @@ class SqlVisitor
                     if (tableSegment == null)
                         throw new Exception($"使用导航属性前，要先使用Include方法包含进来，访问路径:{path}");
 
-                    var memberSegments = this.GetTableFields(tableSegment, 1, tableSegment.FromMember);
+                    var memberSegments = this.AddTableReaderFields(sqlSegment.ReaderIndex, tableSegment);
                     return new SqlSegment
                     {
                         HasField = true,
@@ -398,18 +397,10 @@ class SqlVisitor
             return new SqlSegment { Value = parameterExpr.Name };
         if (typeof(IWhereSql).IsAssignableFrom(parameterExpr.Type))
             return new SqlSegment { Value = parameterExpr.Name };
-
-        //处理Include表字段
+        //
         var fromSegment = this.tableAlias[parameterExpr.Name];
-        //参数的FromMeber没有设置，在Select的时候设置
-        var memberSegments = this.GetTableFields(fromSegment);
-        return new SqlSegment
-        {
-            HasField = true,
-            TableSegment = fromSegment,
-            Expression = parameterExpr,
-            Value = memberSegments
-        };
+        var readerMembers = this.AddTableReaderFields(sqlSegment.ReaderIndex, fromSegment);
+        return sqlSegment.Change(readerMembers, false);
     }
     public virtual SqlSegment VisitNew(SqlSegment sqlSegment)
     {
@@ -713,6 +704,53 @@ class SqlVisitor
         }
         return sqlSegment.Change(objValue);
     }
+    public TableSegment FindTableSegment(string parameterName, string path)
+    {
+        var index = path.IndexOf(".");
+        if (index > 0)
+        {
+            var rootTableSegment = this.tableAlias[parameterName];
+            path = path.Replace(parameterName + ".", rootTableSegment.AliasName + ".");
+            return this.tables.Find(f => f.Path == path);
+        }
+        else return this.tableAlias[parameterName];
+    }
+    public List<ReaderField> AddTableReaderFields(int readerIndex, TableSegment fromSegment)
+    {
+        var readerFields = new List<ReaderField>();
+        fromSegment.Mapper ??= this.dbFactory.GetEntityMap(fromSegment.EntityType);
+        var lastReaderField = new ReaderField
+        {
+            Index = readerIndex,
+            Type = ReaderFieldType.Entity,
+            TableSegment = fromSegment
+            //最外层Select对象的成员，位于顶层, FromMember暂时不设置值，到Select时候去设置 
+        };
+        readerFields.Add(lastReaderField);
+        this.AddIncludeTables(lastReaderField, readerFields);
+        return readerFields;
+    }
+    private void AddIncludeTables(ReaderField lastReaderField, List<ReaderField> readerFields)
+    {
+        var includedSegments = this.tables.FindAll(f => f.IsInclude && f.IncludedFrom == lastReaderField.TableSegment);
+        if (includedSegments != null && includedSegments.Count > 0)
+        {
+            foreach (var includedSegment in includedSegments)
+            {
+                var readerField = new ReaderField
+                {
+                    Index = readerFields.Count,
+                    Type = ReaderFieldType.Entity,
+                    TableSegment = includedSegment,
+                    FromMember = includedSegment.FromMember,
+                    ParentIndex = lastReaderField.Index
+                };
+                readerFields.Add(readerField);
+                if (this.tables.Exists(f => f.IsInclude && f.IncludedFrom == includedSegment))
+                    this.AddIncludeTables(readerField, readerFields);
+            }
+        }
+    }
     private void Swap<T>(ref T left, ref T right)
     {
         var temp = right;
@@ -743,54 +781,6 @@ class SqlVisitor
             case ExpressionType.LeftShift: return "<<";
             case ExpressionType.RightShift: return ">>";
             default: return exprType.ToString();
-        }
-    }
-    private TableSegment FindTableSegment(string parameterName, string path)
-    {
-        var index = path.IndexOf(".");
-        if (index > 0)
-        {
-            var rootTableSegment = this.tableAlias[parameterName];
-            path = path.Replace(parameterName + ".", rootTableSegment.AliasName + ".");
-            return this.tables.Find(f => f.Path == path);
-        }
-        else return this.tableAlias[parameterName];
-    }
-    private List<MemberSegment> GetTableFields(TableSegment fromSegment, int tableIndex = 1, MemberInfo fromMember = null)
-    {
-        var memberSegments = new List<MemberSegment>();
-        this.AddTableFields(fromSegment, memberSegments, tableIndex, fromMember);
-        var fromTables = new List<TableSegment>() { fromSegment };
-        foreach (var tableSegment in this.tables)
-        {
-            if (tableSegment == fromSegment) continue;
-            if (fromTables.Contains(tableSegment.IncludedFrom))
-            {
-                tableIndex++;
-                fromTables.Add(tableSegment);
-                this.AddTableFields(tableSegment, memberSegments, tableIndex, tableSegment.FromMember);
-            }
-        }
-        return memberSegments;
-    }
-    private void AddTableFields(TableSegment fromSegment, List<MemberSegment> memberSegments, int tableIndex, MemberInfo fromMember)
-    {
-        var memberMappers = fromSegment.Mapper.GetMembers();
-        foreach (var memberInfo in memberMappers)
-        {
-            if (memberInfo.GetMemberType().IsEntityType())
-                continue;
-            var memberMapper = fromSegment.Mapper.GetMemberMap(memberInfo.Name);
-            memberSegments.Add(new MemberSegment
-            {
-                //此处FromIndex,FromMember,Body不做处理，不知道是否作为Select内容
-                FromMember = fromMember ?? memberInfo,
-                MemberMapper = memberMapper,
-                TableSegment = fromSegment,
-                Body = $"{fromSegment.AliasName}.{this.ormProvider.GetFieldName(memberMapper.FieldName)}",
-                IsNeedAlias = false,
-                TableIndex = tableIndex
-            });
         }
     }
 }

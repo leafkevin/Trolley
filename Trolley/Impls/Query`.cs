@@ -49,32 +49,32 @@ class Query<T1, T2> : IQuery<T1, T2>
     }
     public IQuery<T1, T2> InnerJoin(Expression<Func<T1, T2, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2> LeftJoin(Expression<Func<T1, T2, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2> RightJoin(Expression<Func<T1, T2, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     #endregion
@@ -359,32 +359,32 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
     }
     public IQuery<T1, T2, T3> InnerJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3> LeftJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3> RightJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     #endregion
@@ -669,32 +669,32 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     }
     public IQuery<T1, T2, T3, T4> InnerJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4> LeftJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4> RightJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     #endregion
@@ -979,32 +979,32 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
     }
     public IQuery<T1, T2, T3, T4, T5> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5> RightJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     #endregion
@@ -1289,32 +1289,32 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
     }
     public IQuery<T1, T2, T3, T4, T5, T6> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     #endregion
@@ -1599,32 +1599,32 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     #endregion
@@ -1909,32 +1909,32 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     #endregion
@@ -2219,32 +2219,32 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     #endregion
@@ -2529,32 +2529,32 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     #endregion
@@ -2839,32 +2839,32 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     #endregion
@@ -3149,32 +3149,32 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     #endregion
@@ -3459,32 +3459,32 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     #endregion
@@ -3769,32 +3769,32 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     #endregion
@@ -4079,32 +4079,32 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
     }
     #endregion
@@ -4381,17 +4381,17 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
     #region Join
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn)
     {
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn)
     {
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn)
     {
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     #endregion

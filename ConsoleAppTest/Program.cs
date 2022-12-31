@@ -2,7 +2,6 @@
 using System;
 using System.Linq.Expressions;
 using Trolley;
-using Trolley.Providers;
 
 namespace ConsoleAppTest;
 
@@ -13,11 +12,6 @@ enum Sex
 }
 class Program
 {
-    class Tedss
-    {
-        public int Id { get; set; }
-        public string Name => "5555";
-    }
     static void Main(string[] args)
     {
         var services = new ServiceCollection();
@@ -48,8 +42,8 @@ class Program
             .Select((a, b) => new { a.OrderNo, BuyerName = a.Buyer.Name, Seller = b })
             .First();
         rep.Update<Order>().Set(f => new { OrderName = "ddd" }).Where(f => f.Id == 3);
-        rep.Update<Order>().From<User, Company>((a, b, c) => a.BuyerId == b.Id && b.CompanyId == c.Id && c.Name == "pa")
-            .Set((x, y, z) => new { OrderNo = "Order_" + y.Name + Guid.NewGuid().ToString() });
+        //rep.Update<Order>().From<User, Company>((a, b, c) => a.BuyerId == b.Id && b.CompanyId == c.Id && c.Name == "pa")
+        //    .Set((x, y, z) => new { OrderNo = "Order_" + y.Name + Guid.NewGuid().ToString() });
 
         //rep.From<Order>().Include(f => f.Buyer).Include(f => f.Details)
         //    .InnerJoin(f => f.BuyerId == f.Buyer.Id)

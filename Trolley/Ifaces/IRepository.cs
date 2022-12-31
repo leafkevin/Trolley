@@ -46,10 +46,6 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     #endregion
 
     #region Delete
-    int DeleteByKey<TEntity>(object keys);
-    Task<int> DeleteByKeyAsync<TEntity>(object keys, CancellationToken cancellationToken = default);
-    int Delete<TEntity>(object whereObj);
-    Task<int> DeleteAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default);
     IDelete<T> Delete<T>();
     #endregion
 

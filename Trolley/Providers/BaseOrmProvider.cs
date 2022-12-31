@@ -33,7 +33,7 @@ public abstract class BaseOrmProvider : IOrmProvider
         if (fieldType == typeof(bool))
             return (bool)value ? "1" : "0";
         if (fieldType == typeof(string))
-            return $"'{value}'";
+            return "'" + value.ToString().Replace("\\", "\\\\").Replace("'", @"\'") + "'";
         if (fieldType == typeof(DateTime))
             return $"'{value:yyyy-MM-dd HH:mm:ss}'";
         if (value is SqlSegment sqlSegment)

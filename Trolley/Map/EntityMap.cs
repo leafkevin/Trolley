@@ -81,7 +81,14 @@ public class EntityMap
         foreach (var memberInfo in memberInfos)
         {
             if (!this.TryGetMemberMap(memberInfo.Name, out _))
-                this.AddMemberMap(memberInfo.Name, new MemberMap(this, this.FieldPrefix, memberInfo));
+            {
+                var memberMapper = new MemberMap(this, this.FieldPrefix, memberInfo);
+                this.AddMemberMap(memberInfo.Name, memberMapper);
+
+                //检查导航属性配置，在Build的时候，就把错误暴漏出来
+                if (memberMapper.MemberType.IsEntityType() && !memberMapper.IsNavigation)
+                    throw new Exception($"模型{this.EntityType.FullName}的成员{memberInfo.Name}未配置为导航属性！");
+            }
         }
         if (this.memberMaps.Count > 0)
         {

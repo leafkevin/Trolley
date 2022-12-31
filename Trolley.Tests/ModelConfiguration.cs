@@ -15,6 +15,8 @@ class ModelConfiguration : IModelConfiguration
         {
             f.ToTable("sys_company").Key(t => t.Id).AutoIncrement(t => t.Id);
             f.HasMany(t => t.Users).HasForeignKey(t => t.CompanyId);
+            f.HasMany(t => t.Brands).HasForeignKey(t => t.CompanyId);
+            f.HasMany(t => t.Products).HasForeignKey(t => t.CompanyId);
         });
         builder.Entity<Order>(f =>
         {
@@ -32,12 +34,14 @@ class ModelConfiguration : IModelConfiguration
         builder.Entity<Product>(f =>
         {
             f.ToTable("sys_product").Key(f => f.Id);
-            f.HasOne(t => t.Brand).HasForeignKey(t => t.BrandId);
+            f.HasOne(t => t.Brand).HasForeignKey(t => t.BrandId).MapTo<Brand>();
+            f.HasOne(t => t.Company).HasForeignKey(t => t.CompanyId).MapTo<Company>();
         });
         builder.Entity<Brand>(f =>
         {
             f.ToTable("sys_brand").Key(f => f.Id);
             f.HasMany(t => t.Products).HasForeignKey(t => t.BrandId);
+            f.HasOne(t => t.Company).HasForeignKey(t => t.CompanyId).MapTo<Company>();
         });
         builder.Entity<LookupValue>(f =>
         {
