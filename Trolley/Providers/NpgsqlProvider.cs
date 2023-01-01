@@ -134,22 +134,6 @@ public class NpgSqlProvider : BaseOrmProvider
         memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalMilliseconds)), target => $"(({this.GetQuotedValue(target)})/1000)");
         memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalMinutes)), target => $"(({this.GetQuotedValue(target)})/{(long)1000000 * 60})");
         memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalSeconds)), target => $"(({this.GetQuotedValue(target)})/1000000)");
-
-
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.Count), Type.EmptyTypes), (target, deferredExprs, arguments) => "COUNT(1)");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.LongCount), Type.EmptyTypes), (target, deferredExprs, arguments) => "COUNT(1)");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.Count), 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"COUNT({arguments[0]})");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.CountDistinct), 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"COUNT(DISTINCT {arguments[0]})");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.LongCount), 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"COUNT({arguments[0]})");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.LongCountDistinct), 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"COUNT(DISTINCT {arguments[0]})");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.Sum), 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"SUM({arguments[0]})");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.SumAs), 2, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"SUM({arguments[0]})");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.Avg), 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"AVG({arguments[0]})");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.AvgAs), 2, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"AVG({arguments[0]})");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.Max), 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"MAX({arguments[0]})");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.MaxAs), 2, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"MAX({arguments[0]})");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.Min), 1, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"MIN({arguments[0]})");
-        methodCallSqlFormatterCahe.TryAdd(typeof(IAggregateSelect).GetMethod(nameof(IAggregateSelect.MinAs), 2, new Type[] { Type.MakeGenericMethodParameter(0) }), (target, deferredExprs, arguments) => $"MIN({arguments[0]})");
     }
 
     public override IDbConnection CreateConnection(string connectionString)

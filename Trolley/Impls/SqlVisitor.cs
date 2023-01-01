@@ -397,14 +397,12 @@ public class SqlVisitor
     public virtual SqlSegment VisitParameter(SqlSegment sqlSegment)
     {
         var parameterExpr = sqlSegment.Expression as ParameterExpression;
-        if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
-            return new SqlSegment { Value = parameterExpr.Name };
         if (typeof(IWhereSql).IsAssignableFrom(parameterExpr.Type))
             return new SqlSegment { Value = parameterExpr.Name };
-        //
+
         var fromSegment = this.tableAlias[parameterExpr.Name];
-        var readerMembers = this.AddTableReaderFields(sqlSegment.ReaderIndex, fromSegment);
-        return sqlSegment.Change(readerMembers, false);
+        var readerFields = this.AddTableReaderFields(sqlSegment.ReaderIndex, fromSegment);
+        return sqlSegment.Change(readerFields, false);
     }
     public virtual SqlSegment VisitNew(SqlSegment sqlSegment)
     {
@@ -664,10 +662,13 @@ public class SqlVisitor
                     }
                     else
                     {
-                        var query = this.Evaluate(new SqlSegment { Expression = methodCallExpr.Arguments[1] }).Value;
+                        SqlSegment querySegment = null;
+                        if (typeof(IQuery<>).MakeGenericType(elementType).IsAssignableFrom(methodCallExpr.Arguments[1].Type))
+                            querySegment = this.Evaluate(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
+                        else querySegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
                         var toSqlInvoker = this.BuildToSqlInvoker(elementType);
                         List<IDbDataParameter> dbDataParameters = null;
-                        var sql = toSqlInvoker.Invoke(query, out dbDataParameters);
+                        var sql = toSqlInvoker.Invoke(querySegment.Value, out dbDataParameters);
                         if (dbDataParameters != null && dbDataParameters.Count > 0)
                         {
                             this.dbParameters ??= new();
@@ -676,29 +677,110 @@ public class SqlVisitor
                         sqlSegment.Change($"{fieldSegment} IN ({sql})");
                     }
                     break;
-                    //case "Exists":
-                    //      elementType = methodCallExpr.Method.GetGenericArguments()[0];
-                    //    var fieldSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    //    if (methodCallExpr.Arguments[1].Type.IsArray || typeof(IEnumerable<>).MakeGenericType(elementType).IsAssignableFrom(methodCallExpr.Arguments[1].Type))
-                    //    {
-                    //        sqlSegment = this.Evaluate(sqlSegment.Next(methodCallExpr.Arguments[1]));
-                    //        if (sqlSegment == SqlSegment.Null)
-                    //            return sqlSegment.Change("0=1");
-                    //        return sqlSegment.Change($"{fieldSegment} IN ({this.ToParameter(sqlSegment)})");
-                    //    }
-                    //    else
-                    //    {
-                    //        var query = this.Evaluate(sqlSegment.Next(methodCallExpr.Arguments[1])).Value;
-                    //        var toSqlInvoker = this.BuildToSqlInvoker(elementType);
-                    //        var sql = toSqlInvoker.Invoke(query, out var dbDataParameters);
-                    //        if (dbDataParameters != null && dbDataParameters.Count > 0)
-                    //        {
-                    //            this.dbParameters ??= new();
-                    //            this.dbParameters.AddRange(dbDataParameters);
-                    //        }
-                    //        return sqlSegment.Change($"{fieldSegment} IN ({sql})");
-                    //    }
-                    //    break;
+                case "Exists":
+                    var subTableTypes = methodCallExpr.Method.GetGenericArguments();
+                    var currentExpr = methodCallExpr.Arguments[0];
+                    while (currentExpr.NodeType != ExpressionType.Lambda)
+                    {
+                        var unaryExpr = currentExpr as UnaryExpression;
+                        currentExpr = unaryExpr.Operand;
+                    }
+                    var lambdaExpr = currentExpr as LambdaExpression;
+                    int index = 0;
+                    var builder = new StringBuilder("EXISTS(SELECT * FROM ");
+                    foreach (var subTableType in subTableTypes)
+                    {
+                        var subTableMapper = this.dbFactory.GetEntityMap(subTableType);
+                        var aliasName = lambdaExpr.Parameters[index].Name;
+                        var tableSegment = new TableSegment
+                        {
+                            EntityType = subTableType,
+                            AliasName = aliasName
+                        };
+                        this.tables.Add(tableSegment);
+                        this.tableAlias.Add(aliasName, tableSegment);
+                        if (index > 0) builder.Append(',');
+                        builder.Append(this.ormProvider.GetTableName(subTableMapper.TableName));
+                        builder.Append($" {aliasName}");
+                        index++;
+                    }
+                    builder.Append(" WHERE ");
+                    builder.Append(this.VisitConditionExpr(lambdaExpr.Body));
+                    builder.Append(')');
+                    sqlSegment.Change(builder.ToString());
+                    break;
+                case "Count":
+                case "LongCount":
+                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    {
+                        if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
+                            throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
+                        sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                        sqlSegment.Change($"COUNT({sqlSegment})");
+                    }
+                    else sqlSegment.Change("COUNT(1)");
+                    this.tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
+                    break;
+                case "CountDistinct":
+                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    {
+                        if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
+                            throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
+                        sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                        sqlSegment.Change($"COUNT(DISTINCT {sqlSegment})");
+                    }
+                    this.tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
+                    break;
+                case "LongCountDistinct":
+                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    {
+                        if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
+                            throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
+                        sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                        sqlSegment.Change($"COUNT(DISTINCT {sqlSegment})");
+                    }
+                    this.tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
+                    break;
+                case "Sum":
+                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    {
+                        if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
+                            throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
+                        sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                        sqlSegment.Change($"SUM({sqlSegment})");
+                    }
+                    this.tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
+                    break;
+                case "Avg":
+                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    {
+                        if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
+                            throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
+                        sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                        sqlSegment.Change($"AVG({sqlSegment})");
+                    }
+                    this.tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
+                    break;
+                case "Max":
+                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    {
+                        if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
+                            throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
+                        sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                        sqlSegment.Change($"MAX({sqlSegment})");
+                    }
+                    this.tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
+                    break;
+                case "Min":
+                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    {
+                        if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
+                            throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
+                        sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                        sqlSegment.Change($"MIN({sqlSegment})");
+                    }
+                    this.tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
+                    break;
             }
         }
         return sqlSegment;
@@ -827,7 +909,7 @@ public class SqlVisitor
     }
     private void AddIncludeTables(ReaderField lastReaderField, List<ReaderField> readerFields)
     {
-        var includedSegments = this.tables.FindAll(f => f.IsInclude && f.IncludedFrom == lastReaderField.TableSegment);
+        var includedSegments = this.tables.FindAll(f => f.IsInclude && f.FromTable == lastReaderField.TableSegment);
         if (includedSegments != null && includedSegments.Count > 0)
         {
             foreach (var includedSegment in includedSegments)
@@ -837,11 +919,11 @@ public class SqlVisitor
                     Index = readerFields.Count,
                     Type = ReaderFieldType.Entity,
                     TableSegment = includedSegment,
-                    FromMember = includedSegment.FromMember,
+                    FromMember = includedSegment.FromMember.Member,
                     ParentIndex = lastReaderField.Index
                 };
                 readerFields.Add(readerField);
-                if (this.tables.Exists(f => f.IsInclude && f.IncludedFrom == includedSegment))
+                if (this.tables.Exists(f => f.IsInclude && f.FromTable == includedSegment))
                     this.AddIncludeTables(readerField, readerFields);
             }
         }

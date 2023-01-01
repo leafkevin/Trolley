@@ -23,7 +23,7 @@ class Query<T> : IQuery<T>
         this.visitor = visitor;
         this.dbFactory = visitor.dbFactory;
         this.connection = visitor.connection;
-        this.transaction = visitor.transaction;        
+        this.transaction = visitor.transaction;
     }
 
     #region Include
@@ -169,11 +169,6 @@ class Query<T> : IQuery<T>
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
-    public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
-    {
-        this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.visitor);
-    }
     public IQuery<T> Distinct()
     {
         this.visitor.Distinct();
@@ -192,73 +187,6 @@ class Query<T> : IQuery<T>
     public IQuery<T> ToChunk(int size)
     {
         throw new NotImplementedException();
-    }
-
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
-    public int Count<TField>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
-    public async Task<int> CountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
-    public int CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
-    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
-    public long LongCount<TField>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
-    public async Task<long> LongCountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
-    public long LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
-    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
-    public TField Sum<TField>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
-    public async Task<TField> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
-    public TTarget SumAs<TField, TTarget>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<TTarget>("SUM({0})", fieldExpr);
-    public async Task<TTarget> SumAsAsync<TField, TTarget>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TTarget>("SUM({0})", fieldExpr, cancellationToken);
-    public TField Avg<TField>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
-    public async Task<TField> AvgAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
-    public TTarget AvgAs<TField, TTarget>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<TTarget>("AVG({0})", fieldExpr);
-    public async Task<TTarget> AvgAsAsync<TField, TTarget>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TTarget>("AVG({0})", fieldExpr, cancellationToken);
-    public TField Max<TField>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
-    public async Task<TField> MaxAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
-    public TTarget MaxAs<TField, TTarget>(Expression<Func<T, TField>> fieldExpr)
-    {
-        var castTo = this.connection.OrmProvider.CastTo(typeof(TTarget));
-        return this.QueryFirstValue<TTarget>($"MAX(CAST({{0}} AS {castTo}))", fieldExpr);
-    }
-    public async Task<TTarget> MaxAsAsync<TField, TTarget>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-    {
-        var castTo = this.connection.OrmProvider.CastTo(typeof(TTarget));
-        return await this.QueryFirstValueAsync<TTarget>($"MAX(CAST({{0}} AS {castTo}))", fieldExpr, cancellationToken);
-    }
-    public TField Min<TField>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
-    public async Task<TField> MinAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
-    public TTarget MinAs<TField, TTarget>(Expression<Func<T, TField>> fieldExpr)
-    {
-        var castTo = this.connection.OrmProvider.CastTo(typeof(TTarget));
-        return this.QueryFirstValue<TTarget>($"MIN(CAST({{0}} AS {castTo}))", fieldExpr);
-    }
-    public async Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-    {
-        var castTo = this.connection.OrmProvider.CastTo(typeof(TTarget));
-        return await this.QueryFirstValueAsync<TTarget>($"MIN(CAST({{0}} AS {castTo}))", fieldExpr, cancellationToken);
     }
     public T First()
     {
@@ -302,7 +230,7 @@ class Query<T> : IQuery<T>
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");;
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         T result = default;
         await this.connection.OpenAsync(cancellationToken);

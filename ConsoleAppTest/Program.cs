@@ -31,10 +31,11 @@ class Program
         var ormProvider = serviceProvider.GetService<IOrmProvider>();
         var repository = dbFactory.Create();
 
-        var userQuery = repository
-           .From<Order>()
-           .Where(f => Sql.In(f.BuyerId, repository.From<User>('b').Where(x => x.Name == "11'1").Select(x => x.Id)))
-           .ToList();
+        //var userQuery = repository
+        //   .From<Order, User>()
+        //   .InnerJoin((x, y) => x.BuyerId == y.Id)
+        //   .Select((x, y) => Sql.CountDistinct(x.Id))
+        //   .ToSql(out _);
 
         //visitor.VisitSqlMethodCall(new SqlSegment { Expression = expr.Body });
 
@@ -44,21 +45,21 @@ class Program
         ////到ToList,First才开始解析，前面只生成方便解析的结构
         ////Stack<>
         var rep = dbFactory.Create();
-        var result = rep.From<Order, User>()
-            .Include((a, b) => a.Buyer.Company)
-            //.ThenInclude(f => f.Company)
-            .InnerJoin((x, y) => x.SellerId == y.Id && x.IsEnabled && y.IsEnabled)
-            .Where((x, y) => Sql.Exists<Order>(f => x.Id == f.Id))
-            .Select((a, b) => new { a.OrderNo, BuyerName = a.Buyer.Name, Seller = b })
-            .First();
-        rep.Update<Order>().Set(f => new { OrderName = "ddd" }).Where(f => f.Id == 3);
+        //var result = rep.From<Order, User>()
+        //    .Include((a, b) => a.Buyer.Company)
+        //    //.ThenInclude(f => f.Company)
+        //    .InnerJoin((x, y) => x.SellerId == y.Id && x.IsEnabled && y.IsEnabled)
+        //    .Where((x, y) => Sql.Exists<Order>(f => x.Id == f.Id))
+        //    .Select((a, b) => new { a.OrderNo, BuyerName = a.Buyer.Name, Seller = b })
+        //    .First();
+        //rep.Update<Order>().Set(f => new { OrderName = "ddd" }).Where(f => f.Id == 3);
         //rep.Update<Order>().From<User, Company>((a, b, c) => a.BuyerId == b.Id && b.CompanyId == c.Id && c.Name == "pa")
         //    .Set((x, y, z) => new { OrderNo = "Order_" + y.Name + Guid.NewGuid().ToString() });
 
         //rep.From<Order>().Include(f => f.Buyer).Include(f => f.Details)
         //    .InnerJoin(f => f.BuyerId == f.Buyer.Id)
         //    .Where(f => f.CreatedAt > DateTime.Parse("2021-10-01"))
-        //    .SelectAggregate((a, b) => new { b.BuyerId, b.OrderNo, Order = b, ProductCount = a.Count(b.Details) })
+        //    .SelectAggregate((a, b) => new { b.BuyerId, b.OrderNo, Order = b, ProductCount = Sql.Count(b.Details) })
         //    .WithTable(f => f.From<Seller>().Select(f => new { SellerId = f.Id, f.Name }))
         //    .InnerJoin((a, b) => a.BuyerId == b.SellerId)
         //    .Where((a, b, c) => a.Exists<User>(t => t.Id == b.BuyerId && t.Age > 40)
@@ -102,17 +103,21 @@ class Program
         //            TotalAmount = a.Sum(c.TotalAmount)
         //        });
 
-        //fromQuery.IncludeMany(f => f.Orders).Filter(f => f.OrderNo.Contains("20221001")).ThenIncludeMany(f => f.Details)
-        //    .GroupBy((a, b, c) => new { a.Id, a.Name, b.OrderNo })
-        //    .OrderBy((a, b, c, d) => new { UserId = a.Id, OrderId = b.Id })
-        //    .Select((a, b, c, d) => new
-        //    {
-        //        a.Id,
-        //        a.Name,
-        //        b.OrderNo,
-        //        //ProductCount = a.Count((a, b) => b.Id),
-        //        //TotalAmount = a.Sum((a, b) => b.TotalAmount)
-        //    }).ToList();
+        var sql = repository.From<User>()
+                .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+                .IncludeMany((a, b) => a.Orders, b => b.OrderNo.Contains("20221001"))
+                .ThenIncludeMany(f => f.Details)
+                .GroupBy((a, b) => new { a.Id, a.Name, b.OrderNo })
+                .OrderBy((x, a, b) => new { UserId = a.Id, OrderId = b.Id })
+                .Select((x, a, b) => new
+                {
+                    a.Id,
+                    a.Name,
+                    b.OrderNo,
+                    //ProductCount = a.Count((a, b) => b.Id),
+                    //TotalAmount = a.Sum((a, b) => b.TotalAmount)
+                })
+                .ToList();
 
         //fromQuery.IncludeMany(f => f.Orders).ThenIncludeMany(f => f.Details)
         //    .GroupBy((a, b, c) => new { a.Id, a.Name, b.OrderNo })

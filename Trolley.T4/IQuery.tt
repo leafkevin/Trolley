@@ -84,37 +84,6 @@ public interface IQuery<T>
 
     IQuery<T> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
-    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr);
-
-    int Count();
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    long LongCount();
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    int Count<TField>(Expression<Func<T, TField>> fieldExpr);
-    Task<int> CountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    int CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
-    Task<int> CountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    long LongCount<TField>(Expression<Func<T, TField>> fieldExpr);
-    Task<long> LongCountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    long LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
-    Task<long> LongCountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
-    TField Sum<TField>(Expression<Func<T, TField>> fieldExpr);
-    Task<TField> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TTarget SumAs<TField, TTarget>(Expression<Func<T, TField>> fieldExpr);
-    Task<TTarget> SumAsAsync<TField, TTarget>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TField Avg<TField>(Expression<Func<T, TField>> fieldExpr);
-    Task<TField> AvgAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TTarget AvgAs<TField, TTarget>(Expression<Func<T, TField>> fieldExpr);
-    Task<TTarget> AvgAsAsync<TField, TTarget>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TField Max<TField>(Expression<Func<T, TField>> fieldExpr);
-    Task<TField> MaxAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TTarget MaxAs<TField, TTarget>(Expression<Func<T, TField>> fieldExpr);
-    Task<TTarget> MaxAsAsync<TField, TTarget>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TField Min<TField>(Expression<Func<T, TField>> fieldExpr);
-    Task<TField> MinAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TTarget MinAs<TField, TTarget>(Expression<Func<T, TField>> fieldExpr);
-    Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
 
     T First();
     Task<T> FirstAsync(CancellationToken cancellationToken = default);
@@ -164,38 +133,6 @@ public interface IQuery<<#=tables#>>
     IQuery<<#=tables#>> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);
-    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, <#=tables#>, TTarget>> fieldsExpr);
-
-    int Count();
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    long LongCount();
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    int Count<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<int> CountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    int CountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<int> CountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    long LongCount<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<long> LongCountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    long LongCountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<long> LongCountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
-    TField Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<TField> SumAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TTarget SumAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<TTarget> SumAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TField Avg<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<TField> AvgAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TTarget AvgAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<TTarget> AvgAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TField Max<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<TField> MaxAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TTarget MaxAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<TTarget> MaxAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TField Min<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<TField> MinAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TTarget MinAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 <#  }
@@ -226,36 +163,5 @@ public interface IQuery<<#=tables#>>
     IQuery<<#=tables#>> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);
-
-    int Count();
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    long LongCount();
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    int Count<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<int> CountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    int CountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<int> CountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    long LongCount<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<long> LongCountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    long LongCountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<long> LongCountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
-    TField Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<TField> SumAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TTarget SumAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<TTarget> SumAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TField Avg<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<TField> AvgAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TTarget AvgAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<TTarget> AvgAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TField Max<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<TField> MaxAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TTarget MaxAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<TTarget> MaxAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TField Min<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<TField> MinAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    TTarget MinAs<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr);
-    Task<TTarget> MinAsAsync<TField, TTarget>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
