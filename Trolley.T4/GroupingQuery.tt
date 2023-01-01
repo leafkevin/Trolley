@@ -12,18 +12,9 @@ namespace Trolley;
 
 class GroupingQuery<T, TGrouping> : IGroupingQuery<T, TGrouping>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
     private readonly QueryVisitor visitor;
 
-    public GroupingQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
-    {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
+    public GroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
     public IGroupingQuery<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
     {
         this.visitor.Having(predicate);
@@ -48,13 +39,13 @@ class GroupingQuery<T, TGrouping> : IGroupingQuery<T, TGrouping>
     {
         Expression<Func<TGrouping, TGrouping>> defaultExpr = f => f;
         this.visitor.Select(null, defaultExpr);
-        return new Query<TGrouping>(dbFactory, connection, transaction, visitor);
+        return new Query<TGrouping>(this.visitor);
     }
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
     {
         Expression<Func<TGrouping, TGrouping>> defaultExpr = f => f;
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(dbFactory, connection, transaction, visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public string ToSql()
     {
@@ -71,18 +62,9 @@ class GroupingQuery<T, TGrouping> : IGroupingQuery<T, TGrouping>
 #>
 class GroupingQuery<<#=tables#>, TGrouping> : IGroupingQuery<<#=tables#>, TGrouping>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
     private readonly QueryVisitor visitor;
 
-    public GroupingQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
-    {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
+    public GroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
     public IGroupingQuery<<#=tables#>, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
     {
         this.visitor.Having(predicate);
@@ -107,12 +89,12 @@ class GroupingQuery<<#=tables#>, TGrouping> : IGroupingQuery<<#=tables#>, TGroup
     {
         Expression<Func<TGrouping, TGrouping>> defaultExpr = f => f;
         this.visitor.Select(null, defaultExpr);
-        return new Query<TGrouping>(dbFactory, connection, transaction, visitor);
+        return new Query<TGrouping>(this.visitor);
     }
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(dbFactory, connection, transaction, visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public string ToSql()
     {
@@ -125,23 +107,14 @@ class GroupingQuery<<#=tables#>, TGrouping> : IGroupingQuery<<#=tables#>, TGroup
 #>
 class GroupingQuery<<#=tables#>, TGrouping> : IGroupingQuery<<#=tables#>, TGrouping>
 {
-    private readonly IOrmDbFactory dbFactory;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
     private readonly QueryVisitor visitor;
 
-    public GroupingQuery(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
-    {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
+    public GroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
     public IQuery<TGrouping> Select()
     {
         Expression<Func<TGrouping, TGrouping>> defaultExpr = f => f;
         this.visitor.Select(null, defaultExpr);
-        return new Query<TGrouping>(dbFactory, connection, transaction, visitor);
+        return new Query<TGrouping>(this.visitor);
     }
     public string ToSql()
     {

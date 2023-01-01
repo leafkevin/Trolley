@@ -18,24 +18,24 @@ class Query<T> : IQuery<T>
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(QueryVisitor visitor)
     {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.dbFactory = visitor.dbFactory;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;        
     }
 
     #region Include
     public IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
     {
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T, TMember>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T, TMember>(this.visitor);
     }
     public IIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.Include(memberSelector, filter);
-        return new IncludableQuery<T, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T, TElment>(this.visitor);
     }
     #endregion
 
@@ -46,7 +46,7 @@ class Query<T> : IQuery<T>
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T, TOther>(this.visitor);
     }
     public IQuery<T> InnerJoin(Expression<Func<T, bool>> joinOn)
     {
@@ -66,17 +66,17 @@ class Query<T> : IQuery<T>
     public IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T, TOther>(this.visitor);
     }
     public IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T, TOther>(this.visitor);
     }
     public IQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T, TOther>(this.visitor);
     }
     #endregion
 
@@ -144,7 +144,7 @@ class Query<T> : IQuery<T>
     public IGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new GroupingQuery<T, TGrouping>(this.visitor);
     }
     public IQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
     {
@@ -167,12 +167,12 @@ class Query<T> : IQuery<T>
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public IQuery<T> Distinct()
     {
@@ -302,7 +302,7 @@ class Query<T> : IQuery<T>
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");;
 
         T result = default;
         await this.connection.OpenAsync(cancellationToken);
@@ -369,7 +369,7 @@ class Query<T> : IQuery<T>
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         var result = new List<T>();
         await this.connection.OpenAsync(cancellationToken);
@@ -435,7 +435,7 @@ class Query<T> : IQuery<T>
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         await this.connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess;
@@ -501,7 +501,7 @@ class Query<T> : IQuery<T>
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;

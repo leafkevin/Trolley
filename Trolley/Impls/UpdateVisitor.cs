@@ -12,8 +12,8 @@ class UpdateVisitor : SqlVisitor
     private string whereSql = string.Empty;
     private string setSql = string.Empty;
 
-    public UpdateVisitor(IOrmDbFactory dbFactory, IOrmProvider ormProvider, Type entityType)
-        : base(dbFactory, ormProvider)
+    public UpdateVisitor(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, Type entityType, char tableStartAs = 'a')
+        : base(dbFactory, connection, transaction, tableStartAs)
     {
         this.tables = new();
         this.tableAlias = new();
@@ -89,7 +89,7 @@ class UpdateVisitor : SqlVisitor
     }
     public UpdateVisitor From(params Type[] entityTypes)
     {
-        char tableIndex = (char)(97 + this.tables.Count);
+        var tableIndex = this.tableStartAs + this.tables.Count;
         for (int i = 0; i < entityTypes.Length; i++)
         {
             this.tables.Add(new TableSegment

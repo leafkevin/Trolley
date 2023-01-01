@@ -12,8 +12,8 @@ class DeleteVisitor : SqlVisitor
     private readonly TableSegment tableSegment;
     private string whereSql = string.Empty;
 
-    public DeleteVisitor(IOrmDbFactory dbFactory, IOrmProvider ormProvider, Type entityType)
-        : base(dbFactory, ormProvider)
+    public DeleteVisitor(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, Type entityType, char tableStartAs = 'a')
+        : base(dbFactory, connection, transaction, tableStartAs)
     {
         this.tableSegment = new TableSegment
         {

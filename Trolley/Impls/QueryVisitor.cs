@@ -28,8 +28,8 @@ class QueryVisitor : SqlVisitor
     private bool isUnion = false;
     private List<IncludeSegment> includeSegments = null;
 
-    public QueryVisitor(IOrmDbFactory dbFactory, IOrmProvider ormProvider, string parameterPrefix = "p")
-        : base(dbFactory, ormProvider, parameterPrefix)
+    public QueryVisitor(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, char tableStartAs = 'a', string parameterPrefix = "p")
+        : base(dbFactory, connection, transaction, tableStartAs, parameterPrefix)
     {
         this.tables = new();
         this.tableAlias = new();
@@ -153,7 +153,7 @@ class QueryVisitor : SqlVisitor
         if (!string.IsNullOrEmpty(this.orderBySql))
             orderBy = $"ORDER BY {this.orderBySql}";
 
-        dbParameters = this.dbParameters;
+        dbParameters = this.dbParameters = new List<IDbDataParameter> { this.ormProvider.CreateParameter("@p", "111") };
         readerFields = this.readerFields;
 
         if (this.skip.HasValue || this.limit.HasValue)
@@ -221,22 +221,20 @@ class QueryVisitor : SqlVisitor
     }
     public QueryVisitor From(params Type[] entityTypes)
     {
-        char tableIndex = 'a';
         for (int i = 0; i < entityTypes.Length; i++)
         {
             this.tables.Add(new TableSegment
             {
                 EntityType = entityTypes[i],
-                AliasName = $"{(char)(tableIndex + i)}",
-                Path = $"{(char)(tableIndex + i)}"
+                AliasName = $"{(char)(this.tableStartAs + i)}",
+                Path = $"{(char)(this.tableStartAs + i)}"
             });
         }
         return this;
     }
     public QueryVisitor WithTable(Type entityType, string body, List<IDbDataParameter> dbParameters = null, string joinType = "")
     {
-        char tableIndex = 'a';
-        tableIndex += (char)this.tables.Count;
+        int tableIndex = this.tableStartAs + this.tables.Count;
         if (this.tables.Count > 0)
             joinType = "INNER JOIN";
 
@@ -244,9 +242,9 @@ class QueryVisitor : SqlVisitor
         {
             JoinType = joinType,
             EntityType = entityType,
-            AliasName = $"{tableIndex}",
+            AliasName = $"{(char)tableIndex}",
             Body = $"({body})",
-            Path = $"{tableIndex}"
+            Path = $"{(char)tableIndex}"
         });
         if (dbParameters != null)
         {
@@ -301,10 +299,13 @@ class QueryVisitor : SqlVisitor
             var lambdaExpr = selectExpr as LambdaExpression;
             this.InitTableAlias(lambdaExpr);
             StringBuilder builder = null;
+            SqlSegment sqlSegment = null;
             switch (lambdaExpr.Body.NodeType)
             {
                 case ExpressionType.MemberAccess:
-                    body = this.Visit(new SqlSegment { Expression = lambdaExpr.Body }).ToString();
+                    sqlSegment = this.Visit(new SqlSegment { Expression = lambdaExpr.Body });
+                    sqlSegment.TableSegment.IsUsed = true;
+                    body = sqlSegment.ToString();
                     break;
                 case ExpressionType.New:
                     var newExpr = lambdaExpr.Body as NewExpression;
@@ -330,7 +331,7 @@ class QueryVisitor : SqlVisitor
                     body = builder.ToString();
                     break;
                 case ExpressionType.Parameter:
-                    var sqlSegment = this.VisitParameter(new SqlSegment { Expression = lambdaExpr.Body, ReaderIndex = 0 });
+                    sqlSegment = this.VisitParameter(new SqlSegment { Expression = lambdaExpr.Body, ReaderIndex = 0 });
                     builder = new StringBuilder();
                     this.readerFields = sqlSegment.Value as List<ReaderField>;
                     this.AddReaderFields(this.readerFields, builder);
@@ -530,7 +531,7 @@ class QueryVisitor : SqlVisitor
     }
     private TableSegment AddTable(string joinType, Type entityType)
     {
-        int tableIndex = 'a' + this.tables.Count;
+        int tableIndex = this.tableStartAs + this.tables.Count;
         var tableSegment = new TableSegment
         {
             EntityType = entityType,

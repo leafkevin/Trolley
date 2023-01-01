@@ -46,7 +46,6 @@ public class Sql
     {
         throw new NotImplementedException();
     }
-
     public static int Count()
     {
         throw new NotImplementedException();
@@ -71,12 +70,7 @@ public class Sql
     {
         throw new NotImplementedException();
     }
-
     public static TField Sum<TField>(TField field)
-    {
-        throw new NotImplementedException();
-    }
-    public static TTarget SumAs<TField, TTarget>(TField field)
     {
         throw new NotImplementedException();
     }
@@ -84,23 +78,11 @@ public class Sql
     {
         throw new NotImplementedException();
     }
-    public static TTarget AvgAs<TField, TTarget>(TField field)
-    {
-        throw new NotImplementedException();
-    }
     public static TField Max<TField>(TField field)
     {
         throw new NotImplementedException();
     }
-    public static TTarget MaxAs<TField, TTarget>(TField field)
-    {
-        throw new NotImplementedException();
-    }
     public static TField Min<TField>(TField field)
-    {
-        throw new NotImplementedException();
-    }
-    public static TTarget MinAs<TField, TTarget>(TField field)
     {
         throw new NotImplementedException();
     }

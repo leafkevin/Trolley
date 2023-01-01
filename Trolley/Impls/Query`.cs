@@ -17,24 +17,24 @@ class Query<T1, T2> : IQuery<T1, T2>
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(QueryVisitor visitor)
     {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.dbFactory = visitor.dbFactory;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;
     }
 
     #region Include
     public IIncludableQuery<T1, T2, TMember> Include<TMember>(Expression<Func<T1, T2, TMember>> memberSelector)
     {
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, TMember>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, TMember>(this.visitor);
     }
     public IIncludableQuery<T1, T2, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.Include(memberSelector, filter);
-        return new IncludableQuery<T1, T2, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, TElment>(this.visitor);
     }
     #endregion
 
@@ -45,7 +45,7 @@ class Query<T1, T2> : IQuery<T1, T2>
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T1, T2, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, TOther>(this.visitor);
     }
     public IQuery<T1, T2> InnerJoin(Expression<Func<T1, T2, bool>> joinOn)
     {
@@ -65,17 +65,17 @@ class Query<T1, T2> : IQuery<T1, T2>
     public IQuery<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, TOther>(this.visitor);
     }
     public IQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, TOther>(this.visitor);
     }
     public IQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, TOther>(this.visitor);
     }
     #endregion
 
@@ -143,7 +143,7 @@ class Query<T1, T2> : IQuery<T1, T2>
     public IGroupingQuery<T1, T2, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new GroupingQuery<T1, T2, TGrouping>(this.visitor);
     }
     public IQuery<T1, T2> OrderBy<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr)
     {
@@ -180,12 +180,12 @@ class Query<T1, T2> : IQuery<T1, T2>
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -276,13 +276,10 @@ class Query<T1, T2> : IQuery<T1, T2>
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        while (reader.Read())
-        {
+        if (reader.Read())
             result = reader.GetValue(0);
-        }
-        while (reader.NextResult()) { }
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -301,17 +298,14 @@ class Query<T1, T2> : IQuery<T1, T2>
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         if (result is DBNull) return default;
@@ -327,24 +321,24 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(QueryVisitor visitor)
     {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.dbFactory = visitor.dbFactory;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;
     }
 
     #region Include
     public IIncludableQuery<T1, T2, T3, TMember> Include<TMember>(Expression<Func<T1, T2, T3, TMember>> memberSelector)
     {
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, TMember>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, TMember>(this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.Include(memberSelector, filter);
-        return new IncludableQuery<T1, T2, T3, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, TElment>(this.visitor);
     }
     #endregion
 
@@ -355,7 +349,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T1, T2, T3, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3> InnerJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
     {
@@ -375,17 +369,17 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
     public IQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, TOther>(this.visitor);
     }
     #endregion
 
@@ -453,7 +447,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
     public IGroupingQuery<T1, T2, T3, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new GroupingQuery<T1, T2, T3, TGrouping>(this.visitor);
     }
     public IQuery<T1, T2, T3> OrderBy<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
     {
@@ -490,12 +484,12 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -586,13 +580,10 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        while (reader.Read())
-        {
+        if (reader.Read())
             result = reader.GetValue(0);
-        }
-        while (reader.NextResult()) { }
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -611,17 +602,14 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         if (result is DBNull) return default;
@@ -637,24 +625,24 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(QueryVisitor visitor)
     {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.dbFactory = visitor.dbFactory;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;
     }
 
     #region Include
     public IIncludableQuery<T1, T2, T3, T4, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, TMember>> memberSelector)
     {
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, TMember>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, TMember>(this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.Include(memberSelector, filter);
-        return new IncludableQuery<T1, T2, T3, T4, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, TElment>(this.visitor);
     }
     #endregion
 
@@ -665,7 +653,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T1, T2, T3, T4, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4> InnerJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
     {
@@ -685,17 +673,17 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     public IQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, TOther>(this.visitor);
     }
     #endregion
 
@@ -763,7 +751,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     public IGroupingQuery<T1, T2, T3, T4, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, TGrouping>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
     {
@@ -800,12 +788,12 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -896,13 +884,10 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        while (reader.Read())
-        {
+        if (reader.Read())
             result = reader.GetValue(0);
-        }
-        while (reader.NextResult()) { }
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -921,17 +906,14 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         if (result is DBNull) return default;
@@ -947,24 +929,24 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(QueryVisitor visitor)
     {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.dbFactory = visitor.dbFactory;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;
     }
 
     #region Include
     public IIncludableQuery<T1, T2, T3, T4, T5, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, TMember>> memberSelector)
     {
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, TMember>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, TMember>(this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.Include(memberSelector, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, TElment>(this.visitor);
     }
     #endregion
 
@@ -975,7 +957,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T1, T2, T3, T4, T5, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
     {
@@ -995,17 +977,17 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
     public IQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, TOther>(this.visitor);
     }
     #endregion
 
@@ -1073,7 +1055,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
     public IGroupingQuery<T1, T2, T3, T4, T5, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, TGrouping>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
     {
@@ -1110,12 +1092,12 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -1206,13 +1188,10 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        while (reader.Read())
-        {
+        if (reader.Read())
             result = reader.GetValue(0);
-        }
-        while (reader.NextResult()) { }
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -1231,17 +1210,14 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         if (result is DBNull) return default;
@@ -1257,24 +1233,24 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(QueryVisitor visitor)
     {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.dbFactory = visitor.dbFactory;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;
     }
 
     #region Include
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, TMember>> memberSelector)
     {
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, TMember>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, TMember>(this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.Include(memberSelector, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, TElment>(this.visitor);
     }
     #endregion
 
@@ -1285,7 +1261,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
     {
@@ -1305,17 +1281,17 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
     public IQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.visitor);
     }
     #endregion
 
@@ -1383,7 +1359,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
     {
@@ -1420,12 +1396,12 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -1516,13 +1492,10 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        while (reader.Read())
-        {
+        if (reader.Read())
             result = reader.GetValue(0);
-        }
-        while (reader.NextResult()) { }
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -1541,17 +1514,14 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         if (result is DBNull) return default;
@@ -1567,24 +1537,24 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(QueryVisitor visitor)
     {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.dbFactory = visitor.dbFactory;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;
     }
 
     #region Include
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TMember>> memberSelector)
     {
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>(this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.Include(memberSelector, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment>(this.visitor);
     }
     #endregion
 
@@ -1595,7 +1565,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn)
     {
@@ -1615,17 +1585,17 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
     public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.visitor);
     }
     #endregion
 
@@ -1693,7 +1663,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr)
     {
@@ -1730,12 +1700,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -1826,13 +1796,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        while (reader.Read())
-        {
+        if (reader.Read())
             result = reader.GetValue(0);
-        }
-        while (reader.NextResult()) { }
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -1851,17 +1818,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         if (result is DBNull) return default;
@@ -1877,24 +1841,24 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(QueryVisitor visitor)
     {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.dbFactory = visitor.dbFactory;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;
     }
 
     #region Include
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TMember>> memberSelector)
     {
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>(this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.Include(memberSelector, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment>(this.visitor);
     }
     #endregion
 
@@ -1905,7 +1869,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn)
     {
@@ -1925,17 +1889,17 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.visitor);
     }
     #endregion
 
@@ -2003,7 +1967,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr)
     {
@@ -2040,12 +2004,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -2136,13 +2100,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        while (reader.Read())
-        {
+        if (reader.Read())
             result = reader.GetValue(0);
-        }
-        while (reader.NextResult()) { }
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -2161,17 +2122,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         if (result is DBNull) return default;
@@ -2187,24 +2145,24 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(QueryVisitor visitor)
     {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.dbFactory = visitor.dbFactory;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;
     }
 
     #region Include
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>> memberSelector)
     {
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>(this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.Include(memberSelector, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment>(this.visitor);
     }
     #endregion
 
@@ -2215,7 +2173,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn)
     {
@@ -2235,17 +2193,17 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.visitor);
     }
     #endregion
 
@@ -2313,7 +2271,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr)
     {
@@ -2350,12 +2308,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -2446,13 +2404,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        while (reader.Read())
-        {
+        if (reader.Read())
             result = reader.GetValue(0);
-        }
-        while (reader.NextResult()) { }
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -2471,17 +2426,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         if (result is DBNull) return default;
@@ -2497,24 +2449,24 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(QueryVisitor visitor)
     {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.dbFactory = visitor.dbFactory;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;
     }
 
     #region Include
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>> memberSelector)
     {
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>(this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.Include(memberSelector, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment>(this.visitor);
     }
     #endregion
 
@@ -2525,7 +2477,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn)
     {
@@ -2545,17 +2497,17 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.visitor);
     }
     #endregion
 
@@ -2623,7 +2575,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr)
     {
@@ -2660,12 +2612,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -2756,13 +2708,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        while (reader.Read())
-        {
+        if (reader.Read())
             result = reader.GetValue(0);
-        }
-        while (reader.NextResult()) { }
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -2781,17 +2730,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         if (result is DBNull) return default;
@@ -2807,24 +2753,24 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(QueryVisitor visitor)
     {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.dbFactory = visitor.dbFactory;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;
     }
 
     #region Include
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>> memberSelector)
     {
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>(this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.Include(memberSelector, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment>(this.visitor);
     }
     #endregion
 
@@ -2835,7 +2781,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn)
     {
@@ -2855,17 +2801,17 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.visitor);
     }
     #endregion
 
@@ -2933,7 +2879,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr)
     {
@@ -2970,12 +2916,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -3066,13 +3012,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        while (reader.Read())
-        {
+        if (reader.Read())
             result = reader.GetValue(0);
-        }
-        while (reader.NextResult()) { }
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -3091,17 +3034,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         if (result is DBNull) return default;
@@ -3117,24 +3057,24 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(QueryVisitor visitor)
     {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.dbFactory = visitor.dbFactory;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;
     }
 
     #region Include
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>> memberSelector)
     {
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>(this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.Include(memberSelector, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment>(this.visitor);
     }
     #endregion
 
@@ -3145,7 +3085,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn)
     {
@@ -3165,17 +3105,17 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.visitor);
     }
     #endregion
 
@@ -3243,7 +3183,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr)
     {
@@ -3280,12 +3220,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -3376,13 +3316,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        while (reader.Read())
-        {
+        if (reader.Read())
             result = reader.GetValue(0);
-        }
-        while (reader.NextResult()) { }
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -3401,17 +3338,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         if (result is DBNull) return default;
@@ -3427,24 +3361,24 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(QueryVisitor visitor)
     {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.dbFactory = visitor.dbFactory;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;
     }
 
     #region Include
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>> memberSelector)
     {
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>(this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.Include(memberSelector, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment>(this.visitor);
     }
     #endregion
 
@@ -3455,7 +3389,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn)
     {
@@ -3475,17 +3409,17 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.visitor);
     }
     #endregion
 
@@ -3553,7 +3487,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr)
     {
@@ -3590,12 +3524,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -3686,13 +3620,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        while (reader.Read())
-        {
+        if (reader.Read())
             result = reader.GetValue(0);
-        }
-        while (reader.NextResult()) { }
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -3711,17 +3642,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         if (result is DBNull) return default;
@@ -3737,24 +3665,24 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(QueryVisitor visitor)
     {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.dbFactory = visitor.dbFactory;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;
     }
 
     #region Include
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>> memberSelector)
     {
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.Include(memberSelector, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment>(this.visitor);
     }
     #endregion
 
@@ -3765,7 +3693,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn)
     {
@@ -3785,17 +3713,17 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.visitor);
     }
     #endregion
 
@@ -3863,7 +3791,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr)
     {
@@ -3900,12 +3828,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -3996,13 +3924,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        while (reader.Read())
-        {
+        if (reader.Read())
             result = reader.GetValue(0);
-        }
-        while (reader.NextResult()) { }
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -4021,17 +3946,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         if (result is DBNull) return default;
@@ -4047,24 +3969,24 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(QueryVisitor visitor)
     {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.dbFactory = visitor.dbFactory;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;
     }
 
     #region Include
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>> memberSelector)
     {
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>(this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.Include(memberSelector, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment>(this.visitor);
     }
     #endregion
 
@@ -4075,7 +3997,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
     {
@@ -4095,17 +4017,17 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.visitor);
     }
     #endregion
 
@@ -4173,7 +4095,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr)
     {
@@ -4210,12 +4132,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -4306,13 +4228,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        while (reader.Read())
-        {
+        if (reader.Read())
             result = reader.GetValue(0);
-        }
-        while (reader.NextResult()) { }
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -4331,17 +4250,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         if (result is DBNull) return default;
@@ -4357,24 +4273,24 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(QueryVisitor visitor)
     {
-        this.dbFactory = dbFactory;
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.dbFactory = visitor.dbFactory;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;
     }
 
     #region Include
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>> memberSelector)
     {
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>(this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.Include(memberSelector, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment>(this.visitor);
     }
     #endregion
 
@@ -4449,7 +4365,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>> groupingExpr)
     {
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr)
     {
@@ -4486,7 +4402,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.dbFactory, this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.visitor);
     }
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -4577,13 +4493,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(behavior);
+        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        while (reader.Read())
-        {
+        if (reader.Read())
             result = reader.GetValue(0);
-        }
-        while (reader.NextResult()) { }
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -4602,17 +4515,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         await connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
-        }
-        while (await reader.NextResultAsync(cancellationToken)) { }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         if (result is DBNull) return default;

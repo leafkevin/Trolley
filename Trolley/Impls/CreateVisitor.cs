@@ -12,8 +12,8 @@ class CreateVisitor : SqlVisitor
     private string selectSql = null;
     private string whereSql = null;
 
-    public CreateVisitor(IOrmDbFactory dbFactory, IOrmProvider ormProvider, Type entityType)
-        : base(dbFactory, ormProvider)
+    public CreateVisitor(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, Type entityType, char tableStartAs = 'a')
+        : base(dbFactory, connection, transaction, tableStartAs)
     {
         this.tables = new();
         this.tableAlias = new();
@@ -174,7 +174,6 @@ class CreateVisitor : SqlVisitor
     }
     private void InitTableAlias(LambdaExpression lambdaExpr)
     {
-        char tableIndex = 'a';
         this.tableAlias.Clear();
         for (int i = 0; i < lambdaExpr.Parameters.Count - 1; i++)
         {
@@ -184,7 +183,7 @@ class CreateVisitor : SqlVisitor
                 EntityType = parameterExpr.Type,
                 //可以省略
                 //Mapper = this.dbFactory.GetEntityMap(parameterExpr.Type),
-                AliasName = $"{(char)(tableIndex + i)}"
+                AliasName = $"{(char)(this.tableStartAs + i)}"
             };
             this.tables.Add(tableSegment);
             this.tableAlias.Add(parameterExpr.Name, tableSegment);

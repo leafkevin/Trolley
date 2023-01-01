@@ -30,7 +30,7 @@ class Delete<TEntity> : IDelete<TEntity>
         => new Deleted<TEntity>(this.dbFactory, this.connection, this.transaction, null, keys);
     public IDeleting<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
     {
-        var visitor = new DeleteVisitor(this.dbFactory, this.connection.OrmProvider, typeof(TEntity));
+        var visitor = new DeleteVisitor(this.dbFactory, this.connection, this.transaction, typeof(TEntity));
         visitor.Where(predicate);
         return new Deleting<TEntity>(this.connection, this.transaction, visitor);
     }
@@ -173,7 +173,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
             cmd.CommandType = CommandType.Text;
             cmd.Transaction = this.transaction;
             if (cmd is not DbCommand command)
-                throw new Exception("当前数据库驱动不支持异步SQL查询");
+                throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
             await this.connection.OpenAsync(cancellationToken);
             var result = await command.ExecuteNonQueryAsync(cancellationToken);
@@ -205,7 +205,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
             cmd.CommandType = CommandType.Text;
             cmd.Transaction = this.transaction;
             if (cmd is not DbCommand command)
-                throw new Exception("当前数据库驱动不支持异步SQL查询");
+                throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
             await this.connection.OpenAsync(cancellationToken);
             var result = await command.ExecuteNonQueryAsync(cancellationToken);
@@ -462,7 +462,7 @@ class Deleting<TEntity> : IDeleting<TEntity>
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         await this.connection.OpenAsync(cancellationToken);
         var result = await command.ExecuteNonQueryAsync(cancellationToken);

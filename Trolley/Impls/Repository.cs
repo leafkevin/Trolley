@@ -36,65 +36,65 @@ public class Repository : IRepository
     #endregion
 
     #region Query
-    public IQuery<T> From<T>()
+    public IQuery<T> From<T>(char tableStartAs = 'a')
     {
-        var visitor = new QueryVisitor(this.dbFactory, this.OrmProvider);
+        var visitor = new QueryVisitor(this.dbFactory, this.connection, this.transaction, tableStartAs);
         visitor.From(typeof(T));
-        return new Query<T>(this.dbFactory, this.connection, this.transaction, visitor);
+        return new Query<T>(visitor);
     }
-    public IQuery<T1, T2> From<T1, T2>()
+    public IQuery<T1, T2> From<T1, T2>(char tableStartAs = 'a')
     {
-        var visitor = new QueryVisitor(this.dbFactory, this.OrmProvider);
+        var visitor = new QueryVisitor(this.dbFactory, this.connection, this.transaction, tableStartAs);
         visitor.From(typeof(T1), typeof(T2));
-        return new Query<T1, T2>(this.dbFactory, this.connection, this.transaction, visitor);
+        return new Query<T1, T2>(visitor);
     }
-    public IQuery<T1, T2, T3> From<T1, T2, T3>()
+    public IQuery<T1, T2, T3> From<T1, T2, T3>(char tableStartAs = 'a')
     {
-        var visitor = new QueryVisitor(this.dbFactory, this.OrmProvider);
+        var visitor = new QueryVisitor(this.dbFactory, this.connection, this.transaction, tableStartAs);
         visitor.From(typeof(T1), typeof(T2), typeof(T3));
-        return new Query<T1, T2, T3>(this.dbFactory, this.connection, this.transaction, visitor);
+        return new Query<T1, T2, T3>(visitor);
     }
-    public IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>()
+    public IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableStartAs = 'a')
     {
-        var visitor = new QueryVisitor(this.dbFactory, this.OrmProvider);
+        var visitor = new QueryVisitor(this.dbFactory, this.connection, this.transaction, tableStartAs);
         visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-        return new Query<T1, T2, T3, T4>(this.dbFactory, this.connection, this.transaction, visitor);
+        return new Query<T1, T2, T3, T4>(visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
+    public IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableStartAs = 'a')
     {
-        var visitor = new QueryVisitor(this.dbFactory, this.OrmProvider);
+        var visitor = new QueryVisitor(this.dbFactory, this.connection, this.transaction, tableStartAs);
         visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
-        return new Query<T1, T2, T3, T4, T5>(this.dbFactory, this.connection, this.transaction, visitor);
+        return new Query<T1, T2, T3, T4, T5>(visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
+    public IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableStartAs = 'a')
     {
-        var visitor = new QueryVisitor(this.dbFactory, this.OrmProvider);
+        var visitor = new QueryVisitor(this.dbFactory, this.connection, this.transaction, tableStartAs);
         visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
-        return new Query<T1, T2, T3, T4, T5, T6>(this.dbFactory, this.connection, this.transaction, visitor);
+        return new Query<T1, T2, T3, T4, T5, T6>(visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>()
+    public IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableStartAs = 'a')
     {
-        var visitor = new QueryVisitor(this.dbFactory, this.OrmProvider);
+        var visitor = new QueryVisitor(this.dbFactory, this.connection, this.transaction, tableStartAs);
         visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
-        return new Query<T1, T2, T3, T4, T5, T6, T7>(this.dbFactory, this.connection, this.transaction, visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7>(visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>()
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableStartAs = 'a')
     {
-        var visitor = new QueryVisitor(this.dbFactory, this.OrmProvider);
+        var visitor = new QueryVisitor(this.dbFactory, this.connection, this.transaction, tableStartAs);
         visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8>(this.dbFactory, this.connection, this.transaction, visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8>(visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>()
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableStartAs = 'a')
     {
-        var visitor = new QueryVisitor(this.dbFactory, this.OrmProvider);
+        var visitor = new QueryVisitor(this.dbFactory, this.connection, this.transaction, tableStartAs);
         visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.dbFactory, this.connection, this.transaction, visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9>(visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>()
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableStartAs = 'a')
     {
-        var visitor = new QueryVisitor(this.dbFactory, this.OrmProvider);
+        var visitor = new QueryVisitor(this.dbFactory, this.connection, this.transaction, tableStartAs);
         visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.dbFactory, this.connection, this.transaction, visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(visitor);
     }
 
     public TEntity QueryFirst<TEntity>(object whereObj)
@@ -323,7 +323,7 @@ public class Repository : IRepository
         cmd.Transaction = this.transaction;
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         TEntity result = default;
         await connection.OpenAsync(cancellationToken);
@@ -564,7 +564,7 @@ public class Repository : IRepository
         cmd.Transaction = this.transaction;
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         var result = new List<TEntity>();
         await connection.OpenAsync(cancellationToken);
@@ -801,7 +801,7 @@ public class Repository : IRepository
         commandInitializer?.Invoke(cmd, this.connection.OrmProvider, whereObj);
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         TEntity result = default;
         await connection.OpenAsync(cancellationToken);

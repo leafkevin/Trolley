@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq.Expressions;
+using System.Xml.Schema;
 using Trolley;
 
 namespace ConsoleAppTest;
@@ -27,7 +28,15 @@ class Program
         });
         var serviceProvider = services.BuildServiceProvider();
         var dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+        var ormProvider = serviceProvider.GetService<IOrmProvider>();
         var repository = dbFactory.Create();
+
+        var userQuery = repository
+           .From<Order>()
+           .Where(f => Sql.In(f.BuyerId, repository.From<User>('b').Where(x => x.Name == "11'1").Select(x => x.Id)))
+           .ToList();
+
+        //visitor.VisitSqlMethodCall(new SqlSegment { Expression = expr.Body });
 
         ////From Order a;LeftJoin User b includeForm Last;Where Order a;ToList解析
         ////From User;From Order includeForm Last Filter;From Detail includeForm Last Filter;ToList解析
@@ -39,6 +48,7 @@ class Program
             .Include((a, b) => a.Buyer.Company)
             //.ThenInclude(f => f.Company)
             .InnerJoin((x, y) => x.SellerId == y.Id && x.IsEnabled && y.IsEnabled)
+            .Where((x, y) => Sql.Exists<Order>(f => x.Id == f.Id))
             .Select((a, b) => new { a.OrderNo, BuyerName = a.Buyer.Name, Seller = b })
             .First();
         rep.Update<Order>().Set(f => new { OrderName = "ddd" }).Where(f => f.Id == 3);

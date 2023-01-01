@@ -40,32 +40,32 @@ class Create<TEntity> : ICreate<TEntity>
     public ICreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector)
     {
         var entityType = typeof(TEntity);
-        var visitor = new CreateVisitor(this.dbFactory, this.connection.OrmProvider, entityType).From(fieldSelector);
-        return new Create<TEntity, TSource>(this.connection, this.transaction, visitor);
+        var visitor = new CreateVisitor(this.dbFactory, this.connection, this.transaction, entityType).From(fieldSelector);
+        return new Create<TEntity, TSource>(visitor);
     }
     public ICreate<TEntity, T1, T2> From<T1, T2>(Expression<Func<T1, T2, object>> fieldSelector)
     {
         var entityType = typeof(TEntity);
-        var visitor = new CreateVisitor(this.dbFactory, this.connection.OrmProvider, entityType).From(fieldSelector);
-        return new Create<TEntity, T1, T2>(this.connection, this.transaction, visitor);
+        var visitor = new CreateVisitor(this.dbFactory, this.connection, this.transaction, entityType).From(fieldSelector);
+        return new Create<TEntity, T1, T2>(visitor);
     }
     public ICreate<TEntity, T1, T2, T3> From<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> fieldSelector)
     {
         var entityType = typeof(TEntity);
-        var visitor = new CreateVisitor(this.dbFactory, this.connection.OrmProvider, entityType).From(fieldSelector);
-        return new Create<TEntity, T1, T2, T3>(this.connection, this.transaction, visitor);
+        var visitor = new CreateVisitor(this.dbFactory, this.connection, this.transaction, entityType).From(fieldSelector);
+        return new Create<TEntity, T1, T2, T3>(visitor);
     }
     public ICreate<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, object>> fieldSelector)
     {
         var entityType = typeof(TEntity);
-        var visitor = new CreateVisitor(this.dbFactory, this.connection.OrmProvider, entityType).From(fieldSelector);
-        return new Create<TEntity, T1, T2, T3, T4>(this.connection, this.transaction, visitor);
+        var visitor = new CreateVisitor(this.dbFactory, this.connection, this.transaction, entityType).From(fieldSelector);
+        return new Create<TEntity, T1, T2, T3, T4>(visitor);
     }
     public ICreate<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, object>> fieldSelector)
     {
         var entityType = typeof(TEntity);
-        var visitor = new CreateVisitor(this.dbFactory, this.connection.OrmProvider, entityType).From(fieldSelector);
-        return new Create<TEntity, T1, T2, T3, T4, T5>(this.connection, this.transaction, visitor);
+        var visitor = new CreateVisitor(this.dbFactory, this.connection, this.transaction, entityType).From(fieldSelector);
+        return new Create<TEntity, T1, T2, T3, T4, T5>(visitor);
     }
 }
 class Created<TEntity> : ICreated<TEntity>
@@ -217,7 +217,7 @@ class Created<TEntity> : ICreated<TEntity>
 
             var cmd = this.connection.CreateCommand();
             if (cmd is not DbCommand command)
-                throw new Exception("当前数据库驱动不支持异步SQL查询");
+                throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
             foreach (var entity in entities)
             {
@@ -268,7 +268,7 @@ class Created<TEntity> : ICreated<TEntity>
             cmd.CommandType = CommandType.Text;
             cmd.Transaction = this.transaction;
             if (cmd is not DbCommand command)
-                throw new Exception("当前数据库驱动不支持异步SQL查询");
+                throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
             await this.connection.OpenAsync(cancellationToken);
             var entityMapper = this.dbFactory.GetEntityMap(entityType);
@@ -596,11 +596,11 @@ class CreateBase
     protected readonly IDbTransaction transaction;
     protected readonly CreateVisitor visitor;
 
-    public CreateBase(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+    public CreateBase(CreateVisitor visitor)
     {
-        this.connection = connection;
-        this.transaction = transaction;
         this.visitor = visitor;
+        this.connection = visitor.connection;
+        this.transaction = visitor.transaction;
     }
     public int Execute()
     {
@@ -625,7 +625,7 @@ class CreateBase
         cmd.Transaction = this.transaction;
 
         if (cmd is not DbCommand command)
-            throw new Exception("当前数据库驱动不支持异步SQL查询");
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
@@ -637,8 +637,8 @@ class CreateBase
 }
 class Create<TEntity, TSource> : CreateBase, ICreate<TEntity, TSource>
 {
-    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
-       : base(connection, transaction, visitor) { }
+    public Create(CreateVisitor visitor)
+        : base(visitor) { }
     public ICreate<TEntity, TSource> Where(Expression<Func<TSource, bool>> predicate)
     {
         this.visitor.Where(predicate);
@@ -647,8 +647,8 @@ class Create<TEntity, TSource> : CreateBase, ICreate<TEntity, TSource>
 }
 class Create<TEntity, T1, T2> : CreateBase, ICreate<TEntity, T1, T2>
 {
-    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
-      : base(connection, transaction, visitor) { }
+    public Create(CreateVisitor visitor)
+        : base(visitor) { }
     public ICreate<TEntity, T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
     {
         this.visitor.Where(predicate);
@@ -657,8 +657,8 @@ class Create<TEntity, T1, T2> : CreateBase, ICreate<TEntity, T1, T2>
 }
 class Create<TEntity, T1, T2, T3> : CreateBase, ICreate<TEntity, T1, T2, T3>
 {
-    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
-       : base(connection, transaction, visitor) { }
+    public Create(CreateVisitor visitor)
+        : base(visitor) { }
     public ICreate<TEntity, T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
     {
         this.visitor.Where(predicate);
@@ -667,8 +667,8 @@ class Create<TEntity, T1, T2, T3> : CreateBase, ICreate<TEntity, T1, T2, T3>
 }
 class Create<TEntity, T1, T2, T3, T4> : CreateBase, ICreate<TEntity, T1, T2, T3, T4>
 {
-    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
-       : base(connection, transaction, visitor) { }
+    public Create(CreateVisitor visitor)
+        : base(visitor) { }
     public ICreate<TEntity, T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
     {
         this.visitor.Where(predicate);
@@ -677,8 +677,8 @@ class Create<TEntity, T1, T2, T3, T4> : CreateBase, ICreate<TEntity, T1, T2, T3,
 }
 class Create<TEntity, T1, T2, T3, T4, T5> : CreateBase, ICreate<TEntity, T1, T2, T3, T4, T5>
 {
-    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
-      : base(connection, transaction, visitor) { }
+    public Create(CreateVisitor visitor)
+        : base(visitor) { }
     public ICreate<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
     {
         this.visitor.Where(predicate);
