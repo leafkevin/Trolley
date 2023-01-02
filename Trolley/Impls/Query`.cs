@@ -33,7 +33,7 @@ class Query<T1, T2> : IQuery<T1, T2>
     }
     public IIncludableQuery<T1, T2, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T1, T2, TElment>(this.visitor);
     }
     #endregion
@@ -289,7 +289,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
     }
     public IIncludableQuery<T1, T2, T3, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T1, T2, T3, TElment>(this.visitor);
     }
     #endregion
@@ -545,7 +545,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     }
     public IIncludableQuery<T1, T2, T3, T4, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T1, T2, T3, T4, TElment>(this.visitor);
     }
     #endregion
@@ -801,7 +801,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T1, T2, T3, T4, T5, TElment>(this.visitor);
     }
     #endregion
@@ -1057,7 +1057,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T1, T2, T3, T4, T5, T6, TElment>(this.visitor);
     }
     #endregion
@@ -1313,7 +1313,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment>(this.visitor);
     }
     #endregion
@@ -1569,7 +1569,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment>(this.visitor);
     }
     #endregion
@@ -1825,7 +1825,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment>(this.visitor);
     }
     #endregion
@@ -2081,7 +2081,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment>(this.visitor);
     }
     #endregion
@@ -2337,7 +2337,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment>(this.visitor);
     }
     #endregion
@@ -2593,7 +2593,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment>(this.visitor);
     }
     #endregion
@@ -2849,7 +2849,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment>(this.visitor);
     }
     #endregion
@@ -3105,7 +3105,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment>(this.visitor);
     }
     #endregion
@@ -3361,7 +3361,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment>(this.visitor);
     }
     #endregion
@@ -3617,7 +3617,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment>(this.visitor);
     }
     #endregion

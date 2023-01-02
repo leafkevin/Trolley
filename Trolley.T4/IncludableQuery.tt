@@ -16,14 +16,14 @@ class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember>
     public IncludableQuery(QueryVisitor visitor)
         : base(visitor) { }
 
-    public IIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member, Expression<Func<TNavigation, bool>> filter = null)
+    public IIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
-        this.visitor.ThenInclude(member, filter);
+        this.visitor.ThenInclude(member);
         return new IncludableQuery<T, TNavigation>(this.visitor);
     }
     public IIncludableQuery<T, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.ThenInclude(member, filter);
+        this.visitor.ThenInclude(member, true, filter);
         return new IncludableQuery<T, TElment>(this.visitor);
     }
 }
@@ -39,14 +39,14 @@ class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IIncludableQue
     public IncludableQuery(QueryVisitor visitor)
         : base(visitor) { }
 
-    public IIncludableQuery<<#=tables#>, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member, Expression<Func<TNavigation, bool>> filter = null)
+    public IIncludableQuery<<#=tables#>, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
-        this.visitor.ThenInclude(member, filter);
+        this.visitor.ThenInclude(member);
         return new IncludableQuery<<#=tables#>, TNavigation>(this.visitor);
     }
     public IIncludableQuery<<#=tables#>, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.ThenInclude(member, filter);
+        this.visitor.ThenInclude(member, true, filter);
         return new IncludableQuery<<#=tables#>, TElment>(this.visitor);
     }
 }

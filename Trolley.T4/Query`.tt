@@ -46,7 +46,7 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     }
     public IIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<<#=tables#>, TElment>(this.visitor);
     }
     #endregion
@@ -305,7 +305,7 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     }
     public IIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<<#=tables#>, TElment>(this.visitor);
     }
     #endregion

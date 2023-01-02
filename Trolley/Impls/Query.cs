@@ -34,7 +34,7 @@ class Query<T> : IQuery<T>
     }
     public IIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        this.visitor.Include(memberSelector, filter);
+        this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T, TElment>(this.visitor);
     }
     #endregion

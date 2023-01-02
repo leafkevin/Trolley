@@ -385,6 +385,12 @@ public class MySqlUnitTest2
             .Select((x, y) => new { Order = x, Buyer = y })
             .ToListAsync();
         Assert.True(result.Count == 2);
+        Assert.NotNull(result[0].Order.Details);
+        Assert.NotEmpty(result[0].Order.Details);
+        Assert.True(result[0].Order.Details.Count == 3);
+        Assert.NotNull(result[0].Order.Details[0].Product);
+        Assert.NotNull(result[0].Order.Details[1].Product);
+        Assert.NotNull(result[0].Order.Details[2].Product);
     }
     [Fact]
     public void FromQuery_Groupby()

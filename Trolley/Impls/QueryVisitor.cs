@@ -25,6 +25,7 @@ class QueryVisitor : SqlVisitor
     private int? limit = null;
     private bool isDistinct = false;
     private bool isUnion = false;
+    private bool hasIncludeMany = false;
     private List<TableSegment> includeSegments = null;
     private TableSegment lastIncludeSegment = null;
     private List<ReaderField> groupFields = null;
@@ -285,7 +286,7 @@ class QueryVisitor : SqlVisitor
         this.isUnion = true;
         this.WithTable(entityType, body, dbParameters);
     }
-    public void Include(Expression memberSelector, Expression filter = null)
+    public void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null)
     {
         var lambdaExpr = memberSelector as LambdaExpression;
         var memberExpr = lambdaExpr.Body as MemberExpression;
@@ -299,9 +300,10 @@ class QueryVisitor : SqlVisitor
             this.tableAlias.TryAdd(parameterName, includeSegment);
             includeSegment.Filter = this.Visit(new SqlSegment { Expression = filter }).ToString();
         }
+        if (isIncludeMany) this.hasIncludeMany = true;
         this.lastIncludeSegment = includeSegment;
     }
-    public void ThenInclude(Expression memberSelector, Expression filter = null)
+    public void ThenInclude(Expression memberSelector, bool isIncludeMany = false, Expression filter = null)
     {
         var lambdaExpr = memberSelector as LambdaExpression;
         var memberExpr = lambdaExpr.Body as MemberExpression;
@@ -311,7 +313,13 @@ class QueryVisitor : SqlVisitor
         var includeSegment = this.AddIncludeTables(memberExpr);
         //TODO: 1:N关联条件的alias表，获取会有问题，待测试
         if (filter != null)
+        {
+            var filterLambdaExpr = filter as LambdaExpression;
+            var parameterName = filterLambdaExpr.Parameters[0].Name;
+            this.tableAlias.TryAdd(parameterName, includeSegment);
             includeSegment.Filter = this.Visit(new SqlSegment { Expression = filter }).ToString();
+        }
+        if (isIncludeMany) this.hasIncludeMany = true;
         this.lastIncludeSegment = includeSegment;
     }
     public void Join(string joinType, Type newEntityType, Expression joinOn)
@@ -838,6 +846,7 @@ class QueryVisitor : SqlVisitor
             if (entityMapper.KeyMembers.Count > 1)
                 throw new Exception($"导航属性表，暂时不支持多个主键字段，实体：{memberMapper.MapType.FullName}");
 
+            //TODO:之前有IncludeMany时，也放到includeSegments中
             if (memberMapper.IsToOne)
             {
                 var rightAlias = $"{(char)(this.tableStartAs + this.tables.Count)}";
