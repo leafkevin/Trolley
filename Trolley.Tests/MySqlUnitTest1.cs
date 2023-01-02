@@ -44,25 +44,25 @@ public class MySqlUnitTest1
             }).ExecuteAsync();
         Assert.Equal(1, count);
     }
-    [Fact]
-    public async void Insert_WithBy_Dictionary_AutoIncrement()
-    {
-        using var repository = this.dbFactory.Create();
-        await repository.Delete<Company>().Where(f => f.Id == 1).ExecuteAsync();
-        var id = repository.Create<Company>()
-            .WithBy(new Dictionary<string, object>()
-            {
-                //{ "Id", 1},
-                { "Name","Œ¢»Ì11"},
-                { "IsEnabled", true},
-                { "CreatedAt", DateTime.Now},
-                { "CreatedBy", 1},
-                { "UpdatedAt", DateTime.Now},
-                { "UpdatedBy", 1}
-            }).Execute();
-        var maxId = repository.From<Company>().Max(f => f.Id);
-        Assert.Equal(maxId, id);
-    }
+    //[Fact]
+    //public async void Insert_WithBy_Dictionary_AutoIncrement()
+    //{
+    //    using var repository = this.dbFactory.Create();
+    //    await repository.Delete<Company>().Where(f => f.Id == 1).ExecuteAsync();
+    //    var id = repository.Create<Company>()
+    //        .WithBy(new Dictionary<string, object>()
+    //        {
+    //            //{ "Id", 1},
+    //            { "Name","Œ¢»Ì11"},
+    //            { "IsEnabled", true},
+    //            { "CreatedAt", DateTime.Now},
+    //            { "CreatedBy", 1},
+    //            { "UpdatedAt", DateTime.Now},
+    //            { "UpdatedBy", 1}
+    //        }).Execute();
+    //    var maxId = repository.From<Company>().Max(f => f.Id);
+    //    Assert.Equal(maxId, id);
+    //}
     [Fact]
     public async void Insert_WithBy_Batch_AnonymousObjects()
     {

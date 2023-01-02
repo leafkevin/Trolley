@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace Trolley;
 
@@ -37,7 +38,7 @@ public class SqlSegment
     /// 是否有函数调用
     /// </summary>
     public bool IsMethodCall { get; set; }
-    public MemberMap MemberMapper { get; set; }
+    public MemberInfo FromMember { get; set; }
     public TableSegment TableSegment { get; set; }
     public object Value { get; set; }
     public Expression Expression { get; set; }

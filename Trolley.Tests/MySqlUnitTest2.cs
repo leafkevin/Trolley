@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using Xunit;
 
 namespace Trolley.Tests;
@@ -320,50 +319,115 @@ public class MySqlUnitTest2
             .Where(f => f.ProductNo.Contains("PN-00"))
             .ToListAsync();
         Assert.True(result.Count >= 3);
+        Assert.NotNull(result[0].Brand);
         Assert.True(result[0].Brand.BrandNo == "BN-001");
         Assert.True(result[1].Brand.BrandNo == "BN-002");
     }
     [Fact]
-    public async void FromQuery_IncludeMany()
+    public void FromQuery_IncludeMany()
     {
         using var repository = this.dbFactory.Create();
         var result = repository.From<Order>()
-            .Include(f => f.Details)
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .IncludeMany((x, y) => x.Details)
             .Where((a, b) => a.TotalAmount > 300)
             .Select((x, y) => new { Order = x, Buyer = y })
             .ToList();
         Assert.True(result.Count == 2);
+        Assert.NotNull(result[0].Order);
+        Assert.NotNull(result[0].Order.Details);
+        Assert.NotEmpty(result[0].Order.Details);
+        Assert.True(result[0].Order.Details.Count == 3);
     }
-    //[Fact]
-    //public async void Insert_RawSql()
-    //{
-    //    using var repository = this.dbFactory.Create();
-    //    repository.Delete<Brand>().Where(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } }).Execute();
-    //    var rawSql = "INSERT INTO sys_brand(Id,BrandNo,Name,IsEnabled,CreatedAt,CreatedBy,UpdatedAt,UpdatedBy) VALUES(@Id,@BrandNo,@Name,1,NOW(),@User,NOW(),@User)";
-    //    var count = await repository.Create<Brand>().RawSql(rawSql, new
-    //    {
-    //        Id = 1,
-    //        BrandNo = "BN-001",
-    //        Name = "波司登",
-    //        User = 1
-    //    }).ExecuteAsync();
-    //    Assert.Equal(1, count);
-    //    count = await repository.Create<Brand>().RawSql(rawSql, new
-    //    {
-    //        Id = 2,
-    //        BrandNo = "BN-002",
-    //        Name = "雪中飞",
-    //        User = 1
-    //    }).ExecuteAsync();
-    //    Assert.Equal(1, count);
-    //    count = await repository.Create<Brand>().RawSql(rawSql, new
-    //    {
-    //        Id = 3,
-    //        BrandNo = "BN-003",
-    //        Name = "优衣库",
-    //        User = 1
-    //    }).ExecuteAsync();
-    //    Assert.Equal(1, count);
-    //}
+    [Fact]
+    public void FromQuery_IncludeMany_Filter()
+    {
+        using var repository = this.dbFactory.Create();
+        var result = repository.From<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .IncludeMany((x, y) => x.Details, f => f.ProductId == 1)
+            .Where((a, b) => a.TotalAmount > 300)
+            .Select((x, y) => new { Order = x, Buyer = y })
+            .ToList();
+        Assert.True(result.Count == 2);
+        Assert.NotNull(result[0].Order);
+        Assert.NotNull(result[0].Order.Details);
+        Assert.NotEmpty(result[0].Order.Details);
+        Assert.True(result[0].Order.Details.Count == 1);
+        Assert.True(result[0].Order.Details[0].ProductId == 1);
+        Assert.True(result[1].Order.Details.Count == 1);
+        Assert.True(result[1].Order.Details[0].ProductId == 1);
+    }
+    [Fact]
+    public async void FromQuery_Include_ThenInclude()
+    {
+        using var repository = this.dbFactory.Create();
+        var result = await repository.From<Order>()
+            .InnerJoin<User>((a, b) => a.SellerId == b.Id)
+            .Include((x, y) => x.Buyer)
+            .ThenInclude(f => f.Company)
+            .Where((a, b) => a.TotalAmount > 300)
+            .Select((x, y) => new { Order = x, Seller = y })
+            .ToListAsync();
+        Assert.True(result.Count == 2);
+        Assert.NotNull(result[0].Order.Buyer);
+        Assert.NotNull(result[0].Order.Buyer.Company);
+    }
+    [Fact]
+    public async void FromQuery_IncludeMany_ThenInclude()
+    {
+        using var repository = this.dbFactory.Create();
+        var result = await repository.From<Order>()
+            .IncludeMany(f => f.Details)
+            .ThenInclude(f => f.Product)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .Where((a, b) => a.TotalAmount > 300)
+            .Select((x, y) => new { Order = x, Buyer = y })
+            .ToListAsync();
+        Assert.True(result.Count == 2);
+    }
+    [Fact]
+    public void FromQuery_Groupby()
+    {
+        using var repository = this.dbFactory.Create();
+        var result = repository.From<User>()
+                .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+                .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
+                .OrderBy((x, a, b) => new { UserId = a.Id, OrderId = b.Id })
+                .Select((x, a, b) => new
+                {
+                    x.Grouping,
+                    OrderCount = x.Count(b.Id),
+                    TotalAmount = x.Sum(b.TotalAmount)
+                })
+                .ToList();
+        Assert.True(result.Count == 2);
+        Assert.NotNull(result[0].Grouping);
+        Assert.NotNull(result[1].Grouping);
+        Assert.NotNull(result[0].Grouping.Name);
+        Assert.NotNull(result[1].Grouping.Name);
+    }
+    [Fact]
+    public void FromQuery_Groupby_Fields()
+    {
+        using var repository = this.dbFactory.Create();
+        var result = repository.From<User>()
+                .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+                .IncludeMany((a, b) => a.Orders)
+                .ThenIncludeMany(f => f.Details)
+                .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
+                .OrderBy((x, a, b) => new { UserId = a.Id, OrderId = b.Id })
+                .Select((x, a, b) => new
+                {
+                    x.Grouping.Id,
+                    x.Grouping.Name,
+                    x.Grouping.Date,
+                    OrderCount = x.Count(b.Id),
+                    TotalAmount = x.Sum(b.TotalAmount)
+                })
+                .ToList();
+        Assert.True(result.Count == 2);
+        Assert.NotNull(result[0].Name);
+        Assert.NotNull(result[1].Name);
+    }
 }

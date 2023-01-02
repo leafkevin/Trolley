@@ -27,6 +27,7 @@ class QueryVisitor : SqlVisitor
     private bool isUnion = false;
     private List<TableSegment> includeSegments = null;
     private TableSegment lastIncludeSegment = null;
+    private List<ReaderField> groupFields = null;
 
     public QueryVisitor(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, char tableStartAs = 'a', string parameterPrefix = "p")
         : base(dbFactory, connection, transaction, tableStartAs, parameterPrefix)
@@ -38,6 +39,11 @@ class QueryVisitor : SqlVisitor
     {
         var builder = new StringBuilder();
         string tableSql = null;
+
+        if (string.IsNullOrEmpty(this.selectSql))
+            throw new Exception("丢失Select操作");
+        if (this.isDistinct)
+            this.selectSql = "DISTINCT " + this.selectSql;
 
         if (this.tables.Count > 0)
         {
@@ -64,9 +70,6 @@ class QueryVisitor : SqlVisitor
             }
             tableSql = builder.ToString();
         }
-
-        if (string.IsNullOrEmpty(this.selectSql))
-            throw new Exception("丢失Select操作");
 
         builder.Clear();
         if (!string.IsNullOrEmpty(this.groupBySql))
@@ -106,6 +109,8 @@ class QueryVisitor : SqlVisitor
 
         if (string.IsNullOrEmpty(this.selectSql))
             this.Select(null, defaultExpr);
+        if (this.isDistinct)
+            this.selectSql = "DISTINCT " + this.selectSql;
 
         if (this.tables.Count > 0)
         {
@@ -226,6 +231,8 @@ class QueryVisitor : SqlVisitor
                 fetchSqlInitializer.Invoke(parameter, this.ormProvider, builder);
             }
             builder.Append(')');
+            if (!string.IsNullOrEmpty(includeSegment.Filter))
+                builder.Append($" AND {includeSegment.Filter}");
         }
         sql = builder.ToString();
         return true;
@@ -238,13 +245,14 @@ class QueryVisitor : SqlVisitor
     }
     public QueryVisitor From(params Type[] entityTypes)
     {
+        int tableIndex = this.tableStartAs + this.tables.Count;
         for (int i = 0; i < entityTypes.Length; i++)
         {
             this.tables.Add(new TableSegment
             {
                 EntityType = entityTypes[i],
-                AliasName = $"{(char)(this.tableStartAs + i)}",
-                Path = $"{(char)(this.tableStartAs + i)}",
+                AliasName = $"{(char)(tableIndex + i)}",
+                Path = $"{(char)(tableIndex + i)}",
                 IsMaster = true
             });
         }
@@ -281,11 +289,16 @@ class QueryVisitor : SqlVisitor
     {
         var lambdaExpr = memberSelector as LambdaExpression;
         var memberExpr = lambdaExpr.Body as MemberExpression;
-        this.InitTableAlias(lambdaExpr, filter == null);
+        this.InitTableAlias(lambdaExpr);
         var includeSegment = this.AddIncludeTables(memberExpr);
         //TODO: 1:N关联条件的alias表，获取会有问题，待测试
         if (filter != null)
+        {
+            var filterLambdaExpr = filter as LambdaExpression;
+            var parameterName = filterLambdaExpr.Parameters[0].Name;
+            this.tableAlias.TryAdd(parameterName, includeSegment);
             includeSegment.Filter = this.Visit(new SqlSegment { Expression = filter }).ToString();
+        }
         this.lastIncludeSegment = includeSegment;
     }
     public void ThenInclude(Expression memberSelector, Expression filter = null)
@@ -372,13 +385,14 @@ class QueryVisitor : SqlVisitor
     {
         var lambdaExpr = expr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
-        this.groupBySql = this.VisitList(lambdaExpr, string.Empty);
+        this.groupFields = new();
+        this.groupBySql = this.VisitList(lambdaExpr, true, string.Empty);
     }
     public void OrderBy(string orderType, Expression expr)
     {
         var lambdaExpr = expr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
-        var orderBy = this.VisitList(lambdaExpr, orderType == "DESC" ? " DESC" : string.Empty);
+        var orderBy = this.VisitList(lambdaExpr, false, orderType == "DESC" ? " DESC" : string.Empty);
         if (string.IsNullOrEmpty(this.orderBySql))
             this.orderBySql = orderBy;
         else this.orderBySql += "," + orderBy;
@@ -428,15 +442,19 @@ class QueryVisitor : SqlVisitor
         var readerFields = this.AddTableReaderFields(sqlSegment.ReaderIndex, fromSegment);
 
         //只有Parameter访问，IncludeMany才会生效
-        foreach (var includeSegment in this.includeSegments)
+        if (this.includeSegments != null && this.includeSegments.Count > 0)
         {
-            var parent = includeSegment.FromTable;
-            while (parent != null)
+            foreach (var includeSegment in this.includeSegments)
             {
-                if (parent == fromSegment)
+                var parent = includeSegment.FromTable;
+                while (parent != null)
                 {
-                    includeSegment.IsUsed = true;
-                    break;
+                    if (parent == fromSegment)
+                    {
+                        includeSegment.IsUsed = true;
+                        break;
+                    }
+                    parent = parent.FromTable;
                 }
             }
         }
@@ -469,6 +487,153 @@ class QueryVisitor : SqlVisitor
         }
         return sqlSegment.Change(memberSegments);
     }
+    public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
+    {
+        var memberExpr = sqlSegment.Expression as MemberExpression;
+        MemberAccessSqlFormatter formatter = null;
+        if (memberExpr.Expression != null)
+        {
+            if (this.IsGroupingAggregateMember(memberExpr))
+            {
+                var tableSegment = new TableSegment { EntityType = memberExpr.Type };
+                foreach (var readerField in this.groupFields)
+                {
+                    readerField.TableSegment = tableSegment;
+                    readerField.FieldCount = this.groupFields.Count;
+                }
+                return new SqlSegment
+                {
+                    HasField = true,
+                    IsConstantValue = false,
+                    TableSegment = tableSegment,
+                    Value = this.groupFields
+                };
+            }
+
+            //Where(f=>... && !f.OrderId.HasValue && ...)
+            //Where(f=>... f.OrderId.Value==10 && ...)
+            //Select(f=>... ,f.OrderId.HasValue  ...)
+            //Select(f=>... ,f.OrderId.Value==10  ...)
+            if (Nullable.GetUnderlyingType(memberExpr.Member.DeclaringType) != null)
+            {
+                if (memberExpr.Member.Name == nameof(Nullable<bool>.HasValue))
+                {
+                    sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.Null });
+                    sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Not });
+                    return sqlSegment.Next(memberExpr.Expression);
+                }
+                else if (memberExpr.Member.Name == nameof(Nullable<bool>.Value))
+                    return sqlSegment.Next(memberExpr.Expression);
+                else throw new ArgumentException($"不支持的MemberAccess操作，表达式'{memberExpr}'返回值不是boolean类型");
+            }
+
+            //各种类型值的属性访问，如：DateTime,TimeSpan,String.Length,List.Count
+            if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
+            {
+                //Where(f=>... && f.CreatedAt.Month<5 && ...)
+                //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
+                var targetSegment = this.Visit(sqlSegment.Next(memberExpr.Expression));
+                return sqlSegment.Change(formatter.Invoke(targetSegment), false);
+            }
+
+            if (memberExpr.IsParameter(out var parameterName))
+            {
+                //Where(f=>... && f.Amount>5 && ...)
+                //Include(f=>f.Buyer); 或是 IncludeMany(f=>f.Orders)
+                //Select(f=>new {f.OrderId, ...})
+                //Where(f=>f.Order.Id>10)
+                //Include(f=>f.Order.Buyer)
+                //Select(f=>new {f.Order.OrderId, ...})
+                //GroupBy(f=>new {f.Order.OrderId, ...})
+                //GroupBy(f=>f.Order.OrderId)
+                //OrderBy(f=>new {f.Order.OrderId, ...})
+                //OrderBy(f=>f.Order.OrderId)
+                string path = null;
+                TableSegment tableSegment = null;
+
+                if (memberExpr.Type.IsEntityType())
+                {
+                    path = memberExpr.Expression.ToString();
+                    var fromSegment = this.FindTableSegment(parameterName, path);
+                    if (fromSegment == null)
+                        throw new Exception($"使用导航属性前，要先使用Include方法包含进来，访问路径:{path}");
+                    fromSegment.Mapper ??= this.dbFactory.GetEntityMap(fromSegment.EntityType);
+
+                    var vavigationMapper = fromSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
+                    if (!vavigationMapper.IsNavigation)
+                        throw new Exception($"类{tableSegment.EntityType.FullName}属性{memberExpr.Member.Name}未配置为导航属性");
+
+                    path = memberExpr.ToString();
+                    tableSegment = this.FindTableSegment(parameterName, path);
+                    if (tableSegment == null)
+                        throw new Exception($"使用导航属性前，要先使用Include方法包含进来，访问路径:{path}");
+
+                    var readerFields = this.AddTableReaderFields(sqlSegment.ReaderIndex, tableSegment);
+                    return new SqlSegment
+                    {
+                        HasField = true,
+                        IsConstantValue = false,
+                        TableSegment = tableSegment,
+                        Value = readerFields
+                    };
+                }
+                else
+                {
+                    if (this.IsGroupingAggregateMember(memberExpr.Expression as MemberExpression))
+                    {
+                        var readerField = this.groupFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
+                        sqlSegment.HasField = true;
+                        sqlSegment.IsConstantValue = false;
+                        sqlSegment.TableSegment = readerField.TableSegment;
+                        sqlSegment.FromMember = readerField.FromMember;
+                        sqlSegment.Value = readerField.Body;
+                        return sqlSegment;
+                    }
+
+                    path = memberExpr.Expression.ToString();
+                    tableSegment = this.FindTableSegment(parameterName, path);
+                    if (tableSegment == null)
+                        throw new Exception($"使用导航属性前，要先使用Include方法包含进来，访问路径:{path}");
+
+                    tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
+                    var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
+                    var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
+
+                    if (sqlSegment.HasDeferred)
+                    {
+                        sqlSegment.HasField = true;
+                        sqlSegment.IsConstantValue = false;
+                        sqlSegment.TableSegment = tableSegment;
+                        sqlSegment.FromMember = memberMapper.Member;
+                        //只有当前类是IncludeMany的导航类时，AliasName别名为null
+                        if (!string.IsNullOrEmpty(tableSegment.AliasName))
+                            sqlSegment.Value = $"{tableSegment.AliasName}.{fieldName}";
+                        else sqlSegment.Value = fieldName;
+                        return this.VisitBooleanDeferred(sqlSegment);
+                    }
+                    sqlSegment.HasField = true;
+                    sqlSegment.IsConstantValue = false;
+                    sqlSegment.TableSegment = tableSegment;
+                    sqlSegment.FromMember = memberMapper.Member;
+                    //只有当前类是IncludeMany的导航类时，AliasName别名为null
+                    if (!string.IsNullOrEmpty(tableSegment.AliasName))
+                        sqlSegment.Value = $"{tableSegment.AliasName}.{fieldName}";
+                    else sqlSegment.Value = fieldName;
+                    return sqlSegment;
+                }
+            }
+        }
+        //各种类型的常量或是静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
+        if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
+            return sqlSegment.Change(formatter(null), false);
+
+        //访问局部变量或是成员变量，当作常量处理,直接计算，如果是字符串变成参数@p
+        //var orderIds=new List<int>{1,2,3}; Where(f=>orderIds.Contains(f.OrderId)); orderIds
+        //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
+        //var orderId=10; Select(f=>new {OrderId=orderId,...}
+        //Select(f=>new {OrderId=this.Order.Id, ...}
+        return this.EvaluateAndParameter(sqlSegment);
+    }
     private void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, List<ReaderField> readerFields)
     {
         string fieldName = null;
@@ -481,29 +646,43 @@ class QueryVisitor : SqlVisitor
                 if (elementExpr.Type.IsEntityType())
                 {
                     var tableReaderFields = sqlSegment.Value as List<ReaderField>;
-                    tableReaderFields[0].FromMember = memberInfo;
-                    readerFields.AddRange(tableReaderFields);
+                    if (this.IsGroupingAggregateMember(elementExpr as MemberExpression))
+                    {
+                        var readerIndex = readerFields.Count;
+                        foreach (var readerField in tableReaderFields)
+                        {
+                            readerField.Index = readerIndex;
+                            readerField.TargetMember = memberInfo;
+                            readerFields.Add(readerField);
+                        }
+                    }
+                    else
+                    {
+                        tableReaderFields[0].TargetMember = memberInfo;
+                        readerFields.AddRange(tableReaderFields);
+                    }
                 }
                 else
                 {
                     fieldName = sqlSegment.ToString();
-                    if (sqlSegment.IsParameter || sqlSegment.IsMethodCall || sqlSegment.MemberMapper.MemberName != memberInfo.Name)
+                    if (sqlSegment.IsParameter || sqlSegment.IsMethodCall || sqlSegment.FromMember.Name != memberInfo.Name)
                         fieldName += " AS " + memberInfo.Name;
                     readerFields.Add(new ReaderField
                     {
                         Index = readerFields.Count,
                         Type = ReaderFieldType.Field,
                         TableSegment = sqlSegment.TableSegment,
-                        FromMember = memberInfo,
+                        FromMember = sqlSegment.FromMember,
+                        TargetMember = memberInfo,
                         Body = fieldName
                     });
                 }
                 break;
             default:
-                //常量访问
+                //常量或方法访问
                 sqlSegment = this.Visit(sqlSegment);
                 fieldName = sqlSegment.ToString();
-                if (sqlSegment.IsParameter || sqlSegment.IsMethodCall || sqlSegment.MemberMapper.MemberName != memberInfo.Name)
+                if (sqlSegment.IsParameter || sqlSegment.IsMethodCall || sqlSegment.FromMember.Name != memberInfo.Name)
                     fieldName += " AS " + memberInfo.Name;
                 readerFields.Add(new ReaderField
                 {
@@ -511,6 +690,7 @@ class QueryVisitor : SqlVisitor
                     Type = ReaderFieldType.Field,
                     TableSegment = sqlSegment.TableSegment,
                     FromMember = memberInfo,
+                    TargetMember = memberInfo,
                     Body = fieldName
                 });
                 break;
@@ -542,35 +722,49 @@ class QueryVisitor : SqlVisitor
             }
         }
     }
-    private string VisitList(LambdaExpression lambdaExpr, string suffix)
+    private string VisitList(LambdaExpression lambdaExpr, bool isGrouping, string suffix)
     {
         if (lambdaExpr.Body is NewExpression newExpr)
         {
             var builder = new StringBuilder();
+            int index = 0;
             foreach (var argumentExpr in newExpr.Arguments)
             {
-                var fieldName = this.Visit(new SqlSegment { Expression = argumentExpr }).ToString();
+                var sqlSegment = this.Visit(new SqlSegment { Expression = argumentExpr });
+                if (isGrouping)
+                {
+                    var memberInfo = newExpr.Members[index];
+                    this.groupFields.Add(new ReaderField
+                    {
+                        Type = ReaderFieldType.AnonymousField,
+                        TableSegment = sqlSegment.TableSegment,
+                        FromMember = sqlSegment.FromMember,
+                        TargetMember = memberInfo,
+                        Body = sqlSegment.Value.ToString()
+                    });
+                }
                 if (builder.Length > 0)
                     builder.Append(',');
-                builder.Append(fieldName);
+                builder.Append(sqlSegment.Value);
                 builder.Append(suffix);
+                index++;
             }
             return builder.ToString();
         }
         else return this.Visit(new SqlSegment { Expression = lambdaExpr.Body }).ToString();
     }
-    private TableSegment InitTableAlias(LambdaExpression lambdaExpr, bool isFilter = true)
+    private TableSegment InitTableAlias(LambdaExpression lambdaExpr)
     {
         TableSegment tableSegment = null;
         this.tableAlias.Clear();
         lambdaExpr.Body.GetParameters(out var parameters);
-        if (isFilter && (parameters == null || parameters.Count <= 0))
+        if ((parameters == null || parameters.Count <= 0))
             return tableSegment;
         var joinTables = this.tables.FindAll(f => !f.IsInclude);
         int index = 0;
         foreach (var parameterExpr in lambdaExpr.Parameters)
         {
-            if (isFilter && !parameters.Contains(parameterExpr.Name))
+            if (!parameters.Contains(parameterExpr.Name))
                 continue;
             this.tableAlias.Add(parameterExpr.Name, joinTables[index]);
             tableSegment = joinTables[index];
@@ -724,8 +918,8 @@ class QueryVisitor : SqlVisitor
                     //最外层，有值就说明是Parameter表达式访问
                     //如：Select((x, y) => new { Order = x, Buyer = y })
                     //没有值通常是单表访问，走默认实体返回 Expression<Func<T, T>> defaultExpr = f => f;
-                    if (current.FromMember != null)
-                        memberInfoStack.Push(current.FromMember);
+                    if (current.TargetMember != null)
+                        memberInfoStack.Push(current.TargetMember);
                     break;
                 }
                 memberInfoStack.Push(current.FromMember);
@@ -938,8 +1132,8 @@ class QueryVisitor : SqlVisitor
                 //最外层，有值就说明是Parameter表达式访问
                 //如：Select((x, y) => new { Order = x, Buyer = y })
                 //没有值通常是单表访问，走默认实体返回 Expression<Func<T, T>> defaultExpr = f => f;
-                if (current.FromMember != null)
-                    memberInfoStack.Push(current.FromMember);
+                if (current.TargetMember != null)
+                    memberInfoStack.Push(current.TargetMember);
                 break;
             }
             memberInfoStack.Push(current.FromMember);
@@ -979,8 +1173,8 @@ class QueryVisitor : SqlVisitor
                 //最外层，有值就说明是Parameter表达式访问
                 //如：Select((x, y) => new { Order = x, Buyer = y })
                 //没有值通常是单表访问，走默认实体返回 Expression<Func<T, T>> defaultExpr = f => f;
-                if (current.FromMember != null)
-                    memberInfoStack.Push(current.FromMember);
+                if (current.TargetMember != null)
+                    memberInfoStack.Push(current.TargetMember);
                 break;
             }
             memberInfoStack.Push(current.FromMember);
@@ -1007,5 +1201,21 @@ class QueryVisitor : SqlVisitor
         }
         hashCode.Add(isMulti);
         return hashCode.ToHashCode();
+    }
+    private bool IsGroupingAggregateMember(MemberExpression memberExpr)
+    {
+        if (memberExpr == null)
+            return false;
+        if (memberExpr.Member.Name != "Grouping")
+            return false;
+        var declaringType = memberExpr.Member.DeclaringType;
+        if (!declaringType.IsGenericType)
+            return false;
+        var genericArguments = declaringType.GetGenericArguments();
+        if (genericArguments == null || genericArguments.Length != 1)
+            return false;
+        if (!typeof(IGroupingAggregate<>).MakeGenericType(genericArguments[0]).IsAssignableFrom(declaringType))
+            return false;
+        return true;
     }
 }

@@ -116,13 +116,13 @@ class CreateVisitor : SqlVisitor
                 {
                     sqlSegment.HasField = true;
                     sqlSegment.TableSegment = tableSegment;
-                    sqlSegment.MemberMapper = memberMapper;
+                    sqlSegment.FromMember = memberMapper.Member;
                     sqlSegment.Value = $"{tableSegment.AliasName}.{fieldName}";
                     return this.VisitBooleanDeferred(sqlSegment);
                 }
                 sqlSegment.HasField = true;
                 sqlSegment.TableSegment = tableSegment;
-                sqlSegment.MemberMapper = memberMapper;
+                sqlSegment.FromMember = memberMapper.Member;
                 sqlSegment.Value = $"{tableSegment.AliasName}.{fieldName}";
                 return sqlSegment;
             }
@@ -181,8 +181,6 @@ class CreateVisitor : SqlVisitor
             var tableSegment = new TableSegment
             {
                 EntityType = parameterExpr.Type,
-                //可以省略
-                //Mapper = this.dbFactory.GetEntityMap(parameterExpr.Type),
                 AliasName = $"{(char)(this.tableStartAs + i)}"
             };
             this.tables.Add(tableSegment);

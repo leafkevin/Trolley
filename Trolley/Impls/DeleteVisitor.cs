@@ -93,13 +93,13 @@ class DeleteVisitor : SqlVisitor
                 {
                     sqlSegment.HasField = true;
                     sqlSegment.TableSegment = this.tableSegment;
-                    sqlSegment.MemberMapper = memberMapper;
+                    sqlSegment.FromMember = memberMapper.Member;
                     sqlSegment.Value = fieldName;
                     return this.VisitBooleanDeferred(sqlSegment);
                 }
                 sqlSegment.HasField = true;
                 sqlSegment.TableSegment = this.tableSegment;
-                sqlSegment.MemberMapper = memberMapper;
+                sqlSegment.FromMember = memberMapper.Member;
                 sqlSegment.Value = fieldName;
                 return sqlSegment;
             }

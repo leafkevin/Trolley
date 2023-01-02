@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 
 namespace Trolley;
@@ -12,7 +13,6 @@ public interface IGroupingAggregate<TGrouping>
     int CountDistinct<TField>(TField field);
     long LongCount<TField>(TField field);
     long LongCountDistinct<TField>(TField field);
-
     TField Sum<TField>(TField field);
     TField Avg<TField>(TField field);
     TField Max<TField>(TField field);

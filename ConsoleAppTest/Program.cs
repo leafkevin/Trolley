@@ -107,17 +107,15 @@ class Program
                 .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
                 .IncludeMany((a, b) => a.Orders, b => b.OrderNo.Contains("20221001"))
                 .ThenIncludeMany(f => f.Details)
-                .GroupBy((a, b) => new { a.Id, a.Name, b.OrderNo })
+                .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
                 .OrderBy((x, a, b) => new { UserId = a.Id, OrderId = b.Id })
                 .Select((x, a, b) => new
                 {
-                    a.Id,
-                    a.Name,
-                    b.OrderNo,
-                    //ProductCount = a.Count((a, b) => b.Id),
-                    //TotalAmount = a.Sum((a, b) => b.TotalAmount)
+                    x.Grouping,
+                    OrderCount = x.Count(b.Id),
+                    TotalAmount = x.Sum(b.TotalAmount)
                 })
-                .ToList();
+                .ToSql(out _);
 
         //fromQuery.IncludeMany(f => f.Orders).ThenIncludeMany(f => f.Details)
         //    .GroupBy((a, b, c) => new { a.Id, a.Name, b.OrderNo })

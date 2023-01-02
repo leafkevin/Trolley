@@ -57,7 +57,6 @@ public static class TrolleyExtensions
     public static async Task<int> UpdateAsync<TEntity, TFields>(this IRepository repository, Expression<Func<TEntity, TFields>> updateFields, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
         => await repository.Update<TEntity>().Set(updateFields).Where(predicate).ExecuteAsync(cancellationToken);
 
-
     public static int Delete<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate)
         => repository.Delete<TEntity>().Where(predicate).Execute();
     public static async Task<int> DeleteAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
@@ -66,7 +65,6 @@ public static class TrolleyExtensions
         => repository.Delete<TEntity>().Where(keys).Execute();
     public static async Task<int> DeleteAsync<TEntity>(this IRepository repository, object keys, CancellationToken cancellationToken = default)
         => await repository.Delete<TEntity>().Where(keys).ExecuteAsync(cancellationToken);
-
 
     public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
     {
@@ -202,13 +200,6 @@ public static class TrolleyExtensions
         }
         return ((Func<IDataReader, TEntity>)deserializer).Invoke(reader);
     }
-    internal static Delegate GetReaderValueConverter(this IDataReader reader, Type targetType, Type fieldType)
-    {
-        var hashCode = HashCode.Combine(targetType, fieldType);
-        if (!readerValueConverterCache.TryGetValue(hashCode, out var converter))
-            readerValueConverterCache.TryAdd(hashCode, converter = CreateReaderValueConverter(targetType, fieldType));
-        return converter;
-    }
     private static Delegate CreateReaderDeserializer(IDataReader reader, IOrmDbFactory dbFactory, Type entityType)
     {
         var blockBodies = new List<Expression>();
@@ -247,9 +238,11 @@ public static class TrolleyExtensions
         var root = NewBuildInfo(entityType);
         var current = root;
         var readerBuilders = new Dictionary<int, EntityBuildInfo>();
-        foreach (var readerField in readerFields)
+        var deferredBuilds = new Stack<EntityBuildInfo>();
+        while (readerIndex < readerFields.Count)
         {
-            if (readerField.Type == ReaderFieldType.Entity)
+            var readerField = readerFields[readerIndex];
+            if (readerField.Type == ReaderFieldType.Entity || readerField.Type == ReaderFieldType.AnonymousField)
             {
                 //第一个是实体，如果是entityType类型，则是Parameter类型表达式访问
                 //如果不是entityType类型，就是子类型，则是New或是MemeberInit类型表达式访问
@@ -263,40 +256,66 @@ public static class TrolleyExtensions
                     if (readerField.ParentIndex.HasValue)
                         parent = readerBuilders[readerField.ParentIndex.Value];
                     else parent = root;
-                    current = NewBuildInfo(readerField.TableSegment.EntityType, readerField.FromMember, parent);
+                    current = NewBuildInfo(readerField.TableSegment.EntityType, readerField.TargetMember, parent);
                 }
                 readerBuilders.Add(readerField.Index, current);
 
-                var memberMappers = readerField.TableSegment.Mapper.MemberMaps;
-                foreach (var memberMapper in memberMappers)
+                if (readerField.Type == ReaderFieldType.AnonymousField)
                 {
-                    if (memberMapper.IsNavigation || memberMapper.MemberType.IsEntityType())
-                        continue;
-                    var fieldType = reader.GetFieldType(index);
-                    var readerValueExpr = GetReaderValue(readerExpr, Expression.Constant(index), memberMapper.MemberType, fieldType);
-                    if (current.IsDefault) current.Bindings.Add(Expression.Bind(memberMapper.Member, readerValueExpr));
-                    else current.Arguments.Add(readerValueExpr);
-                    index++;
+                    int endIndex = index + readerField.FieldCount;
+                    while (index < endIndex)
+                    {
+                        var fieldType = reader.GetFieldType(index);
+                        var readerValueExpr = GetReaderValue(readerExpr, Expression.Constant(index), readerFields[index].FromMember.GetMemberType(), fieldType);
+                        if (current.IsDefault) current.Bindings.Add(Expression.Bind(readerFields[index].FromMember, readerValueExpr));
+                        else current.Arguments.Add(readerValueExpr);
+                        index++;
+                    }
+                    readerIndex += readerField.FieldCount - 1;
                 }
+                else
+                {
+                    var memberMappers = readerField.TableSegment.Mapper.MemberMaps;
+                    foreach (var memberMapper in memberMappers)
+                    {
+                        if (memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.MemberType.IsEntityType())
+                            continue;
+                        var fieldType = reader.GetFieldType(index);
+                        var readerValueExpr = GetReaderValue(readerExpr, Expression.Constant(index), memberMapper.MemberType, fieldType);
+                        if (current.IsDefault) current.Bindings.Add(Expression.Bind(memberMapper.Member, readerValueExpr));
+                        else current.Arguments.Add(readerValueExpr);
+                        index++;
+                    }
+                }
+
                 if (!isTarget)
                 {
-                    //创建子对象，并赋值给父对象的属性,直到Select语句
-                    Expression instanceExpr = null;
-                    if (current.IsDefault)
-                        instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
-                    else instanceExpr = Expression.New(current.Constructor, current.Arguments);
-                    //赋值给父对象的属性
-                    if (parent.IsDefault)
-                        parent.Bindings.Add(Expression.Bind(readerField.FromMember, instanceExpr));
-                    else parent.Arguments.Add(instanceExpr);
+                    if (readerField.HasNextInclude)
+                        deferredBuilds.Push(current);
+                    else
+                    {
+                        do
+                        {
+                            //创建子对象，并赋值给父对象的属性,直到Select语句
+                            Expression instanceExpr = null;
+                            if (current.IsDefault)
+                                instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
+                            else instanceExpr = Expression.New(current.Constructor, current.Arguments);
+                            //赋值给父对象的属性
+                            if (current.Parent.IsDefault)
+                                current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
+                            else current.Parent.Arguments.Add(instanceExpr);
+                        }
+                        while (deferredBuilds.TryPop(out current));
+                    }
                 }
             }
             else
             {
                 var fieldType = reader.GetFieldType(index);
                 var readerValueExpr = GetReaderValue(readerExpr, Expression.Constant(index), readerField.FromMember.GetMemberType(), fieldType);
-                if (current.IsDefault) current.Bindings.Add(Expression.Bind(readerField.FromMember, readerValueExpr));
-                else current.Arguments.Add(readerValueExpr);
+                if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.FromMember, readerValueExpr));
+                else root.Arguments.Add(readerValueExpr);
                 index++;
             }
             readerIndex++;

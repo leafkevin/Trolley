@@ -21,7 +21,7 @@ class UpdateVisitor : SqlVisitor
         {
             EntityType = entityType,
             Mapper = this.dbFactory.GetEntityMap(entityType),
-            AliasName = "a"
+            AliasName = tableStartAs.ToString()
         });
     }
     public string BuildSql(out List<IDbDataParameter> dbParameters)
@@ -89,7 +89,7 @@ class UpdateVisitor : SqlVisitor
     }
     public UpdateVisitor From(params Type[] entityTypes)
     {
-        var tableIndex = this.tableStartAs + this.tables.Count;
+        int tableIndex = this.tableStartAs + this.tables.Count;
         for (int i = 0; i < entityTypes.Length; i++)
         {
             this.tables.Add(new TableSegment
@@ -239,6 +239,7 @@ class UpdateVisitor : SqlVisitor
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
         var memberExpr = sqlSegment.Expression as MemberExpression;
+        MemberAccessSqlFormatter formatter = null;
         if (memberExpr.Expression != null)
         {
             //Where(f=>... && !f.OrderId.HasValue && ...)
@@ -259,12 +260,12 @@ class UpdateVisitor : SqlVisitor
             }
 
             //各种类型值的属性访问，如：DateTime,TimeSpan,String.Length,List.Count,
-            if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out var formatter))
+            if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
             {
-                //Where(f=>... && f.OrderNo.Length==10 && ...)
+                //Where(f=>... && f.CreatedAt.Month<5 && ...)
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
                 var targetSegment = this.Visit(sqlSegment.Next(memberExpr.Expression));
-                return sqlSegment.Change(formatter.Invoke(targetSegment));
+                return sqlSegment.Change(formatter.Invoke(targetSegment), false);
             }
 
             if (memberExpr.IsParameter(out var parameterName))
@@ -286,18 +287,24 @@ class UpdateVisitor : SqlVisitor
                 if (sqlSegment.HasDeferred)
                 {
                     sqlSegment.HasField = true;
+                    sqlSegment.IsConstantValue = false;
                     sqlSegment.TableSegment = tableSegment;
-                    sqlSegment.MemberMapper = memberMapper;
+                    sqlSegment.FromMember = memberMapper.Member;
                     sqlSegment.Value = $"{tableSegment.AliasName}.{fieldName}";
                     return this.VisitBooleanDeferred(sqlSegment);
                 }
                 sqlSegment.HasField = true;
+                sqlSegment.IsConstantValue = false;
                 sqlSegment.TableSegment = tableSegment;
-                sqlSegment.MemberMapper = memberMapper;
+                sqlSegment.FromMember = memberMapper.Member;
                 sqlSegment.Value = $"{tableSegment.AliasName}.{fieldName}";
                 return sqlSegment;
             }
         }
+        //各种类型的常量或是静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
+        if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
+            return sqlSegment.Change(formatter(null), false);
+
         //访问局部变量或是成员变量，当作常量处理,直接计算，如果是字符串变成参数@p
         //var orderIds=new List<int>{1,2,3}; Where(f=>orderIds.Contains(f.OrderId)); orderIds
         //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
