@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -425,9 +424,6 @@ class QueryVisitor : SqlVisitor
     public override SqlSegment VisitParameter(SqlSegment sqlSegment)
     {
         var parameterExpr = sqlSegment.Expression as ParameterExpression;
-        if (typeof(IWhereSql).IsAssignableFrom(parameterExpr.Type))
-            return new SqlSegment { Value = parameterExpr.Name };
-
         var fromSegment = this.tableAlias[parameterExpr.Name];
         var readerFields = this.AddTableReaderFields(sqlSegment.ReaderIndex, fromSegment);
 

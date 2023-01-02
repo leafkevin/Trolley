@@ -686,18 +686,7 @@ class UpdateSetting<TEntity> : IUpdateSetting<TEntity>
         this.visitor.Where(predicate);
         return this;
     }
-    public IUpdateSetting<TEntity> Where(Expression<Func<IWhereSql, TEntity, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IUpdateSetting<TEntity> And(bool condition, Expression<Func<TEntity, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-    public IUpdateSetting<TEntity> And(bool condition, Expression<Func<IWhereSql, TEntity, bool>> predicate)
     {
         if (condition)
             this.visitor.And(predicate);
@@ -767,21 +756,10 @@ class UpdateFrom<TEntity, T1> : IUpdateFrom<TEntity, T1>
         this.visitor.Where(predicate);
         return this;
     }
-    public IUpdateFrom<TEntity, T1> Where(Expression<Func<IWhereSql, TEntity, T1, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IUpdateFrom<TEntity, T1> And(bool condition, Expression<Func<TEntity, T1, bool>> predicate)
     {
         if (condition)
             this.visitor.Where(predicate);
-        return this;
-    }
-    public IUpdateFrom<TEntity, T1> And(bool condition, Expression<Func<IWhereSql, TEntity, T1, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
         return this;
     }
     public int Execute()
@@ -858,21 +836,10 @@ class UpdateJoin<TEntity, T1> : IUpdateJoin<TEntity, T1>
         this.visitor.Where(predicate);
         return this;
     }
-    public IUpdateJoin<TEntity, T1> Where(Expression<Func<IWhereSql, TEntity, T1, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IUpdateJoin<TEntity, T1> And(bool condition, Expression<Func<TEntity, T1, bool>> predicate)
     {
         if (condition)
             this.visitor.Where(predicate);
-        return this;
-    }
-    public IUpdateJoin<TEntity, T1> And(bool condition, Expression<Func<IWhereSql, TEntity, T1, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
         return this;
     }
     public int Execute()
@@ -939,21 +906,10 @@ class UpdateFrom<TEntity, T1, T2> : IUpdateFrom<TEntity, T1, T2>
         this.visitor.Where(predicate);
         return this;
     }
-    public IUpdateFrom<TEntity, T1, T2> Where(Expression<Func<IWhereSql, TEntity, T1, T2, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IUpdateFrom<TEntity, T1, T2> And(bool condition, Expression<Func<TEntity, T1, T2, bool>> predicate)
     {
         if (condition)
             this.visitor.Where(predicate);
-        return this;
-    }
-    public IUpdateFrom<TEntity, T1, T2> And(bool condition, Expression<Func<IWhereSql, TEntity, T1, T2, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
         return this;
     }
     public int Execute()
@@ -1030,21 +986,10 @@ class UpdateJoin<TEntity, T1, T2> : IUpdateJoin<TEntity, T1, T2>
         this.visitor.Where(predicate);
         return this;
     }
-    public IUpdateJoin<TEntity, T1, T2> Where(Expression<Func<IWhereSql, TEntity, T1, T2, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IUpdateJoin<TEntity, T1, T2> And(bool condition, Expression<Func<TEntity, T1, T2, bool>> predicate)
     {
         if (condition)
             this.visitor.Where(predicate);
-        return this;
-    }
-    public IUpdateJoin<TEntity, T1, T2> And(bool condition, Expression<Func<IWhereSql, TEntity, T1, T2, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
         return this;
     }
     public int Execute()
@@ -1111,21 +1056,10 @@ class UpdateFrom<TEntity, T1, T2, T3> : IUpdateFrom<TEntity, T1, T2, T3>
         this.visitor.Where(predicate);
         return this;
     }
-    public IUpdateFrom<TEntity, T1, T2, T3> Where(Expression<Func<IWhereSql, TEntity, T1, T2, T3, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IUpdateFrom<TEntity, T1, T2, T3> And(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> predicate)
     {
         if (condition)
             this.visitor.Where(predicate);
-        return this;
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3> And(bool condition, Expression<Func<IWhereSql, TEntity, T1, T2, T3, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
         return this;
     }
     public int Execute()
@@ -1202,21 +1136,10 @@ class UpdateJoin<TEntity, T1, T2, T3> : IUpdateJoin<TEntity, T1, T2, T3>
         this.visitor.Where(predicate);
         return this;
     }
-    public IUpdateJoin<TEntity, T1, T2, T3> Where(Expression<Func<IWhereSql, TEntity, T1, T2, T3, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IUpdateJoin<TEntity, T1, T2, T3> And(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> predicate)
     {
         if (condition)
             this.visitor.Where(predicate);
-        return this;
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3> And(bool condition, Expression<Func<IWhereSql, TEntity, T1, T2, T3, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
         return this;
     }
     public int Execute()
@@ -1283,21 +1206,10 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateFrom<TEntity, T1, T2, T3, T4>
         this.visitor.Where(predicate);
         return this;
     }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4> Where(Expression<Func<IWhereSql, TEntity, T1, T2, T3, T4, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IUpdateFrom<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate)
     {
         if (condition)
             this.visitor.Where(predicate);
-        return this;
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<IWhereSql, TEntity, T1, T2, T3, T4, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
         return this;
     }
     public int Execute()
@@ -1374,21 +1286,10 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateJoin<TEntity, T1, T2, T3, T4>
         this.visitor.Where(predicate);
         return this;
     }
-    public IUpdateJoin<TEntity, T1, T2, T3, T4> Where(Expression<Func<IWhereSql, TEntity, T1, T2, T3, T4, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IUpdateJoin<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate)
     {
         if (condition)
             this.visitor.Where(predicate);
-        return this;
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<IWhereSql, TEntity, T1, T2, T3, T4, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
         return this;
     }
     public int Execute()
@@ -1455,21 +1356,10 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateFrom<TEntity, T1, T2, T3,
         this.visitor.Where(predicate);
         return this;
     }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<IWhereSql, TEntity, T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate)
     {
         if (condition)
             this.visitor.Where(predicate);
-        return this;
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<IWhereSql, TEntity, T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
         return this;
     }
     public int Execute()
@@ -1536,18 +1426,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateJoin<TEntity, T1, T2, T3,
         this.visitor.Where(predicate);
         return this;
     }
-    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<IWhereSql, TEntity, T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.Where(predicate);
-        return this;
-    }
-    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<IWhereSql, TEntity, T1, T2, T3, T4, T5, bool>> predicate)
     {
         if (condition)
             this.visitor.Where(predicate);

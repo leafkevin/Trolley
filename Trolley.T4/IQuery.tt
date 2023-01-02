@@ -66,9 +66,7 @@ public interface IQuery<T>
 
     #region Where
     IQuery<T> Where(Expression<Func<T, bool>> predicate);
-    IQuery<T> Where(Expression<Func<IWhereSql, T, bool>> predicate);
-    IQuery<T> And(bool condition, Expression<Func<T, bool>> predicate);    
-    IQuery<T> And(bool condition, Expression<Func<IWhereSql, T, bool>> predicate);    
+    IQuery<T> And(bool condition, Expression<Func<T, bool>> predicate);
     #endregion
 
     #region GroupBy/OrderBy
@@ -85,6 +83,28 @@ public interface IQuery<T>
     IQuery<T> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
 
+    int Count();
+    Task<int> CountAsync(CancellationToken cancellationToken = default);
+    long LongCount();
+    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
+    int Count<TField>(Expression<Func<T, TField>> fieldExpr);
+    Task<int> CountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    int CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
+    Task<int> CountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    long LongCount<TField>(Expression<Func<T, TField>> fieldExpr);
+    Task<long> LongCountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    long LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
+    Task<long> LongCountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+
+    TField Sum<TField>(Expression<Func<T, TField>> fieldExpr);
+    Task<TField> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Avg<TField>(Expression<Func<T, TField>> fieldExpr);
+    Task<TField> AvgAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Max<TField>(Expression<Func<T, TField>> fieldExpr);
+    Task<TField> MaxAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Min<TField>(Expression<Func<T, TField>> fieldExpr);
+    Task<TField> MinAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    
     T First();
     Task<T> FirstAsync(CancellationToken cancellationToken = default);
     List<T> ToList();
@@ -93,6 +113,7 @@ public interface IQuery<T>
     Task<IPagedList<T>> ToPageListAsync(int pageIndex, int pageSize, CancellationToken cancellationToken = default);
     Dictionary<TKey, TElement> ToDictionary<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> valueSelector) where TKey : notnull;
     Task<Dictionary<TKey, TElement>> ToDictionaryAsync<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull;
+    
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 <#
@@ -119,10 +140,8 @@ public interface IQuery<<#=tables#>>
     IQuery<<#=tables#>> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
 
     IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
-    IQuery<<#=tables#>> Where(Expression<Func<IWhereSql, <#=tables#>, bool>> predicate);
     IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate);
-    IQuery<<#=tables#>> And(bool condition, Expression<Func<IWhereSql, <#=tables#>, bool>> predicate);
-
+    
     IGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr);
     IQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     IQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
@@ -133,6 +152,29 @@ public interface IQuery<<#=tables#>>
     IQuery<<#=tables#>> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);
+
+    int Count();
+    Task<int> CountAsync(CancellationToken cancellationToken = default);
+    long LongCount();
+    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
+    int Count<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<int> CountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    int CountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<int> CountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    long LongCount<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<long> LongCountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    long LongCountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<long> LongCountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+
+    TField Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TField> SumAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Avg<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TField> AvgAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Max<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TField> MaxAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Min<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TField> MinAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 <#  }
@@ -163,5 +205,28 @@ public interface IQuery<<#=tables#>>
     IQuery<<#=tables#>> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);
+
+    int Count();
+    Task<int> CountAsync(CancellationToken cancellationToken = default);
+    long LongCount();
+    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
+    int Count<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<int> CountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    int CountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<int> CountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    long LongCount<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<long> LongCountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    long LongCountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<long> LongCountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+
+    TField Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TField> SumAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Avg<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TField> AvgAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Max<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TField> MaxAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    TField Min<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
+    Task<TField> MinAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+
     string ToSql(out List<IDbDataParameter> dbParameters);
 }

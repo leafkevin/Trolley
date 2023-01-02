@@ -397,9 +397,6 @@ public class SqlVisitor
     public virtual SqlSegment VisitParameter(SqlSegment sqlSegment)
     {
         var parameterExpr = sqlSegment.Expression as ParameterExpression;
-        if (typeof(IWhereSql).IsAssignableFrom(parameterExpr.Type))
-            return new SqlSegment { Value = parameterExpr.Name };
-
         var fromSegment = this.tableAlias[parameterExpr.Name];
         var readerFields = this.AddTableReaderFields(sqlSegment.ReaderIndex, fromSegment);
         return sqlSegment.Change(readerFields, false);

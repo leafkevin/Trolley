@@ -120,18 +120,7 @@ class Query<T1, T2> : IQuery<T1, T2>
         this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T1, T2> Where(Expression<Func<IWhereSql, T1, T2, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IQuery<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-    public IQuery<T1, T2> And(bool condition, Expression<Func<IWhereSql, T1, T2, bool>> predicate)
     {
         if (condition)
             this.visitor.And(predicate);
@@ -181,8 +170,50 @@ class Query<T1, T2> : IQuery<T1, T2>
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
+
+    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
+    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    public int Count<TField>(Expression<Func<T1, T2, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    public int CountDistinct<TField>(Expression<Func<T1, T2, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    public long LongCount<TField>(Expression<Func<T1, T2, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    public async Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    public long LongCountDistinct<TField>(Expression<Func<T1, T2, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+
+    public TField Sum<TField>(Expression<Func<T1, T2, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    public async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    public TField Avg<TField>(Expression<Func<T1, T2, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    public async Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    public TField Max<TField>(Expression<Func<T1, T2, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    public async Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    public TField Min<TField>(Expression<Func<T1, T2, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
+
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -195,7 +226,7 @@ class Query<T1, T2> : IQuery<T1, T2>
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        connection.Open();
+        this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
         object result = null;
@@ -223,7 +254,7 @@ class Query<T1, T2> : IQuery<T1, T2>
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await connection.OpenAsync(cancellationToken);
+        await this.connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
@@ -345,18 +376,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
         this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T1, T2, T3> Where(Expression<Func<IWhereSql, T1, T2, T3, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IQuery<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-    public IQuery<T1, T2, T3> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, bool>> predicate)
     {
         if (condition)
             this.visitor.And(predicate);
@@ -406,8 +426,50 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
+
+    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
+    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    public int Count<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    public int CountDistinct<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    public long LongCount<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    public async Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    public long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+
+    public TField Sum<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    public async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    public TField Avg<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    public async Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    public TField Max<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    public async Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    public TField Min<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
+
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -420,7 +482,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        connection.Open();
+        this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
         object result = null;
@@ -448,7 +510,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await connection.OpenAsync(cancellationToken);
+        await this.connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
@@ -570,18 +632,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
         this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T1, T2, T3, T4> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, bool>> predicate)
     {
         if (condition)
             this.visitor.And(predicate);
@@ -631,8 +682,50 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
+
+    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
+    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    public int Count<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    public int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    public long LongCount<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    public async Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    public long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+
+    public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    public async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    public TField Avg<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    public async Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    public TField Max<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    public async Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    public TField Min<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
+
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -645,7 +738,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        connection.Open();
+        this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
         object result = null;
@@ -673,7 +766,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await connection.OpenAsync(cancellationToken);
+        await this.connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
@@ -795,18 +888,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
         this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T1, T2, T3, T4, T5> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, bool>> predicate)
     {
         if (condition)
             this.visitor.And(predicate);
@@ -856,8 +938,50 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
+
+    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
+    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    public int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    public long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    public async Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    public long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+
+    public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    public async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    public TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    public async Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    public TField Max<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    public async Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    public TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
+
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -870,7 +994,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        connection.Open();
+        this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
         object result = null;
@@ -898,7 +1022,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await connection.OpenAsync(cancellationToken);
+        await this.connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
@@ -1020,18 +1144,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
         this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T1, T2, T3, T4, T5, T6> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, bool>> predicate)
     {
         if (condition)
             this.visitor.And(predicate);
@@ -1081,8 +1194,50 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
+
+    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
+    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    public int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    public long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    public async Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    public long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+
+    public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    public async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    public TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    public async Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    public TField Max<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    public async Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    public TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
+
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -1095,7 +1250,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        connection.Open();
+        this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
         object result = null;
@@ -1123,7 +1278,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await connection.OpenAsync(cancellationToken);
+        await this.connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
@@ -1245,18 +1400,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
         this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
     {
         if (condition)
             this.visitor.And(predicate);
@@ -1306,8 +1450,50 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
+
+    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
+    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    public int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    public long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    public async Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    public long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+
+    public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    public async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    public TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    public async Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    public TField Max<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    public async Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    public TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
+
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -1320,7 +1506,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        connection.Open();
+        this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
         object result = null;
@@ -1348,7 +1534,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await connection.OpenAsync(cancellationToken);
+        await this.connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
@@ -1470,18 +1656,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
         this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
     {
         if (condition)
             this.visitor.And(predicate);
@@ -1531,8 +1706,50 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
+
+    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
+    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    public int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    public long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    public async Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    public long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+
+    public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    public async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    public TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    public async Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    public TField Max<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    public async Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    public TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
+
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -1545,7 +1762,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        connection.Open();
+        this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
         object result = null;
@@ -1573,7 +1790,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await connection.OpenAsync(cancellationToken);
+        await this.connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
@@ -1695,18 +1912,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
         this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
     {
         if (condition)
             this.visitor.And(predicate);
@@ -1756,8 +1962,50 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
+
+    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
+    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    public int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    public long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    public async Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    public long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+
+    public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    public async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    public TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    public async Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    public TField Max<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    public async Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    public TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
+
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -1770,7 +2018,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        connection.Open();
+        this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
         object result = null;
@@ -1798,7 +2046,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await connection.OpenAsync(cancellationToken);
+        await this.connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
@@ -1920,18 +2168,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
         this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
     {
         if (condition)
             this.visitor.And(predicate);
@@ -1981,8 +2218,50 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
+
+    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
+    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    public int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    public long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    public async Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    public long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+
+    public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    public async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    public TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    public async Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    public TField Max<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    public async Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    public TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
+
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -1995,7 +2274,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        connection.Open();
+        this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
         object result = null;
@@ -2023,7 +2302,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await connection.OpenAsync(cancellationToken);
+        await this.connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
@@ -2145,18 +2424,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
         this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
     {
         if (condition)
             this.visitor.And(predicate);
@@ -2206,8 +2474,50 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
+
+    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
+    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    public int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    public long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    public async Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    public long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+
+    public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    public async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    public TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    public async Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    public TField Max<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    public async Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    public TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
+
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -2220,7 +2530,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        connection.Open();
+        this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
         object result = null;
@@ -2248,7 +2558,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await connection.OpenAsync(cancellationToken);
+        await this.connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
@@ -2370,18 +2680,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
         this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
     {
         if (condition)
             this.visitor.And(predicate);
@@ -2431,8 +2730,50 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
+
+    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
+    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    public int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    public long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    public async Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    public long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+
+    public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    public async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    public TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    public async Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    public TField Max<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    public async Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    public TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
+
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -2445,7 +2786,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        connection.Open();
+        this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
         object result = null;
@@ -2473,7 +2814,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await connection.OpenAsync(cancellationToken);
+        await this.connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
@@ -2595,18 +2936,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
         this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
     {
         if (condition)
             this.visitor.And(predicate);
@@ -2656,8 +2986,50 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
+
+    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
+    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    public int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    public long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    public async Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    public long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+
+    public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    public async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    public TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    public async Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    public TField Max<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    public async Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    public TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
+
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -2670,7 +3042,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        connection.Open();
+        this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
         object result = null;
@@ -2698,7 +3070,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await connection.OpenAsync(cancellationToken);
+        await this.connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
@@ -2820,18 +3192,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
     {
         if (condition)
             this.visitor.And(predicate);
@@ -2881,8 +3242,50 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
+
+    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
+    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    public int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    public long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    public async Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    public long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+
+    public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    public async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    public TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    public async Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    public TField Max<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    public async Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    public TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
+
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -2895,7 +3298,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        connection.Open();
+        this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
         object result = null;
@@ -2923,7 +3326,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await connection.OpenAsync(cancellationToken);
+        await this.connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
@@ -3045,18 +3448,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
         this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where(Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate)
-    {
-        this.visitor.Where(predicate);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate)
-    {
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(bool condition, Expression<Func<IWhereSql, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate)
     {
         if (condition)
             this.visitor.And(predicate);
@@ -3106,8 +3498,50 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
+
+    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
+    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    public int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    public long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    public async Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    public long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+
+    public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    public async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    public TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    public async Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    public TField Max<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    public async Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    public TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
+
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -3120,7 +3554,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        connection.Open();
+        this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
         object result = null;
@@ -3148,7 +3582,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await connection.OpenAsync(cancellationToken);
+        await this.connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
@@ -3298,8 +3732,50 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
+
+    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
+    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    public int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    public long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    public async Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    public long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+
+    public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    public async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    public TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    public async Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    public TField Max<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    public async Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    public TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
+
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -3312,7 +3788,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        connection.Open();
+        this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
         object result = null;
@@ -3340,7 +3816,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
 
         object result = null;
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await connection.OpenAsync(cancellationToken);
+        await this.connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
             result = reader.GetValue(0);
