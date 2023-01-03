@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -54,12 +55,14 @@ class Update<TEntity> : IUpdate<TEntity>
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
+
         return new UpdateSet<TEntity>(this.dbFactory, this.connection, this.transaction, rawSql, parameters);
     }
     public IUpdateSet<TEntity> WithBy<TUpdateObject>(TUpdateObject updateObj, int bulkCount = 500)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
+
         return new UpdateSet<TEntity>(this.dbFactory, this.connection, this.transaction, null, updateObj, bulkCount);
     }
     public IUpdateSetting<TEntity> Set<TMember>(Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default)
@@ -326,8 +329,9 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             return result;
         }
     }
-    public string ToSql()
+    public string ToSql(out List<IDbDataParameter> dbParameters)
     {
+        dbParameters = null;
         bool isMulti = false;
         bool isDictionary = false;
         var entityType = typeof(TEntity);
@@ -361,12 +365,14 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             {
                 commandInitializer.Invoke(command, this.connection.OrmProvider, sqlBuilder, index, entity);
                 if (index >= this.bulkCount)
-                    return sqlBuilder.ToString();
+                    break;
                 index++;
             }
             string sql = null;
             if (index > 0)
                 sql = sqlBuilder.ToString();
+            if (command.Parameters != null && command.Parameters.Count > 0)
+                dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
             command.Cancel();
             command.Dispose();
             return sql;
@@ -379,6 +385,8 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
             var command = this.connection.CreateCommand();
             var sql = commandInitializer?.Invoke(command, this.connection.OrmProvider, this.parameters);
+            if (command.Parameters != null && command.Parameters.Count > 0)
+                dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
             command.Cancel();
             command.Dispose();
             return sql;
@@ -723,7 +731,7 @@ class UpdateSetting<TEntity> : IUpdateSetting<TEntity>
         command.Dispose();
         return result;
     }
-    public string ToSql() => this.visitor.BuildSql(out _);
+    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
 class UpdateFrom<TEntity, T1> : IUpdateFrom<TEntity, T1>
 {
@@ -793,7 +801,7 @@ class UpdateFrom<TEntity, T1> : IUpdateFrom<TEntity, T1>
         command.Dispose();
         return result;
     }
-    public string ToSql() => this.visitor.BuildSql(out _);
+    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
 class UpdateJoin<TEntity, T1> : IUpdateJoin<TEntity, T1>
 {
@@ -873,7 +881,7 @@ class UpdateJoin<TEntity, T1> : IUpdateJoin<TEntity, T1>
         command.Dispose();
         return result;
     }
-    public string ToSql() => this.visitor.BuildSql(out _);
+    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
 class UpdateFrom<TEntity, T1, T2> : IUpdateFrom<TEntity, T1, T2>
 {
@@ -943,7 +951,7 @@ class UpdateFrom<TEntity, T1, T2> : IUpdateFrom<TEntity, T1, T2>
         command.Dispose();
         return result;
     }
-    public string ToSql() => this.visitor.BuildSql(out _);
+    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
 class UpdateJoin<TEntity, T1, T2> : IUpdateJoin<TEntity, T1, T2>
 {
@@ -1023,7 +1031,7 @@ class UpdateJoin<TEntity, T1, T2> : IUpdateJoin<TEntity, T1, T2>
         command.Dispose();
         return result;
     }
-    public string ToSql() => this.visitor.BuildSql(out _);
+    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
 class UpdateFrom<TEntity, T1, T2, T3> : IUpdateFrom<TEntity, T1, T2, T3>
 {
@@ -1093,7 +1101,7 @@ class UpdateFrom<TEntity, T1, T2, T3> : IUpdateFrom<TEntity, T1, T2, T3>
         command.Dispose();
         return result;
     }
-    public string ToSql() => this.visitor.BuildSql(out _);
+    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
 class UpdateJoin<TEntity, T1, T2, T3> : IUpdateJoin<TEntity, T1, T2, T3>
 {
@@ -1173,7 +1181,7 @@ class UpdateJoin<TEntity, T1, T2, T3> : IUpdateJoin<TEntity, T1, T2, T3>
         command.Dispose();
         return result;
     }
-    public string ToSql() => this.visitor.BuildSql(out _);
+    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
 class UpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateFrom<TEntity, T1, T2, T3, T4>
 {
@@ -1243,7 +1251,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateFrom<TEntity, T1, T2, T3, T4>
         command.Dispose();
         return result;
     }
-    public string ToSql() => this.visitor.BuildSql(out _);
+    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
 class UpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateJoin<TEntity, T1, T2, T3, T4>
 {
@@ -1323,7 +1331,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateJoin<TEntity, T1, T2, T3, T4>
         command.Dispose();
         return result;
     }
-    public string ToSql() => this.visitor.BuildSql(out _);
+    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
 class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateFrom<TEntity, T1, T2, T3, T4, T5>
 {
@@ -1393,7 +1401,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateFrom<TEntity, T1, T2, T3,
         command.Dispose();
         return result;
     }
-    public string ToSql() => this.visitor.BuildSql(out _);
+    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
 class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateJoin<TEntity, T1, T2, T3, T4, T5>
 {
@@ -1463,5 +1471,5 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateJoin<TEntity, T1, T2, T3,
         command.Dispose();
         return result;
     }
-    public string ToSql() => this.visitor.BuildSql(out _);
+    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }

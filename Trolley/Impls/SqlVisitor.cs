@@ -367,7 +367,8 @@ public class SqlVisitor
     public virtual SqlSegment VisitMethodCall(SqlSegment sqlSegment)
     {
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
-        if (methodCallExpr.Method.DeclaringType == typeof(Sql) || this.IsGroupingAggregateMethod(methodCallExpr))
+        if (methodCallExpr.Method.DeclaringType == typeof(Sql)
+            || typeof(IAggregateSelect).IsAssignableFrom(methodCallExpr.Method.DeclaringType))
             return this.VisitSqlMethodCall(sqlSegment);
 
         if (!this.ormProvider.TryGetMethodCallSqlFormatter(methodCallExpr.Method, out var formatter))
@@ -670,7 +671,7 @@ public class SqlVisitor
                         this.dbParameters ??= new();
                         this.dbParameters.AddRange(dbDataParameters);
                     }
-                    sqlSegment.Change($"{fieldSegment} IN ({sql})");
+                    sqlSegment.Change($"{fieldSegment} IN ({sql})", false);
                 }
                 break;
             case "Exists":
@@ -703,7 +704,7 @@ public class SqlVisitor
                 builder.Append(" WHERE ");
                 builder.Append(this.VisitConditionExpr(lambdaExpr.Body));
                 builder.Append(')');
-                sqlSegment.Change(builder.ToString());
+                sqlSegment.Change(builder.ToString(), false);
                 break;
             case "Count":
             case "LongCount":
@@ -712,28 +713,19 @@ public class SqlVisitor
                     if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
                         throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
                     sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change($"COUNT({sqlSegment})");
+                    sqlSegment.Change($"COUNT({sqlSegment})", false);
                 }
-                else sqlSegment.Change("COUNT(1)");
+                else sqlSegment.Change("COUNT(1)", false);
                 this.tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
                 break;
             case "CountDistinct":
-                if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
-                {
-                    if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
-                        throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
-                    sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change($"COUNT(DISTINCT {sqlSegment})");
-                }
-                this.tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
-                break;
             case "LongCountDistinct":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
                 {
                     if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
                         throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
                     sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change($"COUNT(DISTINCT {sqlSegment})");
+                    sqlSegment.Change($"COUNT(DISTINCT {sqlSegment})", false);
                 }
                 this.tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
                 break;
@@ -743,7 +735,7 @@ public class SqlVisitor
                     if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
                         throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
                     sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change($"SUM({sqlSegment})");
+                    sqlSegment.Change($"SUM({sqlSegment})", false);
                 }
                 this.tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
                 break;
@@ -753,7 +745,7 @@ public class SqlVisitor
                     if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
                         throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
                     sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change($"AVG({sqlSegment})");
+                    sqlSegment.Change($"AVG({sqlSegment})", false);
                 }
                 this.tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
                 break;
@@ -763,7 +755,7 @@ public class SqlVisitor
                     if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
                         throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
                     sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change($"MAX({sqlSegment})");
+                    sqlSegment.Change($"MAX({sqlSegment})", false);
                 }
                 this.tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
                 break;
@@ -773,7 +765,7 @@ public class SqlVisitor
                     if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
                         throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
                     sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change($"MIN({sqlSegment})");
+                    sqlSegment.Change($"MIN({sqlSegment})", false);
                 }
                 this.tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
                 break;
@@ -1003,18 +995,6 @@ public class SqlVisitor
         if (!typeof(IQuery<>).MakeGenericType(genericArguments[0]).IsAssignableFrom(lambdaExpr.ReturnType))
             return false;
         elementType = genericArguments[0];
-        return true;
-    }
-    private bool IsGroupingAggregateMethod(MethodCallExpression methodCallExpr)
-    {
-        var declaringType = methodCallExpr.Method.DeclaringType;
-        if (!declaringType.IsGenericType)
-            return false;
-        var genericArguments = declaringType.GetGenericArguments();
-        if (genericArguments == null || genericArguments.Length != 1)
-            return false;
-        if (!typeof(IGroupingAggregate<>).MakeGenericType(genericArguments[0]).IsAssignableFrom(declaringType))
-            return false;
         return true;
     }
 }

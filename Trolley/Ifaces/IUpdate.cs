@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,7 +26,7 @@ public interface IUpdateSet<TEntity>
 {
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
 {
@@ -41,7 +43,7 @@ public interface IUpdateFrom<TEntity, T1>
     IUpdateFrom<TEntity, T1> And(bool condition, Expression<Func<TEntity, T1, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IUpdateJoin<TEntity, T1>
 {
@@ -53,7 +55,7 @@ public interface IUpdateJoin<TEntity, T1>
     IUpdateJoin<TEntity, T1> And(bool condition, Expression<Func<TEntity, T1, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IUpdateFrom<TEntity, T1, T2>
 {
@@ -63,7 +65,7 @@ public interface IUpdateFrom<TEntity, T1, T2>
     IUpdateFrom<TEntity, T1, T2> And(bool condition, Expression<Func<TEntity, T1, T2, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IUpdateJoin<TEntity, T1, T2>
 {
@@ -75,7 +77,7 @@ public interface IUpdateJoin<TEntity, T1, T2>
     IUpdateJoin<TEntity, T1, T2> And(bool condition, Expression<Func<TEntity, T1, T2, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IUpdateFrom<TEntity, T1, T2, T3>
 {
@@ -85,7 +87,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3>
     IUpdateFrom<TEntity, T1, T2, T3> And(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IUpdateJoin<TEntity, T1, T2, T3>
 {
@@ -97,7 +99,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3>
     IUpdateJoin<TEntity, T1, T2, T3> And(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IUpdateFrom<TEntity, T1, T2, T3, T4>
 {
@@ -107,7 +109,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4>
     IUpdateFrom<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IUpdateJoin<TEntity, T1, T2, T3, T4>
 {
@@ -119,7 +121,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4>
     IUpdateJoin<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5>
 {
@@ -129,7 +131,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5>
     IUpdateFrom<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5>
 {
@@ -139,5 +141,5 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }

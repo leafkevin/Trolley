@@ -53,13 +53,15 @@ public interface IQuery<T>
     #endregion
 
     #region Union
+    IQuery<T> Union<TOther>(IQuery<TOther> subQuery);
     IQuery<T> Union<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IQuery<T> UnionAll<TOther>(IQuery<TOther> subQuery);
     IQuery<T> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
     #endregion
 
     #region Where
-    IQuery<T> Where(Expression<Func<T, bool>> predicate);
-    IQuery<T> And(bool condition, Expression<Func<T, bool>> predicate);
+    IQuery<T> Where(Expression<Func<T, bool>> predicate = null);
+    IQuery<T> And(bool condition, Expression<Func<T, bool>> predicate = null);
     #endregion
 
     #region GroupBy/OrderBy
@@ -75,6 +77,7 @@ public interface IQuery<T>
 
     IQuery<T> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);
@@ -138,6 +141,7 @@ public interface IQuery<T1, T2>
     IQuery<T1, T2> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);
@@ -192,6 +196,7 @@ public interface IQuery<T1, T2, T3>
     IQuery<T1, T2, T3> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);
@@ -246,6 +251,7 @@ public interface IQuery<T1, T2, T3, T4>
     IQuery<T1, T2, T3, T4> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);
@@ -300,6 +306,7 @@ public interface IQuery<T1, T2, T3, T4, T5>
     IQuery<T1, T2, T3, T4, T5> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);
@@ -354,6 +361,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6>
     IQuery<T1, T2, T3, T4, T5, T6> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);
@@ -408,6 +416,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7>
     IQuery<T1, T2, T3, T4, T5, T6, T7> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);
@@ -462,6 +471,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);
@@ -516,6 +526,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);
@@ -570,6 +581,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);
@@ -624,6 +636,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);
@@ -678,6 +691,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);
@@ -732,6 +746,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);
@@ -786,6 +801,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);
@@ -840,6 +856,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);

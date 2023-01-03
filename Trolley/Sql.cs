@@ -6,6 +6,7 @@ namespace Trolley;
 
 public class Sql
 {
+    public static string Null = "NULL";
     public static bool In<TElement>(TElement value, params TElement[] list)
     {
         throw new NotImplementedException();

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -301,6 +302,10 @@ class UpdateVisitor : SqlVisitor
                 return sqlSegment;
             }
         }
+
+        if (memberExpr.Member == typeof(Sql).GetMember(nameof(Sql.Null)).First())
+            return SqlSegment.Null;
+
         //各种类型的常量或是静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
         if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
             return sqlSegment.Change(formatter(null), false);

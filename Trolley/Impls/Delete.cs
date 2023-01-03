@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -25,11 +26,24 @@ class Delete<TEntity> : IDelete<TEntity>
         this.transaction = transaction;
     }
     public IDeleted<TEntity> RawSql(string rawSql, object parameters)
-        => new Deleted<TEntity>(this.dbFactory, this.connection, this.transaction, rawSql, parameters);
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        return new Deleted<TEntity>(this.dbFactory, this.connection, this.transaction, rawSql, parameters);
+    }
     public IDeleted<TEntity> Where(object keys)
-        => new Deleted<TEntity>(this.dbFactory, this.connection, this.transaction, null, keys);
+    {
+        if (keys == null)
+            throw new ArgumentNullException(nameof(keys));
+
+        return new Deleted<TEntity>(this.dbFactory, this.connection, this.transaction, null, keys);
+    }
     public IDeleting<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
     {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
         var visitor = new DeleteVisitor(this.dbFactory, this.connection, this.transaction, typeof(TEntity));
         visitor.Where(predicate);
         return new Deleting<TEntity>(this.connection, this.transaction, visitor);
@@ -213,8 +227,9 @@ class Deleted<TEntity> : IDeleted<TEntity>
             return result;
         }
     }
-    public string ToSql()
+    public string ToSql(out List<IDbDataParameter> dbParameters)
     {
+        dbParameters = null;
         bool isDictionary = false;
         var entityType = typeof(TEntity);
         if (this.parameters is Dictionary<string, object> dict)
@@ -226,6 +241,8 @@ class Deleted<TEntity> : IDeleted<TEntity>
         else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
         var command = this.connection.CreateCommand();
         var sql = commandInitializer?.Invoke(command, this.connection.OrmProvider, this.parameters);
+        if (command.Parameters != null && command.Parameters.Count > 0)
+            dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Cancel();
         command.Dispose();
         return sql;
@@ -434,6 +451,9 @@ class Deleting<TEntity> : IDeleting<TEntity>
 
     public IDeleting<TEntity> And(bool condition, Expression<Func<TEntity, bool>> predicate)
     {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
         if (condition)
             this.visitor.And(predicate);
         return this;
@@ -469,6 +489,6 @@ class Deleting<TEntity> : IDeleting<TEntity>
         command.Dispose();
         return result;
     }
-    public string ToSql() => this.visitor.BuildSql(out _);
+    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
 

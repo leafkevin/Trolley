@@ -52,7 +52,7 @@ class Program
         //    .Where((x, y) => Sql.Exists<Order>(f => x.Id == f.Id))
         //    .Select((a, b) => new { a.OrderNo, BuyerName = a.Buyer.Name, Seller = b })
         //    .First();
-        //rep.Update<Order>().Set(f => new { OrderName = "ddd" }).Where(f => f.Id == 3);
+        rep.Update<Order>().Set(f => new { SellerId = Sql.Null }).Where(f => f.Id == 3).ToSql();
         //rep.Update<Order>().From<User, Company>((a, b, c) => a.BuyerId == b.Id && b.CompanyId == c.Id && c.Name == "pa")
         //    .Set((x, y, z) => new { OrderNo = "Order_" + y.Name + Guid.NewGuid().ToString() });
 
@@ -68,9 +68,9 @@ class Program
         //    .Select((a, b) => new { UserId = a.BuyerId, UserName = b.Name, a.OrderNo, a.ProductCount })
         //    .ToList();
 
-        //rep.From<Order>().InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-        // .Where((a, b) => a.CreatedAt > DateTime.Parse("2021-10-01"))
-        // .SelectAggregate((a, b, c) => new { b.BuyerId, b.OrderNo, ProductCount = a.Max(b.Id) });
+        rep.From<Order>().InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+         .Where((a, b) => a.CreatedAt > DateTime.Parse("2021-10-01"))
+         .SelectAggregate((a, b, c) => new { b.BuyerId, b.OrderNo, ProductCount = a.Max(b.Id) });
 
         //rep.WithTable(f => f.From<Order>().SelectAggregate((a, b) => new { b.Id, b.OrderNo, ProductCount = a.Count(b.Id) }))
         //    .InnerJoin<User>((a, b) => true)

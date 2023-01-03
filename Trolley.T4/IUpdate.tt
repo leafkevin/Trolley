@@ -6,6 +6,8 @@
 <#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
 <#@ output extension=".cs" #>
 using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,7 +33,7 @@ public interface IUpdateSet<TEntity>
 {
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
 {
@@ -58,7 +60,7 @@ public interface IUpdateFrom<TEntity, <#=tables#>>
     IUpdateFrom<TEntity, <#=tables#>> And(bool condition, Expression<Func<TEntity, <#=tables#>, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IUpdateJoin<TEntity, <#=tables#>>
 {
@@ -70,7 +72,7 @@ public interface IUpdateJoin<TEntity, <#=tables#>>
     IUpdateJoin<TEntity, <#=tables#>> And(bool condition, Expression<Func<TEntity, <#=tables#>, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 <#  }#>
 public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5>
@@ -81,7 +83,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5>
     IUpdateFrom<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5>
 {
@@ -91,5 +93,5 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }

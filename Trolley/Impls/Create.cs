@@ -35,34 +35,50 @@ class Create<TEntity> : ICreate<TEntity>
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
+
         return new Created<TEntity>(this.dbFactory, this.connection, this.transaction, null, insertObjs, bulkCount);
     }
     public ICreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector)
     {
+        if (fieldSelector == null)
+            throw new ArgumentNullException(nameof(fieldSelector));
+
         var entityType = typeof(TEntity);
         var visitor = new CreateVisitor(this.dbFactory, this.connection, this.transaction, entityType).From(fieldSelector);
         return new Create<TEntity, TSource>(visitor);
     }
     public ICreate<TEntity, T1, T2> From<T1, T2>(Expression<Func<T1, T2, object>> fieldSelector)
     {
+        if (fieldSelector == null)
+            throw new ArgumentNullException(nameof(fieldSelector));
+
         var entityType = typeof(TEntity);
         var visitor = new CreateVisitor(this.dbFactory, this.connection, this.transaction, entityType).From(fieldSelector);
         return new Create<TEntity, T1, T2>(visitor);
     }
     public ICreate<TEntity, T1, T2, T3> From<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> fieldSelector)
     {
+        if (fieldSelector == null)
+            throw new ArgumentNullException(nameof(fieldSelector));
+
         var entityType = typeof(TEntity);
         var visitor = new CreateVisitor(this.dbFactory, this.connection, this.transaction, entityType).From(fieldSelector);
         return new Create<TEntity, T1, T2, T3>(visitor);
     }
     public ICreate<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, object>> fieldSelector)
     {
+        if (fieldSelector == null)
+            throw new ArgumentNullException(nameof(fieldSelector));
+
         var entityType = typeof(TEntity);
         var visitor = new CreateVisitor(this.dbFactory, this.connection, this.transaction, entityType).From(fieldSelector);
         return new Create<TEntity, T1, T2, T3, T4>(visitor);
     }
     public ICreate<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, object>> fieldSelector)
     {
+        if (fieldSelector == null)
+            throw new ArgumentNullException(nameof(fieldSelector));
+
         var entityType = typeof(TEntity);
         var visitor = new CreateVisitor(this.dbFactory, this.connection, this.transaction, entityType).From(fieldSelector);
         return new Create<TEntity, T1, T2, T3, T4, T5>(visitor);
@@ -641,6 +657,9 @@ class Create<TEntity, TSource> : CreateBase, ICreate<TEntity, TSource>
         : base(visitor) { }
     public ICreate<TEntity, TSource> Where(Expression<Func<TSource, bool>> predicate)
     {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
         this.visitor.Where(predicate);
         return this;
     }
@@ -651,6 +670,9 @@ class Create<TEntity, T1, T2> : CreateBase, ICreate<TEntity, T1, T2>
         : base(visitor) { }
     public ICreate<TEntity, T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
     {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
         this.visitor.Where(predicate);
         return this;
     }
@@ -661,6 +683,9 @@ class Create<TEntity, T1, T2, T3> : CreateBase, ICreate<TEntity, T1, T2, T3>
         : base(visitor) { }
     public ICreate<TEntity, T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
     {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
         this.visitor.Where(predicate);
         return this;
     }
@@ -671,6 +696,9 @@ class Create<TEntity, T1, T2, T3, T4> : CreateBase, ICreate<TEntity, T1, T2, T3,
         : base(visitor) { }
     public ICreate<TEntity, T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
     {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
         this.visitor.Where(predicate);
         return this;
     }
@@ -681,6 +709,9 @@ class Create<TEntity, T1, T2, T3, T4, T5> : CreateBase, ICreate<TEntity, T1, T2,
         : base(visitor) { }
     public ICreate<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
     {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
         this.visitor.Where(predicate);
         return this;
     }

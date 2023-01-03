@@ -41,19 +41,37 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     #region Include
     public IIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector)
     {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
         this.visitor.Include(memberSelector);
         return new IncludableQuery<<#=tables#>, TMember>(this.visitor);
     }
     public IIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
         this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<<#=tables#>, TElment>(this.visitor);
     }
     #endregion
 
     #region Join
+    public IQuery<<#=tables#>, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var sql = subQuery.ToSql(out var dbDataParameters);
+        this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
+        return new Query<<#=tables#>, TOther>(this.visitor);
+    }
     public IQuery<<#=tables#>, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
         var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
@@ -62,39 +80,77 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     }
     public IQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
         this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
         this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
         this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<<#=tables#>, TOther>(this.visitor);
     }
     public IQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<<#=tables#>, TOther>(this.visitor);
     }
     public IQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<<#=tables#>, TOther>(this.visitor);
     }
     #endregion
 
     #region Union
+    public IQuery<<#=tables#>> Union<TOther>(IQuery<TOther> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var dbParameters = new List<IDbDataParameter>();
+        var sql = this.ToSql(out var parameters);
+        if (parameters != null && parameters.Count > 0)
+            dbParameters.AddRange(parameters);
+
+        sql += " UNION " + subQuery.ToSql(out parameters);
+        if (parameters != null && parameters.Count > 0)
+            dbParameters.AddRange(parameters);
+
+        this.visitor.Union(typeof(TOther), sql, dbParameters);
+        return this;
+    }
     public IQuery<<#=tables#>> Union<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
         var dbParameters = new List<IDbDataParameter>();
         var sql = this.ToSql(out var parameters);
         if (parameters != null && parameters.Count > 0)
@@ -106,11 +162,31 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        this.visitor.Union(typeof(T1), sql, dbParameters);
+        this.visitor.Union(typeof(TOther), sql, dbParameters);
+        return this;
+    }
+    public IQuery<<#=tables#>> UnionAll<TOther>(IQuery<TOther> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var dbParameters = new List<IDbDataParameter>();
+        var sql = this.ToSql(out var parameters);
+        if (parameters != null && parameters.Count > 0)
+            dbParameters.AddRange(parameters);
+
+        sql += " UNION ALL " + subQuery.ToSql(out parameters);
+        if (parameters != null && parameters.Count > 0)
+            dbParameters.AddRange(parameters);
+
+        this.visitor.Union(typeof(TOther), sql, dbParameters);
         return this;
     }
     public IQuery<<#=tables#>> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
         var dbParameters = new List<IDbDataParameter>();
         var sql = this.ToSql(out var parameters);
         if (parameters != null && parameters.Count > 0)
@@ -122,20 +198,21 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        this.visitor.Union(typeof(T1), sql, dbParameters);
+        this.visitor.Union(typeof(TOther), sql, dbParameters);
         return this;
     }
     #endregion
 
     #region Where
-    public IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
+    public IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate = null)
     {
-        this.visitor.Where(predicate);
+        if (predicate != null)
+            this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate)
+    public IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null)
     {
-        if (condition) 
+        if (condition && predicate != null)
             this.visitor.And(predicate);
         return this;
     }
@@ -144,20 +221,46 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     #region GroupBy/OrderBy
     public IGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr)
     {
+        if (groupingExpr == null)
+            throw new ArgumentNullException(nameof(groupingExpr));
+
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<<#=tables#>, TGrouping>(this.visitor);
     }
     public IQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
         this.visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
+
+    public IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
+    {
+    	if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        this.visitor.Select(null, fieldsExpr);
+        return new Query<TTarget>(this.visitor);
+    }
+    public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, <#=tables#>, TTarget>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        this.visitor.Select(null, fieldsExpr);
+        return new Query<TTarget>(this.visitor);
+    }
 
     public IQuery<<#=tables#>> Distinct()
     {
@@ -177,12 +280,7 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     public IQuery<<#=tables#>> ToChunk(int size)
     {
         throw new NotImplementedException();
-    }
-    public IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
-    {
-        this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.visitor);
-    }
+    }    
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
     public async Task<int> CountAsync(CancellationToken cancellationToken = default)
@@ -191,38 +289,119 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
         => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+	{
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    }
+
     public async Task<int> CountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+	{
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    }
     public int CountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    }
     public async Task<int> CountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    }
     public long LongCount<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    }
     public async Task<long> LongCountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    }
     public long LongCountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    }
     public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    }
 
     public TField Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    }
     public async Task<TField> SumAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    }
     public TField Avg<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    }
     public async Task<TField> AvgAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);    
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    }
     public TField Max<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    }
     public async Task<TField> MaxAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    }
     public TField Min<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    }
     public async Task<TField> MinAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+    }
 
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
@@ -241,10 +420,9 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
 
         this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        if (reader.Read()) 
-            result = reader.GetValue(0);
+        using var reader = command.ExecuteReader(behavior);
+        if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;
@@ -300,11 +478,17 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     #region Include
     public IIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector)
     {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
         this.visitor.Include(memberSelector);
         return new IncludableQuery<<#=tables#>, TMember>(this.visitor);
     }
     public IIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
         this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<<#=tables#>, TElment>(this.visitor);
     }
@@ -313,24 +497,53 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     #region Join
     public IQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
         this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
         this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
         this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     #endregion
 
     #region Union
+    public IQuery<<#=tables#>> Union<TOther>(IQuery<TOther> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var dbParameters = new List<IDbDataParameter>();
+        var sql = this.ToSql(out var parameters);
+        if (parameters != null && parameters.Count > 0)
+            dbParameters.AddRange(parameters);
+
+        sql += " UNION " + subQuery.ToSql(out parameters);
+        if (parameters != null && parameters.Count > 0)
+            dbParameters.AddRange(parameters);
+
+        this.visitor.Union(typeof(TOther), sql, dbParameters);
+        return this;
+    }
     public IQuery<<#=tables#>> Union<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
         var dbParameters = new List<IDbDataParameter>();
         var sql = this.ToSql(out var parameters);
         if (parameters != null && parameters.Count > 0)
@@ -342,11 +555,31 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        this.visitor.Union(typeof(T1), sql, dbParameters);
+        this.visitor.Union(typeof(TOther), sql, dbParameters);
+        return this;
+    }
+    public IQuery<<#=tables#>> UnionAll<TOther>(IQuery<TOther> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var dbParameters = new List<IDbDataParameter>();
+        var sql = this.ToSql(out var parameters);
+        if (parameters != null && parameters.Count > 0)
+            dbParameters.AddRange(parameters);
+
+        sql += " UNION ALL " + subQuery.ToSql(out parameters);
+        if (parameters != null && parameters.Count > 0)
+            dbParameters.AddRange(parameters);
+
+        this.visitor.Union(typeof(TOther), sql, dbParameters);
         return this;
     }
     public IQuery<<#=tables#>> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
         var dbParameters = new List<IDbDataParameter>();
         var sql = this.ToSql(out var parameters);
         if (parameters != null && parameters.Count > 0)
@@ -358,20 +591,21 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        this.visitor.Union(typeof(T1), sql, dbParameters);
+        this.visitor.Union(typeof(TOther), sql, dbParameters);
         return this;
     }
     #endregion
 
     #region Where
-    public IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
+    public IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate = null)
     {
-        this.visitor.Where(predicate);
+        if (predicate != null) 
+            this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate)
+    public IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null)
     {
-        if (condition) 
+        if (condition && predicate != null)
             this.visitor.And(predicate);
         return this;
     }
@@ -380,20 +614,38 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     #region GroupBy/OrderBy
     public IGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr)
     {
+        if (groupingExpr == null)
+            throw new ArgumentNullException(nameof(groupingExpr));
+
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<<#=tables#>, TGrouping>(this.visitor);
     }
     public IQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
         this.visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
+
+    public IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
+    {
+    	if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        this.visitor.Select(null, fieldsExpr);
+        return new Query<TTarget>(this.visitor);
+    }
 
     public IQuery<<#=tables#>> Distinct()
     {
@@ -413,13 +665,7 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     public IQuery<<#=tables#>> ToChunk(int size)
     {
         throw new NotImplementedException();
-    }
-
-    public IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
-    {
-        this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.visitor);
-    }
+    }    
 
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
     public async Task<int> CountAsync(CancellationToken cancellationToken = default)
@@ -428,38 +674,119 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
         => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+	{
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    }
+
     public async Task<int> CountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+	{
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    }
     public int CountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    }
     public async Task<int> CountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    }
     public long LongCount<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    }
     public async Task<long> LongCountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    }
     public long LongCountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    }
     public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    }
 
     public TField Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    }
     public async Task<TField> SumAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    }
     public TField Avg<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    }
     public async Task<TField> AvgAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    }
     public TField Max<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    }
     public async Task<TField> MaxAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    }
     public TField Min<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    }
     public async Task<TField> MinAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+    }
 
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(null, out dbParameters, out _);
@@ -478,10 +805,9 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
 
         this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        using var reader = command.ExecuteReader(behavior);
         object result = null;
-        if (reader.Read())
-            result = reader.GetValue(0);
+        using var reader = command.ExecuteReader(behavior);
+        if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
         if (result is DBNull) return default;

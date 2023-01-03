@@ -29,19 +29,37 @@ class Query<T> : IQuery<T>
     #region Include
     public IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
     {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
         this.visitor.Include(memberSelector);
         return new IncludableQuery<T, TMember>(this.visitor);
     }
     public IIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
         this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T, TElment>(this.visitor);
     }
     #endregion
 
     #region Join
+    public IQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var sql = subQuery.ToSql(out var dbDataParameters);
+        this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
+        return new Query<T, TOther>(this.visitor);
+    }
     public IQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
         var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
         var query = subQuery.Invoke(fromQuery);
         var sql = query.ToSql(out var dbDataParameters);
@@ -50,39 +68,77 @@ class Query<T> : IQuery<T>
     }
     public IQuery<T> InnerJoin(Expression<Func<T, bool>> joinOn)
     {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
         this.visitor.Join("INNER JOIN", null, joinOn);
         return this;
     }
     public IQuery<T> LeftJoin(Expression<Func<T, bool>> joinOn)
     {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
         this.visitor.Join("LEFT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T> RightJoin(Expression<Func<T, bool>> joinOn)
     {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
         this.visitor.Join("RIGHT JOIN", null, joinOn);
         return this;
     }
     public IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return new Query<T, TOther>(this.visitor);
     }
     public IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return new Query<T, TOther>(this.visitor);
     }
     public IQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new Query<T, TOther>(this.visitor);
     }
     #endregion
 
     #region Union
+    public IQuery<T> Union<TOther>(IQuery<TOther> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var dbParameters = new List<IDbDataParameter>();
+        var sql = this.ToSql(out var parameters);
+        if (parameters != null && parameters.Count > 0)
+            dbParameters.AddRange(parameters);
+
+        sql += " UNION " + subQuery.ToSql(out parameters);
+        if (parameters != null && parameters.Count > 0)
+            dbParameters.AddRange(parameters);
+
+        this.visitor.Union(typeof(TOther), sql, dbParameters);
+        return this;
+    }
     public IQuery<T> Union<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
         var dbParameters = new List<IDbDataParameter>();
         var sql = this.ToSql(out var parameters);
         if (parameters != null && parameters.Count > 0)
@@ -94,11 +150,31 @@ class Query<T> : IQuery<T>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        this.visitor.Union(typeof(T), sql, dbParameters);
+        this.visitor.Union(typeof(TOther), sql, dbParameters);
+        return this;
+    }
+    public IQuery<T> UnionAll<TOther>(IQuery<TOther> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var dbParameters = new List<IDbDataParameter>();
+        var sql = this.ToSql(out var parameters);
+        if (parameters != null && parameters.Count > 0)
+            dbParameters.AddRange(parameters);
+
+        sql += " UNION ALL " + subQuery.ToSql(out parameters);
+        if (parameters != null && parameters.Count > 0)
+            dbParameters.AddRange(parameters);
+
+        this.visitor.Union(typeof(TOther), sql, dbParameters);
         return this;
     }
     public IQuery<T> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
         var dbParameters = new List<IDbDataParameter>();
         var sql = this.ToSql(out var parameters);
         if (parameters != null && parameters.Count > 0)
@@ -110,20 +186,21 @@ class Query<T> : IQuery<T>
         if (parameters != null && parameters.Count > 0)
             dbParameters.AddRange(parameters);
 
-        this.visitor.Union(typeof(T), sql, dbParameters);
+        this.visitor.Union(typeof(TOther), sql, dbParameters);
         return this;
     }
     #endregion
 
     #region Where
-    public IQuery<T> Where(Expression<Func<T, bool>> predicate)
+    public IQuery<T> Where(Expression<Func<T, bool>> predicate = null)
     {
-        this.visitor.Where(predicate);
+        if (predicate != null)
+            this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T> And(bool condition, Expression<Func<T, bool>> predicate)
+    public IQuery<T> And(bool condition, Expression<Func<T, bool>> predicate = null)
     {
-        if (condition)
+        if (condition && predicate != null)
             this.visitor.And(predicate);
         return this;
     }
@@ -132,16 +209,25 @@ class Query<T> : IQuery<T>
     #region GroupBy/OrderBy
     public IGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
     {
+        if (groupingExpr == null)
+            throw new ArgumentNullException(nameof(groupingExpr));
+
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T, TGrouping>(this.visitor);
     }
     public IQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
     {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
         this.visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IQuery<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr)
     {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
@@ -155,6 +241,17 @@ class Query<T> : IQuery<T>
     }
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
     {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        this.visitor.Select(null, fieldsExpr);
+        return new Query<TTarget>(this.visitor);
+    }
+    public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.visitor);
     }
@@ -185,38 +282,118 @@ class Query<T> : IQuery<T>
     public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
         => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    }
     public async Task<int> CountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    }
     public int CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    }
     public async Task<int> CountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    }
     public long LongCount<TField>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    }
     public async Task<long> LongCountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    }
     public long LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    }
     public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    }
 
     public TField Sum<TField>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    }
     public async Task<TField> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    }
     public TField Avg<TField>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    }
     public async Task<TField> AvgAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    }
     public TField Max<TField>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    }
     public async Task<TField> MaxAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    }
     public TField Min<TField>(Expression<Func<T, TField>> fieldExpr)
-        => this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    }
     public async Task<TField> MinAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+    }
 
     public T First()
     {
@@ -352,6 +529,7 @@ class Query<T> : IQuery<T>
     public IPagedList<T> ToPageList(int pageIndex, int pageSize)
     {
         Expression<Func<T, T>> defaultExpr = f => f;
+        this.visitor.Page(pageIndex, pageSize);
         var sql = this.visitor.BuildSql(defaultExpr, out var dbParameters, out var readerFields);
 
         var command = this.connection.CreateCommand();
@@ -379,6 +557,7 @@ class Query<T> : IQuery<T>
         }
         reader.Close();
         reader.Dispose();
+        result.RecordsTotal = recordsTotal;
 
         if (this.visitor.BuildIncludeSql(result, out sql))
         {
@@ -422,6 +601,7 @@ class Query<T> : IQuery<T>
         }
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        result.RecordsTotal = recordsTotal;
 
         if (this.visitor.BuildIncludeSql(result, out sql))
         {
@@ -433,9 +613,21 @@ class Query<T> : IQuery<T>
         return result;
     }
     public Dictionary<TKey, TElement> ToDictionary<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> valueSelector) where TKey : notnull
-        => this.ToList().ToDictionary(keySelector, valueSelector);
+    {
+        if (keySelector == null)
+            throw new ArgumentNullException(nameof(keySelector));
+        if (valueSelector == null)
+            throw new ArgumentNullException(nameof(valueSelector));
+
+        return this.ToList().ToDictionary(keySelector, valueSelector);
+    }
     public async Task<Dictionary<TKey, TElement>> ToDictionaryAsync<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull
     {
+        if (keySelector == null)
+            throw new ArgumentNullException(nameof(keySelector));
+        if (valueSelector == null)
+            throw new ArgumentNullException(nameof(valueSelector));
+
         var list = await this.ToListAsync(cancellationToken);
         return list.ToDictionary(keySelector, valueSelector);
     }

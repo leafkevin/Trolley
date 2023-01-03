@@ -74,20 +74,21 @@ class QueryVisitor : SqlVisitor
 
         builder.Clear();
         if (!string.IsNullOrEmpty(this.groupBySql))
-        {
-            if (builder.Length > 0) builder.Append(' ');
-            builder.Append($"GROUP BY {this.groupBySql}");
-        }
+            builder.Append($" GROUP BY {this.groupBySql}");
+
         if (!string.IsNullOrEmpty(this.havingSql))
         {
             if (builder.Length > 0) builder.Append(' ');
             builder.Append($"HAVING {this.havingSql}");
         }
-        if (builder.Length > 0) builder.Append(' ');
-        string others = builder.ToString();
         string orderBy = null;
         if (!string.IsNullOrEmpty(this.orderBySql))
-            orderBy = $" ORDER BY {this.orderBySql}";
+        {
+            orderBy = $"ORDER BY {this.orderBySql}";
+            if (builder.Length > 0) builder.Append(' ');
+            builder.Append(orderBy);
+        }
+        string others = builder.ToString();
 
         dbParameters = this.dbParameters;
         readerFields = this.readerFields;
@@ -99,9 +100,9 @@ class QueryVisitor : SqlVisitor
             pageSql = pageSql.Replace("/**fields**/", this.selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
             pageSql = pageSql.Replace("/**conditions**/", this.whereSql);
-            return $"SELECT COUNT(*) FROM {tableSql};{pageSql}{others}";
+            return $"SELECT COUNT(*) FROM {tableSql}{this.whereSql};{pageSql}{others}";
         }
-        else return $"SELECT {this.selectSql} FROM {tableSql}{this.whereSql}{others}{orderBy}";
+        else return $"SELECT {this.selectSql} FROM {tableSql}{this.whereSql}{others}";
     }
     public string BuildSql(Expression defaultExpr, out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields)
     {
@@ -144,20 +145,21 @@ class QueryVisitor : SqlVisitor
 
         builder.Clear();
         if (!string.IsNullOrEmpty(this.groupBySql))
-        {
-            if (builder.Length > 0) builder.Append(' ');
-            builder.Append($"GROUP BY {this.groupBySql}");
-        }
+            builder.Append($" GROUP BY {this.groupBySql}");
+
         if (!string.IsNullOrEmpty(this.havingSql))
         {
             if (builder.Length > 0) builder.Append(' ');
             builder.Append($"HAVING {this.havingSql}");
         }
-        if (builder.Length > 0) builder.Append(' ');
-        string others = builder.ToString();
         string orderBy = null;
         if (!string.IsNullOrEmpty(this.orderBySql))
+        {
             orderBy = $"ORDER BY {this.orderBySql}";
+            if (builder.Length > 0) builder.Append(' ');
+            builder.Append(orderBy);
+        }
+        string others = builder.ToString();
 
         dbParameters = this.dbParameters;
         readerFields = this.readerFields;
@@ -169,9 +171,9 @@ class QueryVisitor : SqlVisitor
             pageSql = pageSql.Replace("/**fields**/", this.selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
             pageSql = pageSql.Replace("/**others**/", this.whereSql);
-            return $"SELECT COUNT(*) FROM {tableSql};{pageSql}{others}";
+            return $"SELECT COUNT(*) FROM {tableSql}{this.whereSql};{pageSql}{others}";
         }
-        else return $"SELECT {this.selectSql} FROM {tableSql}{this.whereSql}{others} {orderBy}";
+        else return $"SELECT {this.selectSql} FROM {tableSql}{this.whereSql}{others}";
     }
     public bool BuildIncludeSql(object parameter, out string sql)
     {
@@ -772,6 +774,8 @@ class QueryVisitor : SqlVisitor
         int index = 0;
         foreach (var parameterExpr in lambdaExpr.Parameters)
         {
+            if (parameterExpr.Type == typeof(IAggregateSelect))
+                continue;
             if (!parameters.Contains(parameterExpr.Name))
                 continue;
             this.tableAlias.Add(parameterExpr.Name, joinTables[index]);
@@ -1213,18 +1217,7 @@ class QueryVisitor : SqlVisitor
     }
     private bool IsGroupingAggregateMember(MemberExpression memberExpr)
     {
-        if (memberExpr == null)
-            return false;
-        if (memberExpr.Member.Name != "Grouping")
-            return false;
-        var declaringType = memberExpr.Member.DeclaringType;
-        if (!declaringType.IsGenericType)
-            return false;
-        var genericArguments = declaringType.GetGenericArguments();
-        if (genericArguments == null || genericArguments.Length != 1)
-            return false;
-        if (!typeof(IGroupingAggregate<>).MakeGenericType(genericArguments[0]).IsAssignableFrom(declaringType))
-            return false;
-        return true;
+        if (memberExpr == null) return false;
+        return typeof(IAggregateSelect).IsAssignableFrom(memberExpr.Member.DeclaringType) && memberExpr.Member.Name == "Grouping";
     }
 }

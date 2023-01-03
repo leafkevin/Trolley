@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,14 +17,14 @@ public interface IDeleted<TEntity>
 {
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IDeleting<TEntity>
 {
     IDeleting<TEntity> And(bool condition, Expression<Func<TEntity, bool>> predicate);
     int Execute();
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql();
+    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 //public interface IMultiDelete<T>
 //{

@@ -18,7 +18,7 @@ public static class TrolleyExtensions
     private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
 
-    public static TEntity QueryFirst<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate)
+    public static TEntity QueryFirst<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate = null)
         => repository.From<TEntity>().Where(predicate).First();
     public static async Task<TEntity> QueryFirstAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
         => await repository.From<TEntity>().Where(predicate).FirstAsync(cancellationToken);
@@ -26,7 +26,18 @@ public static class TrolleyExtensions
         => repository.From<TEntity>().Where(predicate).ToList();
     public static async Task<List<TEntity>> QueryAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
         => await repository.From<TEntity>().Where(predicate).ToListAsync(cancellationToken);
-
+    public static IPagedList<TEntity> QueryPage<TEntity>(this IRepository repository, int pageIndex, int pageSize, Expression<Func<TEntity, bool>> predicate = null)
+    {
+        if (predicate != null)
+            return repository.From<TEntity>().Where(predicate).ToPageList(pageIndex, pageSize);
+        return repository.From<TEntity>().ToPageList(pageIndex, pageSize);
+    }
+    public static async Task<IPagedList<TEntity>> QueryPageAsync<TEntity>(this IRepository repository, int pageIndex, int pageSize, Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default)
+    {
+        if (predicate != null)
+            return await repository.From<TEntity>().Where(predicate).ToPageListAsync(pageIndex, pageSize, cancellationToken);
+        return await repository.From<TEntity>().ToPageListAsync(pageIndex, pageSize, cancellationToken);
+    }
     public static int Create<TEntity>(this IRepository repository, object parameter)
         => repository.Create<TEntity>().WithBy(parameter).Execute();
     public static async Task<int> CreateAsync<TEntity>(this IRepository repository, object parameter, CancellationToken cancellationToken = default)

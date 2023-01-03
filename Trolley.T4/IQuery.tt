@@ -39,6 +39,15 @@ public interface IQuery<T>
     #region Join
     /// <summary>
     /// 添加子查询表，方便后续关联,如：
+    /// 如：WithTable(f => repository.From&lt;Order, OrderDetail&gt;().Where((a, b) => a.Id == b.OrderId).SelectAggregate((a, b, c) => new { b.OrderNo, ProductCount = a.Count(c.Id) })))
+    /// </summary>
+    /// <typeparam name="TOther"></typeparam>
+    /// <param name="subQuery">子查询表达式，如：
+    /// WithTable(f => repository.From&lt;Order, OrderDetail&gt;().Where((a, b) => a.Id == b.OrderId).SelectAggregate((a, b, c) => new { b.OrderNo, ProductCount = a.Count(c.Id) })))</param>
+    /// <returns></returns>
+    IQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    /// <summary>
+    /// 添加子查询表，方便后续关联,如：
     /// 如：WithTable(f => f.From&lt;Order, OrderDetail&gt;().Where((a, b) => a.Id == b.OrderId).SelectAggregate((a, b, c) => new { b.OrderNo, ProductCount = a.Count(c.Id) })))
     /// </summary>
     /// <typeparam name="TOther"></typeparam>
@@ -60,13 +69,15 @@ public interface IQuery<T>
     #endregion
 
     #region Union
+    IQuery<T> Union<TOther>(IQuery<TOther> subQuery);
     IQuery<T> Union<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IQuery<T> UnionAll<TOther>(IQuery<TOther> subQuery);
     IQuery<T> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
     #endregion
 
     #region Where
-    IQuery<T> Where(Expression<Func<T, bool>> predicate);
-    IQuery<T> And(bool condition, Expression<Func<T, bool>> predicate);
+    IQuery<T> Where(Expression<Func<T, bool>> predicate = null);
+    IQuery<T> And(bool condition, Expression<Func<T, bool>> predicate = null);
     #endregion
 
     #region GroupBy/OrderBy
@@ -82,6 +93,7 @@ public interface IQuery<T>
 
     IQuery<T> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);
@@ -152,6 +164,7 @@ public interface IQuery<<#=tables#>>
     IQuery<<#=tables#>> ToChunk(int size);
 
     IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, <#=tables#>, TTarget>> fieldsExpr);
 
     int Count();
     Task<int> CountAsync(CancellationToken cancellationToken = default);
