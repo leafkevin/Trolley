@@ -29,16 +29,15 @@
 
 示例:
 
+没有租户或是没有租户独立分库的场景
 ```csharp
-
-
-
-
-var connString = "Server=.;Initial Catalog=test;User Id=sa;Password=test;Connect Timeout=30";
-OrmProviderFactory.RegisterProvider(connString, new SqlServerProvider(), true);
-
+var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
+var builder = new OrmDbFactoryBuilder();
+builder.Register("fengling", true, f => f.Add<MySqlProvider>(connectionString, true))
+    .Configure(f => new ModelConfiguration().OnModelCreating(f));
+var dbFactory = builder.Build();
 ```
-也可以使用多个连接串进行注册
+多租户，不同租户，不同数据库的场景
 
 ```csharp
 var connectionString1 = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
@@ -46,11 +45,11 @@ var connectionString2 = "User id=postgres;Password=123456;Host=localhost;Port=54
 var builder = new OrmDbFactoryBuilder();
 builder.Register("fengling", true, f =>
 {
-    f.Add<MySqlProvider>(connectionString1, true) 
-     .Add<NpgSqlProvider>(connectionString2, false, new List<int> { 1, 2, 3, 4, 5 });
+    f.Add<MySqlProvider>(connectionString1, true) //默认数据库，除了指定租户外的其他所有租户使用的数据库
+     .Add<NpgSqlProvider>(connectionString2, false, new List<int> { 1, 2, 3, 4, 5 });//租户ID为1，2，3，4，5的租户使用的数据库
 })
 .Configure(f => new ModelConfiguration().OnModelCreating(f));
-return builder.Build();
+var dbFactory = builder.Build();
 
 ```
 
