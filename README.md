@@ -52,6 +52,40 @@ builder.Register("fengling", true, f =>
 var dbFactory = builder.Build();
 
 ```
+这里的ModelConfiguration类，就是模型映射类，内容如下：
+```csharp
+class ModelConfiguration : IModelConfiguration
+{
+    public void OnModelCreating(ModelBuilder builder)
+    {
+        builder.Entity<User>(f =>
+        {
+            //这里只列出了需要特殊指定的列，其他的列在Trolley Build的时候，会自动根据模型结构添加进来的。
+            f.ToTable("sys_user").Key(t => t.Id);//表，主键
+            f.HasOne(t => t.Company).HasForeignKey(t => t.CompanyId).MapTo<Company>();//导航属性，这里是值对象，不是真正的模型，是模型的瘦身版，使用MapTo指定对应的模型Company
+            f.HasMany(t => t.Orders).HasForeignKey(t => t.BuyerId);
+        });
+        builder.Entity<Company>(f =>
+        {
+            f.ToTable("sys_company").Key(t => t.Id).AutoIncrement(t => t.Id);//表，主键，自动增长列
+            f.HasMany(t => t.Users).HasForeignKey(t => t.CompanyId);//导航属性，这里是真正的模型
+        });
+        builder.Entity<Order>(f =>
+        {
+            f.ToTable("sys_order").Key(t => t.Id);
+            f.HasOne(t => t.Buyer).HasForeignKey(t => t.BuyerId);
+            f.HasOne(t => t.Seller).HasForeignKey(t => t.SellerId).MapTo<User>();//导航属性，这里是值对象，不是真正的模型，是模型的瘦身版，使用MapTo指定对应的模型User
+            f.HasMany(t => t.Details).HasForeignKey(t => t.OrderId);
+        });
+        builder.Entity<OrderDetail>(f =>
+        {
+            f.ToTable("sys_order_detail").Key(f => f.Id);
+            f.HasOne(t => t.Order).HasForeignKey(t => t.OrderId);
+        });
+    }
+}
+```
+
 
 其次，创建Repository对象或Repository<TEntity>对象。
 ------------------------------------------------------------
