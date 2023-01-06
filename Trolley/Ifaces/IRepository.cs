@@ -39,8 +39,6 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     #endregion
 
     #region Update  
-    int Update<TEntity>(object updateObj, object whereObj);
-    Task<int> UpdateAsync<TEntity>(object updateObj, object whereObj, CancellationToken cancellationToken = default);
     IUpdate<T> Update<T>();
     #endregion
 
@@ -49,7 +47,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     #endregion
 
     #region Exists
-    bool Exists<TEntity>(object anonymousObj);
+    bool Exists<TEntity>(object whereObj);
     Task<bool> ExistsAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default);
     bool Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate);
     Task<bool> ExistsAsync<TEntity>(Expression<Func<TEntity, bool>> wherePredicate, CancellationToken cancellationToken = default);
@@ -57,7 +55,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
 
     #region Execute
     int Execute(string sql, object parameters = null);
-    Task<int> ExecuteAsync(string sql, object parameters = null, CommandType cmdType = CommandType.Text, CancellationToken cancellationToken = default);
+    Task<int> ExecuteAsync(string sql, object parameters = null, CancellationToken cancellationToken = default);
     #endregion
 
     #region Others

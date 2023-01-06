@@ -32,52 +32,62 @@ class UpdateVisitor : SqlVisitor
         switch (this.ormProvider.DatabaseType)
         {
             case DatabaseType.MySql:
-                builder.Append("a ");
-                for (var i = 1; i < this.tables.Count; i++)
+                if (this.isNeedAlias) builder.Append("a ");
+                if (this.tables.Count > 1)
                 {
-                    var tableSegment = this.tables[i];
-                    var tableName = tableSegment.Body;
-                    if (string.IsNullOrEmpty(tableName))
+                    for (var i = 1; i < this.tables.Count; i++)
                     {
-                        tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
-                        tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
+                        var tableSegment = this.tables[i];
+                        var tableName = tableSegment.Body;
+                        if (string.IsNullOrEmpty(tableName))
+                        {
+                            tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
+                            tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
+                        }
+                        builder.Append($"{tableSegment.JoinType} {tableName} {tableSegment.AliasName}");
+                        builder.Append($" ON {tableSegment.OnExpr}");
                     }
-                    builder.Append($"{tableSegment.JoinType} {tableName} {tableSegment.AliasName}");
-                    builder.Append($" ON {tableSegment.OnExpr}");
                 }
                 builder.Append(" SET ");
                 builder.Append(this.setSql);
                 break;
             case DatabaseType.Postgresql:
-                builder.Append("a SET ");
-                builder.Append(this.setSql);
-                builder.Append(" FROM ");
-                for (var i = 1; i < this.tables.Count; i++)
-                {
-                    var tableSegment = this.tables[i];
-                    var tableName = tableSegment.Body;
-                    if (string.IsNullOrEmpty(tableName))
-                    {
-                        tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
-                        tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
-                    }
-                    builder.Append($"{tableName} {tableSegment.AliasName}");
-                }
-                break;
-            case DatabaseType.MsSql:
+                if (this.isNeedAlias) builder.Append("a ");
                 builder.Append("SET ");
                 builder.Append(this.setSql);
-                builder.Append(" FROM ");
-                for (var i = 1; i < this.tables.Count; i++)
+                if (this.tables.Count > 1)
                 {
-                    var tableSegment = this.tables[i];
-                    var tableName = tableSegment.Body;
-                    if (string.IsNullOrEmpty(tableName))
+                    builder.Append(" FROM ");
+                    for (var i = 1; i < this.tables.Count; i++)
                     {
-                        tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
-                        tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
+                        var tableSegment = this.tables[i];
+                        var tableName = tableSegment.Body;
+                        if (string.IsNullOrEmpty(tableName))
+                        {
+                            tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
+                            tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
+                        }
+                        builder.Append($"{tableName} {tableSegment.AliasName}");
                     }
-                    builder.Append($"{tableName} {tableSegment.AliasName}");
+                }
+                break;
+            case DatabaseType.SqlServer:
+                builder.Append("SET ");
+                builder.Append(this.setSql);
+                if (this.tables.Count > 1)
+                {
+                    builder.Append(" FROM ");
+                    for (var i = 1; i < this.tables.Count; i++)
+                    {
+                        var tableSegment = this.tables[i];
+                        var tableName = tableSegment.Body;
+                        if (string.IsNullOrEmpty(tableName))
+                        {
+                            tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
+                            tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
+                        }
+                        builder.Append($"{tableName} {tableSegment.AliasName}");
+                    }
                 }
                 break;
             case DatabaseType.Oracle:
@@ -90,6 +100,7 @@ class UpdateVisitor : SqlVisitor
     }
     public UpdateVisitor From(params Type[] entityTypes)
     {
+        this.isNeedAlias = true;
         int tableIndex = this.tableStartAs + this.tables.Count;
         for (int i = 0; i < entityTypes.Length; i++)
         {
@@ -103,6 +114,7 @@ class UpdateVisitor : SqlVisitor
     }
     public UpdateVisitor Join(string joinType, Type entityType, Expression joinOn)
     {
+        this.isNeedAlias = true;
         var lambdaExpr = joinOn as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
         this.tables.Add(new TableSegment
@@ -114,31 +126,33 @@ class UpdateVisitor : SqlVisitor
         });
         return this;
     }
-    public UpdateVisitor Set(Expression setExpr, object fieldValue = null)
+    public UpdateVisitor Set(Expression fieldsExpr, object fieldValue = null)
     {
-        if (setExpr == null)
-            throw new ArgumentNullException(nameof(setExpr));
-        var lambdaExpr = setExpr as LambdaExpression;
-
+        var lambdaExpr = fieldsExpr as LambdaExpression;
         var entityMapper = this.tables[0].Mapper;
         var builder = new StringBuilder();
         switch (lambdaExpr.Body.NodeType)
         {
+            //单个字段设置
             case ExpressionType.MemberAccess:
-                if (fieldValue == null)
-                    throw new ArgumentNullException(nameof(fieldValue));
                 if (!string.IsNullOrEmpty(this.setSql))
                     builder.Append(this.setSql);
                 var memberExpr = lambdaExpr.Body as MemberExpression;
                 var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
-                var parameterName = ormProvider.ParameterPrefix + memberMapper.MemberName;
+
                 if (builder.Length > 0)
                     builder.Append(',');
                 if (this.ormProvider.DatabaseType == DatabaseType.MySql)
                     builder.Append("a.");
-                builder.Append($"{ormProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
-                this.dbParameters ??= new();
-                this.dbParameters.Add(ormProvider.CreateParameter(parameterName, fieldValue));
+                builder.Append($"{ormProvider.GetFieldName(memberMapper.FieldName)}=");
+                if (fieldValue is DBNull) builder.Append("NULL");
+                else
+                {
+                    var parameterName = ormProvider.ParameterPrefix + memberMapper.MemberName;
+                    builder.Append(parameterName);
+                    this.dbParameters ??= new();
+                    this.dbParameters.Add(ormProvider.CreateParameter(parameterName, fieldValue));
+                }
                 break;
             case ExpressionType.New:
                 this.InitTableAlias(lambdaExpr);
@@ -147,6 +161,9 @@ class UpdateVisitor : SqlVisitor
                 {
                     var memberInfo = newExpr.Members[i];
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out _))
+                        continue;
+                    //只一个成员访问，没有设置语句，什么也不做，忽略
+                    if (newExpr.Arguments[i] is MemberExpression newMemberExpr && newMemberExpr.Member.Name == memberInfo.Name)
                         continue;
                     this.AddMemberElement(new SqlSegment { Expression = newExpr.Arguments[i] }, memberInfo, builder);
                 }
@@ -157,8 +174,6 @@ class UpdateVisitor : SqlVisitor
                 for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
                 {
                     var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                    if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out _))
-                        continue;
                     this.AddMemberElement(new SqlSegment { Expression = memberAssignment.Expression }, memberAssignment.Member, builder);
                 }
                 break;
@@ -166,62 +181,12 @@ class UpdateVisitor : SqlVisitor
         this.setSql = builder.ToString();
         return this;
     }
-    public UpdateVisitor Set<TField>(Expression setExpr, IQuery<TField> subQuery)
+    public SqlSegment SetValue(Expression fieldsExpr, Expression valueExr, out List<IDbDataParameter> dbParameters)
     {
-        if (setExpr == null)
-            throw new ArgumentNullException(nameof(setExpr));
-        var lambdaExpr = setExpr as LambdaExpression;
-
-        var entityMapper = this.tables[0].Mapper;
-        var builder = new StringBuilder();
-        switch (lambdaExpr.Body.NodeType)
-        {
-            case ExpressionType.MemberAccess:
-                if (subQuery == null)
-                    throw new ArgumentNullException(nameof(subQuery));
-
-                if (!string.IsNullOrEmpty(this.setSql))
-                    builder.Append(this.setSql);
-                var memberExpr = lambdaExpr.Body as MemberExpression;
-                var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
-                if (builder.Length > 0)
-                    builder.Append(',');
-                if (this.ormProvider.DatabaseType == DatabaseType.MySql)
-                    builder.Append("a.");
-                builder.Append($"{ormProvider.GetFieldName(memberMapper.FieldName)}=");
-                var sql = subQuery.ToSql(out var dbDataParameters);
-                builder.Append($"({sql})");
-                this.dbParameters ??= new();
-                if (dbDataParameters != null && dbDataParameters.Count > 0)
-                    dbDataParameters.ForEach(f => this.dbParameters.Add(f));
-                break;
-            case ExpressionType.New:
-                this.InitTableAlias(lambdaExpr);
-                var newExpr = lambdaExpr.Body as NewExpression;
-                for (int i = 0; i < newExpr.Arguments.Count; i++)
-                {
-                    var memberInfo = newExpr.Members[i];
-                    if (!entityMapper.TryGetMemberMap(memberInfo.Name, out _))
-                        continue;
-                    this.AddMemberElement(new SqlSegment { Expression = newExpr.Arguments[i] }, memberInfo, builder);
-                }
-                break;
-            case ExpressionType.MemberInit:
-                this.InitTableAlias(lambdaExpr);
-                var memberInitExpr = lambdaExpr.Body as MemberInitExpression;
-                for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
-                {
-                    var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                    if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out _))
-                        continue;
-                    this.AddMemberElement(new SqlSegment { Expression = memberAssignment.Expression }, memberAssignment.Member, builder);
-                }
-                break;
-            default:
-                throw new NotSupportedException("只支持MemberAccess类型表达式");
-        }
-        this.setSql = builder.ToString();
-        return this;
+        this.InitTableAlias(fieldsExpr as LambdaExpression);
+        var result = this.VisitAndDeferred(new SqlSegment { Expression = valueExr });
+        dbParameters = this.dbParameters;
+        return result;
     }
     public UpdateVisitor Where(Expression whereExpr)
     {
@@ -285,25 +250,32 @@ class UpdateVisitor : SqlVisitor
                 tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
                 var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
                 var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
+                if (this.isNeedAlias)
+                {
+                    if (this.ormProvider.DatabaseType == DatabaseType.SqlServer)
+                        fieldName = tableSegment.Mapper.TableName + "." + fieldName;
+                    else fieldName = tableSegment.AliasName + "." + fieldName;
+                }
+
                 if (sqlSegment.HasDeferred)
                 {
                     sqlSegment.HasField = true;
                     sqlSegment.IsConstantValue = false;
                     sqlSegment.TableSegment = tableSegment;
                     sqlSegment.FromMember = memberMapper.Member;
-                    sqlSegment.Value = $"{tableSegment.AliasName}.{fieldName}";
+                    sqlSegment.Value = fieldName;
                     return this.VisitBooleanDeferred(sqlSegment);
                 }
                 sqlSegment.HasField = true;
                 sqlSegment.IsConstantValue = false;
                 sqlSegment.TableSegment = tableSegment;
                 sqlSegment.FromMember = memberMapper.Member;
-                sqlSegment.Value = $"{tableSegment.AliasName}.{fieldName}";
+                sqlSegment.Value = fieldName;
                 return sqlSegment;
             }
         }
 
-        if (memberExpr.Member == typeof(Sql).GetMember(nameof(Sql.Null)).First())
+        if (memberExpr.Member.DeclaringType == typeof(DBNull))
             return SqlSegment.Null;
 
         //各种类型的常量或是静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
@@ -351,6 +323,22 @@ class UpdateVisitor : SqlVisitor
         }
         return sqlSegment.Change(builder.ToString());
     }
+    public override SqlSegment EvaluateAndParameter(SqlSegment sqlSegment)
+    {
+        var member = Expression.Convert(sqlSegment.Expression, typeof(object));
+        var lambda = Expression.Lambda<Func<object>>(member);
+        var getter = lambda.Compile();
+        var objValue = getter();
+        if (objValue == null)
+            return SqlSegment.Null;
+
+        var parameterName = sqlSegment.ParameterName;
+        if (string.IsNullOrEmpty(parameterName))
+            parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
+        this.dbParameters ??= new();
+        this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, sqlSegment.Value));
+        return sqlSegment.Change(sqlSegment.ParameterName, false);
+    }
     private void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.tableAlias.Clear();
@@ -382,7 +370,10 @@ class UpdateVisitor : SqlVisitor
             {
                 builder.Append(parameterName);
                 if (!sqlSegment.IsParameter)
+                {
+                    this.dbParameters ??= new();
                     this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, sqlSegment.Value));
+                }
             }
         }
     }

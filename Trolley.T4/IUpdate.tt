@@ -16,10 +16,13 @@ namespace Trolley;
 
 public interface IUpdate<TEntity>
 {
-    IUpdateSet<TEntity> RawSql(string rawSql, object parameters);
-    IUpdateSet<TEntity> WithBy<TUpdateObject>(TUpdateObject updateObjs, int bulkCount = 500);
-    IUpdateSetting<TEntity> Set<TMember>(Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
-    IUpdateSetting<TEntity> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateSet<TEntity> RawSql(string rawSql, object parameter);
+    IUpdateSet<TEntity> WithBy<TFields>(TFields parameters, int bulkCount = 500);
+    IUpdateSet<TEntity> WithBy<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr, object parameters, int bulkCount = 500);
+    IUpdateSetting<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr);
+    IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsExpr);
+    IUpdateSetting<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     IUpdateFrom<TEntity, T> From<T>();
     IUpdateFrom<TEntity, T1, T2> From<T1, T2>();
     IUpdateFrom<TEntity, T1, T2, T3> From<T1, T2, T3>();
@@ -37,8 +40,10 @@ public interface IUpdateSet<TEntity>
 }
 public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
 {
-    IUpdateSetting<TEntity> Set<TMember>(Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
-    IUpdateSetting<TEntity> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateSetting<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr);
+    IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsExpr);
+    IUpdateSetting<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     IUpdateSetting<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
     IUpdateSetting<TEntity> And(bool condition, Expression<Func<TEntity, bool>> predicate);
 }
@@ -54,8 +59,10 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
 #>
 public interface IUpdateFrom<TEntity, <#=tables#>>
 {
-    IUpdateFrom<TEntity, <#=tables#>> Set<TSetObject>(Expression<Func<TEntity, <#=tables#>, TSetObject>> setExpr);
-    IUpdateFrom<TEntity, <#=tables#>> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateFrom<TEntity, <#=tables#>> Set<TFields>(Expression<Func<TEntity, <#=tables#>, TFields>> fieldsExpr);
+    IUpdateFrom<TEntity, <#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateFrom<TEntity, <#=tables#>> Set<TFields>(bool condition, Expression<Func<TEntity, <#=tables#>, TFields>> fieldsExpr);
+    IUpdateFrom<TEntity, <#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     IUpdateFrom<TEntity, <#=tables#>> Where(Expression<Func<TEntity, <#=tables#>, bool>> predicate);
     IUpdateFrom<TEntity, <#=tables#>> And(bool condition, Expression<Func<TEntity, <#=tables#>, bool>> predicate);
     int Execute();
@@ -66,8 +73,10 @@ public interface IUpdateJoin<TEntity, <#=tables#>>
 {
     IUpdateJoin<TEntity, <#=tables#>, <#=nextTable#>> InnerJoin<<#=nextTable#>>(Expression<Func<TEntity, <#=tables#>, <#=nextTable#>, bool>> joinOn);
     IUpdateJoin<TEntity, <#=tables#>, <#=nextTable#>> LeftJoin<<#=nextTable#>>(Expression<Func<TEntity, <#=tables#>, <#=nextTable#>, bool>> joinOn);
-    IUpdateJoin<TEntity, <#=tables#>> Set<TSetObject>(Expression<Func<TEntity, <#=tables#>, TSetObject>> setExpr);
-    IUpdateJoin<TEntity, <#=tables#>> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateJoin<TEntity, <#=tables#>> Set<TFields>(Expression<Func<TEntity, <#=tables#>, TFields>> fieldsExpr);
+    IUpdateJoin<TEntity, <#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateJoin<TEntity, <#=tables#>> Set<TFields>(bool condition, Expression<Func<TEntity, <#=tables#>, TFields>> fieldsExpr);
+    IUpdateJoin<TEntity, <#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     IUpdateJoin<TEntity, <#=tables#>> Where(Expression<Func<TEntity, <#=tables#>, bool>> predicate);
     IUpdateJoin<TEntity, <#=tables#>> And(bool condition, Expression<Func<TEntity, <#=tables#>, bool>> predicate);
     int Execute();
@@ -77,8 +86,10 @@ public interface IUpdateJoin<TEntity, <#=tables#>>
 <#  }#>
 public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5>
 {
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TSetObject>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TSetObject>> setExpr);
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     IUpdateFrom<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     int Execute();
@@ -87,8 +98,10 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5>
 }
 public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5>
 {
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TSetObject>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TSetObject>> setExpr);
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TMember>(bool condition, Expression<Func<TEntity, TMember>> fieldExpr, TMember fieldValue = default);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     int Execute();

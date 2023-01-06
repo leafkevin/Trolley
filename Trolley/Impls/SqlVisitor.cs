@@ -16,6 +16,7 @@ public class SqlVisitor
     protected Dictionary<string, TableSegment> tableAlias;
     protected List<IDbDataParameter> dbParameters;
     protected readonly string parameterPrefix;
+    protected bool isNeedAlias = false;
     internal char tableStartAs = 'a';
     internal readonly IOrmDbFactory dbFactory;
     internal readonly TheaConnection connection;
@@ -112,7 +113,6 @@ public class SqlVisitor
                 case ExpressionType.Conditional:
                     result = this.VisitConditional(sqlSegment);
                     break;
-                    //default: return nextExpr.ToString();
             }
             return result;
         }
@@ -326,6 +326,8 @@ public class SqlVisitor
                     tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
                     var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
                     var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
+                    if (this.isNeedAlias)
+                        fieldName = tableSegment.AliasName + "." + fieldName;
 
                     if (sqlSegment.HasDeferred)
                     {
@@ -333,18 +335,22 @@ public class SqlVisitor
                         sqlSegment.IsConstantValue = false;
                         sqlSegment.TableSegment = tableSegment;
                         sqlSegment.FromMember = memberMapper.Member;
-                        sqlSegment.Value = $"{tableSegment.AliasName}.{fieldName}";
+                        sqlSegment.Value = fieldName;
                         return this.VisitBooleanDeferred(sqlSegment);
                     }
                     sqlSegment.HasField = true;
                     sqlSegment.IsConstantValue = false;
                     sqlSegment.TableSegment = tableSegment;
                     sqlSegment.FromMember = memberMapper.Member;
-                    sqlSegment.Value = $"{tableSegment.AliasName}.{fieldName}";
+                    sqlSegment.Value = fieldName;
                     return sqlSegment;
                 }
             }
         }
+
+        if (memberExpr.Member.DeclaringType == typeof(DBNull))
+            return SqlSegment.Null;
+
         //各种类型的常量或是静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
         if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
             return sqlSegment.Change(formatter(null), false);
@@ -404,7 +410,16 @@ public class SqlVisitor
     }
     public virtual SqlSegment VisitNew(SqlSegment sqlSegment)
     {
-        throw new NotImplementedException();
+        var newExpr = sqlSegment.Expression as NewExpression;
+        IEnumerable<Expression> args = this.VisitExpressionList(newExpr.Arguments);
+        if (args != nex.Arguments)
+        {
+            if (nex.Members != null)
+                return Expression.New(nex.Constructor, args, nex.Members);
+            else
+                return Expression.New(nex.Constructor, args);
+        }
+        return nex;
     }
     public virtual SqlSegment VisitMemberInit(SqlSegment sqlSegment)
     {
@@ -867,7 +882,7 @@ public class SqlVisitor
         if (sqlSegment == SqlSegment.Null)
             return SqlSegment.Null;
         sqlSegment.IsParameter = true;
-        this.dbParameters ??= new List<IDbDataParameter>();
+        this.dbParameters ??= new();
         if (sqlSegment.Value is IEnumerable objValues && sqlSegment.Value.GetType() != typeof(string))
         {
             string paramPrefix = null;

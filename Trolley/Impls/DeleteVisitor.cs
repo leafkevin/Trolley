@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text;
 
 namespace Trolley;
@@ -47,6 +48,7 @@ class DeleteVisitor : SqlVisitor
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
         var memberExpr = sqlSegment.Expression as MemberExpression;
+        MemberAccessSqlFormatter formatter = null;
         if (memberExpr.Expression != null)
         {
             //Where(f=>... && !f.OrderId.HasValue && ...)
@@ -67,7 +69,7 @@ class DeleteVisitor : SqlVisitor
             }
 
             //各种类型值的属性访问，如：DateTime,TimeSpan,String.Length,List.Count,
-            if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out var formatter))
+            if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
             {
                 //Where(f=>... && f.OrderNo.Length==10 && ...)
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
@@ -89,21 +91,32 @@ class DeleteVisitor : SqlVisitor
                 //OrderBy(f=>f.Order.OrderId)                
                 var memberMapper = this.tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
                 var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
+
                 if (sqlSegment.HasDeferred)
                 {
                     sqlSegment.HasField = true;
-                    sqlSegment.TableSegment = this.tableSegment;
+                    sqlSegment.IsConstantValue = false;
+                    sqlSegment.TableSegment = tableSegment;
                     sqlSegment.FromMember = memberMapper.Member;
                     sqlSegment.Value = fieldName;
                     return this.VisitBooleanDeferred(sqlSegment);
                 }
                 sqlSegment.HasField = true;
-                sqlSegment.TableSegment = this.tableSegment;
+                sqlSegment.IsConstantValue = false;
+                sqlSegment.TableSegment = tableSegment;
                 sqlSegment.FromMember = memberMapper.Member;
                 sqlSegment.Value = fieldName;
                 return sqlSegment;
             }
         }
+
+        if (memberExpr.Member.DeclaringType == typeof(DBNull))
+            return SqlSegment.Null;
+
+        //各种类型的常量或是静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
+        if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
+            return sqlSegment.Change(formatter(null), false);
+
         //访问局部变量或是成员变量，当作常量处理,直接计算，如果是字符串变成参数@p
         //var orderIds=new List<int>{1,2,3}; Where(f=>orderIds.Contains(f.OrderId)); orderIds
         //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id

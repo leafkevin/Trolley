@@ -108,7 +108,7 @@ class Created<TEntity> : ICreated<TEntity>
         bool isMulti = false;
         bool isDictionary = false;
         var entityType = typeof(TEntity);
-        var parameterType = this.parameters.GetType();
+        Type parameterType = null;
         IEnumerable entities = null;
         if (this.parameters is Dictionary<string, object> dict)
             isDictionary = true;
@@ -136,7 +136,7 @@ class Created<TEntity> : ICreated<TEntity>
             this.bulkCount ??= 500;
             int result = 0, index = 0;
             var sqlBuilder = new StringBuilder();
-            var command = this.connection.CreateCommand();
+            using var command = this.connection.CreateCommand();
             foreach (var entity in entities)
             {
                 commandInitializer.Invoke(command, this.connection.OrmProvider, sqlBuilder, index, entity);
@@ -159,12 +159,14 @@ class Created<TEntity> : ICreated<TEntity>
                 this.connection.Open();
                 result += command.ExecuteNonQuery();
             }
+            command.Dispose();
             return result;
         }
         else
         {
             string sql = null;
-            var command = this.connection.CreateCommand();
+            int result = 0;
+            using var command = this.connection.CreateCommand();
             if (string.IsNullOrEmpty(this.rawSql))
             {
                 Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
@@ -190,11 +192,15 @@ class Created<TEntity> : ICreated<TEntity>
             if (entityMapper.IsAutoIncrement)
             {
                 using var reader = command.ExecuteReader();
-                if (reader.Read()) return reader.To<int>();
+                if (reader.Read()) result = reader.To<int>();
                 reader.Close();
                 reader.Dispose();
+                command.Dispose();
+                return result;
             }
-            return command.ExecuteNonQuery();
+            result = command.ExecuteNonQuery();
+            command.Dispose();
+            return result;
         }
     }
     public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -202,7 +208,7 @@ class Created<TEntity> : ICreated<TEntity>
         bool isMulti = false;
         bool isDictionary = false;
         var entityType = typeof(TEntity);
-        var parameterType = this.parameters.GetType();
+        Type parameterType = null;
         IEnumerable entities = null;
         if (this.parameters is Dictionary<string, object> dict)
             isDictionary = true;
@@ -220,6 +226,7 @@ class Created<TEntity> : ICreated<TEntity>
         }
         else parameterType = this.parameters.GetType();
 
+        int result = 0, index = 0;
         if (isMulti)
         {
             Action<IDbCommand, IOrmProvider, StringBuilder, int, object> commandInitializer = null;
@@ -228,10 +235,9 @@ class Created<TEntity> : ICreated<TEntity>
             else commandInitializer = this.BuildBatchCommandInitializer(entityType, parameterType);
 
             this.bulkCount ??= 500;
-            int result = 0, index = 0;
             var sqlBuilder = new StringBuilder();
 
-            var cmd = this.connection.CreateCommand();
+            using var cmd = this.connection.CreateCommand();
             if (cmd is not DbCommand command)
                 throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
@@ -257,12 +263,13 @@ class Created<TEntity> : ICreated<TEntity>
                 await this.connection.OpenAsync(cancellationToken);
                 result += await command.ExecuteNonQueryAsync(cancellationToken);
             }
+            await command.DisposeAsync();
             return result;
         }
         else
         {
             string sql = null;
-            var cmd = this.connection.CreateCommand();
+            using var cmd = this.connection.CreateCommand();
             if (string.IsNullOrEmpty(this.rawSql))
             {
                 Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
@@ -291,11 +298,16 @@ class Created<TEntity> : ICreated<TEntity>
             if (entityMapper.IsAutoIncrement)
             {
                 using var reader = await command.ExecuteReaderAsync(cancellationToken);
-                if (await reader.ReadAsync()) return reader.To<int>();
+                if (await reader.ReadAsync())
+                    result = reader.To<int>();
                 await reader.CloseAsync();
                 await reader.DisposeAsync();
+                await command.DisposeAsync();
+                return result;
             }
-            return await command.ExecuteNonQueryAsync(cancellationToken);
+            result = await command.ExecuteNonQueryAsync(cancellationToken);
+            await command.DisposeAsync();
+            return result;
         }
     }
     public string ToSql()
@@ -303,7 +315,7 @@ class Created<TEntity> : ICreated<TEntity>
         bool isMulti = false;
         bool isDictionary = false;
         var entityType = typeof(TEntity);
-        var parameterType = this.parameters.GetType();
+        Type parameterType = null;
         IEnumerable entities = null;
         if (this.parameters is Dictionary<string, object> dict)
             isDictionary = true;
@@ -330,7 +342,7 @@ class Created<TEntity> : ICreated<TEntity>
             this.bulkCount ??= 500;
             int index = 0;
             var sqlBuilder = new StringBuilder();
-            var command = this.connection.CreateCommand();
+            using var command = this.connection.CreateCommand();
             foreach (var entity in entities)
             {
                 commandInitializer.Invoke(command, this.connection.OrmProvider, sqlBuilder, index, entity);
@@ -351,7 +363,7 @@ class Created<TEntity> : ICreated<TEntity>
             if (isDictionary)
                 commandInitializer = this.BuildCommandInitializer(entityType);
             else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
-            var command = this.connection.CreateCommand();
+            using var command = this.connection.CreateCommand();
             var sql = commandInitializer?.Invoke(command, this.connection.OrmProvider, this.parameters);
             command.Cancel();
             command.Dispose();
@@ -621,7 +633,7 @@ class CreateBase
     public int Execute()
     {
         var sql = this.visitor.BuildSql(out var dbParameters);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -630,12 +642,14 @@ class CreateBase
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
         connection.Open();
-        return command.ExecuteNonQuery();
+        var result = command.ExecuteNonQuery();
+        command.Dispose();
+        return result;
     }
     public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         var sql = this.visitor.BuildSql(out var dbParameters);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -647,7 +661,9 @@ class CreateBase
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
         await this.connection.OpenAsync(cancellationToken);
-        return await command.ExecuteNonQueryAsync(cancellationToken);
+        var result = await command.ExecuteNonQueryAsync(cancellationToken);
+        await command.DisposeAsync();
+        return result;
     }
     public string ToSql() => this.visitor.BuildSql(out _);
 }

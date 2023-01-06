@@ -397,7 +397,7 @@ class Query<T1, T2> : IQuery<T1, T2>
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -412,6 +412,7 @@ class Query<T1, T2> : IQuery<T1, T2>
         if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
+        command.Dispose();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -419,7 +420,7 @@ class Query<T1, T2> : IQuery<T1, T2>
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -438,6 +439,7 @@ class Query<T1, T2> : IQuery<T1, T2>
             result = reader.GetValue(0);
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        await command.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -831,7 +833,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -846,6 +848,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
         if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
+        command.Dispose();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -853,7 +856,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -872,6 +875,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
             result = reader.GetValue(0);
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        await command.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -1265,7 +1269,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -1280,6 +1284,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
         if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
+        command.Dispose();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -1287,7 +1292,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -1306,6 +1311,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
             result = reader.GetValue(0);
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        await command.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -1699,7 +1705,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -1714,6 +1720,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
         if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
+        command.Dispose();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -1721,7 +1728,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -1740,6 +1747,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
             result = reader.GetValue(0);
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        await command.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -2133,7 +2141,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -2148,6 +2156,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
         if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
+        command.Dispose();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -2155,7 +2164,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -2174,6 +2183,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
             result = reader.GetValue(0);
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        await command.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -2567,7 +2577,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -2582,6 +2592,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
         if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
+        command.Dispose();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -2589,7 +2600,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -2608,6 +2619,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
             result = reader.GetValue(0);
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        await command.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -3001,7 +3013,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -3016,6 +3028,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
         if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
+        command.Dispose();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -3023,7 +3036,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -3042,6 +3055,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
             result = reader.GetValue(0);
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        await command.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -3435,7 +3449,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -3450,6 +3464,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
         if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
+        command.Dispose();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -3457,7 +3472,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -3476,6 +3491,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
             result = reader.GetValue(0);
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        await command.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -3869,7 +3885,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -3884,6 +3900,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
         if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
+        command.Dispose();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -3891,7 +3908,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -3910,6 +3927,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
             result = reader.GetValue(0);
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        await command.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -4303,7 +4321,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -4318,6 +4336,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
         if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
+        command.Dispose();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -4325,7 +4344,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -4344,6 +4363,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
             result = reader.GetValue(0);
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        await command.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -4737,7 +4757,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -4752,6 +4772,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
         if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
+        command.Dispose();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -4759,7 +4780,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -4778,6 +4799,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
             result = reader.GetValue(0);
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        await command.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -5171,7 +5193,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -5186,6 +5208,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
         if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
+        command.Dispose();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -5193,7 +5216,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -5212,6 +5235,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
             result = reader.GetValue(0);
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        await command.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -5605,7 +5629,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -5620,6 +5644,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
+        command.Dispose();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -5627,7 +5652,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -5646,6 +5671,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
             result = reader.GetValue(0);
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        await command.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -6039,7 +6065,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -6054,6 +6080,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
         if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
+        command.Dispose();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -6061,7 +6088,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -6080,6 +6107,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
             result = reader.GetValue(0);
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        await command.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -6421,7 +6449,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -6436,6 +6464,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
         if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
+        command.Dispose();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -6443,7 +6472,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -6462,6 +6491,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T1
             result = reader.GetValue(0);
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        await command.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
     }

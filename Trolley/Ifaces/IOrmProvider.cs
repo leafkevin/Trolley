@@ -10,7 +10,7 @@ public delegate string MethodCallSqlFormatter(object target, Stack<DeferredExpr>
 public enum DatabaseType
 {
     MySql = 1,
-    MsSql = 2,
+    SqlServer = 2,
     Oracle = 3,
     Postgresql = 4
 }

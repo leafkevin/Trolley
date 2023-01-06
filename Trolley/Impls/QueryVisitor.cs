@@ -251,6 +251,7 @@ class QueryVisitor : SqlVisitor
         int tableIndex = this.tableStartAs + this.tables.Count;
         for (int i = 0; i < entityTypes.Length; i++)
         {
+            if (i > 0) isNeedAlias = true;
             this.tables.Add(new TableSegment
             {
                 EntityType = entityTypes[i],
@@ -290,6 +291,7 @@ class QueryVisitor : SqlVisitor
     }
     public void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null)
     {
+        if (!isIncludeMany) isNeedAlias = true;
         var lambdaExpr = memberSelector as LambdaExpression;
         var memberExpr = lambdaExpr.Body as MemberExpression;
         this.InitTableAlias(lambdaExpr);
@@ -326,6 +328,7 @@ class QueryVisitor : SqlVisitor
     }
     public void Join(string joinType, Type newEntityType, Expression joinOn)
     {
+        this.isNeedAlias = true;
         var lambdaExpr = joinOn as LambdaExpression;
         if (newEntityType != null)
             this.AddTable(joinType, newEntityType);
@@ -609,26 +612,24 @@ class QueryVisitor : SqlVisitor
                     var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
                     var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
 
+                    //有联表时采用别名，如果当前类是IncludeMany的导航类时，没有别名
+                    if (this.isNeedAlias && !string.IsNullOrEmpty(tableSegment.AliasName))
+                        fieldName = tableSegment.AliasName + "." + fieldName;
+
                     if (sqlSegment.HasDeferred)
                     {
                         sqlSegment.HasField = true;
                         sqlSegment.IsConstantValue = false;
                         sqlSegment.TableSegment = tableSegment;
                         sqlSegment.FromMember = memberMapper.Member;
-                        //只有当前类是IncludeMany的导航类时，AliasName别名为null
-                        if (!string.IsNullOrEmpty(tableSegment.AliasName))
-                            sqlSegment.Value = $"{tableSegment.AliasName}.{fieldName}";
-                        else sqlSegment.Value = fieldName;
+                        sqlSegment.Value = fieldName;
                         return this.VisitBooleanDeferred(sqlSegment);
                     }
                     sqlSegment.HasField = true;
                     sqlSegment.IsConstantValue = false;
                     sqlSegment.TableSegment = tableSegment;
                     sqlSegment.FromMember = memberMapper.Member;
-                    //只有当前类是IncludeMany的导航类时，AliasName别名为null
-                    if (!string.IsNullOrEmpty(tableSegment.AliasName))
-                        sqlSegment.Value = $"{tableSegment.AliasName}.{fieldName}";
-                    else sqlSegment.Value = fieldName;
+                    sqlSegment.Value = fieldName;
                     return sqlSegment;
                 }
             }

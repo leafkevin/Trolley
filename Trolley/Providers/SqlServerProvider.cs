@@ -17,7 +17,7 @@ public class SqlServerProvider : BaseOrmProvider
     private static Dictionary<Type, int> nativeDbTypes = new();
     private static Dictionary<Type, string> castTos = new();
 
-    public override DatabaseType DatabaseType => DatabaseType.MsSql;
+    public override DatabaseType DatabaseType => DatabaseType.SqlServer;
     public override string SelectIdentitySql => ";SELECT SCOPE_IDENTITY()";
     public SqlServerProvider()
     {

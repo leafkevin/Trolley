@@ -9,7 +9,6 @@ namespace Trolley;
 
 public interface IDelete<TEntity>
 {
-    IDeleted<TEntity> RawSql(string rawSql, object parameters);
     IDeleted<TEntity> Where(object keys);
     IDeleting<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
 }
@@ -26,12 +25,3 @@ public interface IDeleting<TEntity>
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
-//public interface IMultiDelete<T>
-//{
-//    IMultiDelete<T> Where(Expression<Func<T, bool>> predicate);
-//    IMultiDelete<T> Where(bool condition, Expression<Func<T, bool>> predicate);
-//    IMultiDelete<T> Where(object keys);
-//    IMultiDelete<T> Where(bool condition, object keys);
-//    //IMultiQuery Execute();
-//    string ToSql();
-//}

@@ -25,13 +25,6 @@ class Delete<TEntity> : IDelete<TEntity>
         this.connection = connection;
         this.transaction = transaction;
     }
-    public IDeleted<TEntity> RawSql(string rawSql, object parameters)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        return new Deleted<TEntity>(this.dbFactory, this.connection, this.transaction, rawSql, parameters);
-    }
     public IDeleted<TEntity> Where(object keys)
     {
         if (keys == null)
@@ -55,15 +48,13 @@ class Deleted<TEntity> : IDeleted<TEntity>
     private readonly IOrmDbFactory dbFactory;
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private string rawSql = null;
     private object parameters = null;
 
-    public Deleted(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, string rawSql, object parameters)
+    public Deleted(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, object parameters)
     {
         this.dbFactory = dbFactory;
         this.connection = connection;
         this.transaction = transaction;
-        this.rawSql = rawSql;
         this.parameters = parameters;
     }
     public int Execute()
@@ -98,13 +89,12 @@ class Deleted<TEntity> : IDeleted<TEntity>
 
             int index = 0;
             var sqlBuilder = new StringBuilder();
-            var command = this.connection.CreateCommand();
+            using var command = this.connection.CreateCommand();
             foreach (var entity in entities)
             {
                 commandInitializer.Invoke(command, this.connection.OrmProvider, sqlBuilder, index, entity);
                 index++;
             }
-            sqlBuilder.Append(')');
             command.CommandText = sqlBuilder.ToString();
             command.CommandType = CommandType.Text;
             command.Transaction = this.transaction;
@@ -116,25 +106,14 @@ class Deleted<TEntity> : IDeleted<TEntity>
         else
         {
             string sql = null;
-            var command = this.connection.CreateCommand();
+            using var command = this.connection.CreateCommand();
             var ormProvider = this.connection.OrmProvider;
-            if (string.IsNullOrEmpty(this.rawSql))
-            {
-                Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
-                if (isDictionary)
-                    commandInitializer = this.BuildCommandInitializer(entityType);
-                else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
-                sql = commandInitializer.Invoke(command, this.connection.OrmProvider, this.parameters);
-            }
-            else
-            {
-                sql = this.rawSql;
-                Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
-                if (isDictionary)
-                    commandInitializer = this.BuildCommandInitializer(sql);
-                else commandInitializer = this.BuildCommandInitializer(sql, entityType, parameterType);
-                commandInitializer.Invoke(command, this.connection.OrmProvider, this.parameters);
-            }
+            Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
+            if (isDictionary)
+                commandInitializer = this.BuildCommandInitializer(entityType);
+            else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
+            sql = commandInitializer.Invoke(command, this.connection.OrmProvider, this.parameters);
+
             command.CommandText = sql;
             command.CommandType = CommandType.Text;
             command.Transaction = this.transaction;
@@ -176,7 +155,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
 
             int index = 0;
             var sqlBuilder = new StringBuilder();
-            var cmd = this.connection.CreateCommand();
+            using var cmd = this.connection.CreateCommand();
             foreach (var entity in entities)
             {
                 commandInitializer.Invoke(cmd, this.connection.OrmProvider, sqlBuilder, index, entity);
@@ -197,7 +176,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
         else
         {
             string sql = null;
-            var cmd = this.connection.CreateCommand();
+            using var cmd = this.connection.CreateCommand();
             if (string.IsNullOrEmpty(this.rawSql))
             {
                 Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
@@ -239,7 +218,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
         if (isDictionary)
             commandInitializer = this.BuildCommandInitializer(entityType);
         else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         var sql = commandInitializer?.Invoke(command, this.connection.OrmProvider, this.parameters);
         if (command.Parameters != null && command.Parameters.Count > 0)
             dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
@@ -261,10 +240,6 @@ class Deleted<TEntity> : IDeleted<TEntity>
             var indexExpr = Expression.Parameter(typeof(int), "index");
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");
 
-            if (entityMapper.KeyMembers.Count > 1)
-                throw new NotSupportedException($"模型{entityType.FullName}多个主键，不支持批量删除");
-            var keyMemberType = entityMapper.KeyMembers[0].MemberType;
-
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
             ParameterExpression typedParameterExpr = null;
@@ -278,24 +253,30 @@ class Deleted<TEntity> : IDeleted<TEntity>
 
             var methodInfo1 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(char) });
             var methodInfo2 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
-            var methodInfo3 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
+            var methodInfo3 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(int) });
 
-            var sql = $"DELETE FROM {ormProvider.GetFieldName(entityMapper.TableName)} WHERE {ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (";
-            var addSqlExpr = Expression.Call(builderExpr, methodInfo2, Expression.Constant(sql));
-            var addCommaExpr = Expression.Call(builderExpr, methodInfo1, Expression.Constant(','));
+            var addCommaExpr = Expression.Call(builderExpr, methodInfo1, Expression.Constant(';'));
             var greatThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0, typeof(int)));
-            blockBodies.Add(Expression.IfThenElse(greatThenExpr, addCommaExpr, addSqlExpr));
+            blockBodies.Add(Expression.IfThen(greatThenExpr, addCommaExpr));
+            var sql = $"DELETE FROM {ormProvider.GetFieldName(entityMapper.TableName)} WHERE ";
+            blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant(sql)));
 
-            var keyMemberName = entityMapper.KeyMembers[0].MemberName;
-            var parameterName = ormProvider.ParameterPrefix + keyMemberName;
-            var suffixExpr = Expression.Call(indexExpr, typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes));
-            var parameterNameExpr = Expression.Call(methodInfo3, Expression.Constant(parameterName), suffixExpr);
-            blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
+            int index = 0;
+            foreach (var keyMapper in entityMapper.KeyMembers)
+            {
+                if (index > 0)
+                    blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant(" AND ")));
 
-            if (parameterType.IsEntityType())
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, keyMemberName, blockBodies);
-            else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterExpr, parameterNameExpr, blockBodies);
+                var parameterName = ormProvider.ParameterPrefix + keyMapper.MemberName;
+                sql = $"{ormProvider.GetFieldName(keyMapper.FieldName)}={parameterName}";
+                blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant(sql)));
+                blockBodies.Add(Expression.Call(builderExpr, methodInfo3, indexExpr));
 
+                var parameterNameExpr = Expression.Constant(parameterName);
+                if (parameterType.IsEntityType())
+                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, keyMapper.MemberName, blockBodies);
+                else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterExpr, parameterNameExpr, blockBodies);
+            }
             commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, StringBuilder, int, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, builderExpr, indexExpr, parameterExpr).Compile();
             commandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
         }
@@ -303,20 +284,38 @@ class Deleted<TEntity> : IDeleted<TEntity>
     }
     private Action<IDbCommand, IOrmProvider, StringBuilder, int, object> BuildBatchCommandInitializer(Type entityType)
     {
-        return (command, ormProvider, builder, index, parameter) =>
+        var entityMapper = dbFactory.GetEntityMap(entityType);
+        if (entityMapper.KeyMembers.Count > 1)
         {
-            var dict = parameter as Dictionary<string, object>;
-            var entityMapper = dbFactory.GetEntityMap(entityType);
-            if (entityMapper.KeyMembers.Count > 1)
-                throw new NotSupportedException($"模型{entityType.FullName}多个主键，不支持批量删除");
-
-            if (index > 0) builder.Append(',');
-            else builder.Append($"DELETE FROM {ormProvider.GetFieldName(entityMapper.TableName)} WHERE {ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (");
-            var keyMemberName = entityMapper.KeyMembers[0].MemberName;
-            string parameterName = ormProvider.ParameterPrefix + keyMemberName + index.ToString();
-            builder.Append(parameterName);
-            command.Parameters.Add(ormProvider.CreateParameter(parameterName, dict[keyMemberName]));
-        };
+            return (command, ormProvider, builder, index, parameter) =>
+            {
+                var dict = parameter as Dictionary<string, object>;
+                if (index > 0) builder.Append(';');
+                else builder.Append($"DELETE FROM {ormProvider.GetFieldName(entityMapper.TableName)} WHERE ");
+                int keyIndex = 0;
+                foreach (var keyMember in entityMapper.KeyMembers)
+                {
+                    if (keyIndex > 0) builder.Append(" AND ");
+                    var fieldName = ormProvider.GetFieldName(keyMember.FieldName);
+                    string parameterName = ormProvider.ParameterPrefix + keyMember.MemberName + index.ToString();
+                    builder.Append($"{fieldName}={parameterName}");
+                    command.Parameters.Add(ormProvider.CreateParameter(parameterName, dict[keyMember.MemberName]));
+                }
+            };
+        }
+        else
+        {
+            return (command, ormProvider, builder, index, parameter) =>
+            {
+                var dict = parameter as Dictionary<string, object>;
+                if (index > 0) builder.Append(',');
+                else builder.Append($"DELETE FROM {ormProvider.GetFieldName(entityMapper.TableName)} WHERE {ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (");
+                var keyMemberName = entityMapper.KeyMembers[0].MemberName;
+                string parameterName = ormProvider.ParameterPrefix + keyMemberName + index.ToString();
+                builder.Append(parameterName);
+                command.Parameters.Add(ormProvider.CreateParameter(parameterName, dict[keyMemberName]));
+            };
+        }
     }
     private Func<IDbCommand, IOrmProvider, object, string> BuildCommandInitializer(Type entityType, Type parameterType)
     {
@@ -349,7 +348,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
 
                 var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
                 if (index > 0)
-                    builder.Append(',');
+                    builder.Append(" AND ");
                 builder.Append($"{ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
                 var parameterNameExpr = Expression.Constant(parameterName);
                 RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, propMapper.MemberName, blockBodies);
@@ -461,7 +460,7 @@ class Deleting<TEntity> : IDeleting<TEntity>
     public int Execute()
     {
         var sql = this.visitor.BuildSql(out var dbParameters);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -475,7 +474,7 @@ class Deleting<TEntity> : IDeleting<TEntity>
     public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         var sql = this.visitor.BuildSql(out var dbParameters);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -486,7 +485,7 @@ class Deleting<TEntity> : IDeleting<TEntity>
 
         await this.connection.OpenAsync(cancellationToken);
         var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        command.Dispose();
+        await command.DisposeAsync();
         return result;
     }
     public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);

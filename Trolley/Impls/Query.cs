@@ -399,7 +399,7 @@ class Query<T> : IQuery<T>
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         var sql = this.visitor.BuildSql(defaultExpr, out var dbParameters, out var readerFields);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -421,6 +421,7 @@ class Query<T> : IQuery<T>
             using var includeReader = command.ExecuteReader(behavior);
             this.visitor.SetIncludeValues(result, includeReader, this.connection);
         }
+        command.Dispose();
         return result;
     }
     public async Task<T> FirstAsync(CancellationToken cancellationToken = default)
@@ -428,7 +429,7 @@ class Query<T> : IQuery<T>
         Expression<Func<T, T>> defaultExpr = f => f;
         var sql = this.visitor.BuildSql(defaultExpr, out var dbParameters, out var readerFields);
 
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -455,6 +456,7 @@ class Query<T> : IQuery<T>
             using var includeReader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             this.visitor.SetIncludeValues(result, includeReader, this.connection);
         }
+        await command.DisposeAsync();
         return result;
     }
     public List<T> ToList()
@@ -462,7 +464,7 @@ class Query<T> : IQuery<T>
         Expression<Func<T, T>> defaultExpr = f => f;
         var sql = this.visitor.BuildSql(defaultExpr, out var dbParameters, out var readerFields);
 
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -488,6 +490,7 @@ class Query<T> : IQuery<T>
             using var includeReader = command.ExecuteReader(behavior);
             this.visitor.SetIncludeValues(result, includeReader, this.connection);
         }
+        command.Dispose();
         return result;
     }
     public async Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
@@ -495,7 +498,7 @@ class Query<T> : IQuery<T>
         Expression<Func<T, T>> defaultExpr = f => f;
         var sql = this.visitor.BuildSql(defaultExpr, out var dbParameters, out var readerFields);
 
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -524,6 +527,7 @@ class Query<T> : IQuery<T>
             using var includeReader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             this.visitor.SetIncludeValues(result, includeReader, this.connection);
         }
+        await command.DisposeAsync();
         return result;
     }
     public IPagedList<T> ToPageList(int pageIndex, int pageSize)
@@ -532,7 +536,7 @@ class Query<T> : IQuery<T>
         this.visitor.Page(pageIndex, pageSize);
         var sql = this.visitor.BuildSql(defaultExpr, out var dbParameters, out var readerFields);
 
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -566,6 +570,7 @@ class Query<T> : IQuery<T>
             using var includeReader = command.ExecuteReader(behavior);
             this.visitor.SetIncludeValues(result, includeReader, this.connection);
         }
+        command.Dispose();
         return result;
     }
     public async Task<IPagedList<T>> ToPageListAsync(int pageIndex, int pageSize, CancellationToken cancellationToken = default)
@@ -574,7 +579,7 @@ class Query<T> : IQuery<T>
         this.visitor.Page(pageIndex, pageSize);
         var sql = this.visitor.BuildSql(defaultExpr, out var dbParameters, out var readerFields);
 
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -610,6 +615,7 @@ class Query<T> : IQuery<T>
             using var includeReader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             this.visitor.SetIncludeValues(result, includeReader, this.connection);
         }
+        await command.DisposeAsync();
         return result;
     }
     public Dictionary<TKey, TElement> ToDictionary<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> valueSelector) where TKey : notnull
@@ -641,7 +647,7 @@ class Query<T> : IQuery<T>
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var command = this.connection.CreateCommand();
+        using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
@@ -656,6 +662,7 @@ class Query<T> : IQuery<T>
         if (reader.Read()) result = reader.GetValue(0);
         reader.Close();
         reader.Dispose();
+        command.Dispose();
         if (result is DBNull) return default;
         return (TTarget)result;
     }
@@ -663,7 +670,7 @@ class Query<T> : IQuery<T>
     {
         this.visitor.Select(sqlFormat, fieldExpr);
         var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        var cmd = this.connection.CreateCommand();
+        using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
@@ -682,6 +689,7 @@ class Query<T> : IQuery<T>
             result = reader.GetValue(0);
         await reader.CloseAsync();
         await reader.DisposeAsync();
+        await command.DisposeAsync();
         if (result is DBNull) return default;
         return (TTarget)result;
     }

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Xml.Schema;
 using Trolley;
 
 namespace ConsoleAppTest;
@@ -52,7 +52,11 @@ class Program
         //    .Where((x, y) => Sql.Exists<Order>(f => x.Id == f.Id))
         //    .Select((a, b) => new { a.OrderNo, BuyerName = a.Buyer.Name, Seller = b })
         //    .First();
-        rep.Update<Order>().Set(f => new { SellerId = Sql.Null }).Where(f => f.Id == 3).ToSql();
+        List<Order> orders = null;
+        var sql = rep.Update<Order>()
+            .WithBy(f => new { OrderNo = "ON_" + f.OrderNo, TotalAmount = DBNull.Value, f.BuyerId, f.SellerId }, orders)
+            .ToSql(out _);
+        int sfds = 0;
         //rep.Update<Order>().From<User, Company>((a, b, c) => a.BuyerId == b.Id && b.CompanyId == c.Id && c.Name == "pa")
         //    .Set((x, y, z) => new { OrderNo = "Order_" + y.Name + Guid.NewGuid().ToString() });
 
@@ -69,8 +73,8 @@ class Program
         //    .ToList();
 
         rep.From<Order>().InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-         .Where((a, b) => a.CreatedAt > DateTime.Parse("2021-10-01"))
-         .SelectAggregate((a, b, c) => new { b.BuyerId, b.OrderNo, ProductCount = a.Max(b.Id) });
+            .Where((a, b) => a.CreatedAt > DateTime.Parse("2021-10-01"))
+            .SelectAggregate((a, b, c) => new { b.BuyerId, b.OrderNo, ProductCount = a.Max(b.Id) });
 
         //rep.WithTable(f => f.From<Order>().SelectAggregate((a, b) => new { b.Id, b.OrderNo, ProductCount = a.Count(b.Id) }))
         //    .InnerJoin<User>((a, b) => true)
@@ -103,19 +107,19 @@ class Program
         //            TotalAmount = a.Sum(c.TotalAmount)
         //        });
 
-        var sql = repository.From<User>()
-                .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
-                .IncludeMany((a, b) => a.Orders, b => b.OrderNo.Contains("20221001"))
-                .ThenIncludeMany(f => f.Details)
-                .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
-                .OrderBy((x, a, b) => new { UserId = a.Id, OrderId = b.Id })
-                .Select((x, a, b) => new
-                {
-                    x.Grouping,
-                    OrderCount = x.Count(b.Id),
-                    TotalAmount = x.Sum(b.TotalAmount)
-                })
-                .ToSql(out _);
+        sql = repository.From<User>()
+               .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+               .IncludeMany((a, b) => a.Orders, b => b.OrderNo.Contains("20221001"))
+               .ThenIncludeMany(f => f.Details)
+               .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
+               .OrderBy((x, a, b) => new { UserId = a.Id, OrderId = b.Id })
+               .Select((x, a, b) => new
+               {
+                   x.Grouping,
+                   OrderCount = x.Count(b.Id),
+                   TotalAmount = x.Sum(b.TotalAmount)
+               })
+               .ToSql(out _);
 
         //fromQuery.IncludeMany(f => f.Orders).ThenIncludeMany(f => f.Details)
         //    .GroupBy((a, b, c) => new { a.Id, a.Name, b.OrderNo })
