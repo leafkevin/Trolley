@@ -57,7 +57,9 @@ class QueryVisitor : SqlVisitor
                     tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
                 }
                 if (builder.Length > 0) builder.Append(' ');
-                builder.Append($"{tableSegment.JoinType} {tableName} {tableSegment.AliasName}");
+                builder.Append($"{tableSegment.JoinType} {tableName}");
+                if (this.isNeedAlias)
+                    builder.Append(" " + tableSegment.AliasName);
 
                 if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                     builder.Append($" ON {tableSegment.OnExpr}");
@@ -128,7 +130,9 @@ class QueryVisitor : SqlVisitor
                 if (builder.Length > 0) builder.Append(' ');
                 if (!string.IsNullOrEmpty(tableSegment.JoinType))
                     builder.Append($"{tableSegment.JoinType} ");
-                builder.Append($"{tableName} {tableSegment.AliasName}");
+                builder.Append(tableName);
+                if (this.isNeedAlias)
+                    builder.Append(" " + tableSegment.AliasName);
 
                 if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                     builder.Append($" ON {tableSegment.OnExpr}");
@@ -721,7 +725,8 @@ class QueryVisitor : SqlVisitor
                         continue;
                     if (builder.Length > 0)
                         builder.Append(',');
-                    builder.Append(readerField.TableSegment.AliasName + ".");
+                    if (this.isNeedAlias)
+                        builder.Append(readerField.TableSegment.AliasName + ".");
                     builder.Append(this.ormProvider.GetFieldName(memberMapper.FieldName));
                 }
             }

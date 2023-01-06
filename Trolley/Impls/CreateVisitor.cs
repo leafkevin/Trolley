@@ -37,7 +37,9 @@ class CreateVisitor : SqlVisitor
                 tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
             }
             if (i > 1) builder.Append(',');
-            builder.Append($"{tableName} {tableSegment.AliasName}");
+            builder.Append(tableName);
+            if (this.isNeedAlias) 
+                builder.Append(" " + tableSegment.AliasName);
         }
         if (!string.IsNullOrEmpty(this.whereSql))
             builder.Append(this.whereSql);
