@@ -4,13 +4,17 @@
 
 框架特点
 ------------------------------------------------------------
-支持分页，可以不用写SQL,也支持动态SQL，强类型的DDD仓促操作,也支持无类型的SQL操作,支持多种数据库终端。
-目前支持.NET Standard2.0,.NET Framework 4.5+,.NET Core 2.0+ 等平台。
-支持：MySql,Oracle,PostgreSql,Sql Sever 2012+,SqlLite
-性能与dapper相当，使用强类型仓储使用sql比dapper快。
-数据库支持：Sql Server 2012，Postgresql，测试通过。（Oracle，Mysql暂时还不支持.NET Core跨平台）
+强类型的DDD仓储操作,基本可以不用写SQL,支持多种数据库终端，目前是在.NET 6 基础上开发的。
+目前支持：MySql,PostgreSql,Sql Sever,其他的provider会稍后慢慢提供。
 
-首先在系统中要注册OrmProvider，只需要注册一次
+支持分页查询
+支持Insert Select From
+支持Updated From Join
+支持批量插入、更新
+支持模型映射，采用流畅API方式，目前不支持特性方式映射
+支持多租户分库，不同租户不同的数据库。
+
+首先在系统中要注册IOrmDbFactory
 ------------------------------------------------------------
 通常一个连接串对应一个OrmProvider，注册放到全局初次加载的地方。
 
