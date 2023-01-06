@@ -63,7 +63,7 @@ class ModelConfiguration : IModelConfiguration
         {
             //这里只列出了需要特殊指定的列，其他的列在Trolley Build的时候，会自动根据模型结构添加进来的。
             f.ToTable("sys_user").Key(t => t.Id);//表，主键
-            f.HasOne(t => t.Company).HasForeignKey(t => t.CompanyId).MapTo<Company>();//导航属性，这里是值对象，不是真正的模型，是模型的瘦身版，使用MapTo指定对应的模型Company
+            f.HasOne(t => t.Company).HasForeignKey(t => t.CompanyId).MapTo<Company>();//导航属性，这里是值对象，不是真正的模型，是模型Company的瘦身版，使用MapTo指定对应的模型Company
             f.HasMany(t => t.Orders).HasForeignKey(t => t.BuyerId);
         });
         builder.Entity<Company>(f =>
@@ -75,7 +75,7 @@ class ModelConfiguration : IModelConfiguration
         {
             f.ToTable("sys_order").Key(t => t.Id);
             f.HasOne(t => t.Buyer).HasForeignKey(t => t.BuyerId);
-            f.HasOne(t => t.Seller).HasForeignKey(t => t.SellerId).MapTo<User>();//导航属性，这里是值对象，不是真正的模型，是模型的瘦身版，使用MapTo指定对应的模型User
+            f.HasOne(t => t.Seller).HasForeignKey(t => t.SellerId).MapTo<User>();//导航属性，这里是值对象，不是真正的模型，是模型User的瘦身版，使用MapTo指定对应的模型User
             f.HasMany(t => t.Details).HasForeignKey(t => t.OrderId);
         });
         builder.Entity<OrderDetail>(f =>
@@ -86,6 +86,45 @@ class ModelConfiguration : IModelConfiguration
     }
 }
 ```
+对应的模型结构如下：
+```csharp
+public class User
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public Gender Gender { get; set; }
+    public int Age { get; set; }
+    public int CompanyId { get; set; }
+    public bool IsEnabled { get; set; }
+    public int CreatedBy { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public int UpdatedBy { get; set; }
+    public DateTime UpdatedAt { get; set; }
+
+    public CompanyInfo Company { get; set; }//值对象，是模型Company的瘦身版
+    public List<Order> Orders { get; set; }
+}
+//模型Company
+public class Company
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public bool IsEnabled { get; set; }
+    public int CreatedBy { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public int UpdatedBy { get; set; }
+    public DateTime UpdatedAt { get; set; }
+
+    public List<User> Users { get; set; }
+}
+//瘦身版模型CompanyInfo，只有两个字段
+public class CompanyInfo
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+}
+```
+在实际应用中，值对象在模型中定义很常见，没必要引用整个模型，真正使用的就是几个栏位，轻量化模型结构。  
 
 
 其次，创建Repository对象或Repository<TEntity>对象。
