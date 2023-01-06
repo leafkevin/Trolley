@@ -18,7 +18,7 @@
 支持模型映射，采用流畅API方式，目前不支持特性方式映射  
 支持多租户分库，不同租户不同的数据库。  
 
-首先在系统中要注册IOrmDbFactory
+首先，在系统中要注册IOrmDbFactory
 ------------------------------------------------------------
 系统中每个连接串对应一个OrmProvider，每种类型的OrmProvider以单例形式存在，一个应用中可以存在多种类型的OrmProvider。   
 在Trolley中，一个dbKey代表一个或是多个结构相同的数据库，可以是不同的OrmProvider。  
@@ -58,7 +58,7 @@ var dbFactory = builder.Build();
 ```
 
 导航属性的设置，是单向的，只需要把本模型内的导航属性列出来就可以了。  
-对应的导航属性类，再设置它所引用的类型映射。  
+对应的导航属性类，再设置它所引用的模型映射。  
 这里的ModelConfiguration类，就是模型映射类，内容如下：
 ```csharp
 class ModelConfiguration : IModelConfiguration
@@ -225,12 +225,36 @@ var sql = repository.From<User>()
 //SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME),COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) ORDER BY a.`Id`,b.`Id`
 ```
 
-可以更改数据库连接串,跨库操作
+支持跨库查询，只要指定对应的dbKey就可以了
 ------------------------------------------------------------
 
 ```csharp
-var sqlConnString = "Server=.;Initial Catalog=test;User Id=sa;Password=test;Connect Timeout=30;";
-var psqlConnString = "Server=192.168.1.15;Port=5432;Database=test;User Id=postgres;Password=test;Pooling=true;";
+appsetting.json中的数据库配置，如下
+{
+  "Database": {
+    "fengling": {
+      "IsDefault": true,
+      "ConnectionStrings": [
+        {
+          "ConnectionString": "Server=localhost;Port=3306;Database=fengling;User Id=root;Password=123456;Pooling=true;",
+          "IsDefault": true,
+	  //默认使用MySql数据库
+          "OrmProvider": "Trolley.MySqlProvider"
+        },
+        {
+          "ConnectionString": "Server=192.168.1.15;Port=5432;Database=fengling;User Id=postgres;Password=123456;Pooling=true;",
+          "IsDefault": false,
+	  //指定租户Id:1,2,3,4,5，使用PostgreSql数据库
+          "OrmProvider": "Trolley.NpgSqlProvider",
+          "TenantIds": [ 1, 2, 3, 4, 5 ]
+        }
+      ]
+    }
+  }
+}
+var psqlConnString = "Server=192.168.1.15;Port=5432;Database=fengling;User Id=postgres;Password=123456;Pooling=true;";
+using var repository = this.dbFactory.Create("mysql");
+
 
 //默认使用的连接串
 OrmProviderFactory.RegisterProvider(sqlConnString, new SqlServerProvider(), true);
