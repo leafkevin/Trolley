@@ -8,9 +8,12 @@
 目前支持：MySql,PostgreSql,Sql Sever,其他的provider会稍后慢慢提供。  
 
 支持分页查询  
+支持Join、group by,order by等操作  
+支持各种聚合查询，Count,Max,Min,Avg,Sum等操作  
+支持In,Exists操作  
 支持Insert Select From  
-支持Updated From Join  
-支持批量插入、更新  
+支持Update From Join  
+支持批量插入、更新、删除   
 支持模型导航属性，值对象导航属性，就是瘦身版模型  
 支持模型映射，采用流畅API方式，目前不支持特性方式映射  
 支持多租户分库，不同租户不同的数据库。  
@@ -136,71 +139,90 @@ public class CompanyInfo
 在实际应用中，值对象在模型中定义很常见，没必要引用整个模型，真正使用的就是几个栏位，轻量化模型结构。  
 
 
-其次，创建Repository对象或Repository<TEntity>对象。
+
+
+其次，创建Repository对象。
 ------------------------------------------------------------
-接下来就可以用这个仓储对象进行操作了。
-
-示例:
-
-```csharp
-public class User
-{
-    [PrimaryKey("Id")]
-    public int UniqueId { get; set; }
-    public string UserName { get; set; }
-    [Column(typeof(string))]
-    public Sex? Sex { get; set; }
-    public Guid? CardId { get; set; }
-    public DateTime? UpdatedAt { get; set; }
-}
-public enum Sex : byte
-{
-    Male = 1,
-    Female = 2
-}            
-
-var repository = new Repository();
-
-var user = repository.Query<User>("select Age = @Age, Id = @UniqueId", new User { Age = (int?)null, UniqueId = 1 });
-user = await repository.QueryAsync<User>("select Age = @Age, Id = @UniqueId", new User { Age = (int?)null, UniqueId = 1 });
-
-```
+所有的操作都是从创建IRepository对象开始的，IRepository可以开启事务，设置command超时时间、各种查询、命令的执行。 
+不同模型的操作都是采用IRepository泛型方法来完成的。  
 
 
-Repository<TEntity>仓储对象，在获取参数时，查询会比Repository无类型的仓储对象稍快一点。
-Repository<TEntity>仓储对象，操作方法中，都是TEntity类型参数，获取数据会快。
-Repository无类型的仓储对象，操作方法中，都是object匿名类型参数，获取数据要先获取元数据，同比强类型Repository<TEntity>仓储对象会慢一点。
-如果有跨越多个实体对象，使用Repository无类型的仓储对象会合适一些。
-
+查询操作
 
 ```csharp
-public class User
-{
-    [PrimaryKey("Id")]
-    public int UniqueId { get; set; }
-    public string UserName { get; set; }
-    [Column(typeof(string))]
-    public Sex? Sex { get; set; }
-    public int DeptId { get; set; }
-    public DateTime? UpdatedAt { get; set; }
-}
-public class Dept
-{
-    [PrimaryKey("Id")]
-    public int UniqueId { get; set; }
-    public string DeptName { get; set; }
-    public int PersonTotal { get; set; }
-    public DateTime? UpdatedAt { get; set; }
-}
-public class DeptInfo
-{
-    public int DeptId { get; set; }
-    public int PersonTotal { get; set; }
-}
+using var repository = this.dbFactory.Create();
 
-var repository = new Repository();
-var deptInfo = repository.QueryFirst<DeptInfo>("SELECT A.DeptId,B.PersonTotal FORM Coin_User A,Coin_Dept B WHERE A.DeptId=B.Id AND A.Id=@UniqueId", new { UniqueId = 1 });
+//QueryFirst
+var result = repository.QueryFirst<User>(f => f.Id == 1);
+var result = await repository.QueryFirstAsync<User>(f => f.Name == "leafkevin");
+//
 
+//Query
+var result = repository.Query<Product>(f => f.ProductNo.Contains("PN-00"));
+var result = await repository.QueryAsync<Product>(f => f.ProductNo.Contains("PN-00"));
+
+//Page 分页
+var result = repository.QueryPage<OrderDetail>(2, 10, f => f.ProductId == 1);
+var result = await repository.QueryPageAsync<OrderDetail>(2, 10, f => f.ProductId == 1);
+
+//From，这种支持各种复杂操作
+var result = await repository.From<Product>()
+    .Where(f => f.ProductNo.Contains("PN-00"))
+    .ToListAsync();
+    
+//One to One  Include
+var result = await repository.From<Product>()
+            .Include(f => f.Brand)
+            .Where(f => f.ProductNo.Contains("PN-00"))
+            .ToListAsync();	    
+	    
+//InnerJoin and IncludeMany    
+var result = repository.From<Order>()
+    .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+    .IncludeMany((x, y) => x.Details)
+    .Where((a, b) => a.TotalAmount > 300)
+    .Select((x, y) => new { Order = x, Buyer = y })
+    .ToList();
+
+//IncludeMany and filter
+var result = repository.From<Order>()
+    .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+    .IncludeMany((x, y) => x.Details, f => f.ProductId == 1)
+    .Where((a, b) => a.TotalAmount > 300)
+    .Select((x, y) => new { Order = x, Buyer = y })
+    .ToList();
+	    
+//Include and ThenInclude
+var result = await repository.From<Order>()
+    .InnerJoin<User>((a, b) => a.SellerId == b.Id)
+    .Include((x, y) => x.Buyer)
+    .ThenInclude(f => f.Company)
+    .Where((a, b) => a.TotalAmount > 300)
+    .Select((x, y) => new { Order = x, Seller = y })
+    .ToListAsync();
+
+//Include and Paging
+var result = repository.From<OrderDetail>()
+    .Include(f => f.Product)
+    .Where(f => f.ProductId == 1)
+    .ToPageList(2, 10);
+    
+//虽然Include的，但是没有查询对应模型，会忽略Include
+var sql = repository.From<User>()
+    .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+    .IncludeMany((a, b) => a.Orders)
+    .ThenIncludeMany(f => f.Details)
+    .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
+    .OrderBy((x, a, b) => new { UserId = a.Id, OrderId = b.Id })
+    .Select((x, a, b) => new
+    {
+        x.Grouping,
+        OrderCount = x.Count(b.Id),
+        TotalAmount = x.Sum(b.TotalAmount)
+    })
+    .ToSql(out _);
+//生成的SQL如下：
+//SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME),COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) ORDER BY a.`Id`,b.`Id`
 ```
 
 可以更改数据库连接串,跨库操作
