@@ -30,7 +30,7 @@ class Delete<TEntity> : IDelete<TEntity>
         if (keys == null)
             throw new ArgumentNullException(nameof(keys));
 
-        return new Deleted<TEntity>(this.dbFactory, this.connection, this.transaction, null, keys);
+        return new Deleted<TEntity>(this.dbFactory, this.connection, this.transaction, keys);
     }
     public IDeleting<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
     {
@@ -177,23 +177,12 @@ class Deleted<TEntity> : IDeleted<TEntity>
         {
             string sql = null;
             using var cmd = this.connection.CreateCommand();
-            if (string.IsNullOrEmpty(this.rawSql))
-            {
-                Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
-                if (isDictionary)
-                    commandInitializer = this.BuildCommandInitializer(entityType);
-                else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
-                sql = commandInitializer.Invoke(cmd, this.connection.OrmProvider, this.parameters);
-            }
-            else
-            {
-                sql = this.rawSql;
-                Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
-                if (isDictionary)
-                    commandInitializer = this.BuildCommandInitializer(sql);
-                else commandInitializer = this.BuildCommandInitializer(sql, entityType, parameterType);
-                commandInitializer.Invoke(cmd, this.connection.OrmProvider, this.parameters);
-            }
+            Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
+            if (isDictionary)
+                commandInitializer = this.BuildCommandInitializer(entityType);
+            else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
+            sql = commandInitializer.Invoke(cmd, this.connection.OrmProvider, this.parameters);
+
             cmd.CommandText = sql;
             cmd.CommandType = CommandType.Text;
             cmd.Transaction = this.transaction;

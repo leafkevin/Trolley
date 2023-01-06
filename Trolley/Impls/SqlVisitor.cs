@@ -410,16 +410,7 @@ public class SqlVisitor
     }
     public virtual SqlSegment VisitNew(SqlSegment sqlSegment)
     {
-        var newExpr = sqlSegment.Expression as NewExpression;
-        IEnumerable<Expression> args = this.VisitExpressionList(newExpr.Arguments);
-        if (args != nex.Arguments)
-        {
-            if (nex.Members != null)
-                return Expression.New(nex.Constructor, args, nex.Members);
-            else
-                return Expression.New(nex.Constructor, args);
-        }
-        return nex;
+        throw new NotImplementedException();
     }
     public virtual SqlSegment VisitMemberInit(SqlSegment sqlSegment)
     {
