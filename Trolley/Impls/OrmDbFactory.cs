@@ -4,15 +4,12 @@ using System.Collections.Generic;
 
 namespace Trolley;
 
-public class OrmDbFactory : IOrmDbFactory
+class OrmDbFactory : IOrmDbFactory
 {
     private readonly ConcurrentDictionary<Type, IOrmProvider> ormProviders = new();
     private readonly ConcurrentDictionary<string, TheaDatabase> databases = new();
     private readonly ConcurrentDictionary<Type, EntityMap> entityMappers = new();
-
-    private readonly IServiceProvider serviceProvider;
     private TheaDatabase defaultDatabase;
-    public OrmDbFactory(IServiceProvider serviceProvider) => this.serviceProvider = serviceProvider;
 
     public TheaDatabase Register(string dbKey, bool isDefault, Action<TheaDatabaseBuilder> databaseInitializer)
     {
@@ -22,52 +19,38 @@ public class OrmDbFactory : IOrmDbFactory
             {
                 DbKey = dbKey,
                 IsDefault = isDefault,
-                ConnectionStrings = new List<TheaConnectionInfo>()
+                ConnectionInfos = new List<TheaConnectionInfo>()
             });
         }
         if (isDefault) this.defaultDatabase = database;
-        var builder = new TheaDatabaseBuilder(database);
+        var builder = new TheaDatabaseBuilder(this, database);
         databaseInitializer?.Invoke(builder);
         return database;
     }
-    //public void LoadFromConfigure(string sectionName)
-    //{
-    //    var configuration = this.serviceProvider.GetService<IConfiguration>();
-    //    var databases = configuration.GetSection(sectionName).GetChildren();
-    //    foreach (var configInfo in databases)
-    //    {
-    //        var isDefault = configInfo.GetValue<bool>("IsDefault");
-    //        var database = new TheaDatabase
-    //        {
-    //            DbKey = configInfo.Key,
-    //            IsDefault = isDefault,
-    //            ConnectionStrings = new List<TheaConnectionInfo>()
-    //        };
-    //        if (isDefault) this.defaultDatabase = database;
-    //        this.databases.TryAdd(configInfo.Key, database);
-
-    //        var connStrings = configInfo.GetSection("ConnectionStrings").GetChildren();
-    //        foreach (var connString in connStrings)
-    //        {
-    //            var theaConnString = new TheaConnectionInfo { DbKey = configInfo.Key };
-    //            connString.Bind(theaConnString);
-    //            var ormProviderTypeName = connString.GetValue<string>("OrmProvider");
-    //            var ormProviderType = Assembly.GetExecutingAssembly().GetType(ormProviderTypeName);
-    //            if (!ormProviders.TryGetValue(ormProviderType, out var ormProvider))
-    //            {
-    //                var instance = TheaActivator.CreateInstance(this.serviceProvider, ormProviderType);
-    //                ormProviders.TryAdd(ormProviderType, ormProvider = instance as IOrmProvider);
-    //            }
-    //            theaConnString.OrmProvider = ormProvider;
-    //            database.ConnectionStrings.Add(theaConnString);
-    //        }
-    //    }
-    //}
-    public void Configure(Action<ModelBuilder> modelInitializer)
+    public void AddOrmProvider(IOrmProvider ormProvider)
     {
-        var builder = new ModelBuilder(this);
-        modelInitializer.Invoke(builder);
+        if (ormProvider == null)
+            throw new ArgumentNullException(nameof(ormProvider));
+
+        this.ormProviders.TryAdd(ormProvider.GetType(), ormProvider);
     }
+    public void AddEntityMap(Type entityType, EntityMap mapper)
+    {
+        if (entityType == null)
+            throw new ArgumentNullException(nameof(entityType));
+        if (mapper == null)
+            throw new ArgumentNullException(nameof(mapper));
+
+        this.entityMappers.TryAdd(entityType, mapper);
+    }
+    public bool TryGetEntityMap(Type entityType, out EntityMap mapper)
+    {
+        if (entityType == null)
+            throw new ArgumentNullException(nameof(entityType));
+
+        return this.entityMappers.TryGetValue(entityType, out mapper);
+    }
+
     public IRepository Create(TheaConnection connection) => new Repository(this, connection);
     public IRepository Create(string dbKey = null, int? tenantId = null)
     {
@@ -89,8 +72,4 @@ public class OrmDbFactory : IOrmDbFactory
         var database = this.GetDatabase(dbKey);
         return database.GetConnectionInfo(tenantId);
     }
-    public void AddEntityMap(Type entityType, EntityMap mapper)
-        => this.entityMappers.TryAdd(entityType, mapper);
-    public bool TryGetEntityMap(Type entityType, out EntityMap mapper)
-        => this.entityMappers.TryGetValue(entityType, out mapper);
 }

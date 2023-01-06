@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Trolley;
+using Trolley.AspNetCore;
 
 namespace ConsoleAppTest;
 
@@ -17,14 +18,14 @@ class Program
     {
         var services = new ServiceCollection();
         services.AddSingleton<IOrmProvider, MySqlProvider>();
-        services.AddSingleton<IOrmDbFactory, OrmDbFactory>(f =>
+        services.AddSingleton(f =>
         {
-            var dbFactory = new OrmDbFactory(f);
-            //var connectionString = "Server=bj-cdb-o9bbr5vl.sql.tencentcdb.com;Port=63227;Database=fengling;Uid=root;password=Siia@TxDb582e4sdf;charset=utf8mb4;";
             var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
-            dbFactory.Register("fengling", true, f => f.Add<MySqlProvider>(connectionString, true));
-            dbFactory.Configure(f => new ModelConfiguration().OnModelCreating(f));
-            return dbFactory;
+            var ormProvider = f.GetService<IOrmProvider>();
+            var builder = new OrmDbFactoryBuilder();
+            builder.Register("fengling", true, f => f.Add(connectionString, ormProvider, true))
+                .Configure(f => new ModelConfiguration().OnModelCreating(f));
+            return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
         var dbFactory = serviceProvider.GetService<IOrmDbFactory>();

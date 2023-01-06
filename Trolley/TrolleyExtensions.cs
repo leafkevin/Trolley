@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,6 +18,19 @@ public static class TrolleyExtensions
     private static readonly ConcurrentDictionary<int, Delegate> typeReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
+
+
+    public static void Configure(this IOrmDbFactory dbFactory, IModelConfiguration configuration)
+        => configuration.OnModelCreating(new ModelBuilder(dbFactory));
+    public static void Configure<TModelConfiguration>(this IOrmDbFactory dbFactory) where TModelConfiguration : class, IModelConfiguration, new()
+        => new TModelConfiguration().OnModelCreating(new ModelBuilder(dbFactory));
+    public static void Configure(this IOrmDbFactory dbFactory, Action<ModelBuilder> initializer)
+    {
+        if (initializer == null)
+            throw new ArgumentNullException(nameof(initializer));
+
+        initializer.Invoke(new ModelBuilder(dbFactory));
+    }
 
     public static TEntity QueryFirst<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate = null)
         => repository.From<TEntity>().Where(predicate).First();
@@ -44,21 +58,13 @@ public static class TrolleyExtensions
     public static async Task<int> CreateAsync<TEntity>(this IRepository repository, IEnumerable entities, int bulkCount = 500, CancellationToken cancellationToken = default)
         => await repository.Create<TEntity>().WithBy(entities, bulkCount).ExecuteAsync(cancellationToken);
 
-    public static int Update<TEntity>(this IRepository repository, object parameters)
-        => repository.Update<TEntity>().WithBy(parameters).Execute();
-    public static async Task<int> UpdateAsync<TEntity>(this IRepository repository, object parameters, CancellationToken cancellationToken = default)
-        => await repository.Update<TEntity>().WithBy(parameters).ExecuteAsync(cancellationToken);
-    public static int Update<TEntity>(this IRepository repository, IEnumerable entities, int bulkCount = 500)
-        => repository.Update<TEntity>().WithBy(entities, bulkCount).Execute();
-    public static async Task<int> UpdateAsync<TEntity>(this IRepository repository, IEnumerable entities, int bulkCount = 500, CancellationToken cancellationToken = default)
-        => await repository.Update<TEntity>().WithBy(entities, bulkCount).ExecuteAsync(cancellationToken);
     public static int Update<TEntity, TFields>(this IRepository repository, Expression<Func<TEntity, TFields>> fieldsExpr, Expression<Func<TEntity, bool>> predicate)
         => repository.Update<TEntity>().Set(fieldsExpr).Where(predicate).Execute();
     public static async Task<int> UpdateAsync<TEntity, TFields>(this IRepository repository, Expression<Func<TEntity, TFields>> fieldsExpr, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
         => await repository.Update<TEntity>().Set(fieldsExpr).Where(predicate).ExecuteAsync(cancellationToken);
     public static int Update<TEntity, TField>(this IRepository repository, Expression<Func<TEntity, TField>> fieldExpr, object parameter)
         => repository.Update<TEntity>().WithBy(fieldExpr, parameter).Execute();
-    public static async Task<int> UpdateAsync<TEntity, TMember>(this IRepository repository, Expression<Func<TEntity, TMember>> fieldExpr, object parameter, CancellationToken cancellationToken = default)
+    public static async Task<int> UpdateAsync<TEntity, TField>(this IRepository repository, Expression<Func<TEntity, TField>> fieldExpr, object parameter, CancellationToken cancellationToken = default)
         => await repository.Update<TEntity>().WithBy(fieldExpr, parameter).ExecuteAsync(cancellationToken);
     public static int Update<TEntity, TFields>(this IRepository repository, Expression<Func<TEntity, TFields>> fieldsExpr, object parameters, int bulkCount = 500)
         => repository.Update<TEntity>().WithBy(fieldsExpr, parameters, bulkCount).Execute();

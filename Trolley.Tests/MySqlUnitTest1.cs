@@ -12,13 +12,14 @@ public class MySqlUnitTest1
     {
         var services = new ServiceCollection();
         services.AddSingleton<IOrmProvider, MySqlProvider>();
-        services.AddSingleton<IOrmDbFactory, OrmDbFactory>(f =>
+        services.AddSingleton(f =>
         {
-            var dbFactory = new OrmDbFactory(f);
-            var connString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
-            dbFactory.Register("mysql", true, f => f.Add<MySqlProvider>(connString, true));
-            dbFactory.Configure(f => new ModelConfiguration().OnModelCreating(f));
-            return dbFactory;
+            var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
+            var ormProvider = f.GetService<IOrmProvider>();
+            var builder = new OrmDbFactoryBuilder();
+            builder.Register("fengling", true, f => f.Add(connectionString, ormProvider, true))
+                .Configure(f => new ModelConfiguration().OnModelCreating(f));
+            return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
         this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();

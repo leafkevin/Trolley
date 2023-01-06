@@ -8,6 +8,6 @@
 		<PackageReference Include="MySqlConnector" Version="2.2.0" />
 	</ItemGroup>
 	<ItemGroup>
-	  <ProjectReference Include="..\Trolley\Trolley.csproj" />
+	  <ProjectReference Include="..\Trolley.AspNetCore\Trolley.AspNetCore.csproj" />
 	</ItemGroup>
 </Project>
