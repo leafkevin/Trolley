@@ -13,8 +13,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleAppTest", "ConsoleAp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trolley.Tests", "Trolley.Tests\Trolley.Tests.csproj", "{1D7C82EF-8098-4A3B-8816-BACEB0F5A299}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApplication1", "WebApplication1\WebApplication1.csproj", "{86A21322-AB17-4358-A7B9-61D3FD98C408}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,10 +39,6 @@ Global
 		{1D7C82EF-8098-4A3B-8816-BACEB0F5A299}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1D7C82EF-8098-4A3B-8816-BACEB0F5A299}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1D7C82EF-8098-4A3B-8816-BACEB0F5A299}.Release|Any CPU.Build.0 = Release|Any CPU
-		{86A21322-AB17-4358-A7B9-61D3FD98C408}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{86A21322-AB17-4358-A7B9-61D3FD98C408}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{86A21322-AB17-4358-A7B9-61D3FD98C408}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{86A21322-AB17-4358-A7B9-61D3FD98C408}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

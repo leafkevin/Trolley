@@ -300,7 +300,7 @@ public class MySqlUnitTest3
     public void Update_Parameters_One()
     {
         using var repository = this.dbFactory.Create();
-        var result = repository.Update<User>(new { Name = "leafkevin1", Id = 1 });
+        var result = repository.Update<User>().WithBy(new { Name = "leafkevin1", Id = 1 }).Execute();
         var result1 = repository.Get<User>(new { Id = 1 });
         Assert.True(result > 0);
         Assert.NotNull(result1);
