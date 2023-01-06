@@ -21,19 +21,19 @@
 常见的场景是：一些租户独立分库，数据库类型也不一定一样，但结构是一样的，那他们就可以是同一个dbKey。  
 如: A租户是MySql数据库，B租户是PostgreSql，他们的数据库的结构是相同的。  
 在代入租户ID的时候，Trolley会根据租户ID自动找到对应的数据库，进行操作。  
-没有租户ID，就是默认的数据库，就是没有没有指定独立分库的其他所有租户的数据库。  
+没有租户ID，就是默认的数据库，就是没有指定独立分库的其他所有租户的数据库。  
 
 在注册IOrmDbFactory的时候，同时也要把数据库结构的模型映射配置起来。  
-模型映射采用的是Fluent Api方式，类似EF，通常是集成IModelConfiguration的子类。  
-
-
-
-
+模型映射采用的是Fluent Api方式，类似EF，通常是继承IModelConfiguration的子类。  
 
 
 示例:
 
 ```csharp
+
+
+
+
 var connString = "Server=.;Initial Catalog=test;User Id=sa;Password=test;Connect Timeout=30";
 OrmProviderFactory.RegisterProvider(connString, new SqlServerProvider(), true);
 
@@ -41,11 +41,16 @@ OrmProviderFactory.RegisterProvider(connString, new SqlServerProvider(), true);
 也可以使用多个连接串进行注册
 
 ```csharp
-var sqlConnString = "Server=.;Initial Catalog=test;User Id=sa;Password=test;Connect Timeout=30;";
-OrmProviderFactory.RegisterProvider(sqlConnString, new SqlServerProvider(), true);
-
-var psqlConnString = "Server=192.168.1.15;Port=5432;Database=test;User Id=postgres;Password=test;Pooling=true;";
-OrmProviderFactory.RegisterProvider(psqlConnString, new PostgreSqlProvider());
+var connectionString1 = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
+var connectionString2 = "User id=postgres;Password=123456;Host=localhost;Port=5432;Database=fengling;Pooling=true;Min Pool Size=5;Max Pool Size=100;";
+var builder = new OrmDbFactoryBuilder();
+builder.Register("fengling", true, f =>
+{
+    f.Add<MySqlProvider>(connectionString1, true) 
+     .Add<NpgSqlProvider>(connectionString2, false, new List<int> { 1, 2, 3, 4, 5 });
+})
+.Configure(f => new ModelConfiguration().OnModelCreating(f));
+return builder.Build();
 
 ```
 
