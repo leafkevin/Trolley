@@ -7,12 +7,12 @@
 强类型的DDD仓储操作,基本可以不用写SQL,支持多种数据库终端，目前是在.NET 6 基础上开发的。
 目前支持：MySql,PostgreSql,Sql Sever,其他的provider会稍后慢慢提供。
 
-支持分页查询
-支持Insert Select From
-支持Updated From Join
-支持批量插入、更新
-支持模型映射，采用流畅API方式，目前不支持特性方式映射
-支持多租户分库，不同租户不同的数据库。
+支持分页查询  
+支持Insert Select From  
+支持Updated From Join  
+支持批量插入、更新  
+支持模型映射，采用流畅API方式，目前不支持特性方式映射  
+支持多租户分库，不同租户不同的数据库。  
 
 首先在系统中要注册IOrmDbFactory
 ------------------------------------------------------------
