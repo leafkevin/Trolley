@@ -3,59 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Xml.Linq;
 
 namespace Trolley;
 
-//public class EntityBuilder
-//{
-//    private readonly EntityMap mapper;
-
-//    public EntityBuilder(EntityMap mapper) => this.mapper = mapper;
-//    public virtual EntityBuilder ToTable(string tableName)
-//    {
-//        this.mapper.TableName = tableName;
-//        return this;
-//    }
-//    public virtual EntityBuilder Key(params string[] propertyNames)
-//    {
-//        var properties = this.mapper.EntityType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-//        this.mapper.SetKeys(properties);
-//        return this;
-//    }
-//    public virtual EntityBuilder FieldPrefix(string fieldPrefix)
-//    {
-//        this.mapper.FieldPrefix = fieldPrefix;
-//        return this;
-//    }
-//    public virtual EntityBuilder AutoIncrement(string memberName)
-//    {
-//        var memberInfos = this.mapper.EntityType.GetMember(memberName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-//        this.mapper.SetAutoIncrement(memberInfos[0]);
-//        return this;
-//    }
-//    public virtual MemberBuilder Member(string memberName)
-//    {
-//        var memberVisitExpr = memberExpr.Body as MemberExpression;
-//        if (memberVisitExpr == null)
-//            throw new Exception("不支持的表达式");
-
-//        var memberName = memberVisitExpr.Member.Name;
-//        if (!this.mapper.TryGetMemberMap(memberName, out var memberMapper))
-//            this.mapper.AddMemberMap(memberName, memberMapper = new MemberMap(this.mapper, this.mapper.FieldPrefix, memberVisitExpr.Member));
-//        return new MemberBuilder<TMember>(memberMapper);
-//    }
-
-//    public virtual Navigation<TNavigation> HasOne<TMember, TNavigation>(Expression<Func<TEntity, TMember>> memberSelector)
-//    {
-//        return new Navigation<TNavigation>();
-//    }
-//    public virtual EntityBuilder<TEntity> HasMany<TElement, TNavigation>(Expression<Func<TEntity, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, TNavigation>> withSelector, Expression<Action<Navigation<TEntity, TElement>>> mapTo = null)
-//    {
-//        return this;
-//    }
-//    public EntityMap Build() => this.mapper.Build();
-//}
 public class EntityBuilder<TEntity> where TEntity : class
 {
     private readonly EntityMap mapper;

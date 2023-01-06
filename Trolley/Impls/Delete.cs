@@ -6,6 +6,8 @@ using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -161,7 +163,6 @@ class Deleted<TEntity> : IDeleted<TEntity>
                 commandInitializer.Invoke(cmd, this.connection.OrmProvider, sqlBuilder, index, entity);
                 index++;
             }
-            sqlBuilder.Append(')');
             cmd.CommandText = sqlBuilder.ToString();
             cmd.CommandType = CommandType.Text;
             cmd.Transaction = this.transaction;
@@ -232,6 +233,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
             ParameterExpression typedParameterExpr = null;
+            var parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
 
             if (parameterType.IsEntityType())
             {
@@ -239,10 +241,11 @@ class Deleted<TEntity> : IDeleted<TEntity>
                 blockParameters.Add(typedParameterExpr);
                 blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
             }
+            blockParameters.Add(parameterNameExpr);
 
             var methodInfo1 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(char) });
             var methodInfo2 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
-            var methodInfo3 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(int) });
+            var methodInfo3 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
 
             var addCommaExpr = Expression.Call(builderExpr, methodInfo1, Expression.Constant(';'));
             var greatThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0, typeof(int)));
@@ -257,11 +260,14 @@ class Deleted<TEntity> : IDeleted<TEntity>
                     blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant(" AND ")));
 
                 var parameterName = ormProvider.ParameterPrefix + keyMapper.MemberName;
-                sql = $"{ormProvider.GetFieldName(keyMapper.FieldName)}={parameterName}";
-                blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant(sql)));
-                blockBodies.Add(Expression.Call(builderExpr, methodInfo3, indexExpr));
+                var suffixExpr = Expression.Call(indexExpr, typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes));
+                var concatExpr = Expression.Call(methodInfo3, Expression.Constant(parameterName), suffixExpr);
+                blockBodies.Add(Expression.Assign(parameterNameExpr, concatExpr));
 
-                var parameterNameExpr = Expression.Constant(parameterName);
+                var constantExpr = Expression.Constant(ormProvider.GetFieldName(keyMapper.FieldName) + "=");
+                blockBodies.Add(Expression.Call(builderExpr, methodInfo2, constantExpr));
+                blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
+
                 if (parameterType.IsEntityType())
                     RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, keyMapper.MemberName, blockBodies);
                 else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterExpr, parameterNameExpr, blockBodies);

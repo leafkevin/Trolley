@@ -12,6 +12,14 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
+/// <summary>
+/// MySql:
+/// INSERT INTO table2 (column1, column2, column3, ...)
+/// SELECT column1, column2, column3, ...
+/// FROM table1
+/// WHERE condition;
+/// </summary>
+/// <typeparam name="TEntity"></typeparam>
 class Create<TEntity> : ICreate<TEntity>
 {
     private readonly IOrmDbFactory dbFactory;

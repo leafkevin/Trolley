@@ -75,28 +75,6 @@ public class OrmDbFactory : IOrmDbFactory
         var connection = new TheaConnection(connectionInfo);
         return new Repository(this, connection);
     }
-
-    //public SqlExpression<T1, T2> From<T1, T2>(string dbKey = null, int? tenantId = null)
-    //{
-    //    var connectionInfo = this.GetConnectionInfo(dbKey, tenantId);
-    //    var connection = new TheaConnection(connectionInfo);
-    //    var visitor = new SqlExpressionVisitor(this, connection.OrmProvider);
-    //    return new SqlExpression<T1, T2>(this, connection, visitor);
-    //}
-    //public SqlExpression<T1, T2, T3> From<T1, T2, T3>(string dbKey = null, int? tenantId = null)
-    //{
-    //    var connectionInfo = this.GetConnectionInfo(dbKey, tenantId);
-    //    var connection = new TheaConnection(connectionInfo);
-    //    var visitor = new SqlExpressionVisitor(this, connection.OrmProvider);
-    //    return new SqlExpression<T>(this, connection, visitor);
-    //}
-    //public SqlExpression<T> From<T>(string dbKey = null, int? tenantId = null)
-    //{
-    //    var connectionInfo = this.GetConnectionInfo(dbKey, tenantId);
-    //    var connection = new TheaConnection(connectionInfo);
-    //    var visitor = new SqlExpressionVisitor(this, connection.OrmProvider);
-    //    return new SqlExpression<T>(this, connection, visitor);
-    //}
     public TheaDatabase GetDatabase(string dbKey = null)
     {
         TheaDatabase database = null;

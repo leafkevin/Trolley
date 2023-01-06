@@ -170,12 +170,6 @@ public static class TrolleyExtensions
         parameterNames = null;
         return false;
     }
-    public static bool IsConstant(this Expression expr)
-    {
-        var visitor = new TestVisitor();
-        visitor.Visit(expr);
-        return visitor.IsConstant;
-    }
     internal static TValue To<TValue>(this IDataReader reader, int columnIndex = 0)
     {
         var targetType = typeof(TValue);

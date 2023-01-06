@@ -576,9 +576,11 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");
 
             var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
+            var parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
             blockParameters.Add(typedParameterExpr);
+            blockParameters.Add(parameterNameExpr);
             blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
 
             var methodInfo1 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(char) });
@@ -586,11 +588,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             var methodInfo3 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
 
             if (!isFixSetSql)
-            {
-                //var greatThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0, typeof(int)));
-                //blockBodies.Add(Expression.IfThen(greatThenExpr, Expression.Call(builderExpr, methodInfo1, Expression.Constant(';'))));
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant($"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ")));
-            }
 
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
@@ -612,7 +610,8 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
 
                 var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
                 var suffixExpr = Expression.Call(indexExpr, typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes));
-                var parameterNameExpr = Expression.Call(methodInfo3, Expression.Constant(parameterName), suffixExpr);
+                var concatExpr = Expression.Call(methodInfo3, Expression.Constant(parameterName), suffixExpr);
+                blockBodies.Add(Expression.Assign(parameterNameExpr, concatExpr));
 
                 if (isFixSetSql || columnIndex > 0)
                     blockBodies.Add(Expression.Call(builderExpr, methodInfo1, Expression.Constant(',')));
@@ -636,7 +635,8 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
 
                 var parameterName = ormProvider.ParameterPrefix + "k" + keyMemberMapper.MemberName;
                 var suffixExpr = Expression.Call(indexExpr, typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes));
-                var parameterNameExpr = Expression.Call(methodInfo3, Expression.Constant(parameterName), suffixExpr);
+                var concatExpr = Expression.Call(methodInfo3, Expression.Constant(parameterName), suffixExpr);
+                blockBodies.Add(Expression.Assign(parameterNameExpr, concatExpr));
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
                 RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, parameterMemberMapper.MemberName, blockBodies);
