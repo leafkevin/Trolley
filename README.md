@@ -4,8 +4,8 @@
 
 框架特点
 ------------------------------------------------------------
-强类型的DDD仓储操作,基本可以不用写SQL,支持多种数据库终端，目前是在.NET 6 基础上开发的。
-目前支持：MySql,PostgreSql,Sql Sever,其他的provider会稍后慢慢提供。
+强类型的DDD仓储操作,基本可以不用写SQL,支持多种数据库终端，目前是在.NET 6 基础上开发的。  
+目前支持：MySql,PostgreSql,Sql Sever,其他的provider会稍后慢慢提供。  
 
 支持分页查询  
 支持Insert Select From  
