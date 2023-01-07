@@ -169,6 +169,10 @@ var result = repository.QueryPage<OrderDetail>(2, 10, f => f.ProductId == 1);
 var result = await repository.QueryPageAsync<OrderDetail>(2, 10, f => f.ProductId == 1);
 //SELECT COUNT(*) FROM `sys_order_detail` WHERE `ProductId`=1;SELECT `Id`,`IsEnabled`,`CreatedBy`,`UpdatedAt`,`CreatedAt`,`Price`,`Quantity`,`Amount`,`OrderId`,`UpdatedBy`,`ProductId` FROM `sys_order_detail`  WHERE `ProductId`=1 LIMIT 10 OFFSET 10
 
+//Dictionary
+var result = await repository.QueryDictionaryAsync<Product, int, string>(f => f.ProductNo.Contains("PN-00"), f => f.Id, f => f.Name);
+//SELECT `CategoryId`,`CreatedAt`,`Id`,`CompanyId`,`UpdatedBy`,`UpdatedAt`,`CreatedBy`,`IsEnabled`,`BrandId`,`ProductNo`,`Name` FROM `sys_product` WHERE `ProductNo` LIKE '%PN-00%'
+//先把实体查询出来，再根据Key,Value的选取，生成Dictionary
 ```
 
 
