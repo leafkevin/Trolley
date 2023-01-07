@@ -144,7 +144,8 @@ public class CompanyInfo
 其次，创建IRepository对象。
 ------------------------------------------------------------
 所有的操作都是从创建IRepository对象开始的，IRepository可以开启事务，设置command超时时间、各种查询、命令的执行。 
-不同模型的操作都是采用IRepository泛型方法来完成的。  
+不同模型的操作都是采用IRepository泛型方法来完成的。 
+所有的查询操作，都支持ToSql方法，可以查看生成SQL语句，方便诊断。
 
 
 查询操作
@@ -236,7 +237,7 @@ var result = repository.From<OrderDetail>()
 //SELECT COUNT(*) FROM `sys_order_detail` a LEFT JOIN `sys_product` b ON a.`ProductId`=b.`Id` WHERE a.`ProductId`=1;SELECT a.`ProductId`,a.`Id`,a.`Price`,a.`UpdatedAt`,a.`IsEnabled`,a.`CreatedBy`,a.`UpdatedBy`,a.`Amount`,a.`Quantity`,a.`CreatedAt`,a.`OrderId`,b.`CompanyId`,b.`Id`,b.`UpdatedAt`,b.`CategoryId`,b.`IsEnabled`,b.`CreatedBy`,b.`UpdatedBy`,b.`BrandId`,b.`Name`,b.`CreatedAt`,b.`ProductNo` FROM `sys_order_detail` a LEFT JOIN `sys_product` b ON a.`ProductId`=b.`Id`  WHERE a.`ProductId`=1 LIMIT 10 OFFSET 10
 ```
 ```csharp
-//虽然Include的，但是没有查询对应模型，会忽略Include
+//虽然有Include，但是没有查询对应模型，会忽略Include
 var sql = repository.From<User>()
     .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
     .IncludeMany((a, b) => a.Orders)
@@ -277,8 +278,8 @@ var result = repository.From<User>()
 支持跨库查询，只要指定对应的dbKey就可以了
 ------------------------------------------------------------
 
-```csharp
 appsetting.json中的数据库配置，如下
+```json
 {
   "Database": {
     "fengling": {
@@ -301,6 +302,8 @@ appsetting.json中的数据库配置，如下
     }
   }
 }
+```
+```csharp
 var psqlConnString = "Server=192.168.1.15;Port=5432;Database=fengling;User Id=postgres;Password=123456;Pooling=true;";
 using var repository = this.dbFactory.Create("mysql");
 
