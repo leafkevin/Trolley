@@ -225,7 +225,7 @@ var result = await repository.From<Order>()
     .Where((a, b) => a.TotalAmount > 300)
     .Select((x, y) => new { Order = x, Seller = y })
     .ToListAsync();
-//
+//SELECT a.`IsEnabled`,a.`UpdatedAt`,a.`UpdatedBy`,a.`SellerId`,a.`BuyerId`,a.`TotalAmount`,a.`OrderNo`,a.`Id`,a.`CreatedAt`,a.`CreatedBy`,c.`IsEnabled`,c.`UpdatedAt`,c.`Age`,c.`UpdatedBy`,c.`Name`,c.`CompanyId`,c.`Id`,c.`Gender`,c.`CreatedAt`,c.`CreatedBy`,d.`Name`,d.`Id`,b.`IsEnabled`,b.`UpdatedAt`,b.`Age`,b.`UpdatedBy`,b.`Name`,b.`CompanyId`,b.`Id`,b.`Gender`,b.`CreatedAt`,b.`CreatedBy` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`SellerId`=b.`Id` LEFT JOIN `sys_user` c ON a.`BuyerId`=c.`Id` LEFT JOIN `sys_company` d ON c.`CompanyId`=d.`Id` WHERE a.`TotalAmount`>300
 ```
 ```csharp
 //Page and Include
@@ -233,7 +233,7 @@ var result = repository.From<OrderDetail>()
     .Include(f => f.Product)
     .Where(f => f.ProductId == 1)
     .ToPageList(2, 10);
-//
+//SELECT COUNT(*) FROM `sys_order_detail` a LEFT JOIN `sys_product` b ON a.`ProductId`=b.`Id` WHERE a.`ProductId`=1;SELECT a.`ProductId`,a.`Id`,a.`Price`,a.`UpdatedAt`,a.`IsEnabled`,a.`CreatedBy`,a.`UpdatedBy`,a.`Amount`,a.`Quantity`,a.`CreatedAt`,a.`OrderId`,b.`CompanyId`,b.`Id`,b.`UpdatedAt`,b.`CategoryId`,b.`IsEnabled`,b.`CreatedBy`,b.`UpdatedBy`,b.`BrandId`,b.`Name`,b.`CreatedAt`,b.`ProductNo` FROM `sys_order_detail` a LEFT JOIN `sys_product` b ON a.`ProductId`=b.`Id`  WHERE a.`ProductId`=1 LIMIT 10 OFFSET 10
 ```
 ```csharp
 //虽然Include的，但是没有查询对应模型，会忽略Include
