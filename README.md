@@ -343,7 +343,7 @@ var sql = repository.From<User>()
     .ToSql(out _);
 //SELECT a.`Gender`,a.`CreatedAt`,a.`CreatedBy`,a.`Name`,a.`UpdatedBy`,a.`Id`,a.`IsEnabled`,a.`Age`,a.`UpdatedAt`,a.`CompanyId`,b.`Name`,b.`Id` FROM `sys_user` a LEFT JOIN `sys_company` b ON a.`CompanyId`=b.`Id` WHERE a.`Id` IN (SELECT `BuyerId` FROM `sys_order`)
 
-
+//In 从Order,OrderDetail中关联查询条件中使用
 var sql = repository.From<User>()
     .Where(f => Sql.In(f.Id, t => t.From<Order, OrderDetail>('a').InnerJoin((a, b) => a.Id == b.OrderId && b.ProductId == 1).Select((x, y) => x.BuyerId)))
     .ToSql(out _);
