@@ -654,21 +654,19 @@ public class SqlVisitor
         {
             case "In":
                 var elementType = methodCallExpr.Method.GetGenericArguments()[0];
-                var fieldSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 if (methodCallExpr.Arguments[1].Type.IsArray || typeof(IEnumerable<>).MakeGenericType(elementType).IsAssignableFrom(methodCallExpr.Arguments[1].Type))
                 {
-                    sqlSegment = this.Evaluate(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
+                    sqlSegment = this.Evaluate(sqlSegment.Next(methodCallExpr.Arguments[1]));
                     if (sqlSegment == SqlSegment.Null)
                         return sqlSegment.Change("0=1");
                     sqlSegment = this.ToParameter(sqlSegment);
-                    sqlSegment.Change($"{fieldSegment} IN ({sqlSegment})");
                 }
                 else
                 {
                     SqlSegment querySegment = null;
                     if (typeof(IQuery<>).MakeGenericType(elementType).IsAssignableFrom(methodCallExpr.Arguments[1].Type))
-                        querySegment = this.Evaluate(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
-                    else querySegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[1] });
+                        querySegment = this.Evaluate(sqlSegment.Next(methodCallExpr.Arguments[1]));
+                    else querySegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[1]));
                     var toSqlInvoker = this.BuildToSqlInvoker(elementType);
                     List<IDbDataParameter> dbDataParameters = null;
                     var sql = toSqlInvoker.Invoke(querySegment.Value, out dbDataParameters);
@@ -677,8 +675,10 @@ public class SqlVisitor
                         this.dbParameters ??= new();
                         this.dbParameters.AddRange(dbDataParameters);
                     }
-                    sqlSegment.Change($"{fieldSegment} IN ({sql})", false);
+                    sqlSegment.Change(sql, false);
                 }
+                var fieldSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
+                sqlSegment.Change($"{fieldSegment} IN ({sqlSegment})");
                 break;
             case "Exists":
                 var subTableTypes = methodCallExpr.Method.GetGenericArguments();
@@ -690,7 +690,9 @@ public class SqlVisitor
                 }
                 var lambdaExpr = currentExpr as LambdaExpression;
                 int index = 0;
+                this.isNeedAlias = true;
                 var builder = new StringBuilder("EXISTS(SELECT * FROM ");
+                var removeIndices = new List<int>();
                 foreach (var subTableType in subTableTypes)
                 {
                     var subTableMapper = this.dbFactory.GetEntityMap(subTableType);
@@ -700,6 +702,7 @@ public class SqlVisitor
                         EntityType = subTableType,
                         AliasName = aliasName
                     };
+                    removeIndices.Add(this.tables.Count);
                     this.tables.Add(tableSegment);
                     this.tableAlias.Add(aliasName, tableSegment);
                     if (index > 0) builder.Append(',');
@@ -710,6 +713,8 @@ public class SqlVisitor
                 builder.Append(" WHERE ");
                 builder.Append(this.VisitConditionExpr(lambdaExpr.Body));
                 builder.Append(')');
+                removeIndices.Reverse();
+                removeIndices.ForEach(f => this.tables.RemoveAt(f));
                 sqlSegment.Change(builder.ToString(), false);
                 break;
             case "Count":
@@ -781,9 +786,12 @@ public class SqlVisitor
     public virtual SqlSegment VisitFromQuery(SqlSegment sqlSegment, Type elementType)
     {
         var lambdaExpr = sqlSegment.Expression as LambdaExpression;
+        lambdaExpr.GetParameters(out var parameters);
+
         var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction);
         var queryInvoker = lambdaExpr.Compile();
-        return sqlSegment.Change(queryInvoker.DynamicInvoke(fromQuery));
+        var subQuery = queryInvoker.DynamicInvoke(fromQuery);
+        return sqlSegment.Change(subQuery);
     }
     public virtual string VisitConditionExpr(Expression conditionExpr)
     {

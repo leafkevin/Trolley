@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -50,6 +51,7 @@ class QueryVisitor : SqlVisitor
         {
             foreach (var tableSegment in this.tables)
             {
+                if (tableSegment.IsInclude && !tableSegment.IsUsed) continue;
                 var tableName = tableSegment.Body;
                 if (string.IsNullOrEmpty(tableName))
                 {
@@ -120,7 +122,7 @@ class QueryVisitor : SqlVisitor
         {
             foreach (var tableSegment in this.tables)
             {
-                if (!tableSegment.IsUsed) continue;
+                if (tableSegment.IsInclude && !tableSegment.IsUsed) continue;
                 var tableName = tableSegment.Body;
                 if (string.IsNullOrEmpty(tableName))
                 {
@@ -337,6 +339,13 @@ class QueryVisitor : SqlVisitor
         if (newEntityType != null)
             this.AddTable(joinType, newEntityType);
         var joinTableSegment = this.InitTableAlias(lambdaExpr);
+        if (joinOn != null)
+        {
+            foreach (var tableSegment in this.tableAlias.Values)
+            {
+                tableSegment.IsUsed = true;
+            }
+        }
         var joinOnExpr = this.VisitConditionExpr(lambdaExpr.Body);
         joinTableSegment.JoinType = joinType;
         joinTableSegment.OnExpr = joinOnExpr;
@@ -780,10 +789,13 @@ class QueryVisitor : SqlVisitor
         int index = 0;
         foreach (var parameterExpr in lambdaExpr.Parameters)
         {
-            if (parameterExpr.Type == typeof(IAggregateSelect))
+            if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
                 continue;
             if (!parameters.Contains(parameterExpr.Name))
+            {
+                index++;
                 continue;
+            }
             this.tableAlias.Add(parameterExpr.Name, joinTables[index]);
             tableSegment = joinTables[index];
             index++;

@@ -618,7 +618,7 @@ class Query<T> : IQuery<T>
         await command.DisposeAsync();
         return result;
     }
-    public Dictionary<TKey, TElement> ToDictionary<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> valueSelector) where TKey : notnull
+    public Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull
     {
         if (keySelector == null)
             throw new ArgumentNullException(nameof(keySelector));
@@ -627,7 +627,7 @@ class Query<T> : IQuery<T>
 
         return this.ToList().ToDictionary(keySelector, valueSelector);
     }
-    public async Task<Dictionary<TKey, TElement>> ToDictionaryAsync<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull
+    public async Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull
     {
         if (keySelector == null)
             throw new ArgumentNullException(nameof(keySelector));
