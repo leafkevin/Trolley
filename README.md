@@ -211,7 +211,10 @@ var result = repository.From<Order>()
     .Where((a, b) => a.TotalAmount > 300)
     .Select((x, y) => new { Order = x, Buyer = y })
     .ToList();
-//
+//第一次查询SQL:
+//SELECT a.`SellerId`,a.`TotalAmount`,a.`Id`,a.`BuyerId`,a.`UpdatedAt`,a.`OrderNo`,a.`CreatedBy`,a.`UpdatedBy`,a.`IsEnabled`,a.`CreatedAt`,b.`CompanyId`,b.`Gender`,b.`Id`,b.`UpdatedAt`,b.`CreatedBy`,b.`Name`,b.`Age`,b.`UpdatedBy`,b.`IsEnabled`,b.`CreatedAt` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`TotalAmount`>300
+//第二次查询SQL:
+//SELECT `ProductId`,`OrderId`,`Amount`,`Id`,`Price`,`UpdatedAt`,`Quantity`,`CreatedBy`,`UpdatedBy`,`IsEnabled`,`CreatedAt` FROM `sys_order_detail` WHERE OrderId IN (1,2) AND `ProductId`=1
 ```
 ```csharp    
 //Include and ThenInclude
