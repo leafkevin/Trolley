@@ -126,6 +126,7 @@ public class MySqlUnitTest2
                 Id = 1,
                 ProductNo="PN-001",
                 Name = "波司登羽绒服",
+                Price =550,
                 BrandId = 1,
                 CategoryId = 1,
                 IsEnabled = true,
@@ -139,6 +140,7 @@ public class MySqlUnitTest2
                 Id = 2,
                 ProductNo="PN-002",
                 Name = "雪中飞羽绒裤",
+                Price =350,
                 BrandId = 2,
                 CategoryId = 2,
                 IsEnabled = true,
@@ -152,6 +154,7 @@ public class MySqlUnitTest2
                 Id = 3,
                 ProductNo="PN-003",
                 Name = "优衣库保暖内衣",
+                Price =180,
                 BrandId = 3,
                 CategoryId = 3,
                 IsEnabled = true,
@@ -310,7 +313,7 @@ public class MySqlUnitTest2
         using var repository = this.dbFactory.Create();
         var result = await repository.QueryAsync<Product>(f => f.ProductNo.Contains("PN-00"));
         Assert.True(result.Count >= 3);
-    }    
+    }
     [Fact]
     public async void QueryPage()
     {

@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -318,8 +319,9 @@ class Created<TEntity> : ICreated<TEntity>
             return result;
         }
     }
-    public string ToSql()
+    public string ToSql(out List<IDbDataParameter> dbParameters)
     {
+        dbParameters = null;
         bool isMulti = false;
         bool isDictionary = false;
         var entityType = typeof(TEntity);
@@ -355,12 +357,14 @@ class Created<TEntity> : ICreated<TEntity>
             {
                 commandInitializer.Invoke(command, this.connection.OrmProvider, sqlBuilder, index, entity);
                 if (index >= this.bulkCount)
-                    return sqlBuilder.ToString();
+                    break;
                 index++;
             }
             string sql = null;
             if (index > 0)
                 sql = sqlBuilder.ToString();
+            if (command.Parameters != null && command.Parameters.Count > 0)
+                dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
             command.Cancel();
             command.Dispose();
             return sql;
@@ -373,6 +377,8 @@ class Created<TEntity> : ICreated<TEntity>
             else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
             using var command = this.connection.CreateCommand();
             var sql = commandInitializer?.Invoke(command, this.connection.OrmProvider, this.parameters);
+            if (command.Parameters != null && command.Parameters.Count > 0)
+                dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
             command.Cancel();
             command.Dispose();
             return sql;
@@ -673,7 +679,8 @@ class CreateBase
         await command.DisposeAsync();
         return result;
     }
-    public string ToSql() => this.visitor.BuildSql(out _);
+    public string ToSql(out List<IDbDataParameter> dbParameters)
+        => this.visitor.BuildSql(out dbParameters);
 }
 class Create<TEntity, TSource> : CreateBase, ICreate<TEntity, TSource>
 {

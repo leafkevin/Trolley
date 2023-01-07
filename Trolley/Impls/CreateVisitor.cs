@@ -37,9 +37,7 @@ class CreateVisitor : SqlVisitor
                 tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
             }
             if (i > 1) builder.Append(',');
-            builder.Append(tableName);
-            if (this.isNeedAlias) 
-                builder.Append(" " + tableSegment.AliasName);
+            builder.Append(tableName + " " + tableSegment.AliasName);
         }
         if (!string.IsNullOrEmpty(this.whereSql))
             builder.Append(this.whereSql);
@@ -49,6 +47,17 @@ class CreateVisitor : SqlVisitor
     public CreateVisitor From(Expression fieldSelector)
     {
         var lambdaExpr = fieldSelector as LambdaExpression;
+        for (int i = 0; i < lambdaExpr.Parameters.Count; i++)
+        {
+            var parameterExpr = lambdaExpr.Parameters[i];
+            var tableSegment = new TableSegment
+            {
+                EntityType = parameterExpr.Type,
+                Mapper = this.dbFactory.GetEntityMap(parameterExpr.Type),
+                AliasName = $"{(char)(this.tableStartAs + i)}"
+            };
+            this.tables.Add(tableSegment);
+        }
         this.InitTableAlias(lambdaExpr);
         var sqlSegment = new SqlSegment { Expression = lambdaExpr.Body };
         sqlSegment = lambdaExpr.Body.NodeType switch
@@ -64,7 +73,7 @@ class CreateVisitor : SqlVisitor
     {
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
-        this.whereSql = this.VisitConditionExpr(lambdaExpr.Body);
+        this.whereSql = " WHERE " + this.VisitConditionExpr(lambdaExpr.Body);
         return this;
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
@@ -115,8 +124,8 @@ class CreateVisitor : SqlVisitor
                 tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
                 var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
                 var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
-                if (this.isNeedAlias)
-                    fieldName = tableSegment.AliasName + "." + fieldName;
+                //都需要带有别名
+                fieldName = tableSegment.AliasName + "." + fieldName;
 
                 if (sqlSegment.HasDeferred)
                 {
@@ -163,7 +172,7 @@ class CreateVisitor : SqlVisitor
                 var memberInfo = newExpr.Members[i];
                 if (!entityMapper.TryGetMemberMap(memberInfo.Name, out _))
                     continue;
-                this.AddMemberElement(i, sqlSegment.Next(newExpr.Arguments[i]), memberInfo, insertBuilder, fromBuilder);
+                this.AddMemberElement(i, new SqlSegment { Expression = newExpr.Arguments[i] }, memberInfo, insertBuilder, fromBuilder);
             }
             insertBuilder.Append(fromBuilder);
             return sqlSegment.Change(insertBuilder.ToString());
@@ -183,7 +192,7 @@ class CreateVisitor : SqlVisitor
             var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
             if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out _))
                 continue;
-            this.AddMemberElement(i, sqlSegment.Next(memberAssignment.Expression), memberAssignment.Member, insertBuilder, fromBuilder);
+            this.AddMemberElement(i, new SqlSegment { Expression = memberAssignment.Expression }, memberAssignment.Member, insertBuilder, fromBuilder);
         }
         insertBuilder.Append(fromBuilder);
         return sqlSegment.Change(insertBuilder.ToString());
@@ -191,16 +200,10 @@ class CreateVisitor : SqlVisitor
     private void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.tableAlias.Clear();
-        for (int i = 0; i < lambdaExpr.Parameters.Count - 1; i++)
+        for (int i = 0; i < lambdaExpr.Parameters.Count; i++)
         {
             var parameterExpr = lambdaExpr.Parameters[i];
-            var tableSegment = new TableSegment
-            {
-                EntityType = parameterExpr.Type,
-                AliasName = $"{(char)(this.tableStartAs + i)}"
-            };
-            this.tables.Add(tableSegment);
-            this.tableAlias.Add(parameterExpr.Name, tableSegment);
+            this.tableAlias.Add(parameterExpr.Name, this.tables[i + 1]);
         }
     }
     private void AddMemberElement(int index, SqlSegment sqlSegment, MemberInfo memberInfo, StringBuilder insertBuilder, StringBuilder fromBuilder)
@@ -226,7 +229,10 @@ class CreateVisitor : SqlVisitor
             {
                 fromBuilder.Append(parameterName);
                 if (!sqlSegment.IsParameter)
+                {
+                    this.dbParameters ??= new();
                     this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, sqlSegment.Value));
+                }
             }
         }
     }

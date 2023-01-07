@@ -54,8 +54,8 @@ public static class TrolleyExtensions
         => repository.Create<TEntity>().WithBy(parameter).Execute();
     public static async Task<int> CreateAsync<TEntity>(this IRepository repository, object parameter, CancellationToken cancellationToken = default)
         => await repository.Create<TEntity>().WithBy(parameter).ExecuteAsync(cancellationToken);
-    public static int Create<TEntity>(this IRepository repository, string sql, object parameter)
-        => repository.Create<TEntity>().RawSql(sql, parameter).Execute();
+    public static int Create<TEntity>(this IRepository repository, string rawSql, object parameter)
+        => repository.Create<TEntity>().RawSql(rawSql, parameter).Execute();
     public static async Task<int> CreateAsync<TEntity>(this IRepository repository, string sql, object parameter, CancellationToken cancellationToken = default)
         => await repository.Create<TEntity>().RawSql(sql, parameter).ExecuteAsync(cancellationToken);
     public static int Create<TEntity>(this IRepository repository, IEnumerable entities, int bulkCount = 500)

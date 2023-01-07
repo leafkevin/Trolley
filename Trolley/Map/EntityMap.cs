@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 
 namespace Trolley;
 
@@ -101,7 +100,7 @@ public class EntityMap
         if (this.memberMaps.Count > 0)
         {
             this.KeyMembers = new List<MemberMap>();
-            foreach (var memberMapper in this.memberMaps.Values)
+            foreach (var memberMapper in this.memberMappers)
             {
                 var fieldName = $"{this.FieldPrefix}{memberMapper.FieldName}";
                 if (memberMapper.IsKey)
@@ -141,7 +140,7 @@ public class EntityMap
             foreach (var memberInfo in memberInfos)
             {
                 var memberMapper = new MemberMap(mapper, mapper.FieldPrefix, memberInfo);
-                mapper.memberMaps.TryAdd(memberMapper.MemberName, memberMapper);
+                mapper.AddMemberMap(memberMapper.MemberName, memberMapper);
             }
         }
         return mapper;
