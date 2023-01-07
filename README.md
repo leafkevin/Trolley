@@ -144,7 +144,7 @@ public class CompanyInfo
 其次，创建IRepository对象。
 ------------------------------------------------------------
 所有的操作都是从创建IRepository对象开始的，IRepository可以开启事务，设置command超时时间、各种查询、命令的执行。 
-不同模型的操作都是采用IRepository泛型方法来完成的。 
+不同模型的操作都是采用IRepository泛型方法来完成的。   
 所有的查询操作，都支持ToSql方法，可以查看生成SQL语句，方便诊断。
 
 
