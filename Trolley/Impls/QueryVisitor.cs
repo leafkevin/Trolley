@@ -26,7 +26,6 @@ class QueryVisitor : SqlVisitor
     private int? limit = null;
     private bool isDistinct = false;
     private bool isUnion = false;
-    private bool hasIncludeMany = false;
     private List<TableSegment> includeSegments = null;
     private TableSegment lastIncludeSegment = null;
     private List<ReaderField> groupFields = null;
@@ -297,7 +296,7 @@ class QueryVisitor : SqlVisitor
     }
     public void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null)
     {
-        if (!isIncludeMany) isNeedAlias = true;
+        if (!isIncludeMany) this.isNeedAlias = true;
         var lambdaExpr = memberSelector as LambdaExpression;
         var memberExpr = lambdaExpr.Body as MemberExpression;
         this.InitTableAlias(lambdaExpr);
@@ -310,11 +309,11 @@ class QueryVisitor : SqlVisitor
             this.tableAlias.TryAdd(parameterName, includeSegment);
             includeSegment.Filter = this.Visit(new SqlSegment { Expression = filter }).ToString();
         }
-        if (isIncludeMany) this.hasIncludeMany = true;
         this.lastIncludeSegment = includeSegment;
     }
     public void ThenInclude(Expression memberSelector, bool isIncludeMany = false, Expression filter = null)
     {
+        if (!isIncludeMany) this.isNeedAlias = true;
         var lambdaExpr = memberSelector as LambdaExpression;
         var memberExpr = lambdaExpr.Body as MemberExpression;
         lambdaExpr.Body.GetParameters(out var parameters);
@@ -329,7 +328,6 @@ class QueryVisitor : SqlVisitor
             this.tableAlias.TryAdd(parameterName, includeSegment);
             includeSegment.Filter = this.Visit(new SqlSegment { Expression = filter }).ToString();
         }
-        if (isIncludeMany) this.hasIncludeMany = true;
         this.lastIncludeSegment = includeSegment;
     }
     public void Join(string joinType, Type newEntityType, Expression joinOn)
@@ -730,7 +728,7 @@ class QueryVisitor : SqlVisitor
                 readerField.TableSegment.Mapper ??= this.dbFactory.GetEntityMap(readerField.TableSegment.EntityType);
                 foreach (var memberMapper in readerField.TableSegment.Mapper.MemberMaps)
                 {
-                    if (memberMapper.IsNavigation || memberMapper.MemberType.IsEntityType())
+                    if (memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.MemberType.IsEntityType())
                         continue;
                     if (builder.Length > 0)
                         builder.Append(',');

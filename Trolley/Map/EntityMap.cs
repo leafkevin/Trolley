@@ -3,12 +3,14 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Trolley;
 
 public class EntityMap
 {
     private readonly ConcurrentDictionary<string, MemberMap> memberMaps = new();
+    private List<MemberMap> memberMappers = new();
 
     public EntityMap(Type entityType) => this.EntityType = entityType;
 
@@ -20,7 +22,7 @@ public class EntityMap
     public bool IsAutoIncrement { get; set; }
 
     public List<MemberMap> KeyMembers { get; set; }
-    public ICollection<MemberMap> MemberMaps => this.memberMaps.Values;
+    public List<MemberMap> MemberMaps => this.memberMappers;
     public string AutoIncrementField { get; set; }
 
     public void SetKeys(params MemberInfo[] memberInfos)
@@ -31,7 +33,7 @@ public class EntityMap
             if (!this.memberMaps.TryGetValue(memberInfo.Name, out var memberMap))
             {
                 memberMap = new MemberMap(this, this.FieldPrefix, memberInfo);
-                this.memberMaps.TryAdd(memberInfo.Name, memberMap);
+                this.AddMemberMap(memberInfo.Name, memberMap);
             }
             this.KeyMembers.Add(memberMap);
             memberMap.IsKey = true;
@@ -40,7 +42,10 @@ public class EntityMap
     public void SetAutoIncrement(MemberInfo memberInfo)
     {
         if (!this.memberMaps.TryGetValue(memberInfo.Name, out var memberMap))
-            this.memberMaps.TryAdd(memberInfo.Name, memberMap = new MemberMap(this, this.FieldPrefix, memberInfo));
+        {
+            memberMap = new MemberMap(this, this.FieldPrefix, memberInfo);
+            this.AddMemberMap(memberInfo.Name, memberMap);
+        }
         memberMap.IsAutoIncrement = true;
         this.IsAutoIncrement = true;
     }
@@ -64,7 +69,10 @@ public class EntityMap
     }
 
     public void AddMemberMap(string memberName, MemberMap mapper)
-        => this.memberMaps.TryAdd(memberName, mapper);
+    {
+        if (this.memberMaps.TryAdd(memberName, mapper))
+            this.memberMappers.Add(mapper);
+    }
     public EntityMap Build()
     {
         if (string.IsNullOrEmpty(this.TableName))
@@ -175,7 +183,7 @@ public class EntityMap
             {
                 var mapToMemberMapper = mapTo.GetMemberMap(memberInfo.Name);
                 var memberMapper = mapToMemberMapper.Clone(mapper, mapper.FieldPrefix, memberInfo);
-                mapper.memberMaps.TryAdd(memberMapper.MemberName, memberMapper);
+                mapper.AddMemberMap(memberMapper.MemberName, memberMapper);
             }
         }
         return mapper;

@@ -310,14 +310,7 @@ public class MySqlUnitTest2
         using var repository = this.dbFactory.Create();
         var result = await repository.QueryAsync<Product>(f => f.ProductNo.Contains("PN-00"));
         Assert.True(result.Count >= 3);
-    }
-    [Fact]
-    public async void QueryDictionary()
-    {
-        using var repository = this.dbFactory.Create();
-        var result = await repository.QueryDictionaryAsync<Product, int, string>(f => f.ProductNo.Contains("PN-00"), f => f.Id, f => f.Name);
-        Assert.True(result.Count >= 3);
-    }
+    }    
     [Fact]
     public async void QueryPage()
     {
@@ -327,6 +320,13 @@ public class MySqlUnitTest2
         Assert.NotEmpty(result.Items);
         Assert.True(result.RecordsTotal == 2);
         Assert.True(result.Items.Count == 1);
+    }
+    [Fact]
+    public async void QueryDictionary()
+    {
+        using var repository = this.dbFactory.Create();
+        var result = await repository.QueryDictionaryAsync<Product, int, string>(f => f.ProductNo.Contains("PN-00"), f => f.Id, f => f.Name);
+        Assert.True(result.Count >= 3);
     }
     [Fact]
     public async void FromQuery_Include()
@@ -534,7 +534,7 @@ public class MySqlUnitTest2
         var sql = repository.From<User>()
             .Where(f => Sql.In(f.Id, t => t.From<Order, OrderDetail>('a').InnerJoin((a, b) => a.Id == b.OrderId && b.ProductId == 1).Select((x, y) => x.BuyerId)))
             .ToSql(out _);
-        Assert.True(sql == "SELECT `Gender`,`Name`,`Id`,`UpdatedBy`,`CreatedAt`,`IsEnabled`,`Age`,`CreatedBy`,`UpdatedAt`,`CompanyId` FROM `sys_user` WHERE `Id` IN (SELECT a.`BuyerId` FROM `sys_order` a)");
+        Assert.True(sql == "SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id` IN (SELECT a.`BuyerId` FROM `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` AND b.`ProductId`=1)");
     }
     [Fact]
     public void FromQuery_In_Exists1()
@@ -545,7 +545,7 @@ public class MySqlUnitTest2
             .Where(f => Sql.In(f.Id, t => t.From<Order, OrderDetail>('b').InnerJoin((a, b) => a.Id == b.OrderId && b.ProductId == 1).Select((x, y) => x.BuyerId)))
             .And(isMale.HasValue, f => Sql.Exists<Order, Company>((x, y) => f.Id == x.SellerId && f.CompanyId == y.Id))
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`UpdatedBy`,a.`Age`,a.`UpdatedAt`,a.`Id`,a.`CompanyId`,a.`Gender`,a.`CreatedBy`,a.`IsEnabled`,a.`Name`,a.`CreatedAt` FROM `sys_user` a WHERE `Id` IN (SELECT b.`BuyerId` FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` AND c.`ProductId`=1) AND EXISTS(SELECT * FROM `sys_order` x,`sys_company` y WHERE a.`Id`=x.`SellerId` AND a.`CompanyId`=y.`Id`)");
+        Assert.True(sql == "SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_user` a WHERE `Id` IN (SELECT b.`BuyerId` FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` AND c.`ProductId`=1) AND EXISTS(SELECT * FROM `sys_order` x,`sys_company` y WHERE a.`Id`=x.`SellerId` AND a.`CompanyId`=y.`Id`)");
     }
     [Fact]
     public void FromQuery_In_Exists_Group_CountDistinct_Count()
