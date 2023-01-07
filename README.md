@@ -155,15 +155,17 @@ using var repository = this.dbFactory.Create();
 //QueryFirst
 var result = repository.QueryFirst<User>(f => f.Id == 1);
 var result = await repository.QueryFirstAsync<User>(f => f.Name == "leafkevin");
-//
+//SELECT `UpdatedAt`,`CreatedBy`,`CreatedAt`,`Id`,`Age`,`UpdatedBy`,`Name`,`CompanyId`,`IsEnabled`,`Gender` FROM `sys_user` WHERE `Id`=1
 
 //Query
 var result = repository.Query<Product>(f => f.ProductNo.Contains("PN-00"));
 var result = await repository.QueryAsync<Product>(f => f.ProductNo.Contains("PN-00"));
+//SELECT `CompanyId`,`IsEnabled`,`Id`,`Name`,`CreatedBy`,`CategoryId`,`UpdatedBy`,`UpdatedAt`,`BrandId`,`ProductNo`,`CreatedAt` FROM `sys_product` WHERE `ProductNo` LIKE '%PN-00%'
 
 //Page 分页
 var result = repository.QueryPage<OrderDetail>(2, 10, f => f.ProductId == 1);
 var result = await repository.QueryPageAsync<OrderDetail>(2, 10, f => f.ProductId == 1);
+//SELECT COUNT(*) FROM `sys_order_detail` WHERE `ProductId`=1;SELECT `Id`,`IsEnabled`,`CreatedBy`,`UpdatedAt`,`CreatedAt`,`Price`,`Quantity`,`Amount`,`OrderId`,`UpdatedBy`,`ProductId` FROM `sys_order_detail`  WHERE `ProductId`=1 LIMIT 10 OFFSET 10
 
 //From，这种支持各种复杂操作
 var result = await repository.From<Product>()
@@ -184,7 +186,7 @@ var result = repository.From<Order>()
     .Select((x, y) => new { Order = x, Buyer = y })
     .ToList();
 
-//IncludeMany and filter
+//Join、IncludeMany and Filter
 var result = repository.From<Order>()
     .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
     .IncludeMany((x, y) => x.Details, f => f.ProductId == 1)
@@ -201,7 +203,7 @@ var result = await repository.From<Order>()
     .Select((x, y) => new { Order = x, Seller = y })
     .ToListAsync();
 
-//Include and Paging
+//Page and Include
 var result = repository.From<OrderDetail>()
     .Include(f => f.Product)
     .Where(f => f.ProductId == 1)
@@ -223,6 +225,21 @@ var sql = repository.From<User>()
     .ToSql(out _);
 //生成的SQL如下：
 //SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME),COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) ORDER BY a.`Id`,b.`Id`
+
+//Group 使用Grouping
+var result = repository.From<User>()
+    .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+    .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
+    .OrderBy((x, a, b) => new { UserId = a.Id, OrderId = b.Id })
+    .Select((x, a, b) => new
+    {
+        x.Grouping,
+        OrderCount = x.Count(b.Id),
+        TotalAmount = x.Sum(b.TotalAmount)
+    })
+    .ToList();
+//SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME),COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) ORDER BY a.`Id`,b.`Id`
+
 ```
 
 支持跨库查询，只要指定对应的dbKey就可以了
