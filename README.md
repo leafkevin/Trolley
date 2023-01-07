@@ -356,8 +356,39 @@ var sql = repository.From<User>()
 //这里有个不够优雅的地方，第一个In条件的时候，是单表查询没有别名，到后面Exists语句必须带上别名，后面生成的所有SQL都带上了别名。
 ```
 
+```csharp
+//聚合查询
+使用SelectAggregate可以聚合查询，也可以使用Select+Sql静态类
+var sql = repository.From<User>()
+    .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+    .IncludeMany((a, b) => a.Orders)
+    .OrderBy((a, b) => new { UserId = a.Id, OrderId = b.Id })
+    .SelectAggregate((x, a, b) => new
+    {
+	UserId = a.Id,
+	OrderId = b.Id,
+	OrderCount = x.Count(b.Id),
+	TotalAmount = x.Sum(b.TotalAmount)
+    })
+    .ToSql(out _);
+//SELECT a.`Id` AS UserId,b.`Id` AS OrderId,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId`ORDER BY a.`Id`,b.`Id`
 
-
+//使用Sql静态类
+var sql = repository.From<User>()
+    .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+    .IncludeMany((a, b) => a.Orders)
+    .OrderBy((a, b) => new { UserId = a.Id, OrderId = b.Id })
+    .Select((a, b) => new
+    {
+	UserId = a.Id,
+	OrderId = b.Id,
+	OrderCount = Sql.Count(b.Id),
+	TotalAmount = Sql.Sum(b.TotalAmount)
+    })
+    .ToSql(out _);
+//SELECT a.`Id` AS UserId,b.`Id` AS OrderId,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId`ORDER BY a.`Id`,b.`Id`
+//两者生成的SQL完全一样的。
+```
 
 
 支持跨库查询，只要指定对应的dbKey就可以了
