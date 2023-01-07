@@ -174,11 +174,11 @@ From支持各种复杂查询
 
 ```csharp
 using var repository = this.dbFactory.Create();
-//From，这种支持各种复杂操作
+//Simple
 var result = await repository.From<Product>()
     .Where(f => f.ProductNo.Contains("PN-00"))
     .ToListAsync();
-//
+//SELECT `CompanyId`,`IsEnabled`,`Id`,`Name`,`CreatedBy`,`CategoryId`,`UpdatedBy`,`UpdatedAt`,`BrandId`,`ProductNo`,`CreatedAt` FROM `sys_product` WHERE `ProductNo` LIKE '%PN-00%'
 ```
 ```csharp
 //One to One  Include
@@ -186,7 +186,8 @@ var result = await repository.From<Product>()
             .Include(f => f.Brand)
             .Where(f => f.ProductNo.Contains("PN-00"))
             .ToListAsync();	    
-//
+//SELECT a.`CategoryId`,a.`UpdatedAt`,a.`ProductNo`,a.`CreatedAt`,a.`BrandId`,a.`IsEnabled`,a.`Name`,a.`Id`,a.`UpdatedBy`,a.`CompanyId`,a.`CreatedBy`,b.`Name`,b.`Id`,b.`BrandNo` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
+//一对一的Include查询，Include表数据和主表一起查出来。
 ```
 ```csharp    
 //InnerJoin and IncludeMany    
@@ -196,7 +197,11 @@ var result = repository.From<Order>()
     .Where((a, b) => a.TotalAmount > 300)
     .Select((x, y) => new { Order = x, Buyer = y })
     .ToList();
-//
+//SELECT a.`SellerId`,a.`UpdatedAt`,a.`UpdatedBy`,a.`Id`,a.`IsEnabled`,a.`OrderNo`,a.`BuyerId`,a.`CreatedBy`,a.`TotalAmount`,a.`CreatedAt`,b.`Gender`,b.`UpdatedAt`,b.`UpdatedBy`,b.`Id`,b.`IsEnabled`,b.`CreatedBy`,b.`CompanyId`,b.`Name`,b.`CreatedAt`,b.`Age` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`TotalAmount`>300
+//一对多的IncludeMany查询，分2次查询，第一次如上SQL，把主表数据和其他Join、Include表数据查询出来，第二次把所有IncludeMany的数据都查询出来，再设置到对应主表模型中。
+//第二次查询SQL如下：
+//SELECT `Amount`,`Price`,`ProductId`,`Quantity`,`UpdatedAt`,`UpdatedBy`,`Id`,`IsEnabled`,`OrderId`,`CreatedBy`,`CreatedAt` FROM `sys_order_detail` WHERE OrderId IN (1,2)
+//第二次查询，会根据第一次查询主表主键数据和Filter条件，再去查询IncludeMany表数据。
 ```
 ```csharp
 //Join、IncludeMany and Filter
