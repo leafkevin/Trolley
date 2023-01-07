@@ -203,10 +203,10 @@ var result = repository.From<Order>()
     .Where((a, b) => a.TotalAmount > 300)
     .Select((x, y) => new { Order = x, Buyer = y })
     .ToList();
-//SELECT a.`SellerId`,a.`UpdatedAt`,a.`UpdatedBy`,a.`Id`,a.`IsEnabled`,a.`OrderNo`,a.`BuyerId`,a.`CreatedBy`,a.`TotalAmount`,a.`CreatedAt`,b.`Gender`,b.`UpdatedAt`,b.`UpdatedBy`,b.`Id`,b.`IsEnabled`,b.`CreatedBy`,b.`CompanyId`,b.`Name`,b.`CreatedAt`,b.`Age` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`TotalAmount`>300
+//SELECT a.`Id`,a.`OrderNo`,a.`TotalAmount`,a.`BuyerId`,a.`SellerId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`TotalAmount`>300
 //一对多的IncludeMany查询，分2次查询，第一次如上SQL，把主表数据和其他Join、Include表数据查询出来，第二次把所有IncludeMany的数据都查询出来，再设置到对应主表模型中。
 //第二次查询SQL如下：
-//SELECT `Amount`,`Price`,`ProductId`,`Quantity`,`UpdatedAt`,`UpdatedBy`,`Id`,`IsEnabled`,`OrderId`,`CreatedBy`,`CreatedAt` FROM `sys_order_detail` WHERE OrderId IN (1,2)
+//SELECT `Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_order_detail` WHERE OrderId IN (1,2)
 //第二次查询，会根据第一次查询主表主键数据和Filter条件，再去查询IncludeMany表数据。
 ```
 
@@ -219,9 +219,9 @@ var result = repository.From<Order>()
     .Select((x, y) => new { Order = x, Buyer = y })
     .ToList();
 //第一次查询SQL:
-//SELECT a.`SellerId`,a.`TotalAmount`,a.`Id`,a.`BuyerId`,a.`UpdatedAt`,a.`OrderNo`,a.`CreatedBy`,a.`UpdatedBy`,a.`IsEnabled`,a.`CreatedAt`,b.`CompanyId`,b.`Gender`,b.`Id`,b.`UpdatedAt`,b.`CreatedBy`,b.`Name`,b.`Age`,b.`UpdatedBy`,b.`IsEnabled`,b.`CreatedAt` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`TotalAmount`>300
+//SELECT a.`Id`,a.`OrderNo`,a.`TotalAmount`,a.`BuyerId`,a.`SellerId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`TotalAmount`>300
 //第二次查询SQL:
-//SELECT `ProductId`,`OrderId`,`Amount`,`Id`,`Price`,`UpdatedAt`,`Quantity`,`CreatedBy`,`UpdatedBy`,`IsEnabled`,`CreatedAt` FROM `sys_order_detail` WHERE OrderId IN (1,2) AND `ProductId`=1
+//SELECT `Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_order_detail` WHERE OrderId IN (1,2) AND `ProductId`=1
 ```
 
 ```csharp    
@@ -233,7 +233,7 @@ var result = await repository.From<Order>()
     .Where((a, b) => a.TotalAmount > 300)
     .Select((x, y) => new { Order = x, Seller = y })
     .ToListAsync();
-//SELECT a.`IsEnabled`,a.`UpdatedAt`,a.`UpdatedBy`,a.`SellerId`,a.`BuyerId`,a.`TotalAmount`,a.`OrderNo`,a.`Id`,a.`CreatedAt`,a.`CreatedBy`,c.`IsEnabled`,c.`UpdatedAt`,c.`Age`,c.`UpdatedBy`,c.`Name`,c.`CompanyId`,c.`Id`,c.`Gender`,c.`CreatedAt`,c.`CreatedBy`,d.`Name`,d.`Id`,b.`IsEnabled`,b.`UpdatedAt`,b.`Age`,b.`UpdatedBy`,b.`Name`,b.`CompanyId`,b.`Id`,b.`Gender`,b.`CreatedAt`,b.`CreatedBy` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`SellerId`=b.`Id` LEFT JOIN `sys_user` c ON a.`BuyerId`=c.`Id` LEFT JOIN `sys_company` d ON c.`CompanyId`=d.`Id` WHERE a.`TotalAmount`>300
+//SELECT a.`Id`,a.`OrderNo`,a.`TotalAmount`,a.`BuyerId`,a.`SellerId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,c.`Id`,c.`Name`,c.`Gender`,c.`Age`,c.`CompanyId`,c.`IsEnabled`,c.`CreatedBy`,c.`CreatedAt`,c.`UpdatedBy`,c.`UpdatedAt`,d.`Id`,d.`Name`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`SellerId`=b.`Id` LEFT JOIN `sys_user` c ON a.`BuyerId`=c.`Id` LEFT JOIN `sys_company` d ON c.`CompanyId`=d.`Id` WHERE a.`TotalAmount`>300
 ```
 
 ```csharp
@@ -242,7 +242,7 @@ var result = repository.From<OrderDetail>()
     .Include(f => f.Product)
     .Where(f => f.ProductId == 1)
     .ToPageList(2, 10);
-//SELECT COUNT(*) FROM `sys_order_detail` a LEFT JOIN `sys_product` b ON a.`ProductId`=b.`Id` WHERE a.`ProductId`=1;SELECT a.`ProductId`,a.`Id`,a.`Price`,a.`UpdatedAt`,a.`IsEnabled`,a.`CreatedBy`,a.`UpdatedBy`,a.`Amount`,a.`Quantity`,a.`CreatedAt`,a.`OrderId`,b.`CompanyId`,b.`Id`,b.`UpdatedAt`,b.`CategoryId`,b.`IsEnabled`,b.`CreatedBy`,b.`UpdatedBy`,b.`BrandId`,b.`Name`,b.`CreatedAt`,b.`ProductNo` FROM `sys_order_detail` a LEFT JOIN `sys_product` b ON a.`ProductId`=b.`Id`  WHERE a.`ProductId`=1 LIMIT 10 OFFSET 10
+//SELECT COUNT(*) FROM `sys_order_detail` a LEFT JOIN `sys_product` b ON a.`ProductId`=b.`Id` WHERE a.`ProductId`=1;SELECT a.`Id`,a.`OrderId`,a.`ProductId`,a.`Price`,a.`Quantity`,a.`Amount`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`ProductNo`,b.`Name`,b.`BrandId`,b.`CategoryId`,b.`CompanyId`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_order_detail` a LEFT JOIN `sys_product` b ON a.`ProductId`=b.`Id`  WHERE a.`ProductId`=1 LIMIT 10 OFFSET 10
 ```
 
 ```csharp
@@ -345,7 +345,7 @@ var sql = repository.From<User>()
     .Include(f => f.Company)
     .Where(f => Sql.In(f.Id, t => t.From<Order>().Select(p => p.BuyerId)))
     .ToSql(out _);
-//SELECT a.`Gender`,a.`CreatedAt`,a.`CreatedBy`,a.`Name`,a.`UpdatedBy`,a.`Id`,a.`IsEnabled`,a.`Age`,a.`UpdatedAt`,a.`CompanyId`,b.`Name`,b.`Id` FROM `sys_user` a LEFT JOIN `sys_company` b ON a.`CompanyId`=b.`Id` WHERE a.`Id` IN (SELECT `BuyerId` FROM `sys_order`)
+//SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id` IN (SELECT a.`BuyerId` FROM `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` AND b.`ProductId`=1)
 
 //In 从Order,OrderDetail中关联查询条件中使用
 bool? isMale = true;
@@ -355,7 +355,7 @@ var sql = repository.From<User>()
     .GroupBy(f => new { f.Gender, f.Age })
     .Select((t, a) => new { t.Grouping, CompanyCount = t.CountDistinct(a.CompanyId), UserCount = t.Count(a.Id) })
     .ToSql(out _);
-//SELECT a.`Gender`,a.`Age`,COUNT(DISTINCT a.`CompanyId`) AS CompanyCount,COUNT(a.`Id`) AS UserCount FROM `sys_user` a WHERE `Id` IN (SELECT c.`BuyerId` FROM `sys_order_detail` b INNER JOIN `sys_order` c ON b.`OrderId`=c.`Id` AND b.`ProductId`=1) AND EXISTS(SELECT * FROM `sys_company` x,`sys_order` y WHERE a.`Id`=y.`SellerId` AND a.`CompanyId`=x.`Id`) GROUP BY a.`Gender`,a.`Age`
+//SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_user` a WHERE `Id` IN (SELECT b.`BuyerId` FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` AND c.`ProductId`=1) AND EXISTS(SELECT * FROM `sys_order` x,`sys_company` y WHERE a.`Id`=x.`SellerId` AND a.`CompanyId`=y.`Id`)
 //这里又使用And，带有条件
 //这里有个不够优雅的地方，第一个In条件的时候，是单表查询没有别名，到后面Exists语句必须带上别名，后面生成的所有SQL都带上了别名。
 ```
