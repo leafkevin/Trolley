@@ -148,7 +148,9 @@ public class CompanyInfo
 所有的查询操作，都支持ToSql方法，可以查看生成SQL语句，方便诊断。
 
 
+
 查询操作
+查询类语句，只有String类型做了参数化，其他的数据类型都没有参数化。  
 
 ```csharp
 using var repository = this.dbFactory.Create();
