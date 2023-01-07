@@ -144,9 +144,8 @@ public class CompanyInfo
 其次，创建IRepository对象。
 ------------------------------------------------------------
 所有的操作都是从创建IRepository对象开始的，IRepository可以开启事务，设置command超时时间、各种查询、命令的执行。 
-不同模型的操作都是采用IRepository泛型方法来完成的。   
+不同模型的操作都是采用IRepository泛型方法来完成的。  
 所有的查询操作，都支持ToSql方法，可以查看生成SQL语句，方便诊断。
-
 
 
 查询操作
@@ -206,6 +205,7 @@ var result = repository.From<Order>()
 //SELECT `Amount`,`Price`,`ProductId`,`Quantity`,`UpdatedAt`,`UpdatedBy`,`Id`,`IsEnabled`,`OrderId`,`CreatedBy`,`CreatedAt` FROM `sys_order_detail` WHERE OrderId IN (1,2)
 //第二次查询，会根据第一次查询主表主键数据和Filter条件，再去查询IncludeMany表数据。
 ```
+
 ```csharp
 //Join、IncludeMany and Filter
 var result = repository.From<Order>()
@@ -219,6 +219,7 @@ var result = repository.From<Order>()
 //第二次查询SQL:
 //SELECT `ProductId`,`OrderId`,`Amount`,`Id`,`Price`,`UpdatedAt`,`Quantity`,`CreatedBy`,`UpdatedBy`,`IsEnabled`,`CreatedAt` FROM `sys_order_detail` WHERE OrderId IN (1,2) AND `ProductId`=1
 ```
+
 ```csharp    
 //Include and ThenInclude
 var result = await repository.From<Order>()
@@ -230,6 +231,7 @@ var result = await repository.From<Order>()
     .ToListAsync();
 //SELECT a.`IsEnabled`,a.`UpdatedAt`,a.`UpdatedBy`,a.`SellerId`,a.`BuyerId`,a.`TotalAmount`,a.`OrderNo`,a.`Id`,a.`CreatedAt`,a.`CreatedBy`,c.`IsEnabled`,c.`UpdatedAt`,c.`Age`,c.`UpdatedBy`,c.`Name`,c.`CompanyId`,c.`Id`,c.`Gender`,c.`CreatedAt`,c.`CreatedBy`,d.`Name`,d.`Id`,b.`IsEnabled`,b.`UpdatedAt`,b.`Age`,b.`UpdatedBy`,b.`Name`,b.`CompanyId`,b.`Id`,b.`Gender`,b.`CreatedAt`,b.`CreatedBy` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`SellerId`=b.`Id` LEFT JOIN `sys_user` c ON a.`BuyerId`=c.`Id` LEFT JOIN `sys_company` d ON c.`CompanyId`=d.`Id` WHERE a.`TotalAmount`>300
 ```
+
 ```csharp
 //Page and Include
 var result = repository.From<OrderDetail>()
@@ -238,6 +240,7 @@ var result = repository.From<OrderDetail>()
     .ToPageList(2, 10);
 //SELECT COUNT(*) FROM `sys_order_detail` a LEFT JOIN `sys_product` b ON a.`ProductId`=b.`Id` WHERE a.`ProductId`=1;SELECT a.`ProductId`,a.`Id`,a.`Price`,a.`UpdatedAt`,a.`IsEnabled`,a.`CreatedBy`,a.`UpdatedBy`,a.`Amount`,a.`Quantity`,a.`CreatedAt`,a.`OrderId`,b.`CompanyId`,b.`Id`,b.`UpdatedAt`,b.`CategoryId`,b.`IsEnabled`,b.`CreatedBy`,b.`UpdatedBy`,b.`BrandId`,b.`Name`,b.`CreatedAt`,b.`ProductNo` FROM `sys_order_detail` a LEFT JOIN `sys_product` b ON a.`ProductId`=b.`Id`  WHERE a.`ProductId`=1 LIMIT 10 OFFSET 10
 ```
+
 ```csharp
 //虽然有Include，但是没有查询对应模型，会忽略Include
 var sql = repository.From<User>()
@@ -255,10 +258,11 @@ var sql = repository.From<User>()
     .ToSql(out _);
 //生成的SQL如下：
 //SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME),COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) ORDER BY a.`Id`,b.`Id`
-//
 ```
+
 ```csharp
-//Group 使用Grouping
+//Group 使用IGroupingAggregate类型的Grouping属性，也可以不使用
+//IGroupingAggregate类型的Grouping属性，是group by字段选择后的对象，这里有3个字段：Id,Name,Date
 var result = repository.From<User>()
     .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
     .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
@@ -271,10 +275,28 @@ var result = repository.From<User>()
     })
     .ToList();
 //SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME),COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) ORDER BY a.`Id`,b.`Id`
-//
 ```
+
 ```csharp
-//
+//Group 打开Grouping，使用里面的字段
+//IGroupingAggregate类型的Grouping属性，是group by字段选择后的对象，这里有3个字段：Id,Name,Date
+var result = repository.From<User>()
+   .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+   .IncludeMany((a, b) => a.Orders)
+   .ThenIncludeMany(f => f.Details)
+   .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
+   .OrderBy((x, a, b) => new { UserId = a.Id, OrderId = b.Id })
+   .Select((x, a, b) => new
+   {
+       x.Grouping.Id,
+       x.Grouping.Name,
+       x.Grouping.Date,
+       OrderCount = x.Count(b.Id),
+       TotalAmount = x.Sum(b.TotalAmount)
+   })
+   .ToList();
+ //SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) ORDER BY a.`Id`,b.`Id`
+ //打开Grouping属性，和不打开生成的SQL基本差不多，唯一不同的地方是：打开时有AS别名，如上面的Date字段，Id,Name与原字段相同就不用AS了
 ```
 
 支持跨库查询，只要指定对应的dbKey就可以了
