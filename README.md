@@ -397,7 +397,8 @@ var sql = repository.From<User>()
 
 支持跨库查询，只要指定对应的dbKey就可以了
 ------------------------------------------------------------
-
+使用Trolley.AspNetCore扩展后，可以使用json文件来配置数据库连接串信息  
+如果有多租户，代入对应的租户ID，就使用对应的数据库连接串了  
 appsetting.json中的数据库配置，如下
 ```json
 {
@@ -424,93 +425,280 @@ appsetting.json中的数据库配置，如下
 }
 ```
 ```csharp
-var psqlConnString = "Server=192.168.1.15;Port=5432;Database=fengling;User Id=postgres;Password=123456;Pooling=true;";
-using var repository = this.dbFactory.Create("mysql");
-
-
-//默认使用的连接串
-OrmProviderFactory.RegisterProvider(sqlConnString, new SqlServerProvider(), true);
-OrmProviderFactory.RegisterProvider(psqlConnString, new PostgreSqlProvider());
-
-var repository = new Repository(sqlConnString);
-var user = repository.Query<User>("select Age = @Age, Id = @UniqueId", new User { Age = (int?)null, UniqueId = 1 });
-user = await repository.QueryAsync<User>("select Age = @Age, Id = @UniqueId", new User { Age = (int?)null, UniqueId = 1 });
-
-var repository = new Repository(psqlConnString);
-var user = repository.Query<User>("select Age = @Age, Id = @UniqueId", new User { Age = (int?)null, UniqueId = 1 });
-user = await repository.QueryAsync<User>("select Age = @Age, Id = @UniqueId", new User { Age = (int?)null, UniqueId = 1 });
-
-也可以使用默认的字符串构造仓储对象
-var repository = new Repository();
-var repository = new Repository<User>();
-上面两种方式都可以构造仓储对象
-```
-
-也可以使用强类型的Repository仓储对象，操作更便捷。
-------------------------------------------------------------
-
-```csharp
-var repository = new Repository<User>();
-
-var user = repository.Query("select Age = @Age, Id = @UniqueId", new User { Age = (int?)null, UniqueId = 1 });
-user = repository.QueryAsync("select Age = @Age, Id = @UniqueId", new User { Age = (int?)null, UniqueId = 1 });
-```
-
-大部分SQL操作都支持动态SQL
-------------------------------------------------------------
-多常见查询和更新，删除命令操作
-查询，可以动态拼接SELECT语句和WHERE语句
-更新，可以动态拼接UPDATE语句和WHERE语句
-删除，可以动态拼接WHERE语句
-
-```csharp
-var repository = new Repository<User>();
-DateTime? beginDate = DateTime.Parse("2017-01-01");
-var user = new User { UniqueId = 1, UserName = "Kevin", Sex = Sex.Male };
-
-var builder = new SqlBuilder();
-builder.RawSql("UPDATE Coin_User SET UserName=@UserName", user.UserName)
-        .AddField(user.Sex.HasValue, "Sex=@Sex", user.Sex)
-        .RawSql("WHERE Id=@UniqueId", user.UniqueId)
-        .AndWhere(user.UpdatedAt.HasValue, "UpdatedAt>@UpdatedAt", user.UpdatedAt);
-count = await repository.UpdateAsync(builder.BuildSql(), user);
-
-//全量更新
-repository.Update(user);
-await repository.UpdateAsync(user);
-
-//更新
-repository.Update(builder.BuildSql(), user);
-await repository.UpdateAsync(builder.BuildSql(), user);
-
-//或者
-var count = repository.Update(f => 
-			f.RawSql("UPDATE Coin_User SET UserName=@UserName", user.UserName)
-			.AddField(user.Sex.HasValue, "Sex=@Sex", user.Sex)
-			.RawSql("WHERE Id=@UniqueId", user.UniqueId)
-			.AndWhere(user.UpdatedAt.HasValue, "UpdatedAt>@UpdatedAt", user.UpdatedAt));
-
-//查询
-var list = repository.Query(f =>
-			f.RawSql("SELECT * FROM Coin_User")
-			.AndWhere(user.Sex.HasValue, "Sex=@Sex", user.Sex)
-			.AndWhere(user.UpdatedAt.HasValue, "UpdatedAt>@UpdatedAt", user.UpdatedAt)
-			.RawSql("ORDER BY UpdatedAt DESC"));
-
-//查询字典
-var dictRepository = new Repository();
-var dict = dictRepository.QueryDictionary<int, string>("SELECT Id Key,UserName Value FROM Coin_User");
+//按照上面的数据库配置文件
+using var repository = this.dbFactory.Create("fengling", 1);
+//使用fengling dbKey下租户ID:1 的PostgreSql数据库
+using var repository = this.dbFactory.Create("fengling");
+//使用的默认fengling dbkey下默认数据库
 ```
 
 
-所有SQL操作都支持异步
+各种操作命令
 ------------------------------------------------------------
 
 ```csharp
-var repository = new Repository<User>();
-DateTime? beginDate = DateTime.Parse("2017-01-01");
-var user = new User { UniqueId = 1, UserName = "Kevin", Sex = Sex.Male };
+using var repository = this.dbFactory.Create();
+//扩展简化操作
+var result = await repository.CreateAsync<User>(new
+{
+    Id = 1,
+    Name = "leafkevin",
+    Age = 25,
+    CompanyId = 1,
+    Gender = Gender.Male,
+    IsEnabled = true,
+    CreatedAt = DateTime.Now,
+    CreatedBy = 1,
+    UpdatedAt = DateTime.Now,
+    UpdatedBy = 1
+});
+//INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)
+```
 
+```csharp
+//使用字典参数,自增长列
+var result = repository.Create<Company>(new Dictionary<string, object>()
+{
+	//{ "Id", 1}, //可以带主键，插入的值就是代入的值，不代值，就是数据库自增长的值
+	{ "Name","微软11"},
+	{ "IsEnabled", true},
+	{ "CreatedAt", DateTime.Now},
+	{ "CreatedBy", 1},
+	{ "UpdatedAt", DateTime.Now},
+	{ "UpdatedBy", 1}
+});
+//INSERT INTO `sys_company` (`Id`,`Name`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING Id
+//自增长列会返回插入的主键列值，使用RETURNING语句返回值，这样可以返回代入的主键值
+```
+
+```csharp
+//批量新增
+var count = repository.Create<Product>(new[]
+{
+    new
+    {
+	Id = 1,
+	ProductNo="PN-001",
+	Name = "波司登羽绒服",
+	BrandId = 1,
+	CategoryId = 1,
+	IsEnabled = true,
+	CreatedAt = DateTime.Now,
+	CreatedBy = 1,
+	UpdatedAt = DateTime.Now,
+	UpdatedBy = 1
+    },
+    new
+    {
+	Id = 2,
+	ProductNo="PN-002",
+	Name = "雪中飞羽绒裤",
+	BrandId = 2,
+	CategoryId = 2,
+	IsEnabled = true,
+	CreatedAt = DateTime.Now,
+	CreatedBy = 1,
+	UpdatedAt = DateTime.Now,
+	UpdatedBy = 1
+    },
+    new
+    {
+	Id = 3,
+	ProductNo="PN-003",
+	Name = "优衣库保暖内衣",
+	BrandId = 3,
+	CategoryId = 3,
+	IsEnabled = true,
+	CreatedAt = DateTime.Now,
+	CreatedBy = 1,
+	UpdatedAt = DateTime.Now,
+	UpdatedBy = 1
+    }
+});
+//INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)
+
+```
+
+```csharp
+//使用Create<User>() WithBy
+var count = await repository.Create<User>()
+    .WithBy(new
+    {
+	Id = 1,
+	Name = "leafkevin",
+	Age = 25,
+	CompanyId = 1,
+	Gender = Gender.Male,
+	IsEnabled = true,
+	CreatedAt = DateTime.Now,
+	CreatedBy = 1,
+	UpdatedAt = DateTime.Now,
+	UpdatedBy = 1
+    }).ExecuteAsync();
+//INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)
+```
+
+
+```csharp
+WithBy  字典
+var id = repository.Create<Company>()
+    .WithBy(new Dictionary<string, object>()
+    {
+    	{ "Id", 1},
+    	{ "Name","微软11"},
+    	{ "IsEnabled", true},
+    	{ "CreatedAt", DateTime.Now},
+    	{ "CreatedBy", 1},
+    	{ "UpdatedAt", DateTime.Now},
+    	{ "UpdatedBy", 1}
+    }).Execute();
+//INSERT INTO `sys_company` (`Id`,`Name`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING Id
+```  
+
+```csharp
+//WithBy 批量插入
+var count = repository.Create<Product>()
+    .WithBy(new[]
+    {
+	new
+	{
+	    Id = 1,
+	    ProductNo="PN-001",
+	    Name = "波司登羽绒服",
+	    BrandId = 1,
+	    CategoryId = 1,
+	    IsEnabled = true,
+	    CreatedAt = DateTime.Now,
+	    CreatedBy = 1,
+	    UpdatedAt = DateTime.Now,
+	    UpdatedBy = 1
+	},
+	new
+	{
+	    Id = 2,
+	    ProductNo="PN-002",
+	    Name = "雪中飞羽绒裤",
+	    BrandId = 2,
+	    CategoryId = 2,
+	    IsEnabled = true,
+	    CreatedAt = DateTime.Now,
+	    CreatedBy = 1,
+	    UpdatedAt = DateTime.Now,
+	    UpdatedBy = 1
+	},
+	new
+	{
+	    Id = 3,
+	    ProductNo="PN-003",
+	    Name = "优衣库保暖内衣",
+	    BrandId = 3,
+	    CategoryId = 3,
+	    IsEnabled = true,
+	    CreatedAt = DateTime.Now,
+	    CreatedBy = 1,
+	    UpdatedAt = DateTime.Now,
+	    UpdatedBy = 1
+	}
+    }).Execute();
+//INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)
+```  
+
+```csharp
+//WithBy 批量字典
+var count = repository.Create<Product>()
+    .WithBy(new[]
+    {
+	new Dictionary<string,object>
+	{
+	    { "Id",1 },
+	    { "ProductNo","PN-001"},
+	    { "Name","波司登羽绒服"},
+	    { "BrandId",1},
+	    { "CategoryId",1},
+	    { "IsEnabled",true},
+	    { "CreatedAt",DateTime.Now},
+	    { "CreatedBy",1},
+	    { "UpdatedAt",DateTime.Now},
+	    { "UpdatedBy",1}
+	},
+	new Dictionary<string,object>
+	{
+	    { "Id",2},
+	    { "ProductNo","PN-002"},
+	    { "Name","雪中飞羽绒裤"},
+	    { "BrandId",2},
+	    { "CategoryId",2},
+	    { "IsEnabled",true},
+	    { "CreatedAt",DateTime.Now},
+	    { "CreatedBy",1},
+	    { "UpdatedAt",DateTime.Now},
+	    { "UpdatedBy",1}
+	},
+	new Dictionary<string,object>
+	{
+	    { "Id",3},
+	    { "ProductNo","PN-003"},
+	    { "Name","优衣库保暖内衣"},
+	    { "BrandId",3},
+	    { "CategoryId",3},
+	    { "IsEnabled",true},
+	    { "CreatedAt",DateTime.Now},
+	    { "CreatedBy",1},
+	    { "UpdatedAt",DateTime.Now},
+	    { "UpdatedBy",1}
+	}
+    }).Execute();
+    
+//INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)
+```  
+
+```csharp
+//Insert From 单表
+var sql = repository.Create<Product>()
+    .From<Brand>(f => new
+    {
+	Id = f.Id + 1,
+	ProductNo = "PN_" + f.BrandNo,
+	Name = "PName_" + f.Name,
+	BrandId = f.Id,
+	CategoryId = 1,
+	f.CompanyId,
+	f.IsEnabled,
+	f.CreatedBy,
+	f.CreatedAt,
+	f.UpdatedBy,
+	f.UpdatedAt
+    })
+    .Where(f => f.Id == 1)
+    .ToSql(out _);
+//INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT a.`Id`+1,@ProductNo,@Name,a.`Id`,@CategoryId,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1
+使用常量的地方，变成了参数
+```  
+
+```csharp
+//Insert From 多表
+var sql = repository.Create<OrderDetail>()
+    .From<Order, Product>((x, y) => new OrderDetail
+    {
+	Id = 7,
+	OrderId = x.Id,
+	ProductId = y.Id,
+	Price = y.Price,
+	Quantity = 3,
+	Amount = y.Price * 3,
+	IsEnabled = x.IsEnabled,
+	CreatedBy = x.CreatedBy,
+	CreatedAt = x.CreatedAt,
+	UpdatedBy = x.UpdatedBy,
+	UpdatedAt = x.UpdatedAt
+    })
+    .Where((a, b) => a.Id == 3 && b.Id == 1)
+    .ToSql(out _);
+//INSERT INTO `sys_order_detail` (`Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT @Id,a.`Id`,b.`Id`,b.`Price`,@Quantity,b.`Price`*3,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_order` a,`sys_product` b WHERE a.`Id`=3 AND b.`Id`=1
+使用常量的地方，变成了参数
+```  
+
+```csharp
 //全量更新
 await repository.UpdateAsync(user);
 //更新
