@@ -167,17 +167,28 @@ var result = repository.QueryPage<OrderDetail>(2, 10, f => f.ProductId == 1);
 var result = await repository.QueryPageAsync<OrderDetail>(2, 10, f => f.ProductId == 1);
 //SELECT COUNT(*) FROM `sys_order_detail` WHERE `ProductId`=1;SELECT `Id`,`IsEnabled`,`CreatedBy`,`UpdatedAt`,`CreatedAt`,`Price`,`Quantity`,`Amount`,`OrderId`,`UpdatedBy`,`ProductId` FROM `sys_order_detail`  WHERE `ProductId`=1 LIMIT 10 OFFSET 10
 
+```
+
+
+From支持各种复杂查询  
+
+```csharp
+using var repository = this.dbFactory.Create();
 //From，这种支持各种复杂操作
 var result = await repository.From<Product>()
     .Where(f => f.ProductNo.Contains("PN-00"))
     .ToListAsync();
-    
+//
+```
+```csharp
 //One to One  Include
 var result = await repository.From<Product>()
             .Include(f => f.Brand)
             .Where(f => f.ProductNo.Contains("PN-00"))
             .ToListAsync();	    
-	    
+//
+```
+```csharp    
 //InnerJoin and IncludeMany    
 var result = repository.From<Order>()
     .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
@@ -185,7 +196,9 @@ var result = repository.From<Order>()
     .Where((a, b) => a.TotalAmount > 300)
     .Select((x, y) => new { Order = x, Buyer = y })
     .ToList();
-
+//
+```
+```csharp
 //Join、IncludeMany and Filter
 var result = repository.From<Order>()
     .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
@@ -193,7 +206,9 @@ var result = repository.From<Order>()
     .Where((a, b) => a.TotalAmount > 300)
     .Select((x, y) => new { Order = x, Buyer = y })
     .ToList();
-	    
+//
+```
+```csharp    
 //Include and ThenInclude
 var result = await repository.From<Order>()
     .InnerJoin<User>((a, b) => a.SellerId == b.Id)
@@ -202,13 +217,17 @@ var result = await repository.From<Order>()
     .Where((a, b) => a.TotalAmount > 300)
     .Select((x, y) => new { Order = x, Seller = y })
     .ToListAsync();
-
+//
+```
+```csharp
 //Page and Include
 var result = repository.From<OrderDetail>()
     .Include(f => f.Product)
     .Where(f => f.ProductId == 1)
     .ToPageList(2, 10);
-    
+//
+```
+```csharp
 //虽然Include的，但是没有查询对应模型，会忽略Include
 var sql = repository.From<User>()
     .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
@@ -225,7 +244,9 @@ var sql = repository.From<User>()
     .ToSql(out _);
 //生成的SQL如下：
 //SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME),COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) ORDER BY a.`Id`,b.`Id`
-
+//
+```
+```csharp
 //Group 使用Grouping
 var result = repository.From<User>()
     .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
@@ -239,7 +260,10 @@ var result = repository.From<User>()
     })
     .ToList();
 //SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME),COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) ORDER BY a.`Id`,b.`Id`
-
+//
+```
+```csharp
+//
 ```
 
 支持跨库查询，只要指定对应的dbKey就可以了
