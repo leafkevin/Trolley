@@ -336,7 +336,7 @@ var sql = repository.From<User>()
 //SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME),COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE `Id` IN (@p0,@p1,@p2) GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) HAVING SUM(b.`TotalAmount`)>300 AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND COUNT(DISTINCT f.`ProductId`)>2) ORDER BY a.`Id`,b.`Id`
 ```
 ```csharp
-//In 支持查询表数据，甚至更复杂的SQL
+//In、Exists 支持查询表数据，甚至更复杂的SQL
 var sql = repository.From<User>()
     .Include(f => f.Company)
     .Where(f => Sql.In(f.Id, t => t.From<Order>().Select(p => p.BuyerId)))
@@ -344,11 +344,17 @@ var sql = repository.From<User>()
 //SELECT a.`Gender`,a.`CreatedAt`,a.`CreatedBy`,a.`Name`,a.`UpdatedBy`,a.`Id`,a.`IsEnabled`,a.`Age`,a.`UpdatedAt`,a.`CompanyId`,b.`Name`,b.`Id` FROM `sys_user` a LEFT JOIN `sys_company` b ON a.`CompanyId`=b.`Id` WHERE a.`Id` IN (SELECT `BuyerId` FROM `sys_order`)
 
 //In 从Order,OrderDetail中关联查询条件中使用
+bool? isMale = true;
 var sql = repository.From<User>()
-    .Where(f => Sql.In(f.Id, t => t.From<Order, OrderDetail>('a').InnerJoin((a, b) => a.Id == b.OrderId && b.ProductId == 1).Select((x, y) => x.BuyerId)))
+    .Where(f => Sql.In(f.Id, t => t.From<Order, OrderDetail>('b').InnerJoin((a, b) => a.Id == b.OrderId && b.ProductId == 1).Select((x, y) => x.BuyerId)))
+    .And(isMale.HasValue, f => Sql.Exists<Order, Company>((x, y) => f.Id == x.SellerId && f.CompanyId == y.Id))
     .ToSql(out _);
-SELECT `Gender`,`Name`,`Id`,`UpdatedBy`,`CreatedAt`,`IsEnabled`,`Age`,`CreatedBy`,`UpdatedAt`,`CompanyId` FROM `sys_user` WHERE `Id` IN (SELECT a.`BuyerId` FROM `sys_order` a)
+//SELECT a.`UpdatedBy`,a.`Age`,a.`UpdatedAt`,a.`Id`,a.`CompanyId`,a.`Gender`,a.`CreatedBy`,a.`IsEnabled`,a.`Name`,a.`CreatedAt` FROM `sys_user` a WHERE `Id` IN (SELECT b.`BuyerId` FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` AND c.`ProductId`=1) AND EXISTS(SELECT * FROM `sys_order` x,`sys_company` y WHERE a.`Id`=x.`SellerId` AND a.`CompanyId`=y.`Id`)
+//这里又使用And，带有条件
 ```
+
+
+
 支持跨库查询，只要指定对应的dbKey就可以了
 ------------------------------------------------------------
 
