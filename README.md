@@ -157,21 +157,21 @@ using var repository = this.dbFactory.Create();
 //QueryFirst
 var result = repository.QueryFirst<User>(f => f.Id == 1);
 var result = await repository.QueryFirstAsync<User>(f => f.Name == "leafkevin");
-//SELECT `UpdatedAt`,`CreatedBy`,`CreatedAt`,`Id`,`Age`,`UpdatedBy`,`Name`,`CompanyId`,`IsEnabled`,`Gender` FROM `sys_user` WHERE `Id`=1
+//SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=1
 
 //Query
 var result = repository.Query<Product>(f => f.ProductNo.Contains("PN-00"));
 var result = await repository.QueryAsync<Product>(f => f.ProductNo.Contains("PN-00"));
-//SELECT `CompanyId`,`IsEnabled`,`Id`,`Name`,`CreatedBy`,`CategoryId`,`UpdatedBy`,`UpdatedAt`,`BrandId`,`ProductNo`,`CreatedAt` FROM `sys_product` WHERE `ProductNo` LIKE '%PN-00%'
+//SELECT `Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_product` WHERE `ProductNo` LIKE '%PN-00%'
 
 //Page 分页
 var result = repository.QueryPage<OrderDetail>(2, 10, f => f.ProductId == 1);
 var result = await repository.QueryPageAsync<OrderDetail>(2, 10, f => f.ProductId == 1);
-//SELECT COUNT(*) FROM `sys_order_detail` WHERE `ProductId`=1;SELECT `Id`,`IsEnabled`,`CreatedBy`,`UpdatedAt`,`CreatedAt`,`Price`,`Quantity`,`Amount`,`OrderId`,`UpdatedBy`,`ProductId` FROM `sys_order_detail`  WHERE `ProductId`=1 LIMIT 10 OFFSET 10
+//SELECT COUNT(*) FROM `sys_order_detail` WHERE `ProductId`=1;SELECT `Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_order_detail`  WHERE `ProductId`=1 LIMIT 10 OFFSET 10
 
 //Dictionary
 var result = await repository.QueryDictionaryAsync<Product, int, string>(f => f.ProductNo.Contains("PN-00"), f => f.Id, f => f.Name);
-//SELECT `CategoryId`,`CreatedAt`,`Id`,`CompanyId`,`UpdatedBy`,`UpdatedAt`,`CreatedBy`,`IsEnabled`,`BrandId`,`ProductNo`,`Name` FROM `sys_product` WHERE `ProductNo` LIKE '%PN-00%'
+//SELECT `Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_product` WHERE `ProductNo` LIKE '%PN-00%'
 //先把实体查询出来，再根据Key,Value的选取，生成Dictionary
 ```
 
@@ -184,7 +184,7 @@ using var repository = this.dbFactory.Create();
 var result = await repository.From<Product>()
     .Where(f => f.ProductNo.Contains("PN-00"))
     .ToListAsync();
-//SELECT `CompanyId`,`IsEnabled`,`Id`,`Name`,`CreatedBy`,`CategoryId`,`UpdatedBy`,`UpdatedAt`,`BrandId`,`ProductNo`,`CreatedAt` FROM `sys_product` WHERE `ProductNo` LIKE '%PN-00%'
+//SELECT `Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_product` WHERE `ProductNo` LIKE '%PN-00%'
 ```
 ```csharp
 //One to One  Include
@@ -192,7 +192,7 @@ var result = await repository.From<Product>()
             .Include(f => f.Brand)
             .Where(f => f.ProductNo.Contains("PN-00"))
             .ToListAsync();	    
-//SELECT a.`CategoryId`,a.`UpdatedAt`,a.`ProductNo`,a.`CreatedAt`,a.`BrandId`,a.`IsEnabled`,a.`Name`,a.`Id`,a.`UpdatedBy`,a.`CompanyId`,a.`CreatedBy`,b.`Name`,b.`Id`,b.`BrandNo` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
+//SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
 //一对一的Include查询，Include表数据和主表一起查出来。
 ```
 ```csharp    
