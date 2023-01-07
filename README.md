@@ -282,8 +282,6 @@ var result = repository.From<User>()
 //IGroupingAggregate类型的Grouping属性，是group by字段选择后的对象，这里有3个字段：Id,Name,Date
 var result = repository.From<User>()
    .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
-   .IncludeMany((a, b) => a.Orders)
-   .ThenIncludeMany(f => f.Details)
    .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
    .OrderBy((x, a, b) => new { UserId = a.Id, OrderId = b.Id })
    .Select((x, a, b) => new
@@ -297,6 +295,25 @@ var result = repository.From<User>()
    .ToList();
  //SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) ORDER BY a.`Id`,b.`Id`
  //打开Grouping属性，和不打开生成的SQL基本差不多，唯一不同的地方是：打开时有AS别名，如上面的Date字段，Id,Name与原字段相同就不用AS了
+```
+
+```csharp
+//Group and Having
+var sql = repository.From<User>()
+   .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+   .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
+   .Having((x, a, b) => x.Sum(b.TotalAmount) > 300 && Sql.Exists<OrderDetail>(f => b.Id == f.OrderId && x.CountDistinct(f.ProductId) > 2))
+   .OrderBy((x, a, b) => new { UserId = a.Id, OrderId = b.Id })
+   .Select((x, a, b) => new
+   {
+       x.Grouping.Id,
+       x.Grouping.Name,
+       x.Grouping.Date,
+       OrderCount = x.Count(b.Id),
+       TotalAmount = x.Sum(b.TotalAmount)
+   })
+   .ToSql(out _);
+//SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) HAVING SUM(b.`TotalAmount`)>300 AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND COUNT(DISTINCT f.`ProductId`)>2) ORDER BY a.`Id`,b.`Id`
 ```
 
 支持跨库查询，只要指定对应的dbKey就可以了
