@@ -298,7 +298,7 @@ var result = repository.From<User>()
 ```
 
 ```csharp
-//Group and Having
+//Group and Having 、Exists
 var sql = repository.From<User>()
    .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
    .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
@@ -316,6 +316,39 @@ var sql = repository.From<User>()
 //SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) HAVING SUM(b.`TotalAmount`)>300 AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND COUNT(DISTINCT f.`ProductId`)>2) ORDER BY a.`Id`,b.`Id`
 ```
 
+
+```csharp
+//In and Exists 
+//In、Exists操作是通过静态Sql类来完成的，书写起来比较简单。  
+var sql = repository.From<User>()
+    .Where(f => Sql.In(f.Id, new int[] { 1, 2, 3 }))
+    .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+    .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
+    .Having((x, a, b) => x.Sum(b.TotalAmount) > 300 && Sql.Exists<OrderDetail>(f => b.Id == f.OrderId && x.CountDistinct(f.ProductId) > 2))
+    .OrderBy((x, a, b) => new { UserId = a.Id, OrderId = b.Id })
+    .Select((x, a, b) => new
+    {
+	x.Grouping,
+	OrderCount = x.Count(b.Id),
+	TotalAmount = x.Sum(b.TotalAmount)
+    })
+    .ToSql(out _);
+//SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME),COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE `Id` IN (@p0,@p1,@p2) GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) HAVING SUM(b.`TotalAmount`)>300 AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND COUNT(DISTINCT f.`ProductId`)>2) ORDER BY a.`Id`,b.`Id`
+```
+```csharp
+//In 支持查询表数据，甚至更复杂的SQL
+var sql = repository.From<User>()
+    .Include(f => f.Company)
+    .Where(f => Sql.In(f.Id, t => t.From<Order>().Select(p => p.BuyerId)))
+    .ToSql(out _);
+//SELECT a.`Gender`,a.`CreatedAt`,a.`CreatedBy`,a.`Name`,a.`UpdatedBy`,a.`Id`,a.`IsEnabled`,a.`Age`,a.`UpdatedAt`,a.`CompanyId`,b.`Name`,b.`Id` FROM `sys_user` a LEFT JOIN `sys_company` b ON a.`CompanyId`=b.`Id` WHERE a.`Id` IN (SELECT `BuyerId` FROM `sys_order`)
+
+
+var sql = repository.From<User>()
+    .Where(f => Sql.In(f.Id, t => t.From<Order, OrderDetail>('a').InnerJoin((a, b) => a.Id == b.OrderId && b.ProductId == 1).Select((x, y) => x.BuyerId)))
+    .ToSql(out _);
+SELECT `Gender`,`Name`,`Id`,`UpdatedBy`,`CreatedAt`,`IsEnabled`,`Age`,`CreatedBy`,`UpdatedAt`,`CompanyId` FROM `sys_user` WHERE `Id` IN (SELECT a.`BuyerId` FROM `sys_order` a)
+```
 支持跨库查询，只要指定对应的dbKey就可以了
 ------------------------------------------------------------
 
