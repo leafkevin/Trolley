@@ -152,7 +152,7 @@ public class CompanyInfo
 
 ```csharp
 using var repository = this.dbFactory.Create();
-
+//扩展的简化查询，不支持ToSql方法，是由From语句来包装的，From语句支持ToSql查看SQL
 //QueryFirst
 var result = repository.QueryFirst<User>(f => f.Id == 1);
 var result = await repository.QueryFirstAsync<User>(f => f.Name == "leafkevin");
