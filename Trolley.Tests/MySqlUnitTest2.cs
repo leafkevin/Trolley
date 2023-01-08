@@ -304,8 +304,12 @@ public class MySqlUnitTest2
         using var repository = this.dbFactory.Create();
         var result = repository.QueryFirst<User>(f => f.Id == 1);
         Assert.True(result.Name == "leafkevin");
-        result = await repository.QueryFirstAsync<User>(f => f.Name == "leafkevin");
-        Assert.True(result.Id == 1);
+        var user = repository.QueryFirst<User>("SELECT * FROM sys_user where Id=1");
+        Assert.True(user.Name == "leafkevin");
+        var result1 = await repository.QueryFirstAsync<User>(f => f.Name == "leafkevin");
+        var result2 = await repository.QueryFirstAsync<User>(new { Name = "leafkevin" });
+        Assert.True(result1.Id == result2.Id);
+        Assert.True(result1.Id == 1);
     }
     [Fact]
     public async void Query()
@@ -598,5 +602,45 @@ public class MySqlUnitTest2
             })
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id` AS UserId,b.`Id` AS OrderId,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId`ORDER BY a.`Id`,b.`Id`");
+    }
+    [Fact]
+    public void Query_Count()
+    {
+        using var repository = this.dbFactory.Create();
+        var count = repository.From<User>().Count();
+        var count1 = repository.From<User>().Select(f => Sql.Count()).First();
+        var count2 = repository.QueryFirst<int>("SELECT COUNT(1) FROM sys_user");
+        Assert.True(count == count1);
+        Assert.True(count == count2);
+    }
+    [Fact]
+    public void Query_Max()
+    {
+        using var repository = this.dbFactory.Create();
+        var count = repository.From<Order>().Max(f => f.TotalAmount);
+        var count1 = repository.From<Order>().Select(f => Sql.Max(f.TotalAmount)).First();
+        var count2 = repository.QueryFirst<int>("SELECT MAX(TotalAmount) FROM sys_order");
+        Assert.True(count == count1);
+        Assert.True(count == count2);
+    }
+    [Fact]
+    public void Query_Min()
+    {
+        using var repository = this.dbFactory.Create();
+        var count = repository.From<Order>().Min(f => f.TotalAmount);
+        var count1 = repository.From<Order>().Select(f => Sql.Min(f.TotalAmount)).First();
+        var count2 = repository.QueryFirst<double>("SELECT MIN(TotalAmount) FROM sys_order");
+        Assert.True(count == count1);
+        Assert.True(count == count2);
+    }
+    [Fact]
+    public void Query_Avg()
+    {
+        using var repository = this.dbFactory.Create();
+        var count = repository.From<Order>().Avg(f => f.TotalAmount);
+        var count1 = repository.From<Order>().Select(f => Sql.Max(f.TotalAmount)).First();
+        var count2 = repository.QueryFirst<double>("SELECT MAX(TotalAmount) FROM sys_order");
+        Assert.True(count == count1);
+        Assert.True(count == count2);
     }
 }

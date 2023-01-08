@@ -11,6 +11,7 @@ namespace Trolley;
 public class SqlServerProvider : BaseOrmProvider
 {
     private static CreateNativeDbConnectionDelegate createNativeConnectonDelegate = null;
+    private static CreateDefaultNativeParameterDelegate createDefaultNativeParameterDelegate = null;
     private static CreateNativeParameterDelegate createNativeParameterDelegate = null;
     private static ConcurrentDictionary<MemberInfo, MemberAccessSqlFormatter> memberAccessSqlFormatterCahe = new();
     private static ConcurrentDictionary<MethodInfo, MethodCallSqlFormatter> methodCallSqlFormatterCahe = new();
@@ -26,6 +27,7 @@ public class SqlServerProvider : BaseOrmProvider
         var dbTypeType = Type.GetType("System.Data.SqlDbType, System.Data.Common, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a");
         var dbParameterType = Type.GetType("Microsoft.Data.SqlClient.SqlParameter, Microsoft.Data.SqlClient, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5");
         var dbTypePropertyInfo = dbParameterType.GetProperty("SqlDbType");
+        createDefaultNativeParameterDelegate = base.CreateDefaultParameterDelegate(dbParameterType);
         createNativeParameterDelegate = base.CreateParameterDelegate(dbTypeType, dbParameterType, dbTypePropertyInfo);
 
         nativeDbTypes[typeof(bool)] = 2;
@@ -141,10 +143,9 @@ public class SqlServerProvider : BaseOrmProvider
     public override IDbConnection CreateConnection(string connectionString)
         => createNativeConnectonDelegate.Invoke(connectionString);
     public override IDbDataParameter CreateParameter(string parameterName, object value)
-    {
-        var dbType = this.GetNativeDbType(value.GetType());
-        return createNativeParameterDelegate.Invoke(parameterName, dbType, value);
-    }
+        => createDefaultNativeParameterDelegate.Invoke(parameterName, value);
+    public override IDbDataParameter CreateParameter(string parameterName, int nativeDbType, object value)
+        => createNativeParameterDelegate.Invoke(parameterName, nativeDbType, value);
     public override string GetFieldName(string propertyName) => "[" + propertyName + "]";
     public override string GetTableName(string entityName) => "[" + entityName + "]";
     public override string GetPagingTemplate(int skip, int? limit, string orderBy = null)

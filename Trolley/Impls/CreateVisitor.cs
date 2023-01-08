@@ -231,7 +231,9 @@ class CreateVisitor : SqlVisitor
                 if (!sqlSegment.IsParameter)
                 {
                     this.dbParameters ??= new();
-                    this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, sqlSegment.Value));
+                    if (memberMapper.NativeDbType.HasValue)
+                        this.dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, sqlSegment.Value));
+                    else this.dbParameters.Add(ormProvider.CreateParameter(parameterName, sqlSegment.Value));
                 }
             }
         }

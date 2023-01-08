@@ -6,8 +6,6 @@ using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
-using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -269,8 +267,8 @@ class Deleted<TEntity> : IDeleted<TEntity>
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
                 if (parameterType.IsEntityType())
-                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, keyMapper.MemberName, blockBodies);
-                else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterExpr, parameterNameExpr, blockBodies);
+                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, keyMapper.NativeDbType, keyMapper.MemberName, blockBodies);
+                else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterExpr, parameterNameExpr, keyMapper.NativeDbType, blockBodies);
             }
             commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, StringBuilder, int, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, builderExpr, indexExpr, parameterExpr).Compile();
             commandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
@@ -279,7 +277,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
     }
     private Action<IDbCommand, IOrmProvider, StringBuilder, int, object> BuildBatchCommandInitializer(Type entityType)
     {
-        var entityMapper = dbFactory.GetEntityMap(entityType);
+        var entityMapper = this.dbFactory.GetEntityMap(entityType);
         if (entityMapper.KeyMembers.Count > 1)
         {
             return (command, ormProvider, builder, index, parameter) =>
@@ -288,13 +286,16 @@ class Deleted<TEntity> : IDeleted<TEntity>
                 if (index > 0) builder.Append(';');
                 else builder.Append($"DELETE FROM {ormProvider.GetFieldName(entityMapper.TableName)} WHERE ");
                 int keyIndex = 0;
-                foreach (var keyMember in entityMapper.KeyMembers)
+                foreach (var keyMapper in entityMapper.KeyMembers)
                 {
                     if (keyIndex > 0) builder.Append(" AND ");
-                    var fieldName = ormProvider.GetFieldName(keyMember.FieldName);
-                    string parameterName = ormProvider.ParameterPrefix + keyMember.MemberName + index.ToString();
+                    var fieldName = ormProvider.GetFieldName(keyMapper.FieldName);
+                    string parameterName = ormProvider.ParameterPrefix + keyMapper.MemberName + index.ToString();
                     builder.Append($"{fieldName}={parameterName}");
-                    command.Parameters.Add(ormProvider.CreateParameter(parameterName, dict[keyMember.MemberName]));
+
+                    if (keyMapper.NativeDbType.HasValue)
+                        command.Parameters.Add(ormProvider.CreateParameter(parameterName, keyMapper.NativeDbType.Value, dict[keyMapper.MemberName]));
+                    else command.Parameters.Add(ormProvider.CreateParameter(parameterName, dict[keyMapper.MemberName]));
                 }
             };
         }
@@ -305,10 +306,13 @@ class Deleted<TEntity> : IDeleted<TEntity>
                 var dict = parameter as Dictionary<string, object>;
                 if (index > 0) builder.Append(',');
                 else builder.Append($"DELETE FROM {ormProvider.GetFieldName(entityMapper.TableName)} WHERE {ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (");
-                var keyMemberName = entityMapper.KeyMembers[0].MemberName;
-                string parameterName = ormProvider.ParameterPrefix + keyMemberName + index.ToString();
+                var keyMapper = entityMapper.KeyMembers[0];
+                string parameterName = ormProvider.ParameterPrefix + keyMapper.MemberName + index.ToString();
                 builder.Append(parameterName);
-                command.Parameters.Add(ormProvider.CreateParameter(parameterName, dict[keyMemberName]));
+
+                if (keyMapper.NativeDbType.HasValue)
+                    command.Parameters.Add(ormProvider.CreateParameter(parameterName, keyMapper.NativeDbType.Value, dict[keyMapper.MemberName]));
+                else command.Parameters.Add(ormProvider.CreateParameter(parameterName, dict[keyMapper.MemberName]));
             };
         }
     }
@@ -339,14 +343,14 @@ class Deleted<TEntity> : IDeleted<TEntity>
             foreach (var keyMapper in entityMapper.KeyMembers)
             {
                 if (!parameterMapper.TryGetMemberMap(keyMapper.MemberName, out var propMapper))
-                    throw new Exception($"参数类型{parameterType.FullName}不存在字段{keyMapper.MemberName}");
+                    throw new ArgumentNullException($"参数类型{parameterType.FullName}缺少主键字段{keyMapper.MemberName}", "keys");
 
                 var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
                 if (index > 0)
                     builder.Append(" AND ");
                 builder.Append($"{ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, propMapper.MemberName, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, propMapper.NativeDbType, propMapper.MemberName, blockBodies);
                 index++;
             }
             var resultLabelExpr = Expression.Label(typeof(string));
@@ -401,14 +405,17 @@ class Deleted<TEntity> : IDeleted<TEntity>
             foreach (var keyMapper in entityMapper.KeyMembers)
             {
                 if (!dict.TryGetValue(keyMapper.MemberName, out var fieldValue))
-                    throw new Exception($"参数字典中不存在字段{keyMapper.MemberName}");
+                    throw new ArgumentNullException($"字典参数中缺少主键字段{keyMapper.MemberName}", "keys");
 
                 if (index > 0)
                     builder.Append(',');
                 var parameterName = ormProvider.ParameterPrefix + keyMapper.MemberName;
-                var dbParameter = ormProvider.CreateParameter(parameterName, fieldValue);
+
                 builder.Append($"{ormProvider.GetFieldName(keyMapper.MemberName)}={parameterName}");
-                command.Parameters.Add(dbParameter);
+
+                if (keyMapper.NativeDbType.HasValue)
+                    command.Parameters.Add(ormProvider.CreateParameter(parameterName, keyMapper.NativeDbType.Value, fieldValue));
+                else command.Parameters.Add(ormProvider.CreateParameter(parameterName, fieldValue));
                 index++;
             }
             return builder.ToString();

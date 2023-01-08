@@ -176,8 +176,14 @@ class DeleteVisitor : SqlVisitor
             else
             {
                 builder.Append(parameterName);
+
                 if (!sqlSegment.IsParameter)
-                    this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, sqlSegment.Value));
+                {
+                    this.dbParameters ??= new();
+                    if (memberMapper.NativeDbType.HasValue)
+                        this.dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, sqlSegment.Value));
+                    else this.dbParameters.Add(ormProvider.CreateParameter(parameterName, sqlSegment.Value));
+                }
             }
         }
     }

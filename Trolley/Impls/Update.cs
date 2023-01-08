@@ -618,28 +618,28 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant(ormProvider.GetFieldName(propMapper.FieldName) + "=")));
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, parameterMemberMapper.MemberName, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, propMapper.NativeDbType, parameterMemberMapper.MemberName, blockBodies);
                 columnIndex++;
             }
             columnIndex = 0;
             blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant(" WHERE ")));
-            foreach (var keyMemberMapper in entityMapper.KeyMembers)
+            foreach (var keyMapper in entityMapper.KeyMembers)
             {
-                if (!parameterMapper.TryGetMemberMap(keyMemberMapper.MemberName, out var parameterMemberMapper))
-                    throw new Exception($"参数类型{parameterMapper.EntityType.FullName}，丢失{keyMemberMapper.MemberName}主键成员");
+                if (!parameterMapper.TryGetMemberMap(keyMapper.MemberName, out var parameterMemberMapper))
+                    throw new ArgumentNullException($"参数类型{parameterType.FullName}缺少主键字段{keyMapper.MemberName}", "parameters");
 
                 if (columnIndex > 0)
                     blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant(" AND ")));
-                var fieldExpr = Expression.Constant(ormProvider.GetFieldName(keyMemberMapper.FieldName) + "=");
+                var fieldExpr = Expression.Constant(ormProvider.GetFieldName(keyMapper.FieldName) + "=");
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, fieldExpr));
 
-                var parameterName = ormProvider.ParameterPrefix + "k" + keyMemberMapper.MemberName;
+                var parameterName = ormProvider.ParameterPrefix + "k" + keyMapper.MemberName;
                 var suffixExpr = Expression.Call(indexExpr, typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes));
                 var concatExpr = Expression.Call(methodInfo3, Expression.Constant(parameterName), suffixExpr);
                 blockBodies.Add(Expression.Assign(parameterNameExpr, concatExpr));
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, parameterMemberMapper.MemberName, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, keyMapper.NativeDbType, parameterMemberMapper.MemberName, blockBodies);
                 columnIndex++;
             }
             commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, StringBuilder, int, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, builderExpr, indexExpr, parameterExpr).Compile();
@@ -704,22 +704,22 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
                 sqlBuilder.Append($"{ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, parameterMemberMapper.MemberName, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, propMapper.NativeDbType, parameterMemberMapper.MemberName, blockBodies);
                 columnIndex++;
             }
             columnIndex = 0;
             sqlBuilder.Append(" WHERE ");
-            foreach (var keyMemberMapper in entityMapper.KeyMembers)
+            foreach (var keyMapper in entityMapper.KeyMembers)
             {
-                if (!parameterMapper.TryGetMemberMap(keyMemberMapper.MemberName, out var parameterMemberMapper))
-                    throw new Exception($"参数类型{parameterMapper.EntityType.FullName}，丢失{keyMemberMapper.MemberName}主键成员");
+                if (!parameterMapper.TryGetMemberMap(keyMapper.MemberName, out var parameterMemberMapper))
+                    throw new ArgumentNullException($"参数类型{parameterType.FullName}缺少主键字段{keyMapper.MemberName}", "parameters");
 
                 if (columnIndex > 0)
                     sqlBuilder.Append(" AND ");
-                var parameterName = ormProvider.ParameterPrefix + "k" + keyMemberMapper.MemberName;
-                sqlBuilder.Append($"{ormProvider.GetFieldName(keyMemberMapper.FieldName)}={parameterName}");
+                var parameterName = ormProvider.ParameterPrefix + "k" + keyMapper.MemberName;
+                sqlBuilder.Append($"{ormProvider.GetFieldName(keyMapper.FieldName)}={parameterName}");
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, parameterMemberMapper.MemberName, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, keyMapper.NativeDbType, parameterMemberMapper.MemberName, blockBodies);
                 columnIndex++;
             }
             var resultLabelExpr = Expression.Label(typeof(string));
@@ -796,21 +796,27 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
 
                 var parameterName = ormProvider.ParameterPrefix + item.Key + index.ToString();
                 builder.Append($"{ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
-                command.Parameters.Add(ormProvider.CreateParameter(parameterName, dict[item.Key]));
+
+                if (propMapper.NativeDbType.HasValue)
+                    command.Parameters.Add(ormProvider.CreateParameter(parameterName, propMapper.NativeDbType.Value, item.Value));
+                else command.Parameters.Add(ormProvider.CreateParameter(parameterName, item.Value));
                 updateIndex++;
             }
             updateIndex = 0;
             builder.Append(" WHERE ");
-            foreach (var propMapper in entityMapper.KeyMembers)
+            foreach (var keyMapper in entityMapper.KeyMembers)
             {
-                if (!dict.ContainsKey(propMapper.MemberName))
-                    throw new ArgumentException($"参数parameters不包含主键成员{propMapper.MemberName}", "parameters");
+                if (!dict.ContainsKey(keyMapper.MemberName))
+                    throw new ArgumentNullException($"字典参数中缺少主键字段{keyMapper.MemberName}", "parameters");
 
                 if (updateIndex > 0)
                     builder.Append(',');
-                var parameterName = ormProvider.ParameterPrefix + "k" + propMapper.MemberName + index.ToString();
-                builder.Append($"{ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
-                command.Parameters.Add(ormProvider.CreateParameter(parameterName, dict[propMapper.MemberName]));
+                var parameterName = ormProvider.ParameterPrefix + "k" + keyMapper.MemberName + index.ToString();
+                builder.Append($"{ormProvider.GetFieldName(keyMapper.FieldName)}={parameterName}");
+
+                if (keyMapper.NativeDbType.HasValue)
+                    command.Parameters.Add(ormProvider.CreateParameter(parameterName, keyMapper.NativeDbType.Value, dict[keyMapper.MemberName]));
+                else command.Parameters.Add(ormProvider.CreateParameter(parameterName, dict[keyMapper.MemberName]));
                 updateIndex++;
             }
         };
@@ -849,22 +855,28 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
 
                 var parameterName = ormProvider.ParameterPrefix + item.Key;
                 sqlBuilder.Append($"{ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
-                command.Parameters.Add(ormProvider.CreateParameter(parameterName, dict[item.Key]));
+
+                if (propMapper.NativeDbType.HasValue)
+                    command.Parameters.Add(ormProvider.CreateParameter(parameterName, propMapper.NativeDbType.Value, item.Value));
+                else command.Parameters.Add(ormProvider.CreateParameter(parameterName, item.Value));
                 index++;
             }
 
             index = 0;
             sqlBuilder.Append(" WHERE ");
-            foreach (var propMapper in entityMapper.KeyMembers)
+            foreach (var keyMapper in entityMapper.KeyMembers)
             {
-                if (!dict.ContainsKey(propMapper.MemberName))
-                    throw new ArgumentException($"参数parameters不包含主键成员{propMapper.MemberName}", "parameters");
+                if (!dict.ContainsKey(keyMapper.MemberName))
+                    throw new ArgumentNullException($"字典参数中缺少主键字段{keyMapper.MemberName}", "parameters");
 
                 if (index > 0)
                     sqlBuilder.Append(',');
-                var parameterName = ormProvider.ParameterPrefix + "k" + propMapper.MemberName;
-                sqlBuilder.Append($"{ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
-                command.Parameters.Add(ormProvider.CreateParameter(parameterName, dict[propMapper.MemberName]));
+                var parameterName = ormProvider.ParameterPrefix + "k" + keyMapper.MemberName;
+                sqlBuilder.Append($"{ormProvider.GetFieldName(keyMapper.FieldName)}={parameterName}");
+
+                if (keyMapper.NativeDbType.HasValue)
+                    command.Parameters.Add(ormProvider.CreateParameter(parameterName, keyMapper.NativeDbType.Value, dict[keyMapper.MemberName]));
+                else command.Parameters.Add(ormProvider.CreateParameter(parameterName, dict[keyMapper.MemberName]));
                 index++;
             }
             return sqlBuilder.ToString();

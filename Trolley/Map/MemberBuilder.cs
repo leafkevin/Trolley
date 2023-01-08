@@ -1,6 +1,4 @@
-﻿using System.Data;
-
-namespace Trolley;
+﻿namespace Trolley;
 
 public class MemberBuilder
 {

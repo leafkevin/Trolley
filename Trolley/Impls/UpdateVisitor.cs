@@ -150,7 +150,9 @@ class UpdateVisitor : SqlVisitor
                     var parameterName = ormProvider.ParameterPrefix + memberMapper.MemberName;
                     builder.Append(parameterName);
                     this.dbParameters ??= new();
-                    this.dbParameters.Add(ormProvider.CreateParameter(parameterName, fieldValue));
+                    if (memberMapper.NativeDbType.HasValue)
+                        this.dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, fieldValue));
+                    else this.dbParameters.Add(ormProvider.CreateParameter(parameterName, fieldValue));
                 }
                 break;
             case ExpressionType.New:
@@ -371,7 +373,9 @@ class UpdateVisitor : SqlVisitor
                 if (!sqlSegment.IsParameter)
                 {
                     this.dbParameters ??= new();
-                    this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, sqlSegment.Value));
+                    if (memberMapper.NativeDbType.HasValue)
+                        this.dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, sqlSegment.Value));
+                    else this.dbParameters.Add(ormProvider.CreateParameter(parameterName, sqlSegment.Value));
                 }
             }
         }

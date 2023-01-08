@@ -21,6 +21,7 @@ public interface IOrmProvider
     string SelectIdentitySql { get; }
     IDbConnection CreateConnection(string connectionString);
     IDbDataParameter CreateParameter(string parameterName, object value);
+    IDbDataParameter CreateParameter(string parameterName, int nativeDbType, object value);
     string GetTableName(string entityName);
     string GetFieldName(string propertyName);
     string GetPagingTemplate(int skip, int? limit, string orderBy = null);

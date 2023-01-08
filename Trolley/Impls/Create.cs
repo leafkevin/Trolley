@@ -443,7 +443,7 @@ class Created<TEntity> : ICreated<TEntity>
                 var suffixExpr = Expression.Call(indexExpr, typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes));
                 var parameterNameExpr = Expression.Call(methodInfo3, Expression.Constant(parameterName), suffixExpr);
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, parameterMemberMapper.MemberName, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, propMapper.NativeDbType, parameterMemberMapper.MemberName, blockBodies);
                 columnIndex++;
             }
             blockBodies.Add(Expression.Call(builderExpr, methodInfo1, Expression.Constant(')')));
@@ -489,7 +489,7 @@ class Created<TEntity> : ICreated<TEntity>
                 var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
                 valuesBuilder.Append(parameterName);
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, parameterMemberMapper.MemberName, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, propMapper.NativeDbType, parameterMemberMapper.MemberName, blockBodies);
                 columnIndex++;
             }
             insertBuilder.Append(')');
@@ -571,12 +571,14 @@ class Created<TEntity> : ICreated<TEntity>
                     || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                     continue;
 
-                var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName + index.ToString();
-                var dbParameter = ormProvider.CreateParameter(parameterName, dict[propMapper.MemberName]);
                 if (columnIndex > 0)
                     builder.Append(',');
+                var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName + index.ToString();
                 builder.Append(parameterName);
-                command.Parameters.Add(dbParameter);
+
+                if (propMapper.NativeDbType.HasValue)
+                    command.Parameters.Add(ormProvider.CreateParameter(parameterName, propMapper.NativeDbType.Value, item.Value));
+                else command.Parameters.Add(ormProvider.CreateParameter(parameterName, item.Value));
                 columnIndex++;
             }
             builder.Append(')');
@@ -597,16 +599,18 @@ class Created<TEntity> : ICreated<TEntity>
                     || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                     continue;
 
-                var parameterName = ormProvider.ParameterPrefix + item.Key;
-                var dbParameter = ormProvider.CreateParameter(parameterName, dict[item.Key]);
                 if (index > 0)
                 {
                     insertBuilder.Append(',');
                     valuesBuilder.Append(',');
                 }
+                var parameterName = ormProvider.ParameterPrefix + item.Key;
                 insertBuilder.Append(ormProvider.GetFieldName(propMapper.FieldName));
                 valuesBuilder.Append(parameterName);
-                command.Parameters.Add(dbParameter);
+
+                if (propMapper.NativeDbType.HasValue)
+                    command.Parameters.Add(ormProvider.CreateParameter(parameterName, propMapper.NativeDbType.Value, item.Value));
+                else command.Parameters.Add(ormProvider.CreateParameter(parameterName, item.Value));
                 index++;
             }
             insertBuilder.Append(')');

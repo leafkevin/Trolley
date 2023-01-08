@@ -7,6 +7,7 @@ using System.Text;
 namespace Trolley;
 
 public delegate IDbConnection CreateNativeDbConnectionDelegate(string connectionString);
+public delegate IDbDataParameter CreateDefaultNativeParameterDelegate(string name, object value);
 public delegate IDbDataParameter CreateNativeParameterDelegate(string name, int nativeDbType, object value);
 public abstract class BaseOrmProvider : IOrmProvider
 {
@@ -16,6 +17,7 @@ public abstract class BaseOrmProvider : IOrmProvider
 
     public abstract IDbConnection CreateConnection(string connectionString);
     public abstract IDbDataParameter CreateParameter(string parameterName, object value);
+    public abstract IDbDataParameter CreateParameter(string parameterName, int nativeDbType, object value);
     public virtual string GetTableName(string entityName) => entityName;
     public virtual string GetFieldName(string propertyName) => propertyName;
     public virtual string GetPagingTemplate(int skip, int? limit, string orderBy = null)
@@ -55,6 +57,16 @@ public abstract class BaseOrmProvider : IOrmProvider
              Expression.Convert(instanceExpr, typeof(IDbConnection))
              , connStringExpr).Compile();
     }
+    protected virtual CreateDefaultNativeParameterDelegate CreateDefaultParameterDelegate(Type dbParameterType)
+    {
+        var constructor = dbParameterType.GetConstructor(new Type[] { typeof(string), typeof(object) });
+        var parametersExpr = new ParameterExpression[] {
+            Expression.Parameter(typeof(string), "name"),
+            Expression.Parameter(typeof(object), "value") };
+        var instanceExpr = Expression.New(constructor, parametersExpr[0], parametersExpr[1]);
+        var convertExpr = Expression.Convert(instanceExpr, typeof(IDbDataParameter));
+        return Expression.Lambda<CreateDefaultNativeParameterDelegate>(convertExpr, parametersExpr).Compile();
+    }
     protected virtual CreateNativeParameterDelegate CreateParameterDelegate(Type dbTypeType, Type dbParameterType, PropertyInfo dbTypePropertyInfo)
     {
         var constructor = dbParameterType.GetConstructor(new Type[] { typeof(string), typeof(object) });
@@ -70,7 +82,7 @@ public abstract class BaseOrmProvider : IOrmProvider
             Expression.Block(
                 Expression.Call(instanceExpr, dbTypePropertyInfo.GetSetMethod(), dbTypeExpr),
                 Expression.Return(returnLabel, Expression.Convert(instanceExpr, typeof(IDbDataParameter))),
-                Expression.Label(returnLabel, Expression.Constant(null, typeof(IDbDataParameter))))
+                Expression.Label(returnLabel, Expression.Default(typeof(IDbDataParameter))))
             , parametersExpr).Compile();
     }
 }
