@@ -312,6 +312,15 @@ public class MySqlUnitTest2
         Assert.True(result1.Id == 1);
     }
     [Fact]
+    public async void Get()
+    {
+        using var repository = this.dbFactory.Create();
+        var result = repository.Get<User>(1);
+        Assert.True(result.Name == "leafkevin");
+        var user = await repository.GetAsync<User>(new { Id = 1 });
+        Assert.True(user.Name == result.Name);
+    }
+    [Fact]
     public async void Query()
     {
         using var repository = this.dbFactory.Create();
@@ -323,9 +332,10 @@ public class MySqlUnitTest2
     {
         using var repository = this.dbFactory.Create();
         var result = await repository.QueryPageAsync<OrderDetail>(2, 1, f => f.ProductId == 1);
+        var count = await repository.From<OrderDetail>().Where(f => f.ProductId == 1).CountAsync();
         Assert.NotNull(result);
         Assert.NotEmpty(result.Items);
-        Assert.True(result.RecordsTotal == 2);
+        Assert.True(result.RecordsTotal == count);
         Assert.True(result.Items.Count == 1);
     }
     [Fact]
@@ -372,7 +382,7 @@ public class MySqlUnitTest2
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .IncludeMany((x, y) => x.Details, f => f.ProductId == 1)
             .Where((a, b) => a.TotalAmount > 300)
-            .Select((x, y) => new { Order = x, Buyer = y })
+            .Select((x, y) => new { Order = x, Buyer = y, Test = x.OrderNo +"_"+ (y.Age % 4) })
             .ToList();
 
         Assert.True(result.Count == 2);
@@ -426,10 +436,12 @@ public class MySqlUnitTest2
             .Include(f => f.Product)
             .Where(f => f.ProductId == 1)
             .ToPageList(2, 1);
-
+        var count = repository.From<OrderDetail>()
+            .Where(f => f.ProductId == 1)
+            .Count();
         Assert.NotNull(result);
         Assert.NotEmpty(result.Items);
-        Assert.True(result.RecordsTotal == 2);
+        Assert.True(result.RecordsTotal == count);
         Assert.True(result.Items.Count == 1);
         Assert.NotNull(result.Items[0].Product);
         Assert.True(result.Items[0].Product.Id == 1);
@@ -619,7 +631,7 @@ public class MySqlUnitTest2
         using var repository = this.dbFactory.Create();
         var count = repository.From<Order>().Max(f => f.TotalAmount);
         var count1 = repository.From<Order>().Select(f => Sql.Max(f.TotalAmount)).First();
-        var count2 = repository.QueryFirst<int>("SELECT MAX(TotalAmount) FROM sys_order");
+        var count2 = repository.QueryFirst<double>("SELECT MAX(TotalAmount) FROM sys_order");
         Assert.True(count == count1);
         Assert.True(count == count2);
     }
@@ -637,10 +649,10 @@ public class MySqlUnitTest2
     public void Query_Avg()
     {
         using var repository = this.dbFactory.Create();
-        var count = repository.From<Order>().Avg(f => f.TotalAmount);
-        var count1 = repository.From<Order>().Select(f => Sql.Max(f.TotalAmount)).First();
-        var count2 = repository.QueryFirst<double>("SELECT MAX(TotalAmount) FROM sys_order");
-        Assert.True(count == count1);
-        Assert.True(count == count2);
+        var value1 = repository.From<Order>().Avg(f => f.TotalAmount);
+        var value2 = repository.From<Order>().Select(f => Sql.Avg(f.TotalAmount)).First();
+        var value3 = repository.QueryFirst<double>("SELECT AVG(TotalAmount) FROM sys_order");
+        Assert.True(value1 == value2);
+        Assert.True(value1 == value3);
     }
 }

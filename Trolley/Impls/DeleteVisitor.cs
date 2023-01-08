@@ -171,20 +171,20 @@ class DeleteVisitor : SqlVisitor
             builder.Append("NULL");
         else
         {
-            if (sqlSegment.HasField)
-                builder.Append(sqlSegment.ToString());
-            else
+            if (sqlSegment.IsConstantValue)
             {
                 builder.Append(parameterName);
-
                 if (!sqlSegment.IsParameter)
                 {
                     this.dbParameters ??= new();
                     if (memberMapper.NativeDbType.HasValue)
                         this.dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, sqlSegment.Value));
                     else this.dbParameters.Add(ormProvider.CreateParameter(parameterName, sqlSegment.Value));
+                    sqlSegment.IsParameter = true;
+                    sqlSegment.IsConstantValue = false;
                 }
             }
+            else builder.Append(sqlSegment.ToString());
         }
     }
 }

@@ -269,9 +269,12 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                     setField.DbParameters.ForEach(f => command.Parameters.Add(f));
                 index++;
             }
-            builder.Insert(0, $"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ");
-            fixSetSql = builder.ToString();
-            isFixSetSql = true;
+            if (index > 0)
+            {
+                builder.Insert(0, $"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ");
+                fixSetSql = builder.ToString();
+                isFixSetSql = true;
+            }
         }
 
         if (isMulti)
@@ -327,7 +330,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             command.CommandText = sql;
             command.CommandType = CommandType.Text;
             command.Transaction = this.transaction;
-            connection.Open();
+            this.connection.Open();
             var result = command.ExecuteNonQuery();
             command.Dispose();
             return result;
@@ -681,7 +684,9 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             var methodInfo2 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
             var methodInfo3 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
 
-            var sqlBuilder = new StringBuilder($"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ");
+            var sqlBuilder = new StringBuilder();
+            if (!isFixSetSql)
+                sqlBuilder.Append($"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ");
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
                 if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper)
@@ -699,7 +704,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                     if (propMapper.IsKey) continue;
                 }
 
-                if (columnIndex > 0)
+                if (isFixSetSql || columnIndex > 0)
                     sqlBuilder.Append(',');
                 var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
                 sqlBuilder.Append($"{ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
@@ -908,7 +913,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         hashCode.Add(setFields.Count);
         foreach (var setField in setFields)
         {
-            if (string.IsNullOrEmpty(setField.Value))
+            if (!string.IsNullOrEmpty(setField.Value))
                 continue;
             hashCode.Add(setField.MemberName);
         }
@@ -999,7 +1004,7 @@ class UpdateSetting<TEntity> : IUpdateSetting<TEntity>
         command.CommandText = sql;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;
@@ -1107,7 +1112,7 @@ class UpdateFrom<TEntity, T1> : IUpdateFrom<TEntity, T1>
         command.Transaction = this.transaction;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;
@@ -1231,7 +1236,7 @@ class UpdateJoin<TEntity, T1> : IUpdateJoin<TEntity, T1>
         command.Transaction = this.transaction;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;
@@ -1339,7 +1344,7 @@ class UpdateFrom<TEntity, T1, T2> : IUpdateFrom<TEntity, T1, T2>
         command.Transaction = this.transaction;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;
@@ -1463,7 +1468,7 @@ class UpdateJoin<TEntity, T1, T2> : IUpdateJoin<TEntity, T1, T2>
         command.Transaction = this.transaction;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;
@@ -1571,7 +1576,7 @@ class UpdateFrom<TEntity, T1, T2, T3> : IUpdateFrom<TEntity, T1, T2, T3>
         command.Transaction = this.transaction;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;
@@ -1695,7 +1700,7 @@ class UpdateJoin<TEntity, T1, T2, T3> : IUpdateJoin<TEntity, T1, T2, T3>
         command.Transaction = this.transaction;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;
@@ -1803,7 +1808,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateFrom<TEntity, T1, T2, T3, T4>
         command.Transaction = this.transaction;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;
@@ -1927,7 +1932,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateJoin<TEntity, T1, T2, T3, T4>
         command.Transaction = this.transaction;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;
@@ -2035,7 +2040,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateFrom<TEntity, T1, T2, T3,
         command.Transaction = this.transaction;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;
@@ -2143,7 +2148,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateJoin<TEntity, T1, T2, T3,
         command.Transaction = this.transaction;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;

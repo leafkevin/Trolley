@@ -201,7 +201,8 @@ public class NpgSqlProvider : BaseOrmProvider
 
                             var fieldName = this.GetQuotedValue(args[1]);
                             int notIndex = 0;
-                            if (deferExprs != null)
+
+                            if (deferExprs != null && deferExprs.Count > 0)
                             {
                                 while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
                                 {
@@ -250,7 +251,8 @@ public class NpgSqlProvider : BaseOrmProvider
                             }
                             var fieldName = this.GetQuotedValue(args[0]);
                             int notIndex = 0;
-                            if (deferExprs != null)
+
+                            if (deferExprs != null && deferExprs.Count > 0)
                             {
                                 while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
                                 {
@@ -291,7 +293,7 @@ public class NpgSqlProvider : BaseOrmProvider
                             else rightValue = $"'%{args[0]}%'";
 
                             int notIndex = 0;
-                            if (deferExprs != null)
+                            if (deferExprs != null && deferExprs.Count > 0)
                             {
                                 while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
                                 {
@@ -444,7 +446,8 @@ public class NpgSqlProvider : BaseOrmProvider
                         var leftTarget = this.GetQuotedValue(target);
                         var rightValue = this.GetQuotedValue(args[0]);
                         int notIndex = 0;
-                        if (deferExprs != null)
+
+                        if (deferExprs != null && deferExprs.Count > 0)
                         {
                             while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
                             {
@@ -462,7 +465,8 @@ public class NpgSqlProvider : BaseOrmProvider
                         var leftField = this.GetQuotedValue(target);
                         var rightValue = $"'{args[0]}%'";
                         int notIndex = 0;
-                        if (deferExprs != null)
+
+                        if (deferExprs != null && deferExprs.Count > 0)
                         {
                             while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
                             {
@@ -480,7 +484,8 @@ public class NpgSqlProvider : BaseOrmProvider
                         var leftField = this.GetQuotedValue(target);
                         var rightValue = $"'%{args[0]}'";
                         int notIndex = 0;
-                        if (deferExprs != null)
+
+                        if (deferExprs != null && deferExprs.Count > 0)
                         {
                             while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
                             {

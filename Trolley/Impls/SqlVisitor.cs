@@ -157,27 +157,6 @@ public class SqlVisitor
         switch (binaryExpr.NodeType)
         {
             //And/Or，已经在Where/Having中单独处理了
-            //case ExpressionType.AndAlso:
-            //case ExpressionType.OrElse:
-            //var operationType = binaryExpr.NodeType == ExpressionType.AndAlso ?
-            //         OperationType.And : OperationType.Or;
-            //if (sqlSegment.OperationType == OperationType.None)
-            //    sqlSegment.OperationType = operationType;
-            //if (sqlSegment.OperationType != operationType)
-            //{
-            //    sqlSegment.Push(new DeferredExpr
-            //    {
-            //        OperationType = sqlSegment.OperationType,
-            //        Value = sqlSegment.Value
-            //    });
-            //}
-            //sqlSegment.Push(new DeferredExpr
-            //{
-            //    OperationType = operationType,
-            //    Value = binaryExpr.Right
-            //});
-            //return sqlSegment.Next(binaryExpr.Left);
-
             case ExpressionType.Add:
             case ExpressionType.AddChecked:
             case ExpressionType.Subtract:
@@ -199,8 +178,29 @@ public class SqlVisitor
             case ExpressionType.ExclusiveOr:
             case ExpressionType.RightShift:
             case ExpressionType.LeftShift:
+                //表达式计算
+                switch (binaryExpr.NodeType)
+                {
+                    case ExpressionType.Add:
+                    case ExpressionType.AddChecked:
+                    case ExpressionType.Subtract:
+                    case ExpressionType.SubtractChecked:
+                    case ExpressionType.Multiply:
+                    case ExpressionType.MultiplyChecked:
+                    case ExpressionType.Divide:
+                    case ExpressionType.Modulo:
+                    case ExpressionType.Coalesce:
+                    case ExpressionType.ArrayIndex:
+                    case ExpressionType.And:
+                    case ExpressionType.Or:
+                    case ExpressionType.ExclusiveOr:
+                    case ExpressionType.RightShift:
+                    case ExpressionType.LeftShift:
+                        sqlSegment.IsConstantValue = false;
+                        break;
+                }
                 //字符串连接单独处理
-                if (binaryExpr.NodeType == ExpressionType.Add && binaryExpr.Left.Type == typeof(string) && binaryExpr.Right.Type == typeof(string))
+                if (binaryExpr.NodeType == ExpressionType.Add && (binaryExpr.Left.Type == typeof(string) || binaryExpr.Right.Type == typeof(string)))
                     return this.VisitConcatAndDeferred(sqlSegment);
 
                 var leftSegment = this.Visit(sqlSegment.Next(binaryExpr.Left));
@@ -208,7 +208,8 @@ public class SqlVisitor
                 var operators = this.GetOperator(binaryExpr.NodeType);
 
                 if (binaryExpr.NodeType == ExpressionType.Modulo || binaryExpr.NodeType == ExpressionType.Coalesce)
-                    return leftSegment.Change($"{operators}({leftSegment},{rightSegment})");
+                    return leftSegment.Change($"{operators}({leftSegment},{rightSegment})", false);
+
                 if (binaryExpr.NodeType == ExpressionType.Equal || binaryExpr.NodeType == ExpressionType.NotEqual)
                 {
                     if (!leftSegment.HasField && rightSegment.HasField)
@@ -238,8 +239,7 @@ public class SqlVisitor
                         return leftSegment;
                     }
                 }
-
-                return leftSegment.Merge(rightSegment, $"{this.GetSqlValue(leftSegment)}{operators}{this.GetSqlValue(rightSegment)}");
+                return leftSegment.Change($"{this.GetSqlValue(leftSegment)}{operators}{this.GetSqlValue(rightSegment)}", sqlSegment.IsConstantValue);
         }
         return sqlSegment;
     }
@@ -398,8 +398,7 @@ public class SqlVisitor
             args = arguments.ToArray();
         }
         var result = formatter.Invoke(target, sqlSegment.DeferredExprs, args);
-        sqlSegment.IsMethodCall = true;
-        return sqlSegment.Change(result);
+        return sqlSegment.Change(result, false);
     }
     public virtual SqlSegment VisitParameter(SqlSegment sqlSegment)
     {
@@ -436,7 +435,7 @@ public class SqlVisitor
         var objTarget = this.Evaluate(sqlSegment.Next(indexExpr.Object)).Value;
         if (objTarget is List<object> objList)
             return sqlSegment.Change(objList[index]);
-        throw new NotImplementedException("不支持的表达式: " + indexExpr);
+        throw new NotSupportedException("不支持的表达式: " + indexExpr);
     }
     public virtual SqlSegment VisitConditional(SqlSegment sqlSegment)
     {
@@ -491,13 +490,16 @@ public class SqlVisitor
     public virtual SqlSegment VisitConcatAndDeferred(SqlSegment sqlSegment)
     {
         var concatSegments = this.VisitConcatExpr(sqlSegment.Expression);
-        bool isEvaluable = true;
+        bool isConstantValue = true;
         foreach (var segment in concatSegments)
         {
             if (!segment.IsConstantValue)
-                isEvaluable = false;
+            {
+                isConstantValue = false;
+                break;
+            }
         }
-        if (isEvaluable)
+        if (isConstantValue)
             return sqlSegment.Change(string.Concat(concatSegments));
         var concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(object[]) });
         this.ormProvider.TryGetMethodCallSqlFormatter(concatMethodInfo, out var formater);
@@ -591,7 +593,10 @@ public class SqlVisitor
                     Deep = deep
                 };
                 if (binaryExpr.Left.NodeType == ExpressionType.MemberAccess)
+                {
+                    leftSegment.DeferredExprs ??= new();
                     leftSegment.DeferredExprs.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.True });
+                }
                 completedSegements.Add(leftSegment);
             }
             if (isRightLeaf)
@@ -603,7 +608,10 @@ public class SqlVisitor
                     Deep = deep
                 };
                 if (binaryExpr.Right.NodeType == ExpressionType.MemberAccess)
+                {
+                    rightSegment.DeferredExprs ??= new();
                     rightSegment.DeferredExprs.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.True });
+                }
                 deferredExprs.Push(rightSegment);
             }
             Expression nextExpr = null;
@@ -649,7 +657,7 @@ public class SqlVisitor
     public virtual SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment)
     {
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
-        sqlSegment.IsMethodCall = true;
+        sqlSegment.IsConstantValue = false;
         switch (methodCallExpr.Method.Name)
         {
             case "In":
@@ -786,8 +794,6 @@ public class SqlVisitor
     public virtual SqlSegment VisitFromQuery(SqlSegment sqlSegment, Type elementType)
     {
         var lambdaExpr = sqlSegment.Expression as LambdaExpression;
-        lambdaExpr.GetParameters(out var parameters);
-
         var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction);
         var queryInvoker = lambdaExpr.Compile();
         var subQuery = queryInvoker.DynamicInvoke(fromQuery);

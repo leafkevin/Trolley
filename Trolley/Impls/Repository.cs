@@ -165,7 +165,13 @@ public class Repository : IRepository
         this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.To<TEntity>(this.dbFactory, this.connection);
+        if (reader.Read())
+        {
+            var entityType = typeof(TEntity);
+            if (entityType.IsEntityType())
+                result = reader.To<TEntity>(this.dbFactory, this.connection);
+            else result = reader.To<TEntity>();
+        }
         reader.Close();
         reader.Dispose();
         command.Dispose();
@@ -245,7 +251,12 @@ public class Repository : IRepository
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
-            result = reader.To<TEntity>(dbFactory, this.connection);
+        {
+            var entityType = typeof(TEntity);
+            if (entityType.IsEntityType())
+                result = reader.To<TEntity>(this.dbFactory, this.connection);
+            else result = reader.To<TEntity>();
+        }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         await command.DisposeAsync();
@@ -365,7 +376,12 @@ public class Repository : IRepository
         this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.To<TEntity>(this.dbFactory, this.connection);
+        if (reader.Read())
+        {
+            if (entityType.IsEntityType())
+                result = reader.To<TEntity>(this.dbFactory, this.connection);
+            else result = reader.To<TEntity>();
+        }
         reader.Close();
         reader.Dispose();
         command.Dispose();
@@ -489,7 +505,11 @@ public class Repository : IRepository
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
-            result = reader.To<TEntity>(dbFactory, this.connection);
+        {
+            if (entityType.IsEntityType())
+                result = reader.To<TEntity>(this.dbFactory, this.connection);
+            else result = reader.To<TEntity>();
+        }
         await reader.CloseAsync();
         await reader.DisposeAsync();
         await command.DisposeAsync();
@@ -560,9 +580,20 @@ public class Repository : IRepository
         this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess;
         using var reader = command.ExecuteReader(behavior);
-        while (reader.Read())
+        var entityType = typeof(TEntity);
+        if (entityType.IsEntityType())
         {
-            result.Add(reader.To<TEntity>(dbFactory, this.connection));
+            while (reader.Read())
+            {
+                result.Add(reader.To<TEntity>(dbFactory, this.connection));
+            }
+        }
+        else
+        {
+            while (reader.Read())
+            {
+                result.Add(reader.To<TEntity>());
+            }
         }
         reader.Close();
         reader.Dispose();
@@ -638,9 +669,20 @@ public class Repository : IRepository
         await this.connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
+        var entityType = typeof(TEntity);
+        if (entityType.IsEntityType())
         {
-            result.Add(reader.To<TEntity>(dbFactory, this.connection));
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                result.Add(reader.To<TEntity>(dbFactory, this.connection));
+            }
+        }
+        else
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                result.Add(reader.To<TEntity>());
+            }
         }
         await reader.CloseAsync();
         await reader.DisposeAsync();
@@ -762,9 +804,19 @@ public class Repository : IRepository
         this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess;
         using var reader = command.ExecuteReader(behavior);
-        while (reader.Read())
+        if (entityType.IsEntityType())
         {
-            result.Add(reader.To<TEntity>(dbFactory, this.connection));
+            while (reader.Read())
+            {
+                result.Add(reader.To<TEntity>(dbFactory, this.connection));
+            }
+        }
+        else
+        {
+            while (reader.Read())
+            {
+                result.Add(reader.To<TEntity>());
+            }
         }
         reader.Close();
         reader.Dispose();
@@ -888,9 +940,19 @@ public class Repository : IRepository
         await this.connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
+        if (entityType.IsEntityType())
         {
-            result.Add(reader.To<TEntity>(dbFactory, this.connection));
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                result.Add(reader.To<TEntity>(dbFactory, this.connection));
+            }
+        }
+        else
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                result.Add(reader.To<TEntity>());
+            }
         }
         await reader.CloseAsync();
         await reader.DisposeAsync();
@@ -906,6 +968,7 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
+        var whereObjType = whereObj.GetType();
         var sqlCacheKey = HashCode.Combine("Get", connection.OrmProvider, entityType, entityType);
         if (!sqlCache.TryGetValue(sqlCacheKey, out var sql))
         {
@@ -939,7 +1002,7 @@ public class Repository : IRepository
             sqlCache.TryAdd(sqlCacheKey, sql);
         }
         Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
-        if (entityType.IsEntityType())
+        if (whereObjType.IsEntityType())
         {
             if (whereObj is Dictionary<string, object>)
             {
@@ -961,7 +1024,6 @@ public class Repository : IRepository
             }
             else
             {
-                var whereObjType = whereObj.GetType();
                 var cacheKey = HashCode.Combine("Get", connection.OrmProvider, entityType, whereObjType);
                 if (!queryCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
                 {
@@ -1032,6 +1094,7 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
+        var whereObjType = whereObj.GetType();
         var sqlCacheKey = HashCode.Combine("Get", connection.OrmProvider, entityType, entityType);
         if (!sqlCache.TryGetValue(sqlCacheKey, out var sql))
         {
@@ -1065,7 +1128,7 @@ public class Repository : IRepository
             sqlCache.TryAdd(sqlCacheKey, sql);
         }
         Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
-        if (entityType.IsEntityType())
+        if (whereObjType.IsEntityType())
         {
             if (whereObj is Dictionary<string, object>)
             {
@@ -1087,7 +1150,6 @@ public class Repository : IRepository
             }
             else
             {
-                var whereObjType = whereObj.GetType();
                 var cacheKey = HashCode.Combine("Get", connection.OrmProvider, entityType, whereObjType);
                 if (!queryCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
                 {

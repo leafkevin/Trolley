@@ -334,7 +334,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             command.CommandText = sql;
             command.CommandType = CommandType.Text;
             command.Transaction = this.transaction;
-            connection.Open();
+            this.connection.Open();
             var result = command.ExecuteNonQuery();
             command.Dispose();
             return result;
@@ -1006,7 +1006,7 @@ class UpdateSetting<TEntity> : IUpdateSetting<TEntity>
         command.CommandText = sql;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;
@@ -1124,7 +1124,7 @@ class UpdateFrom<TEntity, <#=tables#>> : IUpdateFrom<TEntity, <#=tables#>>
         command.Transaction = this.transaction;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;
@@ -1248,7 +1248,7 @@ class UpdateJoin<TEntity, <#=tables#>> : IUpdateJoin<TEntity, <#=tables#>>
         command.Transaction = this.transaction;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;
@@ -1357,7 +1357,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateFrom<TEntity, T1, T2, T3,
         command.Transaction = this.transaction;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;
@@ -1465,7 +1465,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateJoin<TEntity, T1, T2, T3,
         command.Transaction = this.transaction;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;

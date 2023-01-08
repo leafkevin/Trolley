@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -687,7 +686,7 @@ class QueryVisitor : SqlVisitor
                 else
                 {
                     fieldName = sqlSegment.ToString();
-                    if (sqlSegment.IsParameter || sqlSegment.IsMethodCall || sqlSegment.FromMember.Name != memberInfo.Name)
+                    if (sqlSegment.IsParameter || !sqlSegment.IsConstantValue || sqlSegment.FromMember?.Name != memberInfo.Name)
                         fieldName += " AS " + memberInfo.Name;
                     readerFields.Add(new ReaderField
                     {
@@ -704,7 +703,7 @@ class QueryVisitor : SqlVisitor
                 //常量或方法访问
                 sqlSegment = this.Visit(sqlSegment);
                 fieldName = sqlSegment.ToString();
-                if (sqlSegment.IsParameter || sqlSegment.IsMethodCall || sqlSegment.FromMember.Name != memberInfo.Name)
+                if (sqlSegment.IsParameter || !sqlSegment.IsConstantValue || sqlSegment.FromMember?.Name != memberInfo.Name)
                     fieldName += " AS " + memberInfo.Name;
                 readerFields.Add(new ReaderField
                 {
@@ -722,7 +721,8 @@ class QueryVisitor : SqlVisitor
     {
         foreach (var readerField in readerFields)
         {
-            readerField.TableSegment.IsUsed = true;
+            if (readerField.TableSegment != null)
+                readerField.TableSegment.IsUsed = true;
             if (readerField.Type == ReaderFieldType.Entity)
             {
                 readerField.TableSegment.Mapper ??= this.dbFactory.GetEntityMap(readerField.TableSegment.EntityType);

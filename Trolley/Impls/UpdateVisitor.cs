@@ -358,16 +358,14 @@ class UpdateVisitor : SqlVisitor
         var memberMapper = entityMapper.GetMemberMap(memberInfo.Name);
         if (builder.Length > 0)
             builder.Append(',');
-        if (this.ormProvider.DatabaseType == DatabaseType.MySql)
+        if (this.isNeedAlias)
             builder.Append("a.");
         builder.Append(this.ormProvider.GetFieldName(memberMapper.FieldName) + "=");
         if (sqlSegment == SqlSegment.Null)
             builder.Append("NULL");
         else
         {
-            if (sqlSegment.HasField)
-                builder.Append(sqlSegment.ToString());
-            else
+            if (sqlSegment.IsConstantValue)
             {
                 builder.Append(parameterName);
                 if (!sqlSegment.IsParameter)
@@ -376,8 +374,11 @@ class UpdateVisitor : SqlVisitor
                     if (memberMapper.NativeDbType.HasValue)
                         this.dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, sqlSegment.Value));
                     else this.dbParameters.Add(ormProvider.CreateParameter(parameterName, sqlSegment.Value));
+                    sqlSegment.IsParameter = true;
+                    sqlSegment.IsConstantValue = false;
                 }
             }
+            else builder.Append(sqlSegment.ToString());
         }
     }
 }

@@ -98,7 +98,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
             command.CommandText = sqlBuilder.ToString();
             command.CommandType = CommandType.Text;
             command.Transaction = this.transaction;
-            connection.Open();
+            this.connection.Open();
             var result = command.ExecuteNonQuery();
             command.Dispose();
             return result;
@@ -117,7 +117,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
             command.CommandText = sql;
             command.CommandType = CommandType.Text;
             command.Transaction = this.transaction;
-            connection.Open();
+            this.connection.Open();
             var result = command.ExecuteNonQuery();
             command.Dispose();
             return result;
@@ -468,7 +468,7 @@ class Deleting<TEntity> : IDeleting<TEntity>
         command.Transaction = this.transaction;
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;

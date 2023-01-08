@@ -223,9 +223,7 @@ class CreateVisitor : SqlVisitor
             fromBuilder.Append("NULL");
         else
         {
-            if (sqlSegment.HasField)
-                fromBuilder.Append(sqlSegment.ToString());
-            else
+            if (sqlSegment.IsConstantValue)
             {
                 fromBuilder.Append(parameterName);
                 if (!sqlSegment.IsParameter)
@@ -234,8 +232,11 @@ class CreateVisitor : SqlVisitor
                     if (memberMapper.NativeDbType.HasValue)
                         this.dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, sqlSegment.Value));
                     else this.dbParameters.Add(ormProvider.CreateParameter(parameterName, sqlSegment.Value));
+                    sqlSegment.IsParameter = true;
+                    sqlSegment.IsConstantValue = false;
                 }
             }
+            else fromBuilder.Append(sqlSegment.ToString());
         }
     }
 }

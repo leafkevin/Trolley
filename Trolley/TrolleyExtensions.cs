@@ -7,7 +7,6 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,6 +14,12 @@ namespace Trolley;
 
 public static class TrolleyExtensions
 {
+    private static Type[] valueTypes = new Type[] {typeof(byte),typeof(sbyte),typeof(short),typeof(ushort),
+        typeof(int),typeof(uint),typeof(long),typeof(ulong),typeof(float),typeof(double),typeof(decimal),
+        typeof(bool),typeof(string),typeof(char),typeof(Guid),typeof(DateTime),typeof(DateTimeOffset),
+        typeof(TimeSpan),typeof(byte[]),typeof(byte?),typeof(sbyte?),typeof(short?),typeof(ushort?),
+        typeof(int?),typeof(uint?),typeof(long?),typeof(ulong?),typeof(float?),typeof(double?),typeof(decimal?),
+        typeof(bool?),typeof(char?),typeof(Guid?) ,typeof(DateTime?),typeof(DateTimeOffset?),typeof(TimeSpan?) };
     private static readonly ConcurrentDictionary<int, Delegate> typeReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
@@ -63,18 +68,16 @@ public static class TrolleyExtensions
     public static async Task<int> CreateAsync<TEntity>(this IRepository repository, IEnumerable entities, int bulkCount = 500, CancellationToken cancellationToken = default)
         => await repository.Create<TEntity>().WithBy(entities, bulkCount).ExecuteAsync(cancellationToken);
 
-    public static int Update<TEntity, TFields>(this IRepository repository, Expression<Func<TEntity, TFields>> fieldsExpr, Expression<Func<TEntity, bool>> predicate)
+
+    public static int Update<TEntity>(this IRepository repository, Expression<Func<TEntity, object>> fieldsExpr, Expression<Func<TEntity, bool>> predicate)
         => repository.Update<TEntity>().Set(fieldsExpr).Where(predicate).Execute();
-    public static async Task<int> UpdateAsync<TEntity, TFields>(this IRepository repository, Expression<Func<TEntity, TFields>> fieldsExpr, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    public static async Task<int> UpdateAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, object>> fieldsExpr, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
         => await repository.Update<TEntity>().Set(fieldsExpr).Where(predicate).ExecuteAsync(cancellationToken);
-    public static int Update<TEntity, TField>(this IRepository repository, Expression<Func<TEntity, TField>> fieldExpr, object parameter)
-        => repository.Update<TEntity>().WithBy(fieldExpr, parameter).Execute();
-    public static async Task<int> UpdateAsync<TEntity, TField>(this IRepository repository, Expression<Func<TEntity, TField>> fieldExpr, object parameter, CancellationToken cancellationToken = default)
-        => await repository.Update<TEntity>().WithBy(fieldExpr, parameter).ExecuteAsync(cancellationToken);
-    public static int Update<TEntity, TFields>(this IRepository repository, Expression<Func<TEntity, TFields>> fieldsExpr, object parameters, int bulkCount = 500)
+    public static int Update<TEntity>(this IRepository repository, Expression<Func<TEntity, object>> fieldsExpr, object parameters, int bulkCount = 500)
         => repository.Update<TEntity>().WithBy(fieldsExpr, parameters, bulkCount).Execute();
-    public static async Task<int> UpdateAsync<TEntity, TFields>(this IRepository repository, Expression<Func<TEntity, TFields>> fieldsExpr, object parameters, int bulkCount = 500, CancellationToken cancellationToken = default)
+    public static async Task<int> UpdateAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, object>> fieldsExpr, object parameters, int bulkCount = 500, CancellationToken cancellationToken = default)
         => await repository.Update<TEntity>().WithBy(fieldsExpr, parameters, bulkCount).ExecuteAsync(cancellationToken);
+
 
     public static int Delete<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate)
         => repository.Delete<TEntity>().Where(predicate).Execute();
@@ -84,6 +87,7 @@ public static class TrolleyExtensions
         => repository.Delete<TEntity>().Where(keys).Execute();
     public static async Task<int> DeleteAsync<TEntity>(this IRepository repository, object keys, CancellationToken cancellationToken = default)
         => await repository.Delete<TEntity>().Where(keys).ExecuteAsync(cancellationToken);
+
 
     public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
     {
@@ -111,32 +115,27 @@ public static class TrolleyExtensions
     }
     public static bool IsEntityType(this Type type)
     {
-        var typeCode = Type.GetTypeCode(type);
-        switch (typeCode)
+        if (valueTypes.Contains(type) || type.IsEnum) return false;
+        if (type.FullName == "System.Data.Linq.Binary")
+            return false;
+        if (type.IsValueType)
         {
-            case TypeCode.DBNull:
-            case TypeCode.Boolean:
-            case TypeCode.Char:
-            case TypeCode.SByte:
-            case TypeCode.Byte:
-            case TypeCode.Int16:
-            case TypeCode.UInt16:
-            case TypeCode.Int32:
-            case TypeCode.UInt32:
-            case TypeCode.Int64:
-            case TypeCode.UInt64:
-            case TypeCode.Single:
-            case TypeCode.Double:
-            case TypeCode.Decimal:
-            case TypeCode.DateTime:
-            case TypeCode.String:
+            var underlyingType = Nullable.GetUnderlyingType(type);
+            if (underlyingType != null && underlyingType.IsEnum)
                 return false;
         }
-        if (type.IsClass) return true;
-        if (type.IsValueType && !type.IsEnum && !type.IsPrimitive && type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Count(f => f.MemberType == MemberTypes.Field || (f.MemberType == MemberTypes.Property && f is PropertyInfo propertyInfo && propertyInfo.GetIndexParameters().Length == 0)) > 1)
-            return true;
-        return false;
+        if (type.IsArray)
+        {
+            var elementType = type.GetElementType();
+            if (valueTypes.Contains(elementType) || elementType.IsEnum) return false;
+            if (elementType.IsValueType)
+            {
+                var underlyingType = Nullable.GetUnderlyingType(elementType);
+                if (underlyingType != null && underlyingType.IsEnum)
+                    return false;
+            }
+        }
+        return true;
     }
     public static Type GetMemberType(this MemberInfo member)
     {

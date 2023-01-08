@@ -18,7 +18,7 @@ public class SqlSegment
     /// 操作符:And/Or/Concat/Equals/NotEquals/Convert/,
     /// </summary>
     public OperationType OperationType { get; set; } = OperationType.None;
-    public Stack<DeferredExpr> DeferredExprs { get; set; } = new Stack<DeferredExpr>();
+    public Stack<DeferredExpr> DeferredExprs { get; set; }
     public int Deep { get; set; }
     public int ReaderIndex { get; set; }
     /// <summary>
@@ -34,27 +34,29 @@ public class SqlSegment
     /// </summary>
     public bool IsConstantValue { get; set; }
     public string ParameterName { get; set; }
-    /// <summary>
-    /// 是否有函数调用
-    /// </summary>
-    public bool IsMethodCall { get; set; }
     public MemberInfo FromMember { get; set; }
     public TableSegment TableSegment { get; set; }
     public object Value { get; set; }
     public Expression Expression { get; set; }
-    public bool HasDeferred => this.DeferredExprs.Count > 0;
+    public bool HasDeferred => this.DeferredExprs != null && this.DeferredExprs.Count > 0;
 
     public SqlSegment Merge(SqlSegment right)
     {
         this.isFixValue = false;
         this.HasField = this.HasField || right.HasField;
         this.IsParameter = this.IsParameter || right.IsParameter;
-        this.IsMethodCall = this.IsMethodCall || right.IsMethodCall;
+        //this.IsExpression = this.IsExpression || right.IsExpression;
+        this.IsConstantValue = this.IsConstantValue && right.IsConstantValue;
         this.Value = right.Value;
         if (right.HasDeferred)
         {
-            while (right.TryPop(out var deferredExpr))
-                this.Push(deferredExpr);
+            if (!this.HasDeferred)
+                this.DeferredExprs = right.DeferredExprs;
+            else
+            {
+                while (right.TryPop(out var deferredExpr))
+                    this.Push(deferredExpr);
+            }
         }
         return this;
     }
@@ -83,10 +85,29 @@ public class SqlSegment
         this.Value = value;
         return this;
     }
-    public void Push(DeferredExpr deferredExpr) => this.DeferredExprs.Push(deferredExpr);
-    public bool TryPop(out DeferredExpr deferredExpr) => this.DeferredExprs.TryPop(out deferredExpr);
+    public void Push(DeferredExpr deferredExpr)
+    {
+        this.DeferredExprs ??= new();
+        this.DeferredExprs.Push(deferredExpr);
+    }
+    public bool TryPop(out DeferredExpr deferredExpr)
+    {
+        if (!this.HasDeferred)
+        {
+            deferredExpr = default;
+            return false;
+        }
+        return this.DeferredExprs.TryPop(out deferredExpr);
+    }
     public bool TryPop(OperationType[] operationTypes, out DeferredExpr deferredExpr)
-        => this.DeferredExprs.TryPop(f => operationTypes.Contains(f.OperationType), out deferredExpr);
+    {
+        if (!this.HasDeferred)
+        {
+            deferredExpr = default;
+            return false;
+        }
+        return this.DeferredExprs.TryPop(f => operationTypes.Contains(f.OperationType), out deferredExpr);
+    }
 
     public override string ToString()
     {

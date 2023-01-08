@@ -1,14 +1,19 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Linq;
 using Xunit;
 
 namespace Trolley.Tests;
 
-public class MySqlUnitTest3
+public class MySqlUnitTest4
 {
+    enum Sex { Male, Female }
+    struct Studuent
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+    }
     private readonly IOrmDbFactory dbFactory;
-    public MySqlUnitTest3()
+    public MySqlUnitTest4()
     {
         var services = new ServiceCollection();
         services.AddSingleton<IOrmProvider, MySqlProvider>();
@@ -127,6 +132,7 @@ public class MySqlUnitTest3
                 Id = 1,
                 ProductNo="PN-001",
                 Name = "波司登羽绒服",
+                Price =550,
                 BrandId = 1,
                 CategoryId = 1,
                 IsEnabled = true,
@@ -140,6 +146,7 @@ public class MySqlUnitTest3
                 Id = 2,
                 ProductNo="PN-002",
                 Name = "雪中飞羽绒裤",
+                Price =350,
                 BrandId = 2,
                 CategoryId = 2,
                 IsEnabled = true,
@@ -153,6 +160,7 @@ public class MySqlUnitTest3
                 Id = 3,
                 ProductNo="PN-003",
                 Name = "优衣库保暖内衣",
+                Price =180,
                 BrandId = 3,
                 CategoryId = 3,
                 IsEnabled = true,
@@ -297,100 +305,19 @@ public class MySqlUnitTest3
         });
     }
     [Fact]
-    public void Update_Fields_Where()
+    public void IsEntityType()
     {
-        using var repository = this.dbFactory.Create();
-        var result = repository.Update<User>(f => new { Name = f.Name + "_1", Gender = Gender.Female }, t => t.Id == 1);
-        var result1 = repository.Get<User>(1);
-        Assert.True(result > 0);
-        Assert.NotNull(result1);
-        Assert.True(result1.Name == result1.Name);
-        Assert.True(result1.Name == "leafkevin_1");
-    }
-    [Fact]
-    public void Update_Fields_Parameters()
-    {
-        using var repository = this.dbFactory.Create();
-        var result = repository.Update<User>(f => f.Name, new { Id = 1, Name = "leafkevin11" });
-        var result1 = repository.Get<User>(1);
-        Assert.True(result > 0);
-        Assert.NotNull(result1);
-        Assert.True(result1.Name == result1.Name);
-        Assert.True(result1.Name == "leafkevin11");
-    }
-    [Fact]
-    public void Update_Fields_Parameters_One()
-    {
-        using var repository = this.dbFactory.Create();
-        var result = repository.Update<User>(f => new { Age = 25, f.Name, CompanyId = DBNull.Value }, new { Id = 1, Age = 18, Name = "leafkevin22" });
-        var result1 = repository.Get<User>(1);
-        Assert.True(result > 0);
-        Assert.NotNull(result1);
-        Assert.True(result1.Name == result1.Name);
-        Assert.True(result1.Name == "leafkevin22");
-        Assert.True(result1.Age == 25);
-        Assert.True(result1.CompanyId == 0);
-    }
-    [Fact]
-    public async void Update_Fields_Parameters_Multi()
-    {
-        using var repository = this.dbFactory.Create();
-        var orderDetails = await repository.From<OrderDetail>().ToListAsync();
-        var parameters = orderDetails.Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 1, Amount = f.Amount + 50 }).ToList();
-        var result = repository.Update<OrderDetail>(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters);
-        var updatedDetails = await repository.QueryAsync<OrderDetail>();
-
-        Assert.True(result == parameters.Count);
-        int index = 0;
-        updatedDetails.ForEach(f =>
-        {
-            Assert.True(f.Price == 200);
-            Assert.True(f.Quantity == parameters[index].Quantity);
-            Assert.True(f.Amount == parameters[index].Amount);
-            Assert.True(f.UpdatedBy == 2);
-            Assert.True(f.ProductId == 0);
-            index++;
-        });
-    }
-    [Fact]
-    public void Update_WithBy_Parameters()
-    {
-        using var repository = this.dbFactory.Create();
-        var result = repository.Update<User>().WithBy(new { Name = "leafkevin1", Id = 1 }).Execute();
-        var result1 = repository.Get<User>(new { Id = 1 });
-        Assert.True(result > 0);
-        Assert.NotNull(result1);
-        Assert.True(result1.Id == 1);
-        Assert.True(result1.Name == "leafkevin1");
-    }
-    [Fact]
-    public async void Update_WithBy_Parameters_Multi()
-    {
-        using var repository = this.dbFactory.Create();
-        var parameters = await repository.From<OrderDetail>()
-            .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
-            .ToListAsync();
-        var sql = repository.Update<OrderDetail>().WithBy(parameters).ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price5,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5;UPDATE `sys_order_detail` SET `Price`=@Price6,`Quantity`=@Quantity6,`Amount`=@Amount6 WHERE `Id`=@kId6");
-    }
-    [Fact]
-    public async void Update_WithBy_Fields_Parameters_Multi()
-    {
-        using var repository = this.dbFactory.Create();
-        var parameters = await repository.From<OrderDetail>()
-            .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
-            .ToListAsync();
-        var sql = repository.Update<OrderDetail>()
-            .WithBy(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters)
-            .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity6,`Amount`=@Amount6 WHERE `Id`=@kId6");
-    }
-    [Fact]
-    public async void UpdateAsync_Parameters_WithBy()
-    {
-        using var repository = this.dbFactory.Create();
-        var orders = await repository.From<Order>().ToListAsync();
-        var sql = repository.Update<Order>().WithBy(f => new { BuyerId = DBNull.Value, OrderNo = "ON_" + f.OrderNo, f.TotalAmount }, orders).ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount0 WHERE `Id`=@kId0;UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount1 WHERE `Id`=@kId1;UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount2 WHERE `Id`=@kId2");
+        Assert.False(typeof(Sex).IsEntityType());
+        Assert.False(typeof(Sex?).IsEntityType());
+        Assert.True(typeof(Studuent).IsEntityType());
+        Assert.False(typeof(string).IsEntityType());
+        Assert.False(typeof(int).IsEntityType());
+        Assert.False(typeof(int?).IsEntityType());
+        Assert.False(typeof(Guid).IsEntityType());
+        Assert.False(typeof(Guid?).IsEntityType());
+        Assert.False(typeof(DateTime).IsEntityType());
+        Assert.False(typeof(DateTime?).IsEntityType());
+        Assert.False(typeof(byte[]).IsEntityType());
+        Assert.False(typeof(int[]).IsEntityType());
     }
 }

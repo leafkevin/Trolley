@@ -196,7 +196,7 @@ class Created<TEntity> : ICreated<TEntity>
             command.CommandText = sql;
             command.CommandType = CommandType.Text;
             command.Transaction = this.transaction;
-            connection.Open();
+            this.connection.Open();
             var entityMapper = this.dbFactory.GetEntityMap(entityType);
             if (entityMapper.IsAutoIncrement)
             {
@@ -659,7 +659,7 @@ class CreateBase
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        connection.Open();
+        this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
         return result;
