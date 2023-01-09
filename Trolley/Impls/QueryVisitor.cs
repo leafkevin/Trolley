@@ -686,7 +686,7 @@ class QueryVisitor : SqlVisitor
                 else
                 {
                     fieldName = sqlSegment.ToString();
-                    if (sqlSegment.IsParameter || !sqlSegment.IsConstantValue || sqlSegment.FromMember?.Name != memberInfo.Name)
+                    if (sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.FromMember?.Name != memberInfo.Name)
                         fieldName += " AS " + memberInfo.Name;
                     readerFields.Add(new ReaderField
                     {
@@ -703,7 +703,7 @@ class QueryVisitor : SqlVisitor
                 //常量或方法访问
                 sqlSegment = this.Visit(sqlSegment);
                 fieldName = sqlSegment.ToString();
-                if (sqlSegment.IsParameter || !sqlSegment.IsConstantValue || sqlSegment.FromMember?.Name != memberInfo.Name)
+                if (sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.FromMember?.Name != memberInfo.Name)
                     fieldName += " AS " + memberInfo.Name;
                 readerFields.Add(new ReaderField
                 {

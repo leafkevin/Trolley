@@ -621,7 +621,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant(ormProvider.GetFieldName(propMapper.FieldName) + "=")));
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, propMapper.NativeDbType, parameterMemberMapper.MemberName, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.MemberName, propMapper.NativeDbType, blockBodies);
                 columnIndex++;
             }
             columnIndex = 0;
@@ -642,7 +642,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 blockBodies.Add(Expression.Assign(parameterNameExpr, concatExpr));
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, keyMapper.NativeDbType, parameterMemberMapper.MemberName, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.MemberName, keyMapper.NativeDbType, blockBodies);
                 columnIndex++;
             }
             commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, StringBuilder, int, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, builderExpr, indexExpr, parameterExpr).Compile();
@@ -709,7 +709,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
                 sqlBuilder.Append($"{ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, propMapper.NativeDbType, parameterMemberMapper.MemberName, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.MemberName, propMapper.NativeDbType, blockBodies);
                 columnIndex++;
             }
             columnIndex = 0;
@@ -724,7 +724,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 var parameterName = ormProvider.ParameterPrefix + "k" + keyMapper.MemberName;
                 sqlBuilder.Append($"{ormProvider.GetFieldName(keyMapper.FieldName)}={parameterName}");
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, keyMapper.NativeDbType, parameterMemberMapper.MemberName, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.MemberName, keyMapper.NativeDbType, blockBodies);
                 columnIndex++;
             }
             var resultLabelExpr = Expression.Label(typeof(string));
@@ -760,7 +760,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 if (!Regex.IsMatch(sql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
                     continue;
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, parameterMemberMapper.MemberName, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.MemberName, null, blockBodies);
             }
             commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
             sqlCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);

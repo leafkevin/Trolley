@@ -115,7 +115,7 @@ public static class TrolleyExtensions
     }
     public static bool IsEntityType(this Type type)
     {
-        if (valueTypes.Contains(type) || type.IsEnum) return false;
+        if (type.IsEnum || valueTypes.Contains(type)) return false;
         if (type.FullName == "System.Data.Linq.Binary")
             return false;
         if (type.IsValueType)
@@ -133,6 +133,20 @@ public static class TrolleyExtensions
                 var underlyingType = Nullable.GetUnderlyingType(elementType);
                 if (underlyingType != null && underlyingType.IsEnum)
                     return false;
+            }
+        }
+        if (typeof(IEnumerable).IsAssignableFrom(type))
+        {
+            foreach (var elementType in type.GenericTypeArguments)
+            {
+                if (elementType.IsEnum || valueTypes.Contains(elementType))
+                    return false;
+                if (elementType.IsValueType)
+                {
+                    var underlyingType = Nullable.GetUnderlyingType(elementType);
+                    if (underlyingType != null && underlyingType.IsEnum)
+                        return false;
+                }
             }
         }
         return true;
@@ -238,7 +252,7 @@ public static class TrolleyExtensions
         else returnExpr = Expression.New(target.Constructor, target.Arguments);
 
         blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
-        blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Constant(null, entityType)));
+        blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
         return Expression.Lambda(returnExpr, readerExpr).Compile();
     }
     private static Delegate CreateReaderDeserializer(IDataReader reader, Type entityType, List<ReaderField> readerFields)
@@ -339,7 +353,7 @@ public static class TrolleyExtensions
         else returnExpr = Expression.New(root.Constructor, root.Arguments);
 
         blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
-        blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Constant(null, entityType)));
+        blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
         return Expression.Lambda(returnExpr, readerExpr).Compile();
     }
     private static Expression GetReaderValue(ParameterExpression readerExpr, Expression indexExpr, Type targetType, Type fieldType)

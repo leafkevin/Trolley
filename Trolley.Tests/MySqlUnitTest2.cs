@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using Xunit;
 
 namespace Trolley.Tests;
@@ -175,6 +176,7 @@ public class MySqlUnitTest2
                 BuyerId = 1,
                 SellerId = 2,
                 TotalAmount = 500,
+                //Products = new  List<int>{1, 2},
                 IsEnabled = true,
                 CreatedAt = DateTime.Now,
                 CreatedBy = 1,
@@ -188,6 +190,7 @@ public class MySqlUnitTest2
                 BuyerId = 2,
                 SellerId = 1,
                 TotalAmount = 350,
+                //Products = new  List<int>{1, 3},
                 IsEnabled = true,
                 CreatedAt = DateTime.Now,
                 CreatedBy = 1,
@@ -201,6 +204,7 @@ public class MySqlUnitTest2
                 BuyerId = 1,
                 SellerId = 2,
                 TotalAmount = 199,
+                //Products = new  List<int>{2},
                 IsEnabled = true,
                 CreatedAt = DateTime.Now,
                 CreatedBy = 1,
@@ -382,7 +386,7 @@ public class MySqlUnitTest2
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .IncludeMany((x, y) => x.Details, f => f.ProductId == 1)
             .Where((a, b) => a.TotalAmount > 300)
-            .Select((x, y) => new { Order = x, Buyer = y, Test = x.OrderNo +"_"+ (y.Age % 4) })
+            .Select((x, y) => new { Order = x, Buyer = y, Test = x.OrderNo + "_" + (y.Age % 4) })
             .ToList();
 
         Assert.True(result.Count == 2);
@@ -654,5 +658,20 @@ public class MySqlUnitTest2
         var value3 = repository.QueryFirst<double>("SELECT AVG(TotalAmount) FROM sys_order");
         Assert.True(value1 == value2);
         Assert.True(value1 == value3);
+    }
+    [Fact]
+    public void Query_ValueTuple()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = "SELECT Id,OrderNo,TotalAmount FROM sys_order";
+        var result = repository.Query<(int OrderId, string OrderNo, double TotalAmount)>(sql);
+        Assert.NotNull(result);
+    }
+    [Fact]
+    public void Query_Json()
+    {
+        using var repository = this.dbFactory.Create();
+        var result = repository.From<Order>().First();
+        Assert.NotNull(result);
     }
 }

@@ -232,12 +232,19 @@ class Deleted<TEntity> : IDeleted<TEntity>
             var blockBodies = new List<Expression>();
             ParameterExpression typedParameterExpr = null;
             var parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
+            bool isEntityType = false;
 
             if (parameterType.IsEntityType())
             {
+                isEntityType = true;
                 typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
                 blockParameters.Add(typedParameterExpr);
                 blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
+            }
+            else
+            {
+                if (entityMapper.KeyMembers.Count > 1)
+                    throw new NotSupportedException($"模型{entityType.FullName}有多个主键字段，不能使用单个值类型{parameterType.FullName}作为参数");
             }
             blockParameters.Add(parameterNameExpr);
 
@@ -266,9 +273,9 @@ class Deleted<TEntity> : IDeleted<TEntity>
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, constantExpr));
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
-                if (parameterType.IsEntityType())
-                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, keyMapper.NativeDbType, keyMapper.MemberName, blockBodies);
-                else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterExpr, parameterNameExpr, keyMapper.NativeDbType, blockBodies);
+                if (isEntityType)
+                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, keyMapper.MemberName, keyMapper.NativeDbType, blockBodies);
+                else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, keyMapper.NativeDbType, blockBodies);
             }
             commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, StringBuilder, int, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, builderExpr, indexExpr, parameterExpr).Compile();
             commandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
@@ -323,17 +330,31 @@ class Deleted<TEntity> : IDeleted<TEntity>
         {
             int index = 0;
             var entityMapper = this.dbFactory.GetEntityMap(entityType);
-            var parameterMapper = this.dbFactory.GetEntityMap(parameterType);
+
             var ormProvider = this.connection.OrmProvider;
             var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
             var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");
-            var typedParameterExpr = Expression.Parameter(parameterType, "typedParameter");
 
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
-            blockParameters.Add(typedParameterExpr);
-            blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
+
+            EntityMap parameterMapper = null;
+            ParameterExpression typedParameterExpr = null;
+            bool isEntityType = false;
+            if (parameterType.IsEntityType())
+            {
+                isEntityType = true;
+                parameterMapper = this.dbFactory.GetEntityMap(parameterType);
+                typedParameterExpr = Expression.Parameter(parameterType, "typedParameter");
+                blockParameters.Add(typedParameterExpr);
+                blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
+            }
+            else
+            {
+                if (entityMapper.KeyMembers.Count > 1)
+                    throw new NotSupportedException($"模型{entityType.FullName}有多个主键字段，不能使用单个值类型{parameterType.FullName}作为参数");
+            }
 
             var methodInfo1 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(char) });
             var methodInfo2 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
@@ -342,15 +363,18 @@ class Deleted<TEntity> : IDeleted<TEntity>
             var builder = new StringBuilder($"DELETE FROM {ormProvider.GetTableName(entityMapper.TableName)} WHERE ");
             foreach (var keyMapper in entityMapper.KeyMembers)
             {
-                if (!parameterMapper.TryGetMemberMap(keyMapper.MemberName, out var propMapper))
+                if (isEntityType && !parameterMapper.TryGetMemberMap(keyMapper.MemberName, out var propMapper))
                     throw new ArgumentNullException($"参数类型{parameterType.FullName}缺少主键字段{keyMapper.MemberName}", "keys");
 
-                var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
+                var parameterName = ormProvider.ParameterPrefix + keyMapper.MemberName;
                 if (index > 0)
                     builder.Append(" AND ");
-                builder.Append($"{ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
+                builder.Append($"{ormProvider.GetFieldName(keyMapper.FieldName)}={parameterName}");
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, propMapper.NativeDbType, propMapper.MemberName, blockBodies);
+
+                if (isEntityType)
+                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, keyMapper.MemberName, keyMapper.NativeDbType, blockBodies);
+                else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, keyMapper.NativeDbType, blockBodies);
                 index++;
             }
             var resultLabelExpr = Expression.Label(typeof(string));
@@ -386,7 +410,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
                 if (!Regex.IsMatch(sql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
                     continue;
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, typedParameterExpr, parameterNameExpr, parameterMemberMapper.MemberName, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.MemberName, null, blockBodies);
             }
             commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
             commandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);

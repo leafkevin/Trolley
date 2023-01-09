@@ -58,6 +58,7 @@ public class Order
     public double TotalAmount { get; set; }
     public int BuyerId { get; set; }
     public int SellerId { get; set; }
+    //public List<int> Products { get; set; }
     public bool IsEnabled { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
