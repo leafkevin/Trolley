@@ -11,13 +11,12 @@ public class MySqlUnitTest2
     public MySqlUnitTest2()
     {
         var services = new ServiceCollection();
-        services.AddSingleton<IOrmProvider, MySqlProvider>();
         services.AddSingleton(f =>
         {
             var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
             var ormProvider = f.GetService<IOrmProvider>();
             var builder = new OrmDbFactoryBuilder();
-            builder.Register("fengling", true, f => f.Add(connectionString, ormProvider, true))
+            builder.Register("fengling", true, f => f.Add<MySqlProvider>(connectionString, true))
                 .Configure(f => new ModelConfiguration().OnModelCreating(f));
             return builder.Build();
         });

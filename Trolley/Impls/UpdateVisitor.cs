@@ -140,7 +140,7 @@ class UpdateVisitor : SqlVisitor
         var lambdaExpr = fieldsExpr as LambdaExpression;
         var entityMapper = this.tables[0].Mapper;
         MemberMap memberMapper = null;
-        List<SetField> setFields = null;
+        var setFields = new List<SetField>();
 
         var builder = new StringBuilder();
         if (!string.IsNullOrEmpty(this.setSql))
@@ -159,7 +159,6 @@ class UpdateVisitor : SqlVisitor
             case ExpressionType.New:
                 this.InitTableAlias(lambdaExpr);
                 var newExpr = lambdaExpr.Body as NewExpression;
-                setFields = new List<SetField>();
                 for (int i = 0; i < newExpr.Arguments.Count; i++)
                 {
                     var memberInfo = newExpr.Members[i];
@@ -176,7 +175,6 @@ class UpdateVisitor : SqlVisitor
             case ExpressionType.MemberInit:
                 this.InitTableAlias(lambdaExpr);
                 var memberInitExpr = lambdaExpr.Body as MemberInitExpression;
-                setFields = new List<SetField>();
                 for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
                 {
                     var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
@@ -229,53 +227,36 @@ class UpdateVisitor : SqlVisitor
     {
         var lambdaExpr = fieldsExpr as LambdaExpression;
         var entityMapper = this.tables[0].Mapper;
-        List<SetField> setFields = null;
         MemberMap memberMapper = null;
         List<ParameterExpression> argumentParameters = null;
-
+        var setFields = new List<SetField>();
         var builder = new StringBuilder();
         if (!string.IsNullOrEmpty(this.setSql))
         {
             builder.Append(this.setSql);
             builder.Append(',');
         }
-        switch (fieldsExpr.NodeType)
+        switch (lambdaExpr.Body.NodeType)
         {
             case ExpressionType.MemberAccess:
                 var memberExpr = lambdaExpr.Body as MemberExpression;
                 if (!entityMapper.TryGetMemberMap(memberExpr.Member.Name, out memberMapper))
                     throw new ArgumentException($"模型{entityMapper.EntityType.FullName}不存在成员{memberMapper.MemberName}");
 
-                if (this.isNeedAlias)
-                {
-                    switch (this.ormProvider.DatabaseType)
-                    {
-                        case DatabaseType.MySql:
-                        case DatabaseType.Oracle:
-                            builder.Append("a.");
-                            break;
-                    }
-                }
-
                 if (valueExpr.GetParameters(out argumentParameters)
-                    && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
+                   && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
                 {
                     var lambdaValuesExpr = valueExpr as LambdaExpression;
                     var newLambdaExpr = Expression.Lambda(lambdaValuesExpr.Body, lambdaValuesExpr.Parameters.ToList());
                     var sql = this.VisitFromQuery(newLambdaExpr, out var isNeedAlias);
+                    setFields.Add(new SetField { MemberMapper = memberMapper, Value = $"({sql})" });
                     if (isNeedAlias) this.isNeedAlias = true;
-                    builder.Append($"{ormProvider.GetFieldName(memberMapper.FieldName)}=({sql})");
                 }
-                else
-                {
-                    var setField = this.AddMemberElement(new SqlSegment { Expression = valueExpr }, memberMapper);
-                    builder.Append($"{ormProvider.GetFieldName(memberMapper.FieldName)}={setField.Value}");
-                }
+                else setFields.Add(this.AddMemberElement(new SqlSegment { Expression = valueExpr }, memberMapper));
                 break;
             case ExpressionType.New:
                 this.InitTableAlias(lambdaExpr);
                 var newExpr = lambdaExpr.Body as NewExpression;
-                setFields = new List<SetField>();
                 for (int i = 0; i < newExpr.Arguments.Count; i++)
                 {
                     var memberInfo = newExpr.Members[i];
@@ -301,7 +282,6 @@ class UpdateVisitor : SqlVisitor
             case ExpressionType.MemberInit:
                 this.InitTableAlias(lambdaExpr);
                 var memberInitExpr = lambdaExpr.Body as MemberInitExpression;
-                setFields = new List<SetField>();
                 for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
                 {
                     var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
@@ -539,6 +519,8 @@ class UpdateVisitor : SqlVisitor
     {
         this.tableAlias.Clear();
         lambdaExpr.Body.GetParameterNames(out var parameters);
+        if (parameters == null || parameters.Count == 0)
+            return;
         int index = 0;
         foreach (var parameterExpr in lambdaExpr.Parameters)
         {

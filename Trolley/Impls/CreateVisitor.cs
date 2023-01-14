@@ -200,6 +200,9 @@ class CreateVisitor : SqlVisitor
     private void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.tableAlias.Clear();
+        lambdaExpr.Body.GetParameterNames(out var parameters);
+        if (parameters == null || parameters.Count == 0)
+            return;
         for (int i = 0; i < lambdaExpr.Parameters.Count; i++)
         {
             var parameterExpr = lambdaExpr.Parameters[i];

@@ -11,13 +11,12 @@ public class MySqlUnitTest3
     public MySqlUnitTest3()
     {
         var services = new ServiceCollection();
-        services.AddSingleton<IOrmProvider, MySqlProvider>();
         services.AddSingleton(f =>
         {
             var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
             var ormProvider = f.GetService<IOrmProvider>();
             var builder = new OrmDbFactoryBuilder();
-            builder.Register("fengling", true, f => f.Add(connectionString, ormProvider, true))
+            builder.Register("fengling", true, f => f.Add<MySqlProvider>(connectionString, true))
                 .Configure(f => new ModelConfiguration().OnModelCreating(f));
             return builder.Build();
         });
@@ -429,7 +428,7 @@ public class MySqlUnitTest3
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`) WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
     }
     [Fact]
     public void Update_Set_FromQuery_Fields()
@@ -443,7 +442,54 @@ public class MySqlUnitTest3
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`) WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+    }
+    [Fact]
+    public void Update_From_One()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository.Update<Order>()
+            .From<OrderDetail>()
+            .Set(x => x.TotalAmount, 200.56)
+            .Set((a, b) => new
+            {
+                OrderNo = a.OrderNo + "_111",
+                BuyerId = DBNull.Value
+            })
+            .Where((x, y) => x.Id == y.OrderId && x.BuyerId == 1)
+            .ToSql(out _);
+        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+    }
+    [Fact]
+    public void Update_From_Multi()
+    {        
+        using var repository = this.dbFactory.Create();
+        var sql = repository.Update<Order>()
+            .From<OrderDetail>()
+            .Set((x, y) => new
+            {
+                TotalAmount = y.Amount,
+                OrderNo = x.OrderNo + "_111",
+                BuyerId = DBNull.Value
+            })
+            .Where((x, y) => x.Id == y.OrderId && x.BuyerId == 1)
+            .ToSql(out _);
+        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=b.`Amount`,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+    }
+    [Fact]
+    public void Update_From_Fields()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository.Update<Order>()
+            .From<OrderDetail>()
+            .Set(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
+                .Where(f => f.OrderId == y.Id)
+                .Select(t => Sql.Sum(t.Amount)))
+            .Set((a, b) => new { OrderNo = a.OrderNo + b.ProductId.ToString() })
+            .Set((x, y) => new { BuyerId = DBNull.Value })
+            .Where((x, y) => x.Id == y.OrderId && x.BuyerId == 1)
+            .ToSql(out _);
+        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,CAST(b.`ProductId` AS CHAR)),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
     }
     [Fact]
     public void Update_InnerJoin_One()
@@ -459,7 +505,7 @@ public class MySqlUnitTest3
             })
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=b.`Amount`,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
     }
     [Fact]
     public void Update_InnerJoin_Multi()
@@ -476,5 +522,20 @@ public class MySqlUnitTest3
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out _);
         Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=b.`Amount`,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+    }
+    [Fact]
+    public void Update_InnerJoin_Fields()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository.Update<Order>()
+            .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
+            .Set(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
+                .Where(f => f.OrderId == y.Id)
+                .Select(t => Sql.Sum(t.Amount)))
+            .Set((a, b) => new { OrderNo = a.OrderNo + b.ProductId.ToString() })
+            .Set((x, y) => new { BuyerId = DBNull.Value })
+            .Where((a, b) => a.BuyerId == 1)
+            .ToSql(out _);
+        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,CAST(b.`ProductId` AS CHAR)),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
     }
 }
