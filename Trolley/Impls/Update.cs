@@ -7,7 +7,6 @@ using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -41,6 +40,15 @@ namespace Trolley;
 /// LEFT JOIN sys_order_detail b ON a.`Id` = b.`OrderId`
 /// SET a.`TotalAmount`=a.`TotalAmount`+b.`TotalAmount`+50
 /// WHERE a.`TotalAmount` IS NULL;
+/// 
+/// Oracle
+/// UPDATE sys_order a 
+/// SET a.TotalAmount=(SELECT a.TotalAmount+b.TotalAmount+50 FROM sys_order_detail b WHERE a.Id=b.OrderId)
+/// WHERE a.`Id`=1;
+/// 
+/// UPDATE sys_order a 
+/// SET (a.OrderNo,a.TotalAmount)=(SELECT 'ON_'||a.OrderNo,a.`TotalAmount`+b.`TotalAmount`+50 FROM sys_order_detail b WHERE a.Id=b.OrderId)
+/// WHERE a.`Id`=1;
 /// </summary>
 /// <typeparam name="TEntity"></typeparam>
 class Update<TEntity> : IUpdate<TEntity>
@@ -62,7 +70,7 @@ class Update<TEntity> : IUpdate<TEntity>
 
         return new UpdateSet<TEntity>(this.dbFactory, this.connection, this.transaction, null, parameters, bulkCount);
     }
-    public IUpdateSet<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldsExpr, object parameters, int bulkCount = 500)
+    public IUpdateSet<TEntity> WithBy<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr, object parameters, int bulkCount = 500)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -72,35 +80,44 @@ class Update<TEntity> : IUpdate<TEntity>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持MemberAccess或New类型表达式");
 
         var setFields = new List<SetField>();
+        var entityMapper = this.dbFactory.GetEntityMap(typeof(TEntity));
+        MemberMap memberMapper = null;
         switch (fieldsExpr.Body.NodeType)
         {
             case ExpressionType.MemberAccess:
                 var memberExpr = fieldsExpr.Body as MemberExpression;
-                setFields.Add(new SetField { MemberName = memberExpr.Member.Name });
+                memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
+                setFields.Add(new SetField { MemberMapper = memberMapper });
                 break;
             case ExpressionType.New:
                 var newExpr = fieldsExpr.Body as NewExpression;
-                var entityMapper = this.dbFactory.GetEntityMap(typeof(TEntity));
+
                 UpdateVisitor visitor = null;
                 bool hasParameterFields = false;
                 for (int i = 0; i < newExpr.Arguments.Count; i++)
                 {
                     var memberInfo = newExpr.Members[i];
-                    if (!entityMapper.TryGetMemberMap(memberInfo.Name, out _))
+                    if (!entityMapper.TryGetMemberMap(memberInfo.Name, out memberMapper))
                         continue;
                     var argumentExpr = newExpr.Arguments[i];
                     if (argumentExpr is MemberExpression newMemberExpr && newMemberExpr.Member.Name == memberInfo.Name)
                     {
-                        setFields.Add(new SetField { MemberName = memberInfo.Name });
+                        setFields.Add(new SetField { MemberMapper = memberMapper });
                         hasParameterFields = true;
                     }
                     else
                     {
-                        visitor ??= new UpdateVisitor(this.dbFactory, this.connection, this.transaction, typeof(TEntity));
-                        var sqlSegment = visitor.SetValue(fieldsExpr, argumentExpr, out var dbParameters);
+                        SqlSegment sqlSegment = null;
+                        List<IDbDataParameter> dbParameters = null;
+                        if (visitor == null)
+                        {
+                            visitor = new UpdateVisitor(this.dbFactory, this.connection, this.transaction, typeof(TEntity));
+                            sqlSegment = visitor.SetValue(fieldsExpr, argumentExpr, out dbParameters);
+                        }
+                        else sqlSegment = visitor.SetValue(argumentExpr, out dbParameters);
                         setFields.Add(new SetField
                         {
-                            MemberName = memberInfo.Name,
+                            MemberMapper = memberMapper,
                             Value = sqlSegment.Value.ToString(),
                             DbParameters = dbParameters
                         });
@@ -122,6 +139,39 @@ class Update<TEntity> : IUpdate<TEntity>
         var visitor = new UpdateVisitor(this.dbFactory, this.connection, this.transaction, typeof(TEntity));
         return new UpdateSetting<TEntity>(visitor.Set(fieldsExpr));
     }
+    public IUpdateSetting<TEntity> Set<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        var visitor = new UpdateVisitor(this.dbFactory, this.connection, this.transaction, typeof(TEntity));
+        return new UpdateSetting<TEntity>(visitor.SetFromQuery(fieldsExpr));
+    }
+    public IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        var visitor = new UpdateVisitor(this.dbFactory, this.connection, this.transaction, typeof(TEntity));
+        if (condition) visitor.Set(fieldsExpr);
+        return new UpdateSetting<TEntity>(visitor);
+    }
+    public IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        var visitor = new UpdateVisitor(this.dbFactory, this.connection, this.transaction, typeof(TEntity));
+        if (condition) visitor.SetFromQuery(fieldsExpr, null);
+        return new UpdateSetting<TEntity>(visitor);
+    }
+
     public IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
         if (fieldExpr == null)
@@ -134,16 +184,18 @@ class Update<TEntity> : IUpdate<TEntity>
         var visitor = new UpdateVisitor(this.dbFactory, this.connection, this.transaction, typeof(TEntity));
         return new UpdateSetting<TEntity>(visitor.Set(fieldExpr, fieldValue));
     }
-    public IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsExpr)
+    public IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        var visitor = new UpdateVisitor(this.dbFactory, this.connection, this.transaction, typeof(TEntity));
-        if (condition) visitor.Set(fieldsExpr);
-        return new UpdateSetting<TEntity>(visitor);
+        var entityType = typeof(TEntity);
+        var visitor = new UpdateVisitor(this.dbFactory, this.connection, this.transaction, entityType);
+        return new UpdateSetting<TEntity>(visitor.SetFromQuery(fieldExpr, subQueryExpr));
     }
     public IUpdateSetting<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
@@ -158,6 +210,21 @@ class Update<TEntity> : IUpdate<TEntity>
         if (condition) visitor.Set(fieldExpr, fieldValue);
         return new UpdateSetting<TEntity>(visitor);
     }
+    public IUpdateSetting<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
+
+        var entityType = typeof(TEntity);
+        var visitor = new UpdateVisitor(this.dbFactory, this.connection, this.transaction, entityType);
+        if (condition) visitor.SetFromQuery(fieldExpr, subQueryExpr);
+        return new UpdateSetting<TEntity>(visitor);
+    }
+
     public IUpdateFrom<TEntity, T> From<T>()
     {
         var visitor = new UpdateVisitor(this.dbFactory, this.connection, this.transaction, typeof(TEntity))
@@ -188,6 +255,7 @@ class Update<TEntity> : IUpdate<TEntity>
              .From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
         return new UpdateFrom<TEntity, T1, T2, T3, T4, T5>(visitor);
     }
+
     public IUpdateJoin<TEntity, T> InnerJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
     {
         var visitor = new UpdateVisitor(this.dbFactory, this.connection, this.transaction, typeof(TEntity))
@@ -222,6 +290,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         this.parameters = parameters;
         this.bulkCount = bulkCount;
     }
+
     public int Execute()
     {
         bool isMulti = false;
@@ -257,12 +326,10 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             int index = 0;
             foreach (var setField in this.setFields)
             {
-                if (!entityMapper.TryGetMemberMap(setField.MemberName, out var memberMapper))
-                    continue;
                 if (string.IsNullOrEmpty(setField.Value))
                     continue;
                 if (index > 0) builder.Append(',');
-                builder.Append(ormProvider.GetFieldName(memberMapper.FieldName));
+                builder.Append(ormProvider.GetFieldName(setField.MemberMapper.FieldName));
                 builder.Append('=');
                 builder.Append(setField.Value);
                 if (setField.DbParameters != null && setField.DbParameters.Count > 0)
@@ -371,21 +438,22 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             int index = 0;
             foreach (var setField in this.setFields)
             {
-                if (!entityMapper.TryGetMemberMap(setField.MemberName, out var memberMapper))
-                    continue;
                 if (string.IsNullOrEmpty(setField.Value))
                     continue;
                 if (index > 0) builder.Append(',');
-                builder.Append(ormProvider.GetFieldName(memberMapper.FieldName));
+                builder.Append(ormProvider.GetFieldName(setField.MemberMapper.FieldName));
                 builder.Append('=');
                 builder.Append(setField.Value);
                 if (setField.DbParameters != null && setField.DbParameters.Count > 0)
                     setField.DbParameters.ForEach(f => cmd.Parameters.Add(f));
                 index++;
             }
-            builder.Insert(0, $"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ");
-            fixSetSql = builder.ToString();
-            isFixSetSql = true;
+            if (index > 0)
+            {
+                builder.Insert(0, $"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ");
+                fixSetSql = builder.ToString();
+                isFixSetSql = true;
+            }
         }
 
         if (isMulti)
@@ -489,21 +557,22 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             int index = 0;
             foreach (var setField in this.setFields)
             {
-                if (!entityMapper.TryGetMemberMap(setField.MemberName, out var memberMapper))
-                    continue;
                 if (string.IsNullOrEmpty(setField.Value))
                     continue;
                 if (index > 0) builder.Append(',');
-                builder.Append(ormProvider.GetFieldName(memberMapper.FieldName));
+                builder.Append(ormProvider.GetFieldName(setField.MemberMapper.FieldName));
                 builder.Append('=');
                 builder.Append(setField.Value);
                 if (setField.DbParameters != null && setField.DbParameters.Count > 0)
                     setField.DbParameters.ForEach(f => command.Parameters.Add(f));
                 index++;
             }
-            builder.Insert(0, $"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ");
-            fixSetSql = builder.ToString();
-            isFixSetSql = true;
+            if (index > 0)
+            {
+                builder.Insert(0, $"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ");
+                fixSetSql = builder.ToString();
+                isFixSetSql = true;
+            }
         }
 
         if (isMulti)
@@ -552,6 +621,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             return sql;
         }
     }
+
     private Action<IDbCommand, IOrmProvider, StringBuilder, int, object> BuildBatchCommandInitializer(Type entityType, Type parameterType, bool isFixSetSql)
     {
         int cacheKey = 0;
@@ -601,7 +671,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
 
                 if (this.setFields != null)
                 {
-                    var setField = this.setFields.Find(f => f.MemberName == parameterMemberMapper.MemberName);
+                    var setField = this.setFields.Find(f => f.MemberMapper.MemberName == parameterMemberMapper.MemberName);
                     if (setField == null) continue;
                     if (!string.IsNullOrEmpty(setField.Value))
                         continue;
@@ -695,7 +765,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
 
                 if (this.setFields != null)
                 {
-                    var setField = this.setFields.Find(f => f.MemberName == parameterMemberMapper.MemberName);
+                    var setField = this.setFields.Find(f => f.MemberMapper.MemberName == parameterMemberMapper.MemberName);
                     if (setField == null) continue;
                     if (!string.IsNullOrEmpty(setField.Value)) continue;
                 }
@@ -737,36 +807,6 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         }
         return (Func<IDbCommand, IOrmProvider, object, string>)commandInitializerDelegate;
     }
-    private Action<IDbCommand, IOrmProvider, object> BuildCommandInitializer(string sql, Type entityType, Type parameterType)
-    {
-        var cacheKey = HashCode.Combine("Update", connection.OrmProvider, sql, entityType, parameterType);
-        if (!sqlCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
-        {
-            var parameterMapper = dbFactory.GetEntityMap(parameterType);
-            var ormProvider = this.connection.OrmProvider;
-            var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
-            var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-            var parameterExpr = Expression.Parameter(typeof(object), "parameter");
-            var typedParameterExpr = Expression.Parameter(parameterType, "typedParameter");
-
-            var blockParameters = new List<ParameterExpression>();
-            var blockBodies = new List<Expression>();
-            blockParameters.Add(typedParameterExpr);
-            blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
-
-            foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
-            {
-                var parameterName = ormProvider.ParameterPrefix + parameterMemberMapper.MemberName;
-                if (!Regex.IsMatch(sql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                    continue;
-                var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.MemberName, null, blockBodies);
-            }
-            commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
-            sqlCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
-        }
-        return (Action<IDbCommand, IOrmProvider, object>)commandInitializerDelegate;
-    }
     private Action<IDbCommand, IOrmProvider, StringBuilder, int, object> BuildBatchCommandInitializer(Type entityType, bool isFixSetSql)
     {
         return (command, ormProvider, builder, index, parameter) =>
@@ -786,7 +826,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
 
                 if (setFields != null)
                 {
-                    var setField = setFields.Find(f => f.MemberName == item.Key);
+                    var setField = setFields.Find(f => f.MemberMapper.MemberName == item.Key);
                     if (setField == null) continue;
                     if (!string.IsNullOrEmpty(setField.Value))
                         continue;
@@ -845,7 +885,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
 
                 if (setFields != null)
                 {
-                    var setField = setFields.Find(f => f.MemberName == item.Key);
+                    var setField = setFields.Find(f => f.MemberMapper.MemberName == item.Key);
                     if (setField == null) continue;
                     if (!string.IsNullOrEmpty(setField.Value))
                         continue;
@@ -887,21 +927,6 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             return sqlBuilder.ToString();
         };
     }
-    private Action<IDbCommand, IOrmProvider, object> BuildCommandInitializer(string sql)
-    {
-        return (command, ormProvider, parameter) =>
-        {
-            var dict = parameter as Dictionary<string, object>;
-            foreach (var item in dict)
-            {
-                var parameterName = ormProvider.ParameterPrefix + item.Key;
-                if (!Regex.IsMatch(sql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                    continue;
-                var dbParameter = ormProvider.CreateParameter(parameterName, dict[item.Key]);
-                command.Parameters.Add(dbParameter);
-            }
-        };
-    }
     private int GetCacheKey(string category, IOrmProvider ormProvider, Type entityType, Type parameterType, bool isFixSetSql, List<SetField> setFields)
     {
         var hashCode = new HashCode();
@@ -915,23 +940,61 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         {
             if (!string.IsNullOrEmpty(setField.Value))
                 continue;
-            hashCode.Add(setField.MemberName);
+            hashCode.Add(setField.MemberMapper.MemberName);
         }
         return hashCode.ToHashCode();
     }
 }
-class UpdateSetting<TEntity> : IUpdateSetting<TEntity>
+class UpdateBase
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly UpdateVisitor visitor;
 
-    public UpdateSetting(UpdateVisitor visitor)
+    public UpdateBase(UpdateVisitor visitor)
     {
         this.visitor = visitor;
         this.connection = visitor.connection;
         this.transaction = visitor.transaction;
     }
+
+    public int Execute()
+    {
+        using var command = this.connection.CreateCommand();
+        command.CommandType = CommandType.Text;
+        command.Transaction = this.transaction;
+        var sql = this.visitor.BuildSql(out var dbParameters);
+        command.CommandText = sql;
+        if (dbParameters != null && dbParameters.Count > 0)
+            dbParameters.ForEach(f => command.Parameters.Add(f));
+        this.connection.Open();
+        var result = command.ExecuteNonQuery();
+        command.Dispose();
+        return result;
+    }
+    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
+    {
+        using var cmd = this.connection.CreateCommand();
+        cmd.CommandType = CommandType.Text;
+        cmd.Transaction = this.transaction;
+        var sql = this.visitor.BuildSql(out var dbParameters);
+        cmd.CommandText = sql;
+        if (dbParameters != null && dbParameters.Count > 0)
+            dbParameters.ForEach(f => cmd.Parameters.Add(f));
+        if (cmd is not DbCommand command)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+
+        await this.connection.OpenAsync(cancellationToken);
+        var result = await command.ExecuteNonQueryAsync(cancellationToken);
+        await command.DisposeAsync();
+        return result;
+    }
+    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
+}
+class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
+{
+    public UpdateSetting(UpdateVisitor visitor) : base(visitor) { }
+
     public IUpdateSetting<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -942,6 +1005,39 @@ class UpdateSetting<TEntity> : IUpdateSetting<TEntity>
         this.visitor.Set(fieldsExpr);
         return this;
     }
+    public IUpdateSetting<TEntity> Set<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+    public IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.Set(fieldsExpr);
+        return this;
+    }
+    public IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+
     public IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
         if (fieldExpr == null)
@@ -954,15 +1050,16 @@ class UpdateSetting<TEntity> : IUpdateSetting<TEntity>
         this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsExpr)
+    public IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        if (condition)
-            this.visitor.Set(fieldsExpr);
+        this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
         return this;
     }
     public IUpdateSetting<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -978,6 +1075,20 @@ class UpdateSetting<TEntity> : IUpdateSetting<TEntity>
             this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
+    public IUpdateSetting<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
+        return this;
+    }
+
     public IUpdateSetting<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
     {
         if (predicate == null)
@@ -995,51 +1106,17 @@ class UpdateSetting<TEntity> : IUpdateSetting<TEntity>
             this.visitor.And(predicate);
         return this;
     }
-    public int Execute()
-    {
-        using var command = this.connection.CreateCommand();
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        command.CommandText = sql;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        cmd.CommandText = sql;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        await command.DisposeAsync();
-        return result;
-    }
-    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
-class UpdateFrom<TEntity, T1> : IUpdateFrom<TEntity, T1>
+class SetField
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor = null;
+    public MemberMap MemberMapper { get; set; }
+    public string Value { get; set; }
+    public List<IDbDataParameter> DbParameters { get; set; }
+}
+class UpdateFrom<TEntity, T1> : UpdateBase, IUpdateFrom<TEntity, T1>
+{
+    public UpdateFrom(UpdateVisitor visitor) : base(visitor) { }
 
-    public UpdateFrom(UpdateVisitor visitor)
-    {
-        this.visitor = visitor;
-        this.connection = visitor.connection;
-        this.transaction = visitor.transaction;
-    }
     public IUpdateFrom<TEntity, T1> Set<TFields>(Expression<Func<TEntity, T1, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1050,6 +1127,39 @@ class UpdateFrom<TEntity, T1> : IUpdateFrom<TEntity, T1>
         this.visitor.Set(fieldsExpr);
         return this;
     }
+    public IUpdateFrom<TEntity, T1> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+    public IUpdateFrom<TEntity, T1> Set<TFields>(bool condition, Expression<Func<TEntity, T1, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.Set(fieldsExpr);
+        return this;
+    }
+    public IUpdateFrom<TEntity, T1> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+
     public IUpdateFrom<TEntity, T1> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
         if (fieldExpr == null)
@@ -1062,15 +1172,16 @@ class UpdateFrom<TEntity, T1> : IUpdateFrom<TEntity, T1>
         this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateFrom<TEntity, T1> Set<TFields>(bool condition, Expression<Func<TEntity, T1, TFields>> fieldsExpr)
+    public IUpdateFrom<TEntity, T1> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        if (condition)
-            this.visitor.Set(fieldsExpr);
+        this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
         return this;
     }
     public IUpdateFrom<TEntity, T1> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1086,6 +1197,20 @@ class UpdateFrom<TEntity, T1> : IUpdateFrom<TEntity, T1>
             this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
+    public IUpdateFrom<TEntity, T1> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
+        return this;
+    }
+
     public IUpdateFrom<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate)
     {
         if (predicate == null)
@@ -1100,54 +1225,14 @@ class UpdateFrom<TEntity, T1> : IUpdateFrom<TEntity, T1>
             throw new ArgumentNullException(nameof(predicate));
 
         if (condition)
-            this.visitor.Where(predicate);
+            this.visitor.And(predicate);
         return this;
     }
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        await command.DisposeAsync();
-        return result;
-    }
-    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
-class UpdateJoin<TEntity, T1> : IUpdateJoin<TEntity, T1>
+class UpdateJoin<TEntity, T1> : UpdateBase, IUpdateJoin<TEntity, T1>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor = null;
+    public UpdateJoin(UpdateVisitor visitor) : base(visitor) { }
 
-    public UpdateJoin(UpdateVisitor visitor)
-    {
-        this.visitor = visitor;
-        this.connection = visitor.connection;
-        this.transaction = visitor.transaction;
-    }
     public IUpdateJoin<TEntity, T1, T2> InnerJoin<T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn)
     {
         if (joinOn == null)
@@ -1164,6 +1249,7 @@ class UpdateJoin<TEntity, T1> : IUpdateJoin<TEntity, T1>
         this.visitor.Join("LEFT JOIN", typeof(T2), joinOn);
         return new UpdateJoin<TEntity, T1, T2>(this.visitor);
     }
+
     public IUpdateJoin<TEntity, T1> Set<TFields>(Expression<Func<TEntity, T1, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1174,6 +1260,39 @@ class UpdateJoin<TEntity, T1> : IUpdateJoin<TEntity, T1>
         this.visitor.Set(fieldsExpr);
         return this;
     }
+    public IUpdateJoin<TEntity, T1> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+    public IUpdateJoin<TEntity, T1> Set<TFields>(bool condition, Expression<Func<TEntity, T1, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.Set(fieldsExpr);
+        return this;
+    }
+    public IUpdateJoin<TEntity, T1> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+
     public IUpdateJoin<TEntity, T1> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
         if (fieldExpr == null)
@@ -1186,15 +1305,16 @@ class UpdateJoin<TEntity, T1> : IUpdateJoin<TEntity, T1>
         this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateJoin<TEntity, T1> Set<TFields>(bool condition, Expression<Func<TEntity, T1, TFields>> fieldsExpr)
+    public IUpdateJoin<TEntity, T1> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        if (condition)
-            this.visitor.Set(fieldsExpr);
+        this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
         return this;
     }
     public IUpdateJoin<TEntity, T1> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1210,6 +1330,20 @@ class UpdateJoin<TEntity, T1> : IUpdateJoin<TEntity, T1>
             this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
+    public IUpdateJoin<TEntity, T1> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
+        return this;
+    }
+
     public IUpdateJoin<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate)
     {
         if (predicate == null)
@@ -1224,54 +1358,14 @@ class UpdateJoin<TEntity, T1> : IUpdateJoin<TEntity, T1>
             throw new ArgumentNullException(nameof(predicate));
 
         if (condition)
-            this.visitor.Where(predicate);
+            this.visitor.And(predicate);
         return this;
     }
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        await command.DisposeAsync();
-        return result;
-    }
-    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
-class UpdateFrom<TEntity, T1, T2> : IUpdateFrom<TEntity, T1, T2>
+class UpdateFrom<TEntity, T1, T2> : UpdateBase, IUpdateFrom<TEntity, T1, T2>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor = null;
+    public UpdateFrom(UpdateVisitor visitor) : base(visitor) { }
 
-    public UpdateFrom(UpdateVisitor visitor)
-    {
-        this.visitor = visitor;
-        this.connection = visitor.connection;
-        this.transaction = visitor.transaction;
-    }
     public IUpdateFrom<TEntity, T1, T2> Set<TFields>(Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1282,6 +1376,39 @@ class UpdateFrom<TEntity, T1, T2> : IUpdateFrom<TEntity, T1, T2>
         this.visitor.Set(fieldsExpr);
         return this;
     }
+    public IUpdateFrom<TEntity, T1, T2> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+    public IUpdateFrom<TEntity, T1, T2> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.Set(fieldsExpr);
+        return this;
+    }
+    public IUpdateFrom<TEntity, T1, T2> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+
     public IUpdateFrom<TEntity, T1, T2> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
         if (fieldExpr == null)
@@ -1294,15 +1421,16 @@ class UpdateFrom<TEntity, T1, T2> : IUpdateFrom<TEntity, T1, T2>
         this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateFrom<TEntity, T1, T2> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr)
+    public IUpdateFrom<TEntity, T1, T2> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        if (condition)
-            this.visitor.Set(fieldsExpr);
+        this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1318,6 +1446,20 @@ class UpdateFrom<TEntity, T1, T2> : IUpdateFrom<TEntity, T1, T2>
             this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
+    public IUpdateFrom<TEntity, T1, T2> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
+        return this;
+    }
+
     public IUpdateFrom<TEntity, T1, T2> Where(Expression<Func<TEntity, T1, T2, bool>> predicate)
     {
         if (predicate == null)
@@ -1332,54 +1474,14 @@ class UpdateFrom<TEntity, T1, T2> : IUpdateFrom<TEntity, T1, T2>
             throw new ArgumentNullException(nameof(predicate));
 
         if (condition)
-            this.visitor.Where(predicate);
+            this.visitor.And(predicate);
         return this;
     }
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        await command.DisposeAsync();
-        return result;
-    }
-    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
-class UpdateJoin<TEntity, T1, T2> : IUpdateJoin<TEntity, T1, T2>
+class UpdateJoin<TEntity, T1, T2> : UpdateBase, IUpdateJoin<TEntity, T1, T2>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor = null;
+    public UpdateJoin(UpdateVisitor visitor) : base(visitor) { }
 
-    public UpdateJoin(UpdateVisitor visitor)
-    {
-        this.visitor = visitor;
-        this.connection = visitor.connection;
-        this.transaction = visitor.transaction;
-    }
     public IUpdateJoin<TEntity, T1, T2, T3> InnerJoin<T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn)
     {
         if (joinOn == null)
@@ -1396,6 +1498,7 @@ class UpdateJoin<TEntity, T1, T2> : IUpdateJoin<TEntity, T1, T2>
         this.visitor.Join("LEFT JOIN", typeof(T3), joinOn);
         return new UpdateJoin<TEntity, T1, T2, T3>(this.visitor);
     }
+
     public IUpdateJoin<TEntity, T1, T2> Set<TFields>(Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1406,6 +1509,39 @@ class UpdateJoin<TEntity, T1, T2> : IUpdateJoin<TEntity, T1, T2>
         this.visitor.Set(fieldsExpr);
         return this;
     }
+    public IUpdateJoin<TEntity, T1, T2> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+    public IUpdateJoin<TEntity, T1, T2> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.Set(fieldsExpr);
+        return this;
+    }
+    public IUpdateJoin<TEntity, T1, T2> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+
     public IUpdateJoin<TEntity, T1, T2> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
         if (fieldExpr == null)
@@ -1418,15 +1554,16 @@ class UpdateJoin<TEntity, T1, T2> : IUpdateJoin<TEntity, T1, T2>
         this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateJoin<TEntity, T1, T2> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr)
+    public IUpdateJoin<TEntity, T1, T2> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        if (condition)
-            this.visitor.Set(fieldsExpr);
+        this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1442,6 +1579,20 @@ class UpdateJoin<TEntity, T1, T2> : IUpdateJoin<TEntity, T1, T2>
             this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
+    public IUpdateJoin<TEntity, T1, T2> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
+        return this;
+    }
+
     public IUpdateJoin<TEntity, T1, T2> Where(Expression<Func<TEntity, T1, T2, bool>> predicate)
     {
         if (predicate == null)
@@ -1456,54 +1607,14 @@ class UpdateJoin<TEntity, T1, T2> : IUpdateJoin<TEntity, T1, T2>
             throw new ArgumentNullException(nameof(predicate));
 
         if (condition)
-            this.visitor.Where(predicate);
+            this.visitor.And(predicate);
         return this;
     }
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        await command.DisposeAsync();
-        return result;
-    }
-    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
-class UpdateFrom<TEntity, T1, T2, T3> : IUpdateFrom<TEntity, T1, T2, T3>
+class UpdateFrom<TEntity, T1, T2, T3> : UpdateBase, IUpdateFrom<TEntity, T1, T2, T3>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor = null;
+    public UpdateFrom(UpdateVisitor visitor) : base(visitor) { }
 
-    public UpdateFrom(UpdateVisitor visitor)
-    {
-        this.visitor = visitor;
-        this.connection = visitor.connection;
-        this.transaction = visitor.transaction;
-    }
     public IUpdateFrom<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1514,6 +1625,39 @@ class UpdateFrom<TEntity, T1, T2, T3> : IUpdateFrom<TEntity, T1, T2, T3>
         this.visitor.Set(fieldsExpr);
         return this;
     }
+    public IUpdateFrom<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+    public IUpdateFrom<TEntity, T1, T2, T3> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.Set(fieldsExpr);
+        return this;
+    }
+    public IUpdateFrom<TEntity, T1, T2, T3> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+
     public IUpdateFrom<TEntity, T1, T2, T3> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
         if (fieldExpr == null)
@@ -1526,15 +1670,16 @@ class UpdateFrom<TEntity, T1, T2, T3> : IUpdateFrom<TEntity, T1, T2, T3>
         this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateFrom<TEntity, T1, T2, T3> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr)
+    public IUpdateFrom<TEntity, T1, T2, T3> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        if (condition)
-            this.visitor.Set(fieldsExpr);
+        this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2, T3> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1550,6 +1695,20 @@ class UpdateFrom<TEntity, T1, T2, T3> : IUpdateFrom<TEntity, T1, T2, T3>
             this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
+    public IUpdateFrom<TEntity, T1, T2, T3> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
+        return this;
+    }
+
     public IUpdateFrom<TEntity, T1, T2, T3> Where(Expression<Func<TEntity, T1, T2, T3, bool>> predicate)
     {
         if (predicate == null)
@@ -1564,54 +1723,14 @@ class UpdateFrom<TEntity, T1, T2, T3> : IUpdateFrom<TEntity, T1, T2, T3>
             throw new ArgumentNullException(nameof(predicate));
 
         if (condition)
-            this.visitor.Where(predicate);
+            this.visitor.And(predicate);
         return this;
     }
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        await command.DisposeAsync();
-        return result;
-    }
-    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
-class UpdateJoin<TEntity, T1, T2, T3> : IUpdateJoin<TEntity, T1, T2, T3>
+class UpdateJoin<TEntity, T1, T2, T3> : UpdateBase, IUpdateJoin<TEntity, T1, T2, T3>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor = null;
+    public UpdateJoin(UpdateVisitor visitor) : base(visitor) { }
 
-    public UpdateJoin(UpdateVisitor visitor)
-    {
-        this.visitor = visitor;
-        this.connection = visitor.connection;
-        this.transaction = visitor.transaction;
-    }
     public IUpdateJoin<TEntity, T1, T2, T3, T4> InnerJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn)
     {
         if (joinOn == null)
@@ -1628,6 +1747,7 @@ class UpdateJoin<TEntity, T1, T2, T3> : IUpdateJoin<TEntity, T1, T2, T3>
         this.visitor.Join("LEFT JOIN", typeof(T4), joinOn);
         return new UpdateJoin<TEntity, T1, T2, T3, T4>(this.visitor);
     }
+
     public IUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1638,6 +1758,39 @@ class UpdateJoin<TEntity, T1, T2, T3> : IUpdateJoin<TEntity, T1, T2, T3>
         this.visitor.Set(fieldsExpr);
         return this;
     }
+    public IUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+    public IUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.Set(fieldsExpr);
+        return this;
+    }
+    public IUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+
     public IUpdateJoin<TEntity, T1, T2, T3> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
         if (fieldExpr == null)
@@ -1650,15 +1803,16 @@ class UpdateJoin<TEntity, T1, T2, T3> : IUpdateJoin<TEntity, T1, T2, T3>
         this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr)
+    public IUpdateJoin<TEntity, T1, T2, T3> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        if (condition)
-            this.visitor.Set(fieldsExpr);
+        this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2, T3> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1674,6 +1828,20 @@ class UpdateJoin<TEntity, T1, T2, T3> : IUpdateJoin<TEntity, T1, T2, T3>
             this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
+    public IUpdateJoin<TEntity, T1, T2, T3> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
+        return this;
+    }
+
     public IUpdateJoin<TEntity, T1, T2, T3> Where(Expression<Func<TEntity, T1, T2, T3, bool>> predicate)
     {
         if (predicate == null)
@@ -1688,54 +1856,14 @@ class UpdateJoin<TEntity, T1, T2, T3> : IUpdateJoin<TEntity, T1, T2, T3>
             throw new ArgumentNullException(nameof(predicate));
 
         if (condition)
-            this.visitor.Where(predicate);
+            this.visitor.And(predicate);
         return this;
     }
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        await command.DisposeAsync();
-        return result;
-    }
-    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
-class UpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateFrom<TEntity, T1, T2, T3, T4>
+class UpdateFrom<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateFrom<TEntity, T1, T2, T3, T4>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor = null;
+    public UpdateFrom(UpdateVisitor visitor) : base(visitor) { }
 
-    public UpdateFrom(UpdateVisitor visitor)
-    {
-        this.visitor = visitor;
-        this.connection = visitor.connection;
-        this.transaction = visitor.transaction;
-    }
     public IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1746,6 +1874,39 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateFrom<TEntity, T1, T2, T3, T4>
         this.visitor.Set(fieldsExpr);
         return this;
     }
+    public IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+    public IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.Set(fieldsExpr);
+        return this;
+    }
+    public IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+
     public IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
         if (fieldExpr == null)
@@ -1758,15 +1919,16 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateFrom<TEntity, T1, T2, T3, T4>
         this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr)
+    public IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        if (condition)
-            this.visitor.Set(fieldsExpr);
+        this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1782,6 +1944,20 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateFrom<TEntity, T1, T2, T3, T4>
             this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
+    public IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
+        return this;
+    }
+
     public IUpdateFrom<TEntity, T1, T2, T3, T4> Where(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate)
     {
         if (predicate == null)
@@ -1796,54 +1972,14 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateFrom<TEntity, T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(predicate));
 
         if (condition)
-            this.visitor.Where(predicate);
+            this.visitor.And(predicate);
         return this;
     }
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        await command.DisposeAsync();
-        return result;
-    }
-    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
-class UpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateJoin<TEntity, T1, T2, T3, T4>
+class UpdateJoin<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateJoin<TEntity, T1, T2, T3, T4>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor = null;
+    public UpdateJoin(UpdateVisitor visitor) : base(visitor) { }
 
-    public UpdateJoin(UpdateVisitor visitor)
-    {
-        this.visitor = visitor;
-        this.connection = visitor.connection;
-        this.transaction = visitor.transaction;
-    }
     public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> InnerJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn)
     {
         if (joinOn == null)
@@ -1860,6 +1996,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateJoin<TEntity, T1, T2, T3, T4>
         this.visitor.Join("LEFT JOIN", typeof(T5), joinOn);
         return new UpdateJoin<TEntity, T1, T2, T3, T4, T5>(this.visitor);
     }
+
     public IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1870,6 +2007,39 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateJoin<TEntity, T1, T2, T3, T4>
         this.visitor.Set(fieldsExpr);
         return this;
     }
+    public IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+    public IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.Set(fieldsExpr);
+        return this;
+    }
+    public IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+
     public IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
         if (fieldExpr == null)
@@ -1882,15 +2052,16 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateJoin<TEntity, T1, T2, T3, T4>
         this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr)
+    public IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        if (condition)
-            this.visitor.Set(fieldsExpr);
+        this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1906,6 +2077,20 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateJoin<TEntity, T1, T2, T3, T4>
             this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
+    public IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
+        return this;
+    }
+
     public IUpdateJoin<TEntity, T1, T2, T3, T4> Where(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate)
     {
         if (predicate == null)
@@ -1920,54 +2105,14 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateJoin<TEntity, T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(predicate));
 
         if (condition)
-            this.visitor.Where(predicate);
+            this.visitor.And(predicate);
         return this;
     }
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        await command.DisposeAsync();
-        return result;
-    }
-    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
-class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateFrom<TEntity, T1, T2, T3, T4, T5>
+class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateFrom<TEntity, T1, T2, T3, T4, T5>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor = null;
+    public UpdateFrom(UpdateVisitor visitor) : base(visitor) { }
 
-    public UpdateFrom(UpdateVisitor visitor)
-    {
-        this.visitor = visitor;
-        this.connection = visitor.connection;
-        this.transaction = visitor.transaction;
-    }
     public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1978,6 +2123,39 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateFrom<TEntity, T1, T2, T3,
         this.visitor.Set(fieldsExpr);
         return this;
     }
+    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.Set(fieldsExpr);
+        return this;
+    }
+    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+
     public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
         if (fieldExpr == null)
@@ -1990,15 +2168,16 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateFrom<TEntity, T1, T2, T3,
         this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
+    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        if (condition)
-            this.visitor.Set(fieldsExpr);
+        this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -2014,6 +2193,20 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateFrom<TEntity, T1, T2, T3,
             this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
+    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
+        return this;
+    }
+
     public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate)
     {
         if (predicate == null)
@@ -2028,54 +2221,14 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateFrom<TEntity, T1, T2, T3,
             throw new ArgumentNullException(nameof(predicate));
 
         if (condition)
-            this.visitor.Where(predicate);
+            this.visitor.And(predicate);
         return this;
     }
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        await command.DisposeAsync();
-        return result;
-    }
-    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
-class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateJoin<TEntity, T1, T2, T3, T4, T5>
+class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateJoin<TEntity, T1, T2, T3, T4, T5>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly UpdateVisitor visitor = null;
+    public UpdateJoin(UpdateVisitor visitor) : base(visitor) { }
 
-    public UpdateJoin(UpdateVisitor visitor)
-    {
-        this.visitor = visitor;
-        this.connection = visitor.connection;
-        this.transaction = visitor.transaction;
-    }
     public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -2086,6 +2239,39 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateJoin<TEntity, T1, T2, T3,
         this.visitor.Set(fieldsExpr);
         return this;
     }
+    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.Set(fieldsExpr);
+        return this;
+    }
+    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldsExpr);
+        return this;
+    }
+
     public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
         if (fieldExpr == null)
@@ -2098,15 +2284,16 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateJoin<TEntity, T1, T2, T3,
         this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
+    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-        if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        if (condition)
-            this.visitor.Set(fieldsExpr);
+        this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -2122,6 +2309,20 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateJoin<TEntity, T1, T2, T3,
             this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
+    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
+
+        if (condition)
+            this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
+        return this;
+    }
+
     public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate)
     {
         if (predicate == null)
@@ -2136,45 +2337,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateJoin<TEntity, T1, T2, T3,
             throw new ArgumentNullException(nameof(predicate));
 
         if (condition)
-            this.visitor.Where(predicate);
+            this.visitor.And(predicate);
         return this;
     }
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        await command.DisposeAsync();
-        return result;
-    }
-    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
-}
-class SetField
-{
-    public string MemberName { get; set; }
-    public string Value { get; set; }
-    public List<IDbDataParameter> DbParameters { get; set; }
 }

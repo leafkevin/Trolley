@@ -388,7 +388,7 @@ public class MySqlUnitTest3
         Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5");
     }
     [Fact]
-    public async void UpdateAsync_Parameters_WithBy()
+    public async void Update_Parameters_WithBy()
     {
         using var repository = this.dbFactory.Create();
         var orders = await repository.From<Order>()
@@ -396,5 +396,85 @@ public class MySqlUnitTest3
             .ToListAsync();
         var sql = repository.Update<Order>().WithBy(f => new { BuyerId = DBNull.Value, OrderNo = "ON_" + f.OrderNo, f.TotalAmount }, orders).ToSql(out _);
         Assert.True(sql == "UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount0 WHERE `Id`=@kId0;UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount1 WHERE `Id`=@kId1;UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount2 WHERE `Id`=@kId2");
+    }
+    [Fact]
+    public void Update_Set_FromQuery_Multi()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository.Update<Order>()
+            .Set((a, b) => new
+            {
+                TotalAmount = a.From<OrderDetail>('b')
+                    .Where(f => f.OrderId == b.Id)
+                    .Select(t => Sql.Sum(t.Amount)),
+                OrderNo = b.OrderNo + "_111",
+                BuyerId = DBNull.Value
+            })
+            .Where(a => a.BuyerId == 1)
+            .ToSql(out _);
+        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+    }
+    [Fact]
+    public void Update_Set_FromQuery_One()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository.Update<Order>()
+            .Set((a, b) => new
+            {
+                TotalAmount = a.From<OrderDetail>('b')
+                    .Where(f => f.OrderId == b.Id)
+                    .Select(t => Sql.Sum(t.Amount))
+            })
+            .Set(x => x.OrderNo, "ON_111")
+            .Set(f => new { BuyerId = DBNull.Value })
+            .Where(a => a.BuyerId == 1)
+            .ToSql(out _);
+        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`) WHERE a.`BuyerId`=1");
+    }
+    [Fact]
+    public void Update_Set_FromQuery_Fields()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository.Update<Order>()
+            .Set(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('b')
+                .Where(f => f.OrderId == y.Id)
+                .Select(t => Sql.Sum(t.Amount)))
+            .Set(x => x.OrderNo, "ON_111")
+            .Set(f => new { BuyerId = DBNull.Value })
+            .Where(a => a.BuyerId == 1)
+            .ToSql(out _);
+        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`) WHERE a.`BuyerId`=1");
+    }
+    [Fact]
+    public void Update_InnerJoin_One()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository.Update<Order>()
+            .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
+            .Set(x => x.TotalAmount, 200.56)
+            .Set((a, b) => new
+            {
+                OrderNo = a.OrderNo + "_111",
+                BuyerId = DBNull.Value
+            })
+            .Where((a, b) => a.BuyerId == 1)
+            .ToSql(out _);
+        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=b.`Amount`,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+    }
+    [Fact]
+    public void Update_InnerJoin_Multi()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository.Update<Order>()
+            .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
+            .Set((x, y) => new
+            {
+                TotalAmount = y.Amount,
+                OrderNo = x.OrderNo + "_111",
+                BuyerId = DBNull.Value
+            })
+            .Where((a, b) => a.BuyerId == 1)
+            .ToSql(out _);
+        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=b.`Amount`,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
     }
 }

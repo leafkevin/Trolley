@@ -182,13 +182,25 @@ public static class TrolleyExtensions
         parameterName = null;
         return false;
     }
-    public static bool GetParameters(this Expression expr, out List<string> parameterNames)
+    public static bool GetParameters(this Expression expr, out List<ParameterExpression> parameters)
     {
         var visitor = new TestVisitor();
         visitor.Visit(expr);
         if (visitor.IsParameter)
         {
-            parameterNames = visitor.ParameterNames;
+            parameters = visitor.Parameters;
+            return visitor.IsParameter;
+        }
+        parameters = null;
+        return false;
+    }
+    public static bool GetParameterNames(this Expression expr, out List<string> parameterNames)
+    {
+        var visitor = new TestVisitor();
+        visitor.Visit(expr);
+        if (visitor.IsParameter)
+        {
+            parameterNames = visitor.Parameters.Select(f => f.Name).ToList();
             return visitor.IsParameter;
         }
         parameterNames = null;

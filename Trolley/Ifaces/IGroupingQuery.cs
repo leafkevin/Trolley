@@ -15,7 +15,6 @@ public interface IGroupingQuery<T, TGrouping>
     IGroupingQuery<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr);
-    string ToSql();
 }
 public interface IGroupingQuery<T1, T2, TGrouping>
 {
@@ -25,7 +24,6 @@ public interface IGroupingQuery<T1, T2, TGrouping>
     IGroupingQuery<T1, T2, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TTarget>> fieldsExpr);
-    string ToSql();
 }
 public interface IGroupingQuery<T1, T2, T3, TGrouping>
 {
@@ -35,7 +33,6 @@ public interface IGroupingQuery<T1, T2, T3, TGrouping>
     IGroupingQuery<T1, T2, T3, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TTarget>> fieldsExpr);
-    string ToSql();
 }
 public interface IGroupingQuery<T1, T2, T3, T4, TGrouping>
 {
@@ -45,7 +42,6 @@ public interface IGroupingQuery<T1, T2, T3, T4, TGrouping>
     IGroupingQuery<T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TTarget>> fieldsExpr);
-    string ToSql();
 }
 public interface IGroupingQuery<T1, T2, T3, T4, T5, TGrouping>
 {
@@ -55,7 +51,6 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, TGrouping>
     IGroupingQuery<T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
-    string ToSql();
 }
 public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>
 {
@@ -65,7 +60,6 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>
     IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
-    string ToSql();
 }
 public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
 {
@@ -75,7 +69,6 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr);
-    string ToSql();
 }
 public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>
 {
@@ -85,7 +78,6 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr);
-    string ToSql();
 }
 public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>
 {
@@ -95,7 +87,6 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr);
-    string ToSql();
 }
 public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>
 {
@@ -105,7 +96,6 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGroupi
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr);
-    string ToSql();
 }
 public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>
 {
@@ -115,7 +105,6 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TG
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr);
-    string ToSql();
 }
 public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>
 {
@@ -125,7 +114,6 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr);
-    string ToSql();
 }
 public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>
 {
@@ -135,7 +123,6 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr);
-    string ToSql();
 }
 public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>
 {
@@ -145,7 +132,6 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr);
-    string ToSql();
 }
 public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>
 {
@@ -155,10 +141,8 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr);
-    string ToSql();
 }
 public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>
 {
     IQuery<TGrouping> Select();
-    string ToSql();
 }

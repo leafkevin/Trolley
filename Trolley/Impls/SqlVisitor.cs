@@ -1,17 +1,15 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
 namespace Trolley;
 
-public class SqlVisitor
+class SqlVisitor
 {
-    private delegate string ToSqlDelegate(object query, out List<IDbDataParameter> dbParameters);
-    private static ConcurrentDictionary<Type, ToSqlDelegate> toSqlCache = new();
     protected List<TableSegment> tables;
     protected Dictionary<string, TableSegment> tableAlias;
     protected List<IDbDataParameter> dbParameters;
@@ -32,6 +30,13 @@ public class SqlVisitor
         this.tableStartAs = tableStartAs;
         this.parameterPrefix = parameterPrefix;
     }
+    public QueryVisitor ToQueryVisitor(char tableStartAs = 'a', string parameterPrefix = "p")
+    {
+        var visitor = new QueryVisitor(this.dbFactory, this.connection, this.transaction, tableStartAs, parameterPrefix);
+        visitor.dbParameters = this.dbParameters;
+        visitor.isNeedAlias = this.isNeedAlias;
+        return visitor;
+    }
     public virtual SqlSegment VisitAndDeferred(SqlSegment sqlSegment)
         => this.VisitBooleanDeferred(this.Visit(sqlSegment));
     public virtual SqlSegment Visit(SqlSegment sqlSegment)
@@ -46,8 +51,8 @@ public class SqlVisitor
             {
                 case ExpressionType.Lambda:
                     var lambdaExpr = sqlSegment.Expression as LambdaExpression;
-                    if (this.IsFromQueryLambda(lambdaExpr, out var elementType))
-                        return this.VisitFromQuery(sqlSegment, elementType);
+                    if (this.IsFromQuery(lambdaExpr, out var parameters, out var entityType))
+                        return sqlSegment.Change(this.VisitFromQuery(lambdaExpr, out _), false);
                     sqlSegment.Expression = lambdaExpr.Body;
                     continue;
                 case ExpressionType.Negate:
@@ -379,7 +384,7 @@ public class SqlVisitor
             return this.VisitSqlMethodCall(sqlSegment);
 
         if (!this.ormProvider.TryGetMethodCallSqlFormatter(methodCallExpr.Method, out var formatter))
-            throw new Exception($"不支持的方法访问，或是IOrmProvider未实现此方法{methodCallExpr.Method.Name}");
+            throw new Exception($"不支持的方法访问，或是{this.ormProvider.GetType().FullName}未实现此方法{methodCallExpr.Method.Name}");
 
         object target = null;
         object[] args = null;
@@ -641,6 +646,15 @@ public class SqlVisitor
             return SqlSegment.Null;
         return sqlSegment.Change(objValue);
     }
+    public virtual T Evaluate<T>(Expression expr)
+    {
+        var lambda = Expression.Lambda<Func<T>>(expr);
+        var getter = lambda.Compile();
+        var objValue = getter();
+        if (objValue == null)
+            return default;
+        return objValue;
+    }
     public virtual SqlSegment EvaluateAndParameter(SqlSegment sqlSegment)
     {
         var member = Expression.Convert(sqlSegment.Expression, typeof(object));
@@ -661,6 +675,7 @@ public class SqlVisitor
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
         sqlSegment.IsExpression = true;
         sqlSegment.IsConstantValue = false;
+        LambdaExpression lambdaExpr = null;
         switch (methodCallExpr.Method.Name)
         {
             case "In":
@@ -669,24 +684,15 @@ public class SqlVisitor
                 {
                     sqlSegment = this.Evaluate(sqlSegment.Next(methodCallExpr.Arguments[1]));
                     if (sqlSegment == SqlSegment.Null)
-                        return sqlSegment.Change("0=1");
+                        return sqlSegment.Change("0=1", false);
                     sqlSegment = this.ToParameter(sqlSegment);
                 }
                 else
                 {
-                    SqlSegment querySegment = null;
-                    if (typeof(IQuery<>).MakeGenericType(elementType).IsAssignableFrom(methodCallExpr.Arguments[1].Type))
-                        querySegment = this.Evaluate(sqlSegment.Next(methodCallExpr.Arguments[1]));
-                    else querySegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[1]));
-                    var toSqlInvoker = this.BuildToSqlInvoker(elementType);
-                    List<IDbDataParameter> dbDataParameters = null;
-                    var sql = toSqlInvoker.Invoke(querySegment.Value, out dbDataParameters);
-                    if (dbDataParameters != null && dbDataParameters.Count > 0)
-                    {
-                        this.dbParameters ??= new();
-                        this.dbParameters.AddRange(dbDataParameters);
-                    }
+                    lambdaExpr = methodCallExpr.Arguments[1] as LambdaExpression;
+                    var sql = this.VisitFromQuery(lambdaExpr, out bool isNeedAlias);
                     sqlSegment.Change(sql, false);
+                    if (isNeedAlias) this.isNeedAlias = true;
                 }
                 var fieldSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                 sqlSegment.Change($"{fieldSegment} IN ({sqlSegment})");
@@ -699,7 +705,7 @@ public class SqlVisitor
                     var unaryExpr = currentExpr as UnaryExpression;
                     currentExpr = unaryExpr.Operand;
                 }
-                var lambdaExpr = currentExpr as LambdaExpression;
+                lambdaExpr = currentExpr as LambdaExpression;
                 int index = 0;
                 this.isNeedAlias = true;
                 var builder = new StringBuilder("EXISTS(SELECT * FROM ");
@@ -793,14 +799,6 @@ public class SqlVisitor
                 break;
         }
         return sqlSegment;
-    }
-    public virtual SqlSegment VisitFromQuery(SqlSegment sqlSegment, Type elementType)
-    {
-        var lambdaExpr = sqlSegment.Expression as LambdaExpression;
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction);
-        var queryInvoker = lambdaExpr.Compile();
-        var subQuery = queryInvoker.DynamicInvoke(fromQuery);
-        return sqlSegment.Change(subQuery);
     }
     public virtual string VisitConditionExpr(Expression conditionExpr)
     {
@@ -917,6 +915,145 @@ public class SqlVisitor
             return sqlSegment.Change(parameterName, false);
         }
     }
+    public virtual bool IsFromQuery(LambdaExpression lambdaExpr, out List<ParameterExpression> parameters, out Type entityType)
+    {
+        entityType = null;
+        parameters = null;
+        if (!lambdaExpr.Type.IsGenericType)
+            return false;
+        var genericArguments = lambdaExpr.Type.GetGenericArguments();
+        if (genericArguments == null || genericArguments.Length < 2)
+            return false;
+        if (genericArguments[0] != typeof(IFromQuery))
+            return false;
+        var queryType = genericArguments.Last();
+        if (!queryType.IsGenericType) return false;
+        var queryGenericArguments = queryType.GetGenericArguments();
+        if (queryGenericArguments == null || queryGenericArguments.Length < 1)
+            return false;
+
+        if (!typeof(IFromQuery<>).MakeGenericType(queryGenericArguments[0]).IsAssignableFrom(queryType))
+            return false;
+
+        entityType = genericArguments[1];
+        return true;
+    }
+    public virtual string VisitFromQuery(LambdaExpression lambdaExpr, out bool isNeedAlias)
+    {
+        var currentExpr = lambdaExpr.Body;
+        var callStack = new Stack<MethodCallExpression>();
+        while (true)
+        {
+            if (currentExpr.NodeType == ExpressionType.Parameter)
+                break;
+
+            if (currentExpr is MethodCallExpression callExpr)
+            {
+                callStack.Push(callExpr);
+                currentExpr = callExpr.Object;
+            }
+        }
+        var queryVisitor = this.ToQueryVisitor();
+        while (callStack.TryPop(out var callExpr))
+        {
+            var genericArguments = callExpr.Method.GetGenericArguments();
+            LambdaExpression lambdaArgsExpr = null;
+            switch (callExpr.Method.Name)
+            {
+                case "From":
+                    queryVisitor.From(this.Evaluate<char>(callExpr.Arguments[0]), genericArguments);
+                    queryVisitor.AddTable(this.tables[0]);
+                    break;
+                case "WithTable":
+                    queryVisitor.From(this.Evaluate<char>(callExpr.Arguments[0]), genericArguments);
+                    queryVisitor.AddTable(this.tables[0]);
+                    break;
+                case "Union":
+                    queryVisitor.From(this.Evaluate<char>(callExpr.Arguments[0]), genericArguments);
+                    queryVisitor.AddTable(this.tables[0]);
+                    break;
+                case "UnionAll":
+                    queryVisitor.From(this.Evaluate<char>(callExpr.Arguments[0]), genericArguments);
+                    queryVisitor.AddTable(this.tables[0]);
+                    break;
+                case "InnerJoin":
+                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                    if (genericArguments != null && genericArguments.Length > 0)
+                        queryVisitor.Join("INNER JOIN", genericArguments[0], lambdaArgsExpr);
+                    else queryVisitor.Join("INNER JOIN", null, lambdaArgsExpr);
+                    break;
+                case "LeftJoin":
+                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                    if (genericArguments != null && genericArguments.Length > 0)
+                        queryVisitor.Join("LEFT JOIN", genericArguments[0], lambdaArgsExpr);
+                    else queryVisitor.Join("LEFT JOIN", null, callExpr.Arguments[0]);
+                    break;
+                case "RightJoin":
+                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                    if (genericArguments != null && genericArguments.Length > 0)
+                        queryVisitor.Join("RIGHT JOIN", genericArguments[0], lambdaArgsExpr);
+                    else queryVisitor.Join("RIGHT JOIN", null, lambdaArgsExpr);
+                    break;
+                case "Where":
+                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                    if (lambdaArgsExpr.Body.GetParameters(out var argsParameters)
+                        && argsParameters.Count > lambdaArgsExpr.Parameters.Count)
+                    {
+                        queryVisitor.isNeedAlias = true;
+                        var newParameters = new List<ParameterExpression>(lambdaArgsExpr.Parameters);
+                        newParameters.Add(lambdaExpr.Parameters[1]);
+                        lambdaArgsExpr = Expression.Lambda(lambdaArgsExpr.Body, newParameters);
+                    }
+                    queryVisitor.Where(lambdaArgsExpr);
+                    break;
+                case "And":
+                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[1]);
+                    if (this.Evaluate<bool>(callExpr.Arguments[0]))
+                        queryVisitor.And(lambdaArgsExpr);
+                    break;
+                case "GroupBy":
+                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                    queryVisitor.GroupBy(lambdaArgsExpr);
+                    break;
+                case "Having":
+                    if (callExpr.Arguments.Count > 1 && this.Evaluate<bool>(callExpr.Arguments[0]))
+                    {
+                        lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[1]);
+                        queryVisitor.Having(lambdaArgsExpr);
+                    }
+                    else
+                    {
+                        lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                        queryVisitor.Having(lambdaArgsExpr);
+                    }
+                    break;
+                case "OrderBy":
+                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                    queryVisitor.OrderBy("ASC", lambdaArgsExpr);
+                    break;
+                case "OrderByDescending":
+                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                    queryVisitor.OrderBy("DESC", lambdaArgsExpr);
+                    break;
+                case "Select":
+                case "SelectAggregate":
+                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                    queryVisitor.Select(null, lambdaArgsExpr);
+                    break;
+                case "Distinct":
+                    queryVisitor.Distinct();
+                    break;
+            }
+        }
+        var result = queryVisitor.BuildSql(out var dbDataParameters, out _);
+        if (dbDataParameters != null && dbDataParameters.Count > 0)
+        {
+            this.dbParameters ??= new();
+            this.dbParameters.AddRange(dbDataParameters);
+        }
+        isNeedAlias = queryVisitor.isNeedAlias;
+        return result;
+    }
     private void AddIncludeTables(ReaderField lastReaderField, List<ReaderField> readerFields)
     {
         var includedSegments = this.tables.FindAll(f => f.IsInclude && f.FromTable == lastReaderField.TableSegment);
@@ -939,26 +1076,6 @@ public class SqlVisitor
                     this.AddIncludeTables(readerField, readerFields);
             }
         }
-    }
-    private ToSqlDelegate BuildToSqlInvoker(Type elementType)
-    {
-        if (!toSqlCache.TryGetValue(elementType, out var toSqlInvoker))
-        {
-            var queryType = typeof(IQuery<>).MakeGenericType(elementType);
-            var parameterExpr = Expression.Parameter(typeof(object), "obj");
-            var dbParametersExpr = Expression.Parameter(typeof(List<IDbDataParameter>).MakeByRefType(), "dbParameters");
-            var resultLabelExpr = Expression.Label(typeof(string));
-
-            var methodInfo = queryType.GetMethod("ToSql");
-            var convertExpr = Expression.Convert(parameterExpr, queryType);
-            var toSqlExpr = Expression.Call(convertExpr, methodInfo, dbParametersExpr);
-            var returnExpr = Expression.Return(resultLabelExpr, toSqlExpr);
-            var labelExpr = Expression.Label(resultLabelExpr, Expression.Default(typeof(string)));
-            var bodyExpr = Expression.Block(returnExpr, labelExpr);
-            toSqlInvoker = Expression.Lambda<ToSqlDelegate>(bodyExpr, parameterExpr, dbParametersExpr).Compile();
-            toSqlCache.TryAdd(elementType, toSqlInvoker);
-        }
-        return toSqlInvoker;
     }
     private void Swap<T>(ref T left, ref T right)
     {
@@ -1003,21 +1120,19 @@ public class SqlVisitor
             return true;
         return false;
     }
-    private bool IsFromQueryLambda(LambdaExpression lambdaExpr, out Type elementType)
+    private LambdaExpression EnsureLambda(Expression expr)
     {
-        elementType = null;
-        if (lambdaExpr.Parameters == null || lambdaExpr.Parameters.Count != 1)
-            return false;
-        if (lambdaExpr.Parameters[0].Type != typeof(IFromQuery))
-            return false;
-        if (!lambdaExpr.ReturnType.IsGenericType)
-            return false;
-        var genericArguments = lambdaExpr.ReturnType.GetGenericArguments();
-        if (genericArguments == null || genericArguments.Length != 1)
-            return false;
-        if (!typeof(IQuery<>).MakeGenericType(genericArguments[0]).IsAssignableFrom(lambdaExpr.ReturnType))
-            return false;
-        elementType = genericArguments[0];
-        return true;
+        if (expr.NodeType == ExpressionType.Lambda)
+            return expr as LambdaExpression;
+        var currentExpr = expr;
+        while (true)
+        {
+            if (currentExpr.NodeType == ExpressionType.Lambda)
+                break;
+
+            if (currentExpr is UnaryExpression unaryExpr)
+                currentExpr = unaryExpr.Operand;
+        }
+        return currentExpr as LambdaExpression;
     }
 }

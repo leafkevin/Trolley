@@ -21,8 +21,7 @@ public interface IGroupingQuery<T, TGrouping>
     IGroupingQuery<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     IGroupingQuery<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
-    IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr);    
-    string ToSql();
+    IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr);  
 }
 <#
     var count = 16;
@@ -39,7 +38,6 @@ public interface IGroupingQuery<<#=tables#>, TGrouping>
     IGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
     IQuery<TGrouping> Select();
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr);
-    string ToSql();
 }
 <#  }
     tables += $", T{count}";
@@ -47,5 +45,4 @@ public interface IGroupingQuery<<#=tables#>, TGrouping>
 public interface IGroupingQuery<<#=tables#>, TGrouping>
 {
     IQuery<TGrouping> Select();
-    string ToSql();
 }

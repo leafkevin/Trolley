@@ -503,7 +503,7 @@ class Created<TEntity> : ICreated<TEntity>
 
             var resultLabelExpr = Expression.Label(typeof(string));
             blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
-            blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Constant(null, typeof(string))));
+            blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(string))));
 
             commandInitializerDelegate = Expression.Lambda<Func<IDbCommand, IOrmProvider, object, string>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
             commandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);

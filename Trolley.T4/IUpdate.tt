@@ -19,10 +19,16 @@ public interface IUpdate<TEntity>
     IUpdateSet<TEntity> RawSql(string rawSql, object parameter);
     IUpdateSet<TEntity> WithBy<TFields>(TFields parameters, int bulkCount = 500);
     IUpdateSet<TEntity> WithBy<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr, object parameters, int bulkCount = 500);
+
     IUpdateSetting<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr);
-    IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateSetting<TEntity> Set<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr);
     IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsExpr);
+    IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr);
+    IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr);
     IUpdateSetting<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateSetting<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr);
+
     IUpdateFrom<TEntity, T> From<T>();
     IUpdateFrom<TEntity, T1, T2> From<T1, T2>();
     IUpdateFrom<TEntity, T1, T2, T3> From<T1, T2, T3>();
@@ -41,9 +47,14 @@ public interface IUpdateSet<TEntity>
 public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
 {
     IUpdateSetting<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr);
-    IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateSetting<TEntity> Set<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr);
     IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsExpr);
+    IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr);
+    IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr);
     IUpdateSetting<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateSetting<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr);
+
     IUpdateSetting<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
     IUpdateSetting<TEntity> And(bool condition, Expression<Func<TEntity, bool>> predicate);
 }
@@ -57,54 +68,63 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
         tables += $"T{i}";
         var nextTable = $"T{i+1}";
 #>
-public interface IUpdateFrom<TEntity, <#=tables#>>
+public interface IUpdateFrom<TEntity, <#=tables#>> : IUpdateSet<TEntity>
 {
     IUpdateFrom<TEntity, <#=tables#>> Set<TFields>(Expression<Func<TEntity, <#=tables#>, TFields>> fieldsExpr);
-    IUpdateFrom<TEntity, <#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateFrom<TEntity, <#=tables#>> Set<TFields>(Expression<Func<IFromQuery, TEntity, <#=tables#>, TFields>> fieldsExpr);
     IUpdateFrom<TEntity, <#=tables#>> Set<TFields>(bool condition, Expression<Func<TEntity, <#=tables#>, TFields>> fieldsExpr);
+    IUpdateFrom<TEntity, <#=tables#>> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, <#=tables#>, TFields>> fieldsExpr);
+    IUpdateFrom<TEntity, <#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateFrom<TEntity, <#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr);
     IUpdateFrom<TEntity, <#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateFrom<TEntity, <#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr);
+
     IUpdateFrom<TEntity, <#=tables#>> Where(Expression<Func<TEntity, <#=tables#>, bool>> predicate);
-    IUpdateFrom<TEntity, <#=tables#>> And(bool condition, Expression<Func<TEntity, <#=tables#>, bool>> predicate);
-    int Execute();
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql(out List<IDbDataParameter> dbParameters);
+    IUpdateFrom<TEntity, <#=tables#>> And(bool condition, Expression<Func<TEntity, <#=tables#>, bool>> predicate);    
 }
-public interface IUpdateJoin<TEntity, <#=tables#>>
+public interface IUpdateJoin<TEntity, <#=tables#>> : IUpdateSet<TEntity>
 {
     IUpdateJoin<TEntity, <#=tables#>, <#=nextTable#>> InnerJoin<<#=nextTable#>>(Expression<Func<TEntity, <#=tables#>, <#=nextTable#>, bool>> joinOn);
     IUpdateJoin<TEntity, <#=tables#>, <#=nextTable#>> LeftJoin<<#=nextTable#>>(Expression<Func<TEntity, <#=tables#>, <#=nextTable#>, bool>> joinOn);
+
     IUpdateJoin<TEntity, <#=tables#>> Set<TFields>(Expression<Func<TEntity, <#=tables#>, TFields>> fieldsExpr);
-    IUpdateJoin<TEntity, <#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateJoin<TEntity, <#=tables#>> Set<TFields>(Expression<Func<IFromQuery, TEntity, <#=tables#>, TFields>> fieldsExpr);
     IUpdateJoin<TEntity, <#=tables#>> Set<TFields>(bool condition, Expression<Func<TEntity, <#=tables#>, TFields>> fieldsExpr);
+    IUpdateJoin<TEntity, <#=tables#>> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, <#=tables#>, TFields>> fieldsExpr);
+    IUpdateJoin<TEntity, <#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateJoin<TEntity, <#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr);
     IUpdateJoin<TEntity, <#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateJoin<TEntity, <#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr);
+
     IUpdateJoin<TEntity, <#=tables#>> Where(Expression<Func<TEntity, <#=tables#>, bool>> predicate);
     IUpdateJoin<TEntity, <#=tables#>> And(bool condition, Expression<Func<TEntity, <#=tables#>, bool>> predicate);
-    int Execute();
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 <#  }#>
-public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5>
+public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
 {
     IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr);
     IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr);
+
     IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     IUpdateFrom<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
-    int Execute();
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }
-public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5>
+public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
 {
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr);
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr);
+
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
-    int Execute();
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }

@@ -49,84 +49,16 @@ class QueryVisitor : SqlVisitor
         {
             foreach (var tableSegment in this.tables)
             {
-                if (tableSegment.IsInclude && !tableSegment.IsUsed) continue;
+                //在Update的Value子查询语句中，where子句中有更新主表的关联条件，此时IsUsed=false
+                //在Include的1:1子表，通常不参与Select语句,如果有Parameter类型的主表查询时，IsUsed=true，没有则IsUsed=false
+                if (!tableSegment.IsUsed) continue;
                 var tableName = tableSegment.Body;
                 if (string.IsNullOrEmpty(tableName))
                 {
                     tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
                     tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
                 }
-                if (builder.Length > 0) builder.Append(' ');
-                builder.Append($"{tableSegment.JoinType} {tableName}");
-                if (this.isNeedAlias)
-                    builder.Append(" " + tableSegment.AliasName);
 
-                if (!string.IsNullOrEmpty(tableSegment.OnExpr))
-                    builder.Append($" ON {tableSegment.OnExpr}");
-
-                if (!string.IsNullOrEmpty(tableSegment.Filter))
-                {
-                    if (!string.IsNullOrEmpty(tableSegment.OnExpr))
-                        builder.Append(" AND ");
-                    builder.Append(tableSegment.Filter);
-                }
-            }
-            tableSql = builder.ToString();
-        }
-
-        builder.Clear();
-        if (!string.IsNullOrEmpty(this.groupBySql))
-            builder.Append($" GROUP BY {this.groupBySql}");
-
-        if (!string.IsNullOrEmpty(this.havingSql))
-        {
-            if (builder.Length > 0) builder.Append(' ');
-            builder.Append($"HAVING {this.havingSql}");
-        }
-        string orderBy = null;
-        if (!string.IsNullOrEmpty(this.orderBySql))
-        {
-            orderBy = $"ORDER BY {this.orderBySql}";
-            if (builder.Length > 0) builder.Append(' ');
-            builder.Append(orderBy);
-        }
-        string others = builder.ToString();
-
-        dbParameters = this.dbParameters;
-        readerFields = this.readerFields;
-
-        if (this.skip.HasValue || this.limit.HasValue)
-        {
-            //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ WHERE /**conditions**/");
-            var pageSql = this.ormProvider.GetPagingTemplate(this.skip ?? 0, this.limit, orderBy);
-            pageSql = pageSql.Replace("/**fields**/", this.selectSql);
-            pageSql = pageSql.Replace("/**tables**/", tableSql);
-            pageSql = pageSql.Replace("/**conditions**/", this.whereSql);
-            return $"SELECT COUNT(*) FROM {tableSql}{this.whereSql};{pageSql}{others}";
-        }
-        else return $"SELECT {this.selectSql} FROM {tableSql}{this.whereSql}{others}";
-    }
-    public string BuildSql(Expression defaultExpr, out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields)
-    {
-        var builder = new StringBuilder();
-        string tableSql = null;
-
-        if (string.IsNullOrEmpty(this.selectSql))
-            this.Select(null, defaultExpr);
-        if (this.isDistinct)
-            this.selectSql = "DISTINCT " + this.selectSql;
-
-        if (this.tables.Count > 0)
-        {
-            foreach (var tableSegment in this.tables)
-            {
-                if (tableSegment.IsInclude && !tableSegment.IsUsed) continue;
-                var tableName = tableSegment.Body;
-                if (string.IsNullOrEmpty(tableName))
-                {
-                    tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
-                    tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
-                }
                 if (builder.Length > 0) builder.Append(' ');
                 if (!string.IsNullOrEmpty(tableSegment.JoinType))
                     builder.Append($"{tableSegment.JoinType} ");
@@ -174,7 +106,83 @@ class QueryVisitor : SqlVisitor
             var pageSql = this.ormProvider.GetPagingTemplate(this.skip ?? 0, this.limit, orderBy);
             pageSql = pageSql.Replace("/**fields**/", this.selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
-            pageSql = pageSql.Replace("/**others**/", this.whereSql);
+            pageSql = pageSql.Replace("/**conditions**/", this.whereSql.TrimStart());
+            return $"SELECT COUNT(*) FROM {tableSql}{this.whereSql};{pageSql}{others}";
+        }
+        else return $"SELECT {this.selectSql} FROM {tableSql}{this.whereSql}{others}";
+    }
+    public string BuildSql(Expression defaultExpr, out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields)
+    {
+        var builder = new StringBuilder();
+        string tableSql = null;
+
+        if (string.IsNullOrEmpty(this.selectSql))
+            this.Select(null, defaultExpr);
+        if (this.isDistinct)
+            this.selectSql = "DISTINCT " + this.selectSql;
+
+        if (this.tables.Count > 0)
+        {
+            foreach (var tableSegment in this.tables)
+            {
+                //在Update的Value子查询语句中，where子句中有更新主表的关联条件，此时IsUsed=false
+                //在Include的1:1子表，通常不参与Select语句,如果有Parameter类型的主表查询时，IsUsed=true，没有则IsUsed=false
+                if (!tableSegment.IsUsed) continue;
+                var tableName = tableSegment.Body;
+                if (string.IsNullOrEmpty(tableName))
+                {
+                    tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
+                    tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
+                }
+
+                if (builder.Length > 0) builder.Append(' ');
+                if (!string.IsNullOrEmpty(tableSegment.JoinType))
+                    builder.Append($"{tableSegment.JoinType} ");
+                builder.Append(tableName);
+                if (this.isNeedAlias)
+                    builder.Append(" " + tableSegment.AliasName);
+
+                if (!string.IsNullOrEmpty(tableSegment.OnExpr))
+                    builder.Append($" ON {tableSegment.OnExpr}");
+
+                if (!string.IsNullOrEmpty(tableSegment.Filter))
+                {
+                    if (!string.IsNullOrEmpty(tableSegment.OnExpr))
+                        builder.Append(" AND ");
+                    builder.Append(tableSegment.Filter);
+                }
+            }
+            tableSql = builder.ToString();
+        }
+
+        builder.Clear();
+        if (!string.IsNullOrEmpty(this.groupBySql))
+            builder.Append($" GROUP BY {this.groupBySql}");
+
+        if (!string.IsNullOrEmpty(this.havingSql))
+        {
+            if (builder.Length > 0) builder.Append(' ');
+            builder.Append($"HAVING {this.havingSql}");
+        }
+        string orderBy = null;
+        if (!string.IsNullOrEmpty(this.orderBySql))
+        {
+            orderBy = $"ORDER BY {this.orderBySql}";
+            if (builder.Length > 0) builder.Append(' ');
+            builder.Append(orderBy);
+        }
+        string others = builder.ToString();
+
+        dbParameters = this.dbParameters;
+        readerFields = this.readerFields;
+
+        if (this.skip.HasValue || this.limit.HasValue)
+        {
+            //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ WHERE /**conditions**/");
+            var pageSql = this.ormProvider.GetPagingTemplate(this.skip ?? 0, this.limit, orderBy);
+            pageSql = pageSql.Replace("/**fields**/", this.selectSql);
+            pageSql = pageSql.Replace("/**tables**/", tableSql);
+            pageSql = pageSql.Replace("/**others**/", this.whereSql.TrimStart());
             return $"SELECT COUNT(*) FROM {tableSql}{this.whereSql};{pageSql}{others}";
         }
         else return $"SELECT {this.selectSql} FROM {tableSql}{this.whereSql}{others}";
@@ -255,7 +263,6 @@ class QueryVisitor : SqlVisitor
         int tableIndex = this.tableStartAs + this.tables.Count;
         for (int i = 0; i < entityTypes.Length; i++)
         {
-            if (i > 0) isNeedAlias = true;
             this.tables.Add(new TableSegment
             {
                 EntityType = entityTypes[i],
@@ -264,6 +271,19 @@ class QueryVisitor : SqlVisitor
                 IsMaster = true
             });
         }
+        if (this.tables.Count > 1) this.isNeedAlias = true;
+        return this;
+    }
+    public QueryVisitor From(char tableStartAs, params Type[] entityTypes)
+    {
+        this.tableStartAs = tableStartAs;
+        this.From(entityTypes);
+        return this;
+    }
+    public QueryVisitor AddTable(TableSegment tableSegment)
+    {
+        this.tables.Add(tableSegment);
+        if (this.tables.Count > 1) this.isNeedAlias = true;
         return this;
     }
     public QueryVisitor WithTable(Type entityType, string body, List<IDbDataParameter> dbParameters = null, string joinType = "")
@@ -315,7 +335,7 @@ class QueryVisitor : SqlVisitor
         if (!isIncludeMany) this.isNeedAlias = true;
         var lambdaExpr = memberSelector as LambdaExpression;
         var memberExpr = lambdaExpr.Body as MemberExpression;
-        lambdaExpr.Body.GetParameters(out var parameters);
+        lambdaExpr.Body.GetParameterNames(out var parameters);
         this.tableAlias.Clear();
         this.tableAlias.Add(parameters[0], this.lastIncludeSegment);
         var includeSegment = this.AddIncludeTables(memberExpr);
@@ -401,7 +421,12 @@ class QueryVisitor : SqlVisitor
             }
         }
         if (!string.IsNullOrEmpty(sqlFormat))
-            this.selectSql = string.Format(sqlFormat, body);
+        {
+            this.tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
+            if (!string.IsNullOrEmpty(body))
+                this.selectSql = string.Format(sqlFormat, body);
+            else this.selectSql = sqlFormat;
+        }
         else this.selectSql = body;
     }
     public void GroupBy(Expression expr)
@@ -447,6 +472,7 @@ class QueryVisitor : SqlVisitor
     {
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
+        //在Update的Value子查询语句中，更新主表别名是a，引用表别名从b开始，无需别名替换
         this.whereSql = " WHERE " + this.VisitConditionExpr(lambdaExpr.Body);
         return this;
     }
@@ -644,6 +670,7 @@ class QueryVisitor : SqlVisitor
                 }
             }
         }
+
         //各种类型的常量或是静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
         if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
             return sqlSegment.Change(formatter(null), false);
@@ -780,7 +807,7 @@ class QueryVisitor : SqlVisitor
     {
         TableSegment tableSegment = null;
         this.tableAlias.Clear();
-        lambdaExpr.Body.GetParameters(out var parameters);
+        lambdaExpr.Body.GetParameterNames(out var parameters);
         if ((parameters == null || parameters.Count <= 0))
             return tableSegment;
         var joinTables = this.tables.FindAll(f => !f.IsInclude);
@@ -788,6 +815,8 @@ class QueryVisitor : SqlVisitor
         foreach (var parameterExpr in lambdaExpr.Parameters)
         {
             if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
+                continue;
+            if (typeof(IFromQuery).IsAssignableFrom(parameterExpr.Type))
                 continue;
             if (!parameters.Contains(parameterExpr.Name))
             {

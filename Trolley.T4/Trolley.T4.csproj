@@ -3,6 +3,10 @@
 		<TargetFramework>net6.0</TargetFramework>
 	</PropertyGroup>
 	<ItemGroup>
+		<None Update="IFromQuery.tt">
+		  <Generator>TextTemplatingFileGenerator</Generator>
+		  <LastGenOutput>IFromQuery.cs</LastGenOutput>
+		</None>
 		<None Update="IGroupingQuery.tt">
 			<Generator>TextTemplatingFileGenerator</Generator>
 			<LastGenOutput>IGroupingQuery.cs</LastGenOutput>
@@ -30,6 +34,18 @@
 		<None Update="GroupingQuery.tt">
 			<Generator>TextTemplatingFileGenerator</Generator>
 			<LastGenOutput>GroupingQuery.cs</LastGenOutput>
+		</None>
+		<None Update="FromQuery.tt">
+		  <Generator>TextTemplatingFileGenerator</Generator>
+		  <LastGenOutput>FromQuery.cs</LastGenOutput>
+		</None>
+		<None Update="FromGroupingQuery.tt">
+		  <Generator>TextTemplatingFileGenerator</Generator>
+		  <LastGenOutput>FromGroupingQuery.cs</LastGenOutput>
+		</None>
+		<None Update="IFromGroupingQuery.tt">
+		  <Generator>TextTemplatingFileGenerator</Generator>
+		  <LastGenOutput>IFromGroupingQuery.cs</LastGenOutput>
 		</None>
 		<None Update="Update.tt">
 			<Generator>TextTemplatingFileGenerator</Generator>

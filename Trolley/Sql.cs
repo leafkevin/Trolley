@@ -14,19 +14,11 @@ public class Sql
     {
         throw new NotImplementedException();
     }
-    public static bool In<TElement>(TElement value, IQuery<TElement> subQuery)
-    {
-        throw new NotImplementedException();
-    }
-    public static bool In<TElement>(TElement value, Func<IFromQuery, IQuery<TElement>> subQuery)
+    public static bool In<TElement>(TElement value, Func<IFromQuery, IFromQuery<TElement>> subQuery)
     {
         throw new NotImplementedException();
     }
     public static bool Exists<T>(Expression<Func<T, bool>> filter)
-    {
-        throw new NotImplementedException();
-    }
-    public static bool Exists<T>(Expression<Func<IQuery<T>, bool>> filter)
     {
         throw new NotImplementedException();
     }

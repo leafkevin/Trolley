@@ -10,12 +10,11 @@ public static class TrolleyExtensions
     {
         var builder = new OrmDbFactoryBuilder();
         initializer.Invoke(builder);
-        services.AddSingleton(f => builder.Build());
+        services.AddSingleton(builder.Build());
         return services;
     }
-    public static IOrmDbFactory LoadFromConfiguration(this OrmDbFactoryBuilder builder, IServiceProvider serviceProvider, string sectionName)
+    public static IOrmDbFactory LoadFromConfiguration(this OrmDbFactoryBuilder builder, IConfiguration configuration, string sectionName)
     {
-        var configuration = serviceProvider.GetService<IConfiguration>();
         var databases = configuration.GetSection(sectionName).GetChildren();
         foreach (var configInfo in databases)
         {
