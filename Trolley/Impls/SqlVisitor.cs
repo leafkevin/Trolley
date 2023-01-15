@@ -183,38 +183,12 @@ class SqlVisitor
             case ExpressionType.ExclusiveOr:
             case ExpressionType.RightShift:
             case ExpressionType.LeftShift:
-                //表达式计算
-                switch (binaryExpr.NodeType)
-                {
-                    case ExpressionType.Add:
-                    case ExpressionType.AddChecked:
-                    case ExpressionType.Subtract:
-                    case ExpressionType.SubtractChecked:
-                    case ExpressionType.Multiply:
-                    case ExpressionType.MultiplyChecked:
-                    case ExpressionType.Divide:
-                    case ExpressionType.Modulo:
-                    case ExpressionType.Coalesce:
-                    case ExpressionType.ArrayIndex:
-                    case ExpressionType.And:
-                    case ExpressionType.Or:
-                    case ExpressionType.ExclusiveOr:
-                    case ExpressionType.RightShift:
-                    case ExpressionType.LeftShift:
-                        sqlSegment.IsExpression = true;
-                        sqlSegment.IsConstantValue = false;
-                        break;
-                }
                 //字符串连接单独处理
                 if (binaryExpr.NodeType == ExpressionType.Add && (binaryExpr.Left.Type == typeof(string) || binaryExpr.Right.Type == typeof(string)))
                     return this.VisitConcatAndDeferred(sqlSegment);
 
                 var leftSegment = this.Visit(sqlSegment.Next(binaryExpr.Left));
                 var rightSegment = this.Visit(new SqlSegment { Expression = binaryExpr.Right });
-                var operators = this.GetOperator(binaryExpr.NodeType);
-
-                if (binaryExpr.NodeType == ExpressionType.Modulo || binaryExpr.NodeType == ExpressionType.Coalesce)
-                    return leftSegment.Change($"{operators}({leftSegment},{rightSegment})", false);
 
                 if (binaryExpr.NodeType == ExpressionType.Equal || binaryExpr.NodeType == ExpressionType.NotEqual)
                 {
@@ -245,7 +219,8 @@ class SqlVisitor
                         return leftSegment;
                     }
                 }
-                return leftSegment.Change($"{this.GetSqlValue(leftSegment)}{operators}{this.GetSqlValue(rightSegment)}", sqlSegment.IsConstantValue);
+
+                return this.ormProvider.FormatBinary(binaryExpr.NodeType, leftSegment, rightSegment);
         }
         return sqlSegment;
     }
@@ -510,6 +485,7 @@ class SqlVisitor
             return sqlSegment.Change(string.Concat(concatSegments));
         var concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(object[]) });
         this.ormProvider.TryGetMethodCallSqlFormatter(concatMethodInfo, out var formater);
+        sqlSegment.IsExpression = true;
         return sqlSegment.Change(formater.Invoke(null, null, concatSegments), false);
     }
     public virtual List<SqlSegment> VisitConcatExpr(Expression concatExpr)
@@ -1054,6 +1030,13 @@ class SqlVisitor
         isNeedAlias = queryVisitor.isNeedAlias;
         return result;
     }
+    public virtual SqlSegment VisitBinaryByOperator(ExpressionType nodeType, string operators, SqlSegment leftSegment, SqlSegment rightSegment, bool isConstantValue)
+    {
+        if (nodeType == ExpressionType.Coalesce)
+            return leftSegment.Change($"{operators}({leftSegment},{rightSegment})", false);
+
+        return leftSegment.Change($"{this.GetSqlValue(leftSegment)}{operators}{this.GetSqlValue(rightSegment)}", isConstantValue);
+    }
     private void AddIncludeTables(ReaderField lastReaderField, List<ReaderField> readerFields)
     {
         var includedSegments = this.tables.FindAll(f => f.IsInclude && f.FromTable == lastReaderField.TableSegment);
@@ -1082,32 +1065,6 @@ class SqlVisitor
         var temp = right;
         right = left;
         left = temp;
-    }
-    private string GetOperator(ExpressionType exprType)
-    {
-        switch (exprType)
-        {
-            case ExpressionType.Equal: return "=";
-            case ExpressionType.NotEqual: return "<>";
-            case ExpressionType.GreaterThan: return ">";
-            case ExpressionType.GreaterThanOrEqual: return ">=";
-            case ExpressionType.LessThan: return "<";
-            case ExpressionType.LessThanOrEqual: return "<=";
-            case ExpressionType.AndAlso: return "AND";
-            case ExpressionType.OrElse: return "OR";
-            case ExpressionType.Add: return "+";
-            case ExpressionType.Subtract: return "-";
-            case ExpressionType.Multiply: return "*";
-            case ExpressionType.Divide: return "/";
-            case ExpressionType.Modulo: return "MOD";
-            case ExpressionType.Coalesce: return "COALESCE";
-            case ExpressionType.And: return "&";
-            case ExpressionType.Or: return "|";
-            case ExpressionType.ExclusiveOr: return "^";
-            case ExpressionType.LeftShift: return "<<";
-            case ExpressionType.RightShift: return ">>";
-            default: return exprType.ToString();
-        }
     }
     private bool IsEnumerableString(Type type)
     {

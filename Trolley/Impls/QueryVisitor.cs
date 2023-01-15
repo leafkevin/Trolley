@@ -439,11 +439,25 @@ class QueryVisitor : SqlVisitor
     public void OrderBy(string orderType, Expression expr)
     {
         var lambdaExpr = expr as LambdaExpression;
-        this.InitTableAlias(lambdaExpr);
-        var orderBy = this.VisitList(lambdaExpr, false, orderType == "DESC" ? " DESC" : string.Empty);
-        if (string.IsNullOrEmpty(this.orderBySql))
-            this.orderBySql = orderBy;
-        else this.orderBySql += "," + orderBy;
+        var builder = new StringBuilder();
+        if (!string.IsNullOrEmpty(this.orderBySql))
+            builder.Append(this.orderBySql + ",");
+        if (this.IsGroupingAggregateMember(lambdaExpr.Body as MemberExpression))
+        {
+            for (int i = 0; i < this.groupFields.Count; i++)
+            {
+                if (i > 0) builder.Append(',');
+                builder.Append(this.groupFields[i].Body);
+                if (orderType == "DESC")
+                    builder.Append(" DESC");
+            }
+        }
+        else
+        {
+            this.InitTableAlias(lambdaExpr);
+            builder.Append(this.VisitList(lambdaExpr, false, orderType == "DESC" ? " DESC" : string.Empty));
+        }
+        this.orderBySql = builder.ToString();
     }
     public void Having(Expression havingExpr)
     {
@@ -753,6 +767,7 @@ class QueryVisitor : SqlVisitor
             if (readerField.Type == ReaderFieldType.Entity)
             {
                 readerField.TableSegment.Mapper ??= this.dbFactory.GetEntityMap(readerField.TableSegment.EntityType);
+                int fieldCount = 0;
                 foreach (var memberMapper in readerField.TableSegment.Mapper.MemberMaps)
                 {
                     if (memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.MemberType.IsEntityType())
@@ -762,7 +777,9 @@ class QueryVisitor : SqlVisitor
                     if (this.isNeedAlias)
                         builder.Append(readerField.TableSegment.AliasName + ".");
                     builder.Append(this.ormProvider.GetFieldName(memberMapper.FieldName));
+                    fieldCount++;
                 }
+                readerField.FieldCount = fieldCount;
             }
             else
             {
@@ -801,7 +818,12 @@ class QueryVisitor : SqlVisitor
             }
             return builder.ToString();
         }
-        else return this.Visit(new SqlSegment { Expression = lambdaExpr.Body }).ToString();
+        else
+        {
+            if (!string.IsNullOrEmpty(suffix))
+                return this.Visit(new SqlSegment { Expression = lambdaExpr.Body }).ToString() + suffix;
+            return this.Visit(new SqlSegment { Expression = lambdaExpr.Body }).ToString();
+        }
     }
     private TableSegment InitTableAlias(LambdaExpression lambdaExpr)
     {

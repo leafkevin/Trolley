@@ -25,6 +25,12 @@ class UpdateVisitor : SqlVisitor
             Mapper = this.dbFactory.GetEntityMap(entityType),
             AliasName = tableStartAs.ToString()
         });
+        switch (this.ormProvider.DatabaseType)
+        {
+            case DatabaseType.SqlServer:
+                this.tables[0].AliasName = this.ormProvider.GetTableName(this.tables[0].Mapper.TableName);
+                break;
+        }
     }
     public string BuildSql(out List<IDbDataParameter> dbParameters)
     {
@@ -108,6 +114,13 @@ class UpdateVisitor : SqlVisitor
     {
         this.isNeedAlias = true;
         this.isFrom = true;
+        switch (this.ormProvider.DatabaseType)
+        {
+            case DatabaseType.MySql:
+                throw new NotSupportedException("MySql不支持Update From语法，支持Update InnerJoin/LeftJoin语法");
+            case DatabaseType.Oracle:
+                throw new NotSupportedException("Oracle不支持Update From语法，支持Update Set Field=(subQuery)语法");
+        }
         int tableIndex = this.tableStartAs + this.tables.Count;
         for (int i = 0; i < entityTypes.Length; i++)
         {
@@ -123,6 +136,15 @@ class UpdateVisitor : SqlVisitor
     {
         this.isNeedAlias = true;
         this.isJoin = true;
+        switch (this.ormProvider.DatabaseType)
+        {
+            case DatabaseType.Postgresql:
+                throw new NotSupportedException("PostgreSql不支持Update Join语法，支持Update From语法");
+            case DatabaseType.SqlServer:
+                throw new NotSupportedException("SqlServer不支持Update Join语法，支持Update From语法");
+            case DatabaseType.Oracle:
+                throw new NotSupportedException("Oracle不支持Update Join语法，支持Update Set Field=(subQuery)语法");
+        }
         var lambdaExpr = joinOn as LambdaExpression;
         var joinTable = new TableSegment
         {
@@ -389,11 +411,7 @@ class UpdateVisitor : SqlVisitor
                 var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
                 var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
                 if (this.isNeedAlias)
-                {
-                    if (this.ormProvider.DatabaseType == DatabaseType.SqlServer)
-                        fieldName = tableSegment.Mapper.TableName + "." + fieldName;
-                    else fieldName = tableSegment.AliasName + "." + fieldName;
-                }
+                    fieldName = tableSegment.AliasName + "." + fieldName;
 
                 if (sqlSegment.HasDeferred)
                 {

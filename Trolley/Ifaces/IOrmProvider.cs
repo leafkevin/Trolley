@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq.Expressions;
 using System.Reflection;
 
 namespace Trolley;
@@ -30,4 +31,6 @@ public interface IOrmProvider
     string GetQuotedValue(Type fieldType, object value);
     bool TryGetMemberAccessSqlFormatter(MemberInfo memberInfo, out MemberAccessSqlFormatter formatter);
     bool TryGetMethodCallSqlFormatter(MethodInfo methodInfo, out MethodCallSqlFormatter formatter);
+    string GetBinaryOperator(ExpressionType nodeType);
+    SqlSegment FormatBinary(ExpressionType nodeType, SqlSegment leftSegment, SqlSegment rightSegment);
 }

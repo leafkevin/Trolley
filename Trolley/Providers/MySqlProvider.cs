@@ -304,7 +304,14 @@ public class MySqlProvider : BaseOrmProvider
                                     {
                                         if (builder.Length > 0)
                                             builder.Append(',');
-                                        builder.Append(this.GetQuotedValue(element));
+
+                                        if (element is SqlSegment sqlSegment && sqlSegment.Expression.Type != typeof(string) && !sqlSegment.IsConstantValue)
+                                        {
+                                            var methodInfo = sqlSegment.Expression.Type.GetMethod("ToString", Type.EmptyTypes);
+                                            if (this.TryGetMethodCallSqlFormatter(methodInfo, out var toStringFormater))
+                                                builder.Append(toStringFormater.Invoke(sqlSegment, null, null));
+                                        }
+                                        else builder.Append(this.GetQuotedValue(element));
                                     }
                                 }
                                 else

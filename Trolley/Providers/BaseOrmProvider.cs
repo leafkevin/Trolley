@@ -40,7 +40,7 @@ public abstract class BaseOrmProvider : IOrmProvider
             return $"'{value:yyyy-MM-dd HH:mm:ss}'";
         if (value is SqlSegment sqlSegment)
         {
-            if (!sqlSegment.IsConstantValue)
+            if (sqlSegment == SqlSegment.Null || !sqlSegment.IsConstantValue)
                 return sqlSegment.Value.ToString();
             return this.GetQuotedValue(sqlSegment.Value);
         }
@@ -48,7 +48,7 @@ public abstract class BaseOrmProvider : IOrmProvider
     }
     public abstract bool TryGetMemberAccessSqlFormatter(MemberInfo memberInfo, out MemberAccessSqlFormatter formatter);
     public abstract bool TryGetMethodCallSqlFormatter(MethodInfo methodInfo, out MethodCallSqlFormatter formatter);
-    protected virtual CreateNativeDbConnectionDelegate CreateConnectionDelegate(Type connectionType)
+    public virtual CreateNativeDbConnectionDelegate CreateConnectionDelegate(Type connectionType)
     {
         var constructor = connectionType.GetConstructor(new Type[] { typeof(string) });
         var connStringExpr = Expression.Parameter(typeof(string), "connectionString");
@@ -57,7 +57,7 @@ public abstract class BaseOrmProvider : IOrmProvider
              Expression.Convert(instanceExpr, typeof(IDbConnection))
              , connStringExpr).Compile();
     }
-    protected virtual CreateDefaultNativeParameterDelegate CreateDefaultParameterDelegate(Type dbParameterType)
+    public virtual CreateDefaultNativeParameterDelegate CreateDefaultParameterDelegate(Type dbParameterType)
     {
         var constructor = dbParameterType.GetConstructor(new Type[] { typeof(string), typeof(object) });
         var parametersExpr = new ParameterExpression[] {
@@ -67,7 +67,7 @@ public abstract class BaseOrmProvider : IOrmProvider
         var convertExpr = Expression.Convert(instanceExpr, typeof(IDbDataParameter));
         return Expression.Lambda<CreateDefaultNativeParameterDelegate>(convertExpr, parametersExpr).Compile();
     }
-    protected virtual CreateNativeParameterDelegate CreateParameterDelegate(Type dbTypeType, Type dbParameterType, PropertyInfo dbTypePropertyInfo)
+    public virtual CreateNativeParameterDelegate CreateParameterDelegate(Type dbTypeType, Type dbParameterType, PropertyInfo dbTypePropertyInfo)
     {
         var constructor = dbParameterType.GetConstructor(new Type[] { typeof(string), typeof(object) });
         var parametersExpr = new ParameterExpression[] {
@@ -84,5 +84,49 @@ public abstract class BaseOrmProvider : IOrmProvider
                 Expression.Return(returnLabel, Expression.Convert(instanceExpr, typeof(IDbDataParameter))),
                 Expression.Label(returnLabel, Expression.Default(typeof(IDbDataParameter))))
             , parametersExpr).Compile();
+    }
+    public virtual string GetBinaryOperator(ExpressionType nodeType) =>
+       nodeType switch
+       {
+           ExpressionType.Equal => "=",
+           ExpressionType.NotEqual => "<>",
+           ExpressionType.GreaterThan => ">",
+           ExpressionType.GreaterThanOrEqual => ">=",
+           ExpressionType.LessThan => "<",
+           ExpressionType.LessThanOrEqual => "<=",
+           ExpressionType.AndAlso => "AND",
+           ExpressionType.OrElse => "OR",
+           ExpressionType.Add => "+",
+           ExpressionType.Subtract => "-",
+           ExpressionType.Multiply => "*",
+           ExpressionType.Divide => "/",
+           ExpressionType.Modulo => "%",
+           ExpressionType.Coalesce => "COALESCE",
+           ExpressionType.And => "&",
+           ExpressionType.Or => "|",
+           ExpressionType.ExclusiveOr => "^",
+           ExpressionType.LeftShift => "<<",
+           ExpressionType.RightShift => ">>",
+           _ => nodeType.ToString()
+       };
+    public virtual SqlSegment FormatBinary(ExpressionType nodeType, SqlSegment leftSegment, SqlSegment rightSegment)
+    {
+        leftSegment.IsExpression = true;
+        var operators = this.GetBinaryOperator(nodeType);
+        if (nodeType == ExpressionType.Coalesce)
+            return leftSegment.Change($"{operators}({leftSegment},{rightSegment})", false);
+        //if (operators == "-")
+        //{
+        //    if (leftSegment.Expression.Type == typeof(DateTime))
+        //    {
+        //        if (rightSegment.Expression.Type != typeof(DateTime) && rightSegment.Expression.Type != typeof(TimeSpan))
+        //            throw new NotSupportedException("DateTime类型的表达式只支持DateTime和TimeSpan类型的减法操作");
+        //        if (leftSegment.IsConstantValue && rightSegment.IsConstantValue) ;
+        //        var methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.Subtract), new Type[] { rightSegment.Expression.Type });
+        //        if (this.TryGetMethodCallSqlFormatter(methodInfo, out var sqlFormatter))
+        //            return leftSegment.Change(sqlFormatter.Invoke(leftSegment, null, rightSegment));
+        //    }
+        //}
+        return leftSegment.Change($"{this.GetQuotedValue(leftSegment)}{operators}{this.GetQuotedValue(rightSegment)}", false);
     }
 }

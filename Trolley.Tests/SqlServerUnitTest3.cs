@@ -1,22 +1,23 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using NuGet.Frameworks;
 using System;
 using System.Linq;
 using Xunit;
 
 namespace Trolley.Tests;
 
-public class MySqlUnitTest3
+public class SqlServerUnitTest3
 {
     private readonly IOrmDbFactory dbFactory;
-    public MySqlUnitTest3()
+    public SqlServerUnitTest3()
     {
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
-            var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
+            var connectionString = "Server=.;Database=fengling;Uid=sa;password=Angangyur123456;TrustServerCertificate=true";
             var ormProvider = f.GetService<IOrmProvider>();
             var builder = new OrmDbFactoryBuilder();
-            builder.Register("fengling", true, f => f.Add<MySqlProvider>(connectionString, true))
+            builder.Register("fengling", true, f => f.Add<SqlServerProvider>(connectionString, true))
                 .Configure(f => new ModelConfiguration().OnModelCreating(f));
             return builder.Build();
         });
@@ -126,6 +127,7 @@ public class MySqlUnitTest3
                 Id = 1,
                 ProductNo="PN-001",
                 Name = "波司登羽绒服",
+                Price =550,
                 BrandId = 1,
                 CategoryId = 1,
                 IsEnabled = true,
@@ -139,6 +141,7 @@ public class MySqlUnitTest3
                 Id = 2,
                 ProductNo="PN-002",
                 Name = "雪中飞羽绒裤",
+                Price =350,
                 BrandId = 2,
                 CategoryId = 2,
                 IsEnabled = true,
@@ -152,6 +155,7 @@ public class MySqlUnitTest3
                 Id = 3,
                 ProductNo="PN-003",
                 Name = "优衣库保暖内衣",
+                Price =180,
                 BrandId = 3,
                 CategoryId = 3,
                 IsEnabled = true,
@@ -172,6 +176,7 @@ public class MySqlUnitTest3
                 BuyerId = 1,
                 SellerId = 2,
                 TotalAmount = 500,
+                //Products = new  List<int>{1, 2},
                 IsEnabled = true,
                 CreatedAt = DateTime.Now,
                 CreatedBy = 1,
@@ -185,6 +190,7 @@ public class MySqlUnitTest3
                 BuyerId = 2,
                 SellerId = 1,
                 TotalAmount = 350,
+                //Products = new  List<int>{1, 3},
                 IsEnabled = true,
                 CreatedAt = DateTime.Now,
                 CreatedBy = 1,
@@ -198,6 +204,7 @@ public class MySqlUnitTest3
                 BuyerId = 1,
                 SellerId = 2,
                 TotalAmount = 199,
+                //Products = new  List<int>{2},
                 IsEnabled = true,
                 CreatedAt = DateTime.Now,
                 CreatedBy = 1,
@@ -295,6 +302,7 @@ public class MySqlUnitTest3
             }
         });
     }
+
     [Fact]
     public void Update_Fields_Where()
     {
@@ -371,7 +379,7 @@ public class MySqlUnitTest3
             .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
             .ToListAsync();
         var sql = repository.Update<OrderDetail>().WithBy(parameters).ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price5,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5");
+        Assert.True(sql == "UPDATE [sys_order_detail] SET [Price]=@Price0,[Quantity]=@Quantity0,[Amount]=@Amount0 WHERE [Id]=@kId0;UPDATE [sys_order_detail] SET [Price]=@Price1,[Quantity]=@Quantity1,[Amount]=@Amount1 WHERE [Id]=@kId1;UPDATE [sys_order_detail] SET [Price]=@Price2,[Quantity]=@Quantity2,[Amount]=@Amount2 WHERE [Id]=@kId2;UPDATE [sys_order_detail] SET [Price]=@Price3,[Quantity]=@Quantity3,[Amount]=@Amount3 WHERE [Id]=@kId3;UPDATE [sys_order_detail] SET [Price]=@Price4,[Quantity]=@Quantity4,[Amount]=@Amount4 WHERE [Id]=@kId4;UPDATE [sys_order_detail] SET [Price]=@Price5,[Quantity]=@Quantity5,[Amount]=@Amount5 WHERE [Id]=@kId5");
     }
     [Fact]
     public async void Update_WithBy_Fields_Parameters_Multi()
@@ -384,7 +392,7 @@ public class MySqlUnitTest3
         var sql = repository.Update<OrderDetail>()
             .WithBy(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5");
+        Assert.True(sql == "UPDATE [sys_order_detail] SET [Price]=200,[UpdatedBy]=2,[ProductId]=NULL,[Quantity]=@Quantity0,[Amount]=@Amount0 WHERE [Id]=@kId0;UPDATE [sys_order_detail] SET [Price]=200,[UpdatedBy]=2,[ProductId]=NULL,[Quantity]=@Quantity1,[Amount]=@Amount1 WHERE [Id]=@kId1;UPDATE [sys_order_detail] SET [Price]=200,[UpdatedBy]=2,[ProductId]=NULL,[Quantity]=@Quantity2,[Amount]=@Amount2 WHERE [Id]=@kId2;UPDATE [sys_order_detail] SET [Price]=200,[UpdatedBy]=2,[ProductId]=NULL,[Quantity]=@Quantity3,[Amount]=@Amount3 WHERE [Id]=@kId3;UPDATE [sys_order_detail] SET [Price]=200,[UpdatedBy]=2,[ProductId]=NULL,[Quantity]=@Quantity4,[Amount]=@Amount4 WHERE [Id]=@kId4;UPDATE [sys_order_detail] SET [Price]=200,[UpdatedBy]=2,[ProductId]=NULL,[Quantity]=@Quantity5,[Amount]=@Amount5 WHERE [Id]=@kId5");
     }
     [Fact]
     public async void Update_Parameters_WithBy()
@@ -394,7 +402,7 @@ public class MySqlUnitTest3
             .Where(f => new int[] { 1, 2, 3 }.Contains(f.Id))
             .ToListAsync();
         var sql = repository.Update<Order>().WithBy(f => new { BuyerId = DBNull.Value, OrderNo = "ON_" + f.OrderNo, f.TotalAmount }, orders).ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount0 WHERE `Id`=@kId0;UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount1 WHERE `Id`=@kId1;UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount2 WHERE `Id`=@kId2");
+        Assert.True(sql == "UPDATE [sys_order] SET [BuyerId]=NULL,[OrderNo]='ON_'+[OrderNo],[TotalAmount]=@TotalAmount0 WHERE [Id]=@kId0;UPDATE [sys_order] SET [BuyerId]=NULL,[OrderNo]='ON_'+[OrderNo],[TotalAmount]=@TotalAmount1 WHERE [Id]=@kId1;UPDATE [sys_order] SET [BuyerId]=NULL,[OrderNo]='ON_'+[OrderNo],[TotalAmount]=@TotalAmount2 WHERE [Id]=@kId2");
     }
     [Fact]
     public void Update_Set_FromQuery_Multi()
@@ -411,7 +419,7 @@ public class MySqlUnitTest3
             })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(b.[Amount]) FROM [sys_order_detail] b WHERE b.[OrderId]=[sys_order].[Id]),[OrderNo]=[sys_order].[OrderNo]+'_111',[BuyerId]=NULL WHERE [sys_order].[BuyerId]=1");
     }
     [Fact]
     public void Update_Set_FromQuery_One()
@@ -428,7 +436,7 @@ public class MySqlUnitTest3
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(b.[Amount]) FROM [sys_order_detail] b WHERE b.[OrderId]=[sys_order].[Id]),[OrderNo]=@OrderNo,[BuyerId]=NULL WHERE [sys_order].[BuyerId]=1");
     }
     [Fact]
     public void Update_Set_FromQuery_Fields()
@@ -442,53 +450,53 @@ public class MySqlUnitTest3
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(b.[Amount]) FROM [sys_order_detail] b WHERE b.[OrderId]=[sys_order].[Id]),[OrderNo]=@OrderNo,[BuyerId]=NULL WHERE [sys_order].[BuyerId]=1");
     }
     [Fact]
-    public void Update_InnerJoin_One()
+    public void Update_From_One()
     {
         using var repository = this.dbFactory.Create();
         var sql = repository.Update<Order>()
-            .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
+            .From<OrderDetail>()
             .Set(x => x.TotalAmount, 200.56)
             .Set((a, b) => new
             {
                 OrderNo = a.OrderNo + "_111",
                 BuyerId = DBNull.Value
             })
-            .Where((a, b) => a.BuyerId == 1)
+            .Where((x, y) => x.Id == y.OrderId && x.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=@TotalAmount,[OrderNo]=[sys_order].[OrderNo]+'_111',[BuyerId]=NULL FROM [sys_order_detail] b WHERE [sys_order].[Id]=b.[OrderId] AND [sys_order].[BuyerId]=1");
     }
     [Fact]
-    public void Update_InnerJoin_Multi()
+    public void Update_From_Multi()
     {
         using var repository = this.dbFactory.Create();
         var sql = repository.Update<Order>()
-            .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
+            .From<OrderDetail>()
             .Set((x, y) => new
             {
                 TotalAmount = y.Amount,
                 OrderNo = x.OrderNo + "_111",
                 BuyerId = DBNull.Value
             })
-            .Where((a, b) => a.BuyerId == 1)
+            .Where((x, y) => x.Id == y.OrderId && x.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=b.`Amount`,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=b.[Amount],[OrderNo]=[sys_order].[OrderNo]+'_111',[BuyerId]=NULL FROM [sys_order_detail] b WHERE [sys_order].[Id]=b.[OrderId] AND [sys_order].[BuyerId]=1");
     }
     [Fact]
-    public void Update_InnerJoin_Fields()
+    public void Update_From_Fields()
     {
         using var repository = this.dbFactory.Create();
         var sql = repository.Update<Order>()
-            .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
+            .From<OrderDetail>()
             .Set(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
                 .Where(f => f.OrderId == y.Id)
                 .Select(t => Sql.Sum(t.Amount)))
             .Set((a, b) => new { OrderNo = a.OrderNo + b.ProductId.ToString() })
             .Set((x, y) => new { BuyerId = DBNull.Value })
-            .Where((a, b) => a.BuyerId == 1)
+            .Where((x, y) => x.Id == y.OrderId && x.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,CAST(b.`ProductId` AS CHAR)),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(c.[Amount]) FROM [sys_order_detail] c WHERE c.[OrderId]=[sys_order].[Id]),[OrderNo]=[sys_order].[OrderNo]+CAST(b.[ProductId] AS NVARCHAR(MAX)),[BuyerId]=NULL FROM [sys_order_detail] b WHERE [sys_order].[Id]=b.[OrderId] AND [sys_order].[BuyerId]=1");
     }
 }

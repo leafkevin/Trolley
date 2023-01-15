@@ -150,7 +150,7 @@ public class SqlServerProvider : BaseOrmProvider
     public override string GetTableName(string entityName) => "[" + entityName + "]";
     public override string GetPagingTemplate(int skip, int? limit, string orderBy = null)
     {
-        if (String.IsNullOrEmpty(orderBy)) throw new ArgumentNullException("orderBy");
+        if (string.IsNullOrEmpty(orderBy)) throw new ArgumentNullException("orderBy");
         var builder = new StringBuilder("SELECT /**fields**/ FROM /**tables**/ WHERE /**conditions**/");
         if (!String.IsNullOrEmpty(orderBy)) builder.Append($" {orderBy}");
         builder.Append($" OFFSET {skip} ROWS");
@@ -330,8 +330,15 @@ public class SqlServerProvider : BaseOrmProvider
                                     foreach (var element in enumerable)
                                     {
                                         if (builder.Length > 0)
-                                            builder.Append(',');
-                                        builder.Append(this.GetQuotedValue(element));
+                                            builder.Append('+');
+
+                                        if (element is SqlSegment sqlSegment && sqlSegment.Expression.Type != typeof(string) && !sqlSegment.IsConstantValue)
+                                        {
+                                            var methodInfo = sqlSegment.Expression.Type.GetMethod("ToString", Type.EmptyTypes);
+                                            if (this.TryGetMethodCallSqlFormatter(methodInfo, out var toStringFormater))
+                                                builder.Append(toStringFormater.Invoke(sqlSegment, null, null));
+                                        }
+                                        else builder.Append(this.GetQuotedValue(element));
                                     }
                                 }
                                 else
@@ -340,11 +347,6 @@ public class SqlServerProvider : BaseOrmProvider
                                         builder.Append(',');
                                     builder.Append(this.GetQuotedValue(arg));
                                 }
-                            }
-                            if (builder.Length > 0)
-                            {
-                                builder.Insert(0, "CONCAT(");
-                                builder.Append(')');
                             }
                             return builder.ToString();
                         });
