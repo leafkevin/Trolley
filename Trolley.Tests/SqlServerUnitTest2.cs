@@ -333,7 +333,10 @@ public class SqlServerUnitTest2
     public async void QueryPage()
     {
         using var repository = this.dbFactory.Create();
-        var result = await repository.QueryPageAsync<OrderDetail>(2, 1, f => f.ProductId == 1);
+        var result = repository.From<OrderDetail>()
+            .Where(f => f.ProductId == 1)
+            .OrderByDescending(f => f.CreatedAt)            
+            .ToPageList(2, 1);
         var count = await repository.From<OrderDetail>().Where(f => f.ProductId == 1).CountAsync();
         Assert.NotNull(result);
         Assert.NotEmpty(result.Items);

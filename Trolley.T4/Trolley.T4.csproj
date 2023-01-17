@@ -3,6 +3,10 @@
 		<TargetFramework>net6.0</TargetFramework>
 	</PropertyGroup>
 	<ItemGroup>
+		<None Update="Create.tt">
+		  <Generator>TextTemplatingFileGenerator</Generator>
+		  <LastGenOutput>Create.cs</LastGenOutput>
+		</None>
 		<None Update="IFromQuery.tt">
 		  <Generator>TextTemplatingFileGenerator</Generator>
 		  <LastGenOutput>IFromQuery.cs</LastGenOutput>

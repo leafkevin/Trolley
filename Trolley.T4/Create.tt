@@ -1,4 +1,11 @@
-﻿using System;
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
+<#@ output extension=".cs" #>
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -685,11 +692,20 @@ class CreateBase
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(out dbParameters);
 }
-class Create<TEntity, T1> : CreateBase, ICreate<TEntity, T1>
+<#
+    var count = 6;
+    string tables = "";
+    for (int i = 1; i < count; i++)
+    {
+        if(tables.Length > 0)
+            tables += ", ";
+        tables += $"T{i}";
+#>
+class Create<TEntity, <#=tables#>> : CreateBase, ICreate<TEntity, <#=tables#>>
 {
     public Create(CreateVisitor visitor)
         : base(visitor) { }
-    public ICreate<TEntity, T1> Where(Expression<Func<T1, bool>> predicate)
+    public ICreate<TEntity, <#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -697,7 +713,7 @@ class Create<TEntity, T1> : CreateBase, ICreate<TEntity, T1>
         this.visitor.Where(predicate);
         return this;
     }
-    public ICreate<TEntity, T1> And(bool condition, Expression<Func<T1, bool>> predicate)
+    public ICreate<TEntity, <#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -707,91 +723,4 @@ class Create<TEntity, T1> : CreateBase, ICreate<TEntity, T1>
         return this;
     }
 }
-class Create<TEntity, T1, T2> : CreateBase, ICreate<TEntity, T1, T2>
-{
-    public Create(CreateVisitor visitor)
-        : base(visitor) { }
-    public ICreate<TEntity, T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.Where(predicate);
-        return this;
-    }
-    public ICreate<TEntity, T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-}
-class Create<TEntity, T1, T2, T3> : CreateBase, ICreate<TEntity, T1, T2, T3>
-{
-    public Create(CreateVisitor visitor)
-        : base(visitor) { }
-    public ICreate<TEntity, T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.Where(predicate);
-        return this;
-    }
-    public ICreate<TEntity, T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-}
-class Create<TEntity, T1, T2, T3, T4> : CreateBase, ICreate<TEntity, T1, T2, T3, T4>
-{
-    public Create(CreateVisitor visitor)
-        : base(visitor) { }
-    public ICreate<TEntity, T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.Where(predicate);
-        return this;
-    }
-    public ICreate<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-}
-class Create<TEntity, T1, T2, T3, T4, T5> : CreateBase, ICreate<TEntity, T1, T2, T3, T4, T5>
-{
-    public Create(CreateVisitor visitor)
-        : base(visitor) { }
-    public ICreate<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.Where(predicate);
-        return this;
-    }
-    public ICreate<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        if (condition)
-            this.visitor.And(predicate);
-        return this;
-    }
-}
+<#  }#>

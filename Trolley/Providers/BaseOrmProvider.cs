@@ -30,13 +30,13 @@ public abstract class BaseOrmProvider : IOrmProvider
     }
     public abstract int GetNativeDbType(Type type);
     public abstract string CastTo(Type type);
-    public virtual string GetQuotedValue(Type fieldType, object value)
+    public virtual string GetQuotedValue(Type expectType, object value)
     {
-        if (fieldType == typeof(bool))
+        if (expectType == typeof(bool))
             return (bool)value ? "1" : "0";
-        if (fieldType == typeof(string))
+        if (expectType == typeof(string))
             return "'" + value.ToString().Replace("\\", "\\\\").Replace("'", @"\'") + "'";
-        if (fieldType == typeof(DateTime))
+        if (expectType == typeof(DateTime))
             return $"'{value:yyyy-MM-dd HH:mm:ss}'";
         if (value is SqlSegment sqlSegment)
         {
@@ -46,8 +46,6 @@ public abstract class BaseOrmProvider : IOrmProvider
         }
         return value.ToString();
     }
-    public abstract bool TryGetMemberAccessSqlFormatter(MemberInfo memberInfo, out MemberAccessSqlFormatter formatter);
-    public abstract bool TryGetMethodCallSqlFormatter(MethodInfo methodInfo, out MethodCallSqlFormatter formatter);
     public virtual CreateNativeDbConnectionDelegate CreateConnectionDelegate(Type connectionType)
     {
         var constructor = connectionType.GetConstructor(new Type[] { typeof(string) });
@@ -109,24 +107,6 @@ public abstract class BaseOrmProvider : IOrmProvider
            ExpressionType.RightShift => ">>",
            _ => nodeType.ToString()
        };
-    public virtual SqlSegment FormatBinary(ExpressionType nodeType, SqlSegment leftSegment, SqlSegment rightSegment)
-    {
-        leftSegment.IsExpression = true;
-        var operators = this.GetBinaryOperator(nodeType);
-        if (nodeType == ExpressionType.Coalesce)
-            return leftSegment.Change($"{operators}({leftSegment},{rightSegment})", false);
-        //if (operators == "-")
-        //{
-        //    if (leftSegment.Expression.Type == typeof(DateTime))
-        //    {
-        //        if (rightSegment.Expression.Type != typeof(DateTime) && rightSegment.Expression.Type != typeof(TimeSpan))
-        //            throw new NotSupportedException("DateTime类型的表达式只支持DateTime和TimeSpan类型的减法操作");
-        //        if (leftSegment.IsConstantValue && rightSegment.IsConstantValue) ;
-        //        var methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.Subtract), new Type[] { rightSegment.Expression.Type });
-        //        if (this.TryGetMethodCallSqlFormatter(methodInfo, out var sqlFormatter))
-        //            return leftSegment.Change(sqlFormatter.Invoke(leftSegment, null, rightSegment));
-        //    }
-        //}
-        return leftSegment.Change($"{this.GetQuotedValue(leftSegment)}{operators}{this.GetQuotedValue(rightSegment)}", false);
-    }
+    public abstract bool TryGetMemberAccessSqlFormatter(SqlSegment originalSegment, MemberInfo memberInfo, out MemberAccessSqlFormatter formatter);
+    public abstract bool TryGetMethodCallSqlFormatter(SqlSegment originalSegment, MethodInfo methodInfo, out MethodCallSqlFormatter formatter);
 }

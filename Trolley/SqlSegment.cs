@@ -46,7 +46,7 @@ public class SqlSegment
         this.isFixValue = false;
         this.HasField = this.HasField || right.HasField;
         this.IsParameter = this.IsParameter || right.IsParameter;
-        //this.IsExpression = this.IsExpression || right.IsExpression;
+        this.IsExpression = this.IsExpression || right.IsExpression;
         this.IsConstantValue = this.IsConstantValue && right.IsConstantValue;
         this.Value = right.Value;
         if (right.HasDeferred)

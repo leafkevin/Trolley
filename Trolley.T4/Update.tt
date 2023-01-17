@@ -1122,19 +1122,17 @@ class SetField
 }
 <#
     var count = 5;
-    var tables = "";    
+    var tables = "TEntity";    
     for (int i = 1; i < count; i++)
     {
-        if(tables.Length > 0)
-            tables += ", ";
-        tables += $"T{i}";
+        tables += $", T{i}";
         var nextTable = $"T{i+1}";
 #>
-class UpdateFrom<TEntity, <#=tables#>> : UpdateBase, IUpdateFrom<TEntity, <#=tables#>>
+class UpdateFrom<<#=tables#>> : UpdateBase, IUpdateFrom<<#=tables#>>
 {
     public UpdateFrom(UpdateVisitor visitor) : base(visitor) { }
 
-    public IUpdateFrom<TEntity, <#=tables#>> Set<TFields>(Expression<Func<TEntity, <#=tables#>, TFields>> fieldsExpr)
+    public IUpdateFrom<<#=tables#>> Set<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -1144,7 +1142,7 @@ class UpdateFrom<TEntity, <#=tables#>> : UpdateBase, IUpdateFrom<TEntity, <#=tab
         this.visitor.Set(fieldsExpr);
         return this;
     }
-    public IUpdateFrom<TEntity, <#=tables#>> Set<TFields>(Expression<Func<IFromQuery, TEntity, <#=tables#>, TFields>> fieldsExpr)
+    public IUpdateFrom<<#=tables#>> Set<TFields>(Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -1154,7 +1152,7 @@ class UpdateFrom<TEntity, <#=tables#>> : UpdateBase, IUpdateFrom<TEntity, <#=tab
         this.visitor.SetFromQuery(fieldsExpr);
         return this;
     }
-    public IUpdateFrom<TEntity, <#=tables#>> Set<TFields>(bool condition, Expression<Func<TEntity, <#=tables#>, TFields>> fieldsExpr)
+    public IUpdateFrom<<#=tables#>> Set<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -1165,7 +1163,7 @@ class UpdateFrom<TEntity, <#=tables#>> : UpdateBase, IUpdateFrom<TEntity, <#=tab
             this.visitor.Set(fieldsExpr);
         return this;
     }
-    public IUpdateFrom<TEntity, <#=tables#>> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, <#=tables#>, TFields>> fieldsExpr)
+    public IUpdateFrom<<#=tables#>> Set<TFields>(bool condition, Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -1177,7 +1175,7 @@ class UpdateFrom<TEntity, <#=tables#>> : UpdateBase, IUpdateFrom<TEntity, <#=tab
         return this;
     }
 
-    public IUpdateFrom<TEntity, <#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
+    public IUpdateFrom<<#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
@@ -1189,7 +1187,7 @@ class UpdateFrom<TEntity, <#=tables#>> : UpdateBase, IUpdateFrom<TEntity, <#=tab
         this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateFrom<TEntity, <#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
+    public IUpdateFrom<<#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
@@ -1201,7 +1199,7 @@ class UpdateFrom<TEntity, <#=tables#>> : UpdateBase, IUpdateFrom<TEntity, <#=tab
         this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
         return this;
     }
-    public IUpdateFrom<TEntity, <#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
+    public IUpdateFrom<<#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
@@ -1214,7 +1212,7 @@ class UpdateFrom<TEntity, <#=tables#>> : UpdateBase, IUpdateFrom<TEntity, <#=tab
             this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateFrom<TEntity, <#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
+    public IUpdateFrom<<#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
@@ -1228,7 +1226,7 @@ class UpdateFrom<TEntity, <#=tables#>> : UpdateBase, IUpdateFrom<TEntity, <#=tab
         return this;
     }
 
-    public IUpdateFrom<TEntity, <#=tables#>> Where(Expression<Func<TEntity, <#=tables#>, bool>> predicate)
+    public IUpdateFrom<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -1236,7 +1234,7 @@ class UpdateFrom<TEntity, <#=tables#>> : UpdateBase, IUpdateFrom<TEntity, <#=tab
         this.visitor.Where(predicate);
         return this;
     }
-    public IUpdateFrom<TEntity, <#=tables#>> And(bool condition, Expression<Func<TEntity, <#=tables#>, bool>> predicate)
+    public IUpdateFrom<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -1246,28 +1244,28 @@ class UpdateFrom<TEntity, <#=tables#>> : UpdateBase, IUpdateFrom<TEntity, <#=tab
         return this;
     }
 }
-class UpdateJoin<TEntity, <#=tables#>> : UpdateBase, IUpdateJoin<TEntity, <#=tables#>>
+class UpdateJoin<<#=tables#>> : UpdateBase, IUpdateJoin<<#=tables#>>
 {
     public UpdateJoin(UpdateVisitor visitor) : base(visitor) { }
 
-    public IUpdateJoin<TEntity, <#=tables#>, <#=nextTable#>> InnerJoin<<#=nextTable#>>(Expression<Func<TEntity, <#=tables#>, <#=nextTable#>, bool>> joinOn)
+    public IUpdateJoin<<#=tables#>, <#=nextTable#>> InnerJoin<<#=nextTable#>>(Expression<Func<<#=tables#>, <#=nextTable#>, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(<#=nextTable#>), joinOn);
-        return new UpdateJoin<TEntity, <#=tables#>, <#=nextTable#>>(this.visitor);
+        return new UpdateJoin<<#=tables#>, <#=nextTable#>>(this.visitor);
     }
-    public IUpdateJoin<TEntity, <#=tables#>, <#=nextTable#>> LeftJoin<<#=nextTable#>>(Expression<Func<TEntity, <#=tables#>, <#=nextTable#>, bool>> joinOn)
+    public IUpdateJoin<<#=tables#>, <#=nextTable#>> LeftJoin<<#=nextTable#>>(Expression<Func<<#=tables#>, <#=nextTable#>, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(<#=nextTable#>), joinOn);
-        return new UpdateJoin<TEntity, <#=tables#>, <#=nextTable#>>(this.visitor);
+        return new UpdateJoin<<#=tables#>, <#=nextTable#>>(this.visitor);
     }
 
-    public IUpdateJoin<TEntity, <#=tables#>> Set<TFields>(Expression<Func<TEntity, <#=tables#>, TFields>> fieldsExpr)
+    public IUpdateJoin<<#=tables#>> Set<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -1277,7 +1275,7 @@ class UpdateJoin<TEntity, <#=tables#>> : UpdateBase, IUpdateJoin<TEntity, <#=tab
         this.visitor.Set(fieldsExpr);
         return this;
     }
-    public IUpdateJoin<TEntity, <#=tables#>> Set<TFields>(Expression<Func<IFromQuery, TEntity, <#=tables#>, TFields>> fieldsExpr)
+    public IUpdateJoin<<#=tables#>> Set<TFields>(Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -1287,7 +1285,7 @@ class UpdateJoin<TEntity, <#=tables#>> : UpdateBase, IUpdateJoin<TEntity, <#=tab
         this.visitor.SetFromQuery(fieldsExpr);
         return this;
     }
-    public IUpdateJoin<TEntity, <#=tables#>> Set<TFields>(bool condition, Expression<Func<TEntity, <#=tables#>, TFields>> fieldsExpr)
+    public IUpdateJoin<<#=tables#>> Set<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -1298,7 +1296,7 @@ class UpdateJoin<TEntity, <#=tables#>> : UpdateBase, IUpdateJoin<TEntity, <#=tab
             this.visitor.Set(fieldsExpr);
         return this;
     }
-    public IUpdateJoin<TEntity, <#=tables#>> Set<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, <#=tables#>, TFields>> fieldsExpr)
+    public IUpdateJoin<<#=tables#>> Set<TFields>(bool condition, Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -1310,7 +1308,7 @@ class UpdateJoin<TEntity, <#=tables#>> : UpdateBase, IUpdateJoin<TEntity, <#=tab
         return this;
     }
 
-    public IUpdateJoin<TEntity, <#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
+    public IUpdateJoin<<#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
@@ -1322,7 +1320,7 @@ class UpdateJoin<TEntity, <#=tables#>> : UpdateBase, IUpdateJoin<TEntity, <#=tab
         this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateJoin<TEntity, <#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
+    public IUpdateJoin<<#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
@@ -1334,7 +1332,7 @@ class UpdateJoin<TEntity, <#=tables#>> : UpdateBase, IUpdateJoin<TEntity, <#=tab
         this.visitor.SetFromQuery(fieldExpr, subQueryExpr);
         return this;
     }
-    public IUpdateJoin<TEntity, <#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
+    public IUpdateJoin<<#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
@@ -1347,7 +1345,7 @@ class UpdateJoin<TEntity, <#=tables#>> : UpdateBase, IUpdateJoin<TEntity, <#=tab
             this.visitor.Set(fieldExpr, fieldValue);
         return this;
     }
-    public IUpdateJoin<TEntity, <#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
+    public IUpdateJoin<<#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
@@ -1361,7 +1359,7 @@ class UpdateJoin<TEntity, <#=tables#>> : UpdateBase, IUpdateJoin<TEntity, <#=tab
         return this;
     }
 
-    public IUpdateJoin<TEntity, <#=tables#>> Where(Expression<Func<TEntity, <#=tables#>, bool>> predicate)
+    public IUpdateJoin<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -1369,7 +1367,7 @@ class UpdateJoin<TEntity, <#=tables#>> : UpdateBase, IUpdateJoin<TEntity, <#=tab
         this.visitor.Where(predicate);
         return this;
     }
-    public IUpdateJoin<TEntity, <#=tables#>> And(bool condition, Expression<Func<TEntity, <#=tables#>, bool>> predicate)
+    public IUpdateJoin<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));

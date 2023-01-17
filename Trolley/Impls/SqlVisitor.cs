@@ -15,6 +15,8 @@ class SqlVisitor
     protected List<IDbDataParameter> dbParameters;
     protected readonly string parameterPrefix;
     protected bool isNeedAlias = false;
+    protected bool isSelect = false;
+    protected bool isWhere = false;
     internal char tableStartAs = 'a';
     internal readonly IOrmDbFactory dbFactory;
     internal readonly TheaConnection connection;
@@ -51,7 +53,7 @@ class SqlVisitor
             {
                 case ExpressionType.Lambda:
                     var lambdaExpr = sqlSegment.Expression as LambdaExpression;
-                    if (this.IsFromQuery(lambdaExpr, out var parameters, out var entityType))
+                    if (this.IsFromQuery(lambdaExpr))
                         return sqlSegment.Change(this.VisitFromQuery(lambdaExpr, out _), false);
                     sqlSegment.Expression = lambdaExpr.Body;
                     continue;
@@ -117,6 +119,9 @@ class SqlVisitor
                     break;
                 case ExpressionType.Conditional:
                     result = this.VisitConditional(sqlSegment);
+                    break;
+                case ExpressionType.ListInit:
+                    result = this.VisitListInit(sqlSegment);
                     break;
             }
             return result;
@@ -186,6 +191,12 @@ class SqlVisitor
                 //字符串连接单独处理
                 if (binaryExpr.NodeType == ExpressionType.Add && (binaryExpr.Left.Type == typeof(string) || binaryExpr.Right.Type == typeof(string)))
                     return this.VisitConcatAndDeferred(sqlSegment);
+                if (binaryExpr.NodeType == ExpressionType.Subtract && binaryExpr.Left.Type == typeof(DateTime))
+                {
+                    var methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.Subtract), new Type[] { binaryExpr.Type });
+                    var subtractExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
+                    return this.VisitMethodCall(sqlSegment.Next(subtractExpr));
+                }
 
                 var leftSegment = this.Visit(sqlSegment.Next(binaryExpr.Left));
                 var rightSegment = this.Visit(new SqlSegment { Expression = binaryExpr.Right });
@@ -220,7 +231,10 @@ class SqlVisitor
                     }
                 }
 
-                return this.ormProvider.FormatBinary(binaryExpr.NodeType, leftSegment, rightSegment);
+                var operators = this.ormProvider.GetBinaryOperator(binaryExpr.NodeType);
+                if (binaryExpr.NodeType == ExpressionType.Coalesce)
+                    return leftSegment.Change($"{operators}({leftSegment},{rightSegment})", false);
+                return leftSegment.Change($"{this.GetSqlValue(leftSegment)}{operators}{this.GetSqlValue(rightSegment)}", false);
         }
         return sqlSegment;
     }
@@ -248,7 +262,7 @@ class SqlVisitor
             }
 
             //各种类型值的属性访问，如：DateTime,TimeSpan,String.Length,List.Count
-            if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
+            if (this.ormProvider.TryGetMemberAccessSqlFormatter(sqlSegment, memberExpr.Member, out formatter))
             {
                 //Where(f=>... && f.CreatedAt.Month<5 && ...)
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
@@ -333,7 +347,7 @@ class SqlVisitor
             return SqlSegment.Null;
 
         //各种类型的常量或是静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
-        if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
+        if (this.ormProvider.TryGetMemberAccessSqlFormatter(sqlSegment, memberExpr.Member, out formatter))
             return sqlSegment.Change(formatter(null), false);
 
         //访问局部变量或是成员变量，当作常量处理,直接计算，如果是字符串变成参数@p
@@ -358,15 +372,18 @@ class SqlVisitor
             || typeof(IAggregateSelect).IsAssignableFrom(methodCallExpr.Method.DeclaringType))
             return this.VisitSqlMethodCall(sqlSegment);
 
-        if (!this.ormProvider.TryGetMethodCallSqlFormatter(methodCallExpr.Method, out var formatter))
+        if (!this.ormProvider.TryGetMethodCallSqlFormatter(sqlSegment, methodCallExpr.Method, out var formatter))
             throw new Exception($"不支持的方法访问，或是{this.ormProvider.GetType().FullName}未实现此方法{methodCallExpr.Method.Name}");
 
-        object target = null;
+        SqlSegment target = null;
         object[] args = null;
-
+        bool isConstantValue = false;
         //如果方法对象是聚合查询，不做任何处理
         if (methodCallExpr.Object != null)
+        {
             target = this.Visit(new SqlSegment { Expression = methodCallExpr.Object });
+            if (target.IsConstantValue) isConstantValue = true;
+        }
 
         //字符串连接单独特殊处理
         if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
@@ -374,11 +391,17 @@ class SqlVisitor
             var arguments = new List<object>();
             foreach (var argumentExpr in methodCallExpr.Arguments)
             {
-                arguments.Add(this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr }));
+                var argumentSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
+                arguments.Add(argumentSegment);
+                if (argumentSegment.IsConstantValue) isConstantValue = true;
             }
             args = arguments.ToArray();
         }
         var result = formatter.Invoke(target, sqlSegment.DeferredExprs, args);
+
+        //ToString 原来的值通常都是常量，再以常量值返回
+        if (methodCallExpr.Method.Name == "ToString" && isConstantValue)
+            return sqlSegment.Change(result);
         sqlSegment.IsExpression = true;
         return sqlSegment.Change(result, false);
     }
@@ -439,6 +462,19 @@ class SqlVisitor
         }
         return sqlSegment;
     }
+    public virtual SqlSegment VisitListInit(SqlSegment sqlSegment)
+    {
+        var listExpr = sqlSegment.Expression as ListInitExpression;
+        var result = new List<object>();
+        foreach (var elementInit in listExpr.Initializers)
+        {
+            if (elementInit.Arguments.Count == 0)
+                continue;
+            var elementSegment = new SqlSegment { Expression = elementInit.Arguments[0] };
+            result.Add(this.VisitAndDeferred(elementSegment));
+        }
+        return sqlSegment.Change(result, false);
+    }
     public virtual SqlSegment VisitBooleanDeferred(SqlSegment fieldSegment)
     {
         if (!fieldSegment.HasDeferred)
@@ -484,50 +520,80 @@ class SqlVisitor
         if (isConstantValue)
             return sqlSegment.Change(string.Concat(concatSegments));
         var concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(object[]) });
-        this.ormProvider.TryGetMethodCallSqlFormatter(concatMethodInfo, out var formater);
+        this.ormProvider.TryGetMethodCallSqlFormatter(sqlSegment, concatMethodInfo, out var formater);
         sqlSegment.IsExpression = true;
         return sqlSegment.Change(formater.Invoke(null, null, concatSegments), false);
     }
     public virtual List<SqlSegment> VisitConcatExpr(Expression concatExpr)
     {
-        var completedSegements = new List<SqlSegment>();
-        var deferredExprs = new Stack<Expression>();
-        Func<Expression, bool> isConcatBinary = f =>
+        Func<Expression, bool> isAddBinary = f =>
         {
-            if (f is BinaryExpression binaryExpr && binaryExpr.NodeType == ExpressionType.Add
-                && binaryExpr.Left.Type == typeof(string) && binaryExpr.Right.Type == typeof(string))
+            if (f is BinaryExpression binaryExpr && binaryExpr.NodeType == ExpressionType.Add && binaryExpr.Type == typeof(string)
+                && (binaryExpr.Left.Type == typeof(string) || binaryExpr.Right.Type == typeof(string)))
                 return true;
             return false;
         };
-
+        Func<Expression, bool> isConcatCall = f =>
+        {
+            if (f is MethodCallExpression callExpr && callExpr.Method.Name == "Concat")
+                return true;
+            return false;
+        };
+        List<Expression> completedExprs = null;
+        if (isAddBinary(concatExpr))
+            completedExprs = this.FlattenAddConcatParameters(concatExpr);
+        if (isConcatCall(concatExpr))
+            completedExprs = this.FlattenConcatCallParameters(concatExpr);
+        var result = new List<SqlSegment>();
+        foreach (var completedExpr in completedExprs)
+        {
+            result.Add(this.VisitAndDeferred(new SqlSegment { Expression = completedExpr }));
+        }
+        return result;
+    }
+    public virtual List<Expression> FlattenAddConcatParameters(Expression concatExpr)
+    {
+        var completedExprs = new List<Expression>();
+        var deferredExprs = new Stack<Expression>();
+        Func<Expression, bool> isAddBinary = f =>
+        {
+            if (f is BinaryExpression binaryExpr && binaryExpr.NodeType == ExpressionType.Add && binaryExpr.Type == typeof(string)
+                && (binaryExpr.Left.Type == typeof(string) || binaryExpr.Right.Type == typeof(string)))
+                return true;
+            return false;
+        };
+        Func<Expression, bool> isConcatCall = f =>
+        {
+            if (f is MethodCallExpression callExpr && callExpr.Method.Name == "Concat")
+                return true;
+            return false;
+        };
         var nextExpr = concatExpr;
         while (true)
         {
             if (nextExpr is BinaryExpression binaryExpr)
             {
-                var isLeftBinary = isConcatBinary(binaryExpr.Left);
-                var isRightBinary = isConcatBinary(binaryExpr.Right);
+                var isLeftBinary = isAddBinary(binaryExpr.Left);
                 if (isLeftBinary)
                 {
                     deferredExprs.Push(binaryExpr.Right);
                     nextExpr = binaryExpr.Left as BinaryExpression;
                     continue;
                 }
-                completedSegements.Add(this.Visit(new SqlSegment
-                {
-                    OperationType = OperationType.Concat,
-                    Expression = binaryExpr.Left
-                }));
+                if (isConcatCall(binaryExpr.Left))
+                    completedExprs.AddRange(this.FlattenConcatCallParameters(binaryExpr.Left));
+                else completedExprs.Add(binaryExpr.Left);
+
+                var isRightBinary = isAddBinary(binaryExpr.Right);
                 if (isRightBinary)
                 {
                     nextExpr = binaryExpr.Right as BinaryExpression;
                     continue;
                 }
-                completedSegements.Add(this.Visit(new SqlSegment
-                {
-                    OperationType = OperationType.Concat,
-                    Expression = binaryExpr.Right
-                }));
+
+                if (isConcatCall(binaryExpr.Right))
+                    completedExprs.AddRange(this.FlattenConcatCallParameters(binaryExpr.Right));
+                else completedExprs.Add(binaryExpr.Right);
 
                 if (deferredExprs.TryPop(out var expr))
                     nextExpr = expr;
@@ -535,17 +601,34 @@ class SqlVisitor
             }
             else
             {
-                completedSegements.Add(this.Visit(new SqlSegment
-                {
-                    OperationType = OperationType.Concat,
-                    Expression = nextExpr
-                }));
+                completedExprs.Add(nextExpr);
                 if (deferredExprs.TryPop(out var expr))
                     nextExpr = expr;
                 else break;
             }
         }
-        return completedSegements;
+        return completedExprs;
+    }
+    public virtual List<Expression> FlattenConcatCallParameters(Expression expr)
+    {
+        var concatExpr = expr as MethodCallExpression;
+        var completedExprs = new List<Expression>();
+        Func<Expression, bool> isAddBinary = f =>
+        {
+            if (f is BinaryExpression binaryExpr && binaryExpr.NodeType == ExpressionType.Add && binaryExpr.Type == typeof(string)
+                && (binaryExpr.Left.Type == typeof(string) || binaryExpr.Right.Type == typeof(string)))
+                return true;
+            return false;
+        };
+        foreach (var augumentExpr in concatExpr.Arguments)
+        {
+            if (isAddBinary(augumentExpr))
+                completedExprs.AddRange(this.FlattenAddConcatParameters(augumentExpr));
+            else if (augumentExpr is MethodCallExpression callExpr && callExpr.Method.Name == "Concat")
+                completedExprs.AddRange(this.FlattenConcatCallParameters(callExpr));
+            else completedExprs.Add(augumentExpr);
+        }
+        return completedExprs;
     }
     public virtual List<SqlSegment> VisitLogicBinaryExpr(Expression expr)
     {
@@ -891,10 +974,8 @@ class SqlVisitor
             return sqlSegment.Change(parameterName, false);
         }
     }
-    public virtual bool IsFromQuery(LambdaExpression lambdaExpr, out List<ParameterExpression> parameters, out Type entityType)
+    public virtual bool IsFromQuery(LambdaExpression lambdaExpr)
     {
-        entityType = null;
-        parameters = null;
         if (!lambdaExpr.Type.IsGenericType)
             return false;
         var genericArguments = lambdaExpr.Type.GetGenericArguments();
@@ -910,8 +991,6 @@ class SqlVisitor
 
         if (!typeof(IFromQuery<>).MakeGenericType(queryGenericArguments[0]).IsAssignableFrom(queryType))
             return false;
-
-        entityType = genericArguments[1];
         return true;
     }
     public virtual string VisitFromQuery(LambdaExpression lambdaExpr, out bool isNeedAlias)

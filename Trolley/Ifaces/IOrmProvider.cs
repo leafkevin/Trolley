@@ -29,8 +29,7 @@ public interface IOrmProvider
     int GetNativeDbType(Type type);
     string CastTo(Type type);
     string GetQuotedValue(Type fieldType, object value);
-    bool TryGetMemberAccessSqlFormatter(MemberInfo memberInfo, out MemberAccessSqlFormatter formatter);
-    bool TryGetMethodCallSqlFormatter(MethodInfo methodInfo, out MethodCallSqlFormatter formatter);
     string GetBinaryOperator(ExpressionType nodeType);
-    SqlSegment FormatBinary(ExpressionType nodeType, SqlSegment leftSegment, SqlSegment rightSegment);
+    bool TryGetMemberAccessSqlFormatter(SqlSegment originalSegment, MemberInfo memberInfo, out MemberAccessSqlFormatter formatter);
+    bool TryGetMethodCallSqlFormatter(SqlSegment originalSegment, MethodInfo methodInfo, out MethodCallSqlFormatter formatter);
 }

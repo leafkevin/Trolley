@@ -34,14 +34,18 @@ class DeleteVisitor : SqlVisitor
     }
     public DeleteVisitor Where(Expression whereExpr)
     {
+        this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.whereSql = " WHERE " + this.VisitConditionExpr(lambdaExpr.Body);
+        this.isWhere = false;
         return this;
     }
     public DeleteVisitor And(Expression whereExpr)
     {
+        this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.whereSql += " AND " + this.VisitConditionExpr(lambdaExpr.Body);
+        this.isWhere = false;
         return this;
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
@@ -68,7 +72,7 @@ class DeleteVisitor : SqlVisitor
             }
 
             //各种类型值的属性访问，如：DateTime,TimeSpan,String.Length,List.Count,
-            if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
+            if (this.ormProvider.TryGetMemberAccessSqlFormatter(sqlSegment, memberExpr.Member, out formatter))
             {
                 //Where(f=>... && f.OrderNo.Length==10 && ...)
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
@@ -113,7 +117,7 @@ class DeleteVisitor : SqlVisitor
             return SqlSegment.Null;
 
         //各种类型的常量或是静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
-        if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
+        if (this.ormProvider.TryGetMemberAccessSqlFormatter(sqlSegment, memberExpr.Member, out formatter))
             return sqlSegment.Change(formatter(null), false);
 
         //访问局部变量或是成员变量，当作常量处理,直接计算，如果是字符串变成参数@p

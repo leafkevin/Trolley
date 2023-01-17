@@ -323,10 +323,12 @@ class QueryVisitor : SqlVisitor
         //TODO: 1:N关联条件的alias表，获取会有问题，待测试
         if (filter != null)
         {
+            this.isWhere = true;
             var filterLambdaExpr = filter as LambdaExpression;
             var parameterName = filterLambdaExpr.Parameters[0].Name;
             this.tableAlias.TryAdd(parameterName, includeSegment);
             includeSegment.Filter = this.Visit(new SqlSegment { Expression = filter }).ToString();
+            this.isWhere = false;
         }
         this.lastIncludeSegment = includeSegment;
     }
@@ -363,13 +365,16 @@ class QueryVisitor : SqlVisitor
                 tableSegment.IsUsed = true;
             }
         }
+        this.isWhere = true;
         var joinOnExpr = this.VisitConditionExpr(lambdaExpr.Body);
+        this.isWhere = false;
         joinTableSegment.JoinType = joinType;
         joinTableSegment.OnExpr = joinOnExpr;
         joinTableSegment.IsMaster = true;
     }
     public void Select(string sqlFormat, Expression selectExpr = null)
     {
+        this.isSelect = true;
         string body = null;
         if (selectExpr != null)
         {
@@ -428,6 +433,7 @@ class QueryVisitor : SqlVisitor
             else this.selectSql = sqlFormat;
         }
         else this.selectSql = body;
+        this.isSelect = false;
     }
     public void GroupBy(Expression expr)
     {
@@ -461,9 +467,11 @@ class QueryVisitor : SqlVisitor
     }
     public void Having(Expression havingExpr)
     {
+        this.isWhere = true;
         var lambdaExpr = havingExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
         this.havingSql = this.VisitConditionExpr(lambdaExpr.Body);
+        this.isWhere = false;
     }
     public QueryVisitor Page(int pageIndex, int pageSize)
     {
@@ -484,17 +492,21 @@ class QueryVisitor : SqlVisitor
     }
     public QueryVisitor Where(Expression whereExpr)
     {
+        this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
         //在Update的Value子查询语句中，更新主表别名是a，引用表别名从b开始，无需别名替换
         this.whereSql = " WHERE " + this.VisitConditionExpr(lambdaExpr.Body);
+        this.isWhere = false;
         return this;
     }
     public QueryVisitor And(Expression whereExpr)
     {
+        this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
         this.whereSql += " AND " + this.VisitConditionExpr(lambdaExpr.Body);
+        this.isWhere = false;
         return this;
     }
     public void Distinct() => this.isDistinct = true;
@@ -561,6 +573,7 @@ class QueryVisitor : SqlVisitor
                 var tableSegment = new TableSegment { EntityType = memberExpr.Type };
                 foreach (var readerField in this.groupFields)
                 {
+                    if (this.isSelect) readerField.TableSegment.IsUsed = true;
                     readerField.TableSegment = tableSegment;
                     readerField.FieldCount = this.groupFields.Count;
                 }
@@ -591,7 +604,7 @@ class QueryVisitor : SqlVisitor
             }
 
             //各种类型值的属性访问，如：DateTime,TimeSpan,String.Length,List.Count
-            if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
+            if (this.ormProvider.TryGetMemberAccessSqlFormatter(sqlSegment, memberExpr.Member, out formatter))
             {
                 //Where(f=>... && f.CreatedAt.Month<5 && ...)
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
@@ -630,6 +643,7 @@ class QueryVisitor : SqlVisitor
                     tableSegment = this.FindTableSegment(parameterName, path);
                     if (tableSegment == null)
                         throw new Exception($"使用导航属性前，要先使用Include方法包含进来，访问路径:{path}");
+                    if (this.isSelect) tableSegment.IsUsed = true;
 
                     var readerFields = this.AddTableReaderFields(sqlSegment.ReaderIndex, tableSegment);
                     return new SqlSegment
@@ -645,6 +659,7 @@ class QueryVisitor : SqlVisitor
                     if (this.IsGroupingAggregateMember(memberExpr.Expression as MemberExpression))
                     {
                         var readerField = this.groupFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
+                        if (this.isSelect) readerField.TableSegment.IsUsed = true;
                         sqlSegment.HasField = true;
                         sqlSegment.IsConstantValue = false;
                         sqlSegment.TableSegment = readerField.TableSegment;
@@ -665,7 +680,7 @@ class QueryVisitor : SqlVisitor
                     //有联表时采用别名，如果当前类是IncludeMany的导航类时，没有别名
                     if (this.isNeedAlias && !string.IsNullOrEmpty(tableSegment.AliasName))
                         fieldName = tableSegment.AliasName + "." + fieldName;
-
+                    if (this.isSelect) tableSegment.IsUsed = true;
                     if (sqlSegment.HasDeferred)
                     {
                         sqlSegment.HasField = true;
@@ -686,7 +701,7 @@ class QueryVisitor : SqlVisitor
         }
 
         //各种类型的常量或是静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
-        if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr.Member, out formatter))
+        if (this.ormProvider.TryGetMemberAccessSqlFormatter(sqlSegment, memberExpr.Member, out formatter))
             return sqlSegment.Change(formatter(null), false);
 
         //访问局部变量或是成员变量，当作常量处理,直接计算，如果是字符串变成参数@p

@@ -166,9 +166,9 @@ public class NpgSqlProvider : BaseOrmProvider
             return dbType;
         return type.ToString().ToLower();
     }
-    public override bool TryGetMemberAccessSqlFormatter(MemberInfo memberInfo, out MemberAccessSqlFormatter formatter)
+    public override bool TryGetMemberAccessSqlFormatter(SqlSegment originalSegment, MemberInfo memberInfo, out MemberAccessSqlFormatter formatter)
        => memberAccessSqlFormatterCahe.TryGetValue(memberInfo, out formatter);
-    public override bool TryGetMethodCallSqlFormatter(MethodInfo methodInfo, out MethodCallSqlFormatter formatter)
+    public override bool TryGetMethodCallSqlFormatter(SqlSegment originalSegment, MethodInfo methodInfo, out MethodCallSqlFormatter formatter)
     {
         if (!methodCallSqlFormatterCahe.TryGetValue(methodInfo, out formatter))
         {
@@ -180,7 +180,7 @@ public class NpgSqlProvider : BaseOrmProvider
                     //public static bool Contains<TSource>(this IEnumerable<TSource> source, TSource value);
                     //public static bool Contains<TSource>(this IEnumerable<TSource> source, TSource value, IEqualityComparer<TSource>? comparer);
                     if (methodInfo.IsStatic && parameterInfos.Length >= 2 && parameterInfos[0].ParameterType.GenericTypeArguments.Length > 0
-                        && parameterInfos[0].ParameterType.IsAssignableFrom(typeof(IEnumerable<>).MakeGenericType(parameterInfos[0].ParameterType.GenericTypeArguments[0])))
+                        && typeof(IEnumerable<>).MakeGenericType(parameterInfos[0].ParameterType.GenericTypeArguments[0]).IsAssignableFrom(parameterInfos[0].ParameterType))
                     {
                         //数组调用
                         methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
@@ -225,7 +225,7 @@ public class NpgSqlProvider : BaseOrmProvider
                     //IEnumerable<T>,List<T>
                     //public bool Contains(T item);
                     if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
-                        && methodInfo.DeclaringType.IsAssignableFrom(typeof(IEnumerable<>).MakeGenericType(methodInfo.DeclaringType.GenericTypeArguments[0])))
+                        && typeof(IEnumerable<>).MakeGenericType(methodInfo.DeclaringType.GenericTypeArguments[0]).IsAssignableFrom(methodInfo.DeclaringType))
                     {
                         methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
                         {
@@ -286,7 +286,7 @@ public class NpgSqlProvider : BaseOrmProvider
                             if (args[0] is SqlSegment rightSegment && rightSegment.IsParameter)
                             {
                                 var concatMethodInfo = typeof(string).GetMethod("Concat", BindingFlags.Public | BindingFlags.Static, new Type[] { typeof(string), typeof(string), typeof(string) });
-                                if (this.TryGetMethodCallSqlFormatter(concatMethodInfo, out var concatFormatter))
+                                if (this.TryGetMethodCallSqlFormatter(originalSegment, concatMethodInfo, out var concatFormatter))
                                     //自己调用字符串连接，参数直接是字符串
                                     rightValue = concatFormatter.Invoke(null, deferExprs, "'%'", rightSegment.Value.ToString(), "'%'");
                             }
@@ -307,67 +307,116 @@ public class NpgSqlProvider : BaseOrmProvider
                     }
                     break;
                 case "Concat":
-                    if (methodInfo.IsStatic && methodInfo.DeclaringType == typeof(string))
+                    //public static String Concat(IEnumerable<String?> values);
+                    //public static String Concat(params String?[] values);
+                    //public static String Concat<T>(IEnumerable<T> values);
+                    //public static String Concat(params object?[] args);
+                    //public static String Concat(object? arg0);
+                    //public static String Concat(object? arg0, object? arg1, object? arg2);
+                    //public static String Concat(String? str0, String? str1, String? str2, String? str3);
+                    //public static String Concat(ReadOnlySpan<char> str0, ReadOnlySpan<char> str1, ReadOnlySpan<char> str2, ReadOnlySpan<char> str3);
+                    //public static IEnumerable<TSource> Concat<TSource>(this IEnumerable<TSource> first, IEnumerable<TSource> second);
+                    //TODO:测试一下IEnumerable<TSource> Concat<TSource>(this IEnumerable<TSource> first, IEnumerable<TSource> second)
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
                     {
-                        //public static String Concat(IEnumerable<String?> values);
-                        //public static String Concat(params String?[] values);
-                        //public static String Concat<T>(IEnumerable<T> values);
-                        //public static String Concat(params object?[] args);
-                        //public static String Concat(object? arg0);
-                        //public static String Concat(object? arg0, object? arg1, object? arg2);
-                        //public static String Concat(String? str0, String? str1, String? str2, String? str3);
-                        //public static String Concat(ReadOnlySpan<char> str0, ReadOnlySpan<char> str1, ReadOnlySpan<char> str2, ReadOnlySpan<char> str3);
-                        //public static IEnumerable<TSource> Concat<TSource>(this IEnumerable<TSource> first, IEnumerable<TSource> second);
-                        //TODO:测试一下IEnumerable<TSource> Concat<TSource>(this IEnumerable<TSource> first, IEnumerable<TSource> second)
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
+                        var builder = new StringBuilder();
+                        foreach (var arg in args)
                         {
-                            var builder = new StringBuilder();
-                            foreach (var arg in args)
+                            if (arg is IEnumerable enumerable && arg is not string)
                             {
-                                if (arg is IEnumerable enumerable && arg is not string)
-                                {
-                                    foreach (var element in enumerable)
-                                    {
-                                        if (builder.Length > 0)
-                                            builder.Append(" || ");
-
-                                        if (element is SqlSegment sqlSegment && sqlSegment.Expression.Type != typeof(string) && !sqlSegment.IsConstantValue)
-                                        {
-                                            var methodInfo = sqlSegment.Expression.Type.GetMethod("ToString", Type.EmptyTypes);
-                                            if (this.TryGetMethodCallSqlFormatter(methodInfo, out var toStringFormater))
-                                                builder.Append(toStringFormater.Invoke(sqlSegment, null, null));
-                                        }
-                                        else builder.Append(this.GetQuotedValue(element));
-                                    }
-                                }
-                                else
+                                foreach (var element in enumerable)
                                 {
                                     if (builder.Length > 0)
                                         builder.Append(" || ");
-                                    builder.Append(this.GetQuotedValue(arg));
+
+                                    if (element is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
+                                        builder.Append(sqlSegment);
+                                    else builder.Append(this.GetQuotedValue(typeof(string), element));
                                 }
                             }
-                            return builder.ToString();
-                        });
-                        result = true;
-                    }
+                            else
+                            {
+                                if (builder.Length > 0)
+                                    builder.Append(" || ");
+                                builder.Append(this.GetQuotedValue(arg));
+                            }
+                        }
+                        return builder.ToString();
+                    });
+                    result = true;
                     break;
                 case "Format":
-                    if (methodInfo.IsStatic && methodInfo.DeclaringType == typeof(string))
+                    //public static String Format(String format, object? arg0);
+                    //public static String Format(String format, object? arg0, object? arg1); 
+                    //public static String Format(String format, object? arg0, object? arg1, object? arg2); 
+                    //public static String Format(String format, params object?[] args);
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
                     {
-                        //public static String Format(String format, object? arg0);
-                        //public static String Format(String format, object? arg0, object? arg1); 
-                        //public static String Format(String format, object? arg0, object? arg1, object? arg2); 
-                        //public static String Format(String format, params object?[] args);
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
+                        var parameters = new List<object>(args);
+                        parameters.RemoveAt(0);
+                        var result = args[0].ToString();
+                        var concatIndices = new List<int>();
+                        var count = parameters.Count;
+                        for (int i = 0; i < count; i++)
                         {
-                            var parameters = new List<object>(args);
-                            parameters.RemoveAt(0);
-                            //直接计算
-                            return string.Format(args[0] as string, parameters.ToArray());
-                        });
-                        result = true;
-                    }
+                            if (parameters[i] is SqlSegment sqlSegment && sqlSegment.IsConstantValue)
+                            {
+                                string strValue = null;
+                                if (sqlSegment != SqlSegment.Null)
+                                {
+                                    if (sqlSegment.Value is IEnumerable enumerable && sqlSegment.Value is not string)
+                                    {
+                                        parameters.RemoveAt(i);
+                                        int eleIndex = 0;
+                                        foreach (var element in enumerable)
+                                        {
+                                            if (element is SqlSegment eleSegment && eleSegment.IsConstantValue)
+                                            {
+                                                strValue = eleSegment.ToString();
+                                                result = result.Replace("{" + eleIndex + "}", strValue);
+                                            }
+                                            else concatIndices.Add(eleIndex);
+                                            parameters.Add(element);
+                                            eleIndex++;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        strValue = this.GetQuotedValue(sqlSegment);
+                                        result = result.Replace("{" + i + "}", strValue);
+                                    }
+                                }
+                            }
+                            else concatIndices.Add(i);
+                        }
+                        if (concatIndices.Count > 0)
+                        {
+                            int index = 0;
+                            int lastIndex = 0;
+                            var concatParameters = new List<object>();
+                            var formatSpan = result.AsSpan();
+                            foreach (var concatIndex in concatIndices)
+                            {
+                                index = formatSpan.IndexOf('{');
+                                if (index > 0)
+                                {
+                                    var concatParameter = formatSpan.Slice(0, index);
+                                    concatParameters.Add(concatParameter.ToString());
+                                }
+                                concatParameters.Add(parameters[concatIndex]);
+                                lastIndex = formatSpan.IndexOf('}') + 1;
+                                formatSpan = formatSpan.Slice(lastIndex);
+                            }
+                            if (formatSpan.Length > 0)
+                                concatParameters.Add(formatSpan.ToString());
+
+                            var methodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string).MakeArrayType() });
+                            this.TryGetMethodCallSqlFormatter(originalSegment, methodInfo, out var concatFormater);
+                            result = concatFormater.Invoke(null, null, concatParameters);
+                        }
+                        return result;
+                    });
+                    result = true;
                     break;
                 case "Compare":
                     if (methodInfo.IsStatic && methodInfo.DeclaringType == typeof(string))

@@ -46,10 +46,6 @@ public static class TrolleyExtensions
         => repository.From<TEntity>().Where(predicate).ToList();
     public static async Task<List<TEntity>> QueryAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default)
         => await repository.From<TEntity>().Where(predicate).ToListAsync(cancellationToken);
-    public static IPagedList<TEntity> QueryPage<TEntity>(this IRepository repository, int pageIndex, int pageSize, Expression<Func<TEntity, bool>> predicate = null)
-        => repository.From<TEntity>().Where(predicate).ToPageList(pageIndex, pageSize);
-    public static async Task<IPagedList<TEntity>> QueryPageAsync<TEntity>(this IRepository repository, int pageIndex, int pageSize, Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default)
-        => await repository.From<TEntity>().Where(predicate).ToPageListAsync(pageIndex, pageSize, cancellationToken);
     public static Dictionary<TKey, TValue> QueryDictionary<TEntity, TKey, TValue>(this IRepository repository, Expression<Func<TEntity, bool>> predicate, Func<TEntity, TKey> keySelector, Func<TEntity, TValue> valueSelector) where TKey : notnull
         => repository.From<TEntity>().Where(predicate).ToDictionary(keySelector, valueSelector);
     public static async Task<Dictionary<TKey, TValue>> QueryDictionaryAsync<TEntity, TKey, TValue>(this IRepository repository, Expression<Func<TEntity, bool>> predicate, Func<TEntity, TKey> keySelector, Func<TEntity, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull
