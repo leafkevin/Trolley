@@ -244,13 +244,6 @@ public class SqlServerProvider : BaseOrmProvider
                                 //目前数组元素是原来的值，没有SqlSegment包装
                                 builder.Append(this.GetQuotedValue(element));
                             }
-
-                            foreach (var element in enumerable)
-                            {
-                                if (builder.Length > 0)
-                                    builder.Append(',');
-                                builder.Append(element);
-                            }
                             var fieldName = this.GetQuotedValue(args[0]);
                             int notIndex = 0;
                             if (deferExprs != null && deferExprs.Count > 0)
@@ -330,8 +323,13 @@ public class SqlServerProvider : BaseOrmProvider
                                     if (builder.Length > 0)
                                         builder.Append('+');
 
+                                    //连接符是+，不是字符串类型，无法连接，需要转换
                                     if (element is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
-                                        builder.Append(sqlSegment);
+                                    {
+                                        if (sqlSegment.Expression.Type != typeof(string))
+                                            builder.Append($"CAST({sqlSegment.Value} AS {this.CastTo(typeof(string))})");
+                                        else builder.Append(sqlSegment.Value.ToString());
+                                    }
                                     else builder.Append(this.GetQuotedValue(typeof(string), element));
                                 }
                             }
@@ -420,80 +418,96 @@ public class SqlServerProvider : BaseOrmProvider
                     result = true;
                     break;
                 case "Compare":
-                    if (methodInfo.IsStatic && methodInfo.DeclaringType == typeof(string))
-                    {
-                        //String.Compare  不区分大小写
-                        //public static int Compare(String? strA, String? strB);
-                        //public static int Compare(String? strA, String? strB, bool ignoreCase);
-                        //public static int Compare(String? strA, String? strB, bool ignoreCase, CultureInfo? culture);
-                        if (parameterInfos.Length >= 2 && parameterInfos.Length <= 4)
-                        {
-                            methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
-                            {
-                                var leftArgument = this.GetQuotedValue(args[0]);
-                                var rightArgument = this.GetQuotedValue(args[1]);
-                                return $"(CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END)";
-                            });
-                            result = true;
-                        }
-                    }
-                    break;
                 case "CompareOrdinal":
-                    if (methodInfo.IsStatic && methodInfo.DeclaringType == typeof(string))
+                    //String.Compare  不区分大小写
+                    //public static int Compare(String? strA, String? strB);
+                    //public static int Compare(String? strA, String? strB, bool ignoreCase);
+                    //public static int Compare(String? strA, String? strB, bool ignoreCase, CultureInfo? culture);
+                    if (parameterInfos.Length >= 2 && parameterInfos.Length <= 4)
                     {
-                        //public static int CompareOrdinal(String? strA, String? strB);
-                        if (parameterInfos.Length == 2)
-                        {
-                            methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
-                            {
-                                var leftArgument = this.GetQuotedValue(args[0]);
-                                var rightArgument = this.GetQuotedValue(args[1]);
-                                return $"(CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END)";
-                            });
-                            result = true;
-                        }
-                    }
-                    break;
-                case "CompareTo":
-                    if (!methodCallSqlFormatterCahe.TryGetValue(methodInfo, out formatter))
-                    {
-                        //各种类型都有CompareTo方法
-                        //public int CompareTo(Boolean value);
-                        //public int CompareTo(Int32 value);
-                        //public int CompareTo(Double value);
-                        //public int CompareTo(DateTime value);
-                        //public int CompareTo(object? value);
                         methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
                         {
-                            var leftArgument = this.GetQuotedValue(target);
-                            var rightArgument = this.GetQuotedValue(args[0]);
+                            var leftArgument = this.GetQuotedValue(args[0]);
+                            var rightArgument = this.GetQuotedValue(args[1]);
                             return $"(CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END)";
                         });
                         result = true;
                     }
                     break;
+                case "CompareTo":
+                    //各种类型都有CompareTo方法
+                    //public int CompareTo(Boolean value);
+                    //public int CompareTo(Int32 value);
+                    //public int CompareTo(Double value);
+                    //public int CompareTo(DateTime value);
+                    //public int CompareTo(object? value);                       
+                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
+                    {
+                        var leftArgument = this.GetQuotedValue(target);
+                        var rightArgument = this.GetQuotedValue(args[0]);
+                        return $"(CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END)";
+                    });
+                    result = true;
+                    break;
                 case "Trim":
-                    formatter = (target, deferExprs, args) => $"ltrim(rtrim({target}))";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
+                    if (methodInfo.GetParameters().Length == 0)
+                    {
+                        formatter = (target, deferExprs, args) =>
+                        {
+                            if (target is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
+                                return $"LTRIM(RTRIM({target}))";
+                            else return $"LTRIM(RTRIM('{target}'))";
+                        };
+                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                        result = true;
+                    }
+                    else result = false;
                     break;
-                case "LTrim":
-                    formatter = (target, deferExprs, args) => $"ltrim({target})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
+                case "TrimStart":
+                    if (methodInfo.GetParameters().Length == 0)
+                    {
+                        formatter = (target, deferExprs, args) =>
+                        {
+                            if (target is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
+                                return $"LTRIM({target})";
+                            else return $"LTRIM('{target}')";
+                        };
+                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                        result = true;
+                    }
+                    else result = false;
                     break;
-                case "RTrim":
-                    formatter = (target, deferExprs, args) => $"rtrim({target})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
+                case "TrimEnd":
+                    if (methodInfo.GetParameters().Length == 0)
+                    {
+                        formatter = (target, deferExprs, args) =>
+                        {
+                            if (target is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
+                                return $"RTRIM({target})";
+                            else return $"RTRIM('{target}')";
+                        };
+                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                        result = true;
+                    }
+                    else result = false;
                     break;
                 case "ToUpper":
-                    formatter = (target, deferExprs, args) => $"upper({target})";
+                    formatter = (target, deferExprs, args) =>
+                    {
+                        if (target is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
+                            return $"UPPER({target})";
+                        else return $"UPPER('{target}')";
+                    };
                     methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
                     result = true;
                     break;
                 case "ToLower":
-                    formatter = (target, deferExprs, args) => $"lower({target})";
+                    formatter = (target, deferExprs, args) =>
+                    {
+                        if (target is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
+                            return $"LOWER({target})";
+                        else return $"LOWER('{target}')";
+                    };
                     methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
                     result = true;
                     break;
@@ -584,7 +598,7 @@ public class SqlServerProvider : BaseOrmProvider
                     break;
                 case "Parse":
                 case "TryParse":
-                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(methodInfo.DeclaringType)})";
+                    formatter = (target, deferExprs, args) => $"CAST('{args[0]}' AS {this.CastTo(methodInfo.DeclaringType)})";
                     methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
                     result = true;
                     break;

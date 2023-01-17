@@ -16,4 +16,7 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\Trolley\Trolley.csproj" />
 	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="PostgreSql\" />
+	</ItemGroup>
 </Project>
