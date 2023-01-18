@@ -129,7 +129,7 @@ public class Company
 
     public List<User> Users { get; set; }
 }
-//瘦身版模型CompanyInfo，只有两个字段
+//值对象，就是瘦身版模型CompanyInfo，只有两个字段
 public class CompanyInfo
 {
     public int Id { get; set; }
@@ -165,9 +165,11 @@ var result = await repository.QueryAsync<Product>(f => f.ProductNo.Contains("PN-
 //SELECT `Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_product` WHERE `ProductNo` LIKE '%PN-00%'
 
 //Page 分页
-var result = repository.QueryPage<OrderDetail>(2, 10, f => f.ProductId == 1);
-var result = await repository.QueryPageAsync<OrderDetail>(2, 10, f => f.ProductId == 1);
-//SELECT COUNT(*) FROM `sys_order_detail` WHERE `ProductId`=1;SELECT `Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_order_detail`  WHERE `ProductId`=1 LIMIT 10 OFFSET 10
+var result = repository.From<OrderDetail>()
+    .Where(f => f.ProductId == 1)
+    .OrderByDescending(f => f.CreatedAt)
+    .ToPageList(2, 10);
+//SELECT COUNT(*) FROM `sys_order_detail` WHERE `ProductId`=1;SELECT `Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_order_detail` WHERE `ProductId`=1 ORDER BY `CreatedAt` DESC LIMIT 10 OFFSET 10
 
 //Dictionary
 var result = await repository.QueryDictionaryAsync<Product, int, string>(f => f.ProductNo.Contains("PN-00"), f => f.Id, f => f.Name);
@@ -394,7 +396,51 @@ var sql = repository.From<User>()
 //两者生成的SQL完全一样的。
 ```
 
+```csharp
+//查询NULL Where Null
+var sql = repository.From<Order>()
+    .Where(x => x.ProductCount == null)
+    .And(true, f => !f.ProductCount.HasValue)
+    .Select(x => new
+    {
+	NoOrderNo = x.OrderNo == null,
+	HasProduct = x.ProductCount.HasValue
+    })
+    .ToSql(out _);
+//SELECT (`OrderNo` IS NULL) AS NoOrderNo,(`ProductCount` IS NOT NULL) AS HasProduct FROM `sys_order` WHERE `ProductCount` IS NULL AND `ProductCount` IS NOT NULL
+```
 
+
+```csharp
+//查询ValueTuple
+var sql = "SELECT Id,OrderNo,TotalAmount FROM sys_order";
+var result = repository.Query<(int OrderId, string OrderNo, double TotalAmount)>(sql);
+```
+
+```csharp
+//单表Count
+var count = repository.From<User>().Count();
+var count1 = repository.From<User>().Select(f => Sql.Count()).First();
+var count2 = repository.QueryFirst<int>("SELECT COUNT(1) FROM sys_user");
+
+//单表Max
+var count = repository.From<Order>().Max(f => f.TotalAmount);
+var count1 = repository.From<Order>().Select(f => Sql.Max(f.TotalAmount)).First();
+var count2 = repository.QueryFirst<double>("SELECT MAX(TotalAmount) FROM sys_order");
+
+//单表Min
+var count = repository.From<Order>().Min(f => f.TotalAmount);
+var count1 = repository.From<Order>().Select(f => Sql.Min(f.TotalAmount)).First();
+var count2 = repository.QueryFirst<double>("SELECT MIN(TotalAmount) FROM sys_order");
+
+//单表Avg
+var value1 = repository.From<Order>().Avg(f => f.TotalAmount);
+var value2 = repository.From<Order>().Select(f => Sql.Avg(f.TotalAmount)).First();
+var value3 = repository.QueryFirst<double>("SELECT AVG(TotalAmount) FROM sys_order");
+```
+ 
+
+	
 支持跨库查询，只要指定对应的dbKey就可以了
 ------------------------------------------------------------
 使用Trolley.AspNetCore扩展后，可以使用json文件来配置数据库连接串信息  
@@ -436,6 +482,7 @@ using var repository = this.dbFactory.Create("fengling");
 各种操作命令
 ------------------------------------------------------------
 
+#### 新增
 ```csharp
 using var repository = this.dbFactory.Create();
 //扩展简化操作
@@ -540,7 +587,7 @@ var count = await repository.Create<User>()
 
 
 ```csharp
-WithBy  字典
+//WithBy  字典
 var id = repository.Create<Company>()
     .WithBy(new Dictionary<string, object>()
     {
@@ -553,6 +600,26 @@ var id = repository.Create<Company>()
     	{ "UpdatedBy", 1}
     }).Execute();
 //INSERT INTO `sys_company` (`Id`,`Name`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING Id
+```  
+
+```csharp
+//可为null字段不赋值
+var count = repository.Create<Order>(new Order
+{
+    Id = 1,
+    OrderNo = "ON-001",
+    BuyerId = 1,
+    SellerId = 2,
+    TotalAmount = 500,
+    //此字段可为空，但不赋值
+    //ProductCount = 3,
+    IsEnabled = true,
+    CreatedAt = DateTime.Now,
+    CreatedBy = 1,
+    UpdatedAt = DateTime.Now,
+    UpdatedBy = 1
+});
+//进入到数据库中ProductCount字段值为null
 ```  
 
 ```csharp
@@ -672,7 +739,7 @@ var sql = repository.Create<Product>()
     .Where(f => f.Id == 1)
     .ToSql(out _);
 //INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT a.`Id`+1,@ProductNo,@Name,a.`Id`,@CategoryId,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1
-使用常量的地方，变成了参数
+//使用常量的地方，变成了参数
 ```  
 
 ```csharp
@@ -695,478 +762,306 @@ var sql = repository.Create<OrderDetail>()
     .Where((a, b) => a.Id == 3 && b.Id == 1)
     .ToSql(out _);
 //INSERT INTO `sys_order_detail` (`Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT @Id,a.`Id`,b.`Id`,b.`Price`,@Quantity,b.`Price`*3,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_order` a,`sys_product` b WHERE a.`Id`=3 AND b.`Id`=1
-使用常量的地方，变成了参数
+//使用常量的地方，变成了参数
+```  
+
+
+
+#### 更新
+
+```csharp
+//简化操作
+var result = repository.Update<User>(f => new { Name = f.Name + "_1", Gender = Gender.Female }, t => t.Id == 1);
+//UPDATE `sys_user` SET `Name`=CONCAT(`Name`,'_1'),`Gender`=@Gender WHERE `Id`=1
+```
+
+```csharp
+//带有参数，局部更新
+var result = repository.Update<User>(f => f.Name, new { Id = 1, Name = "leafkevin11" });
+//UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@kId
+```
+
+```csharp
+//部分表达式更新，部分参数更新，更新的字段由前面的表达式指定，Where条件是主键
+var result = repository.Update<User>(f => new { Age = 25, f.Name, CompanyId = DBNull.Value }, new { Id = 1, Age = 18, Name = "leafkevin22" });
+//UPDATE `sys_user` SET `Age`=25,`CompanyId`=NULL,`Name`=@Name WHERE `Id`=@kId
+//说明：
+//Age = 25 ，CompanyId = DBNull.Value 表达式更新，直接以SQL形式更新
+//DBNull.Value ,null 都可用来更新NULL字段
+//f.Name 只成员访问，将作为后面参数更新的字段
+//后面参数的中，有Age字段，但是前面的表达式是 Age = 25，所以不生效，如果是 f.Age ,后面的参数就生效了
+```
+
+
+```csharp
+//批量参数更新，Where条件是主键，其他的更新字段由表达式指定
+var orderDetails = await repository.From<OrderDetail>().ToListAsync();
+var parameters = orderDetails.Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 1, Amount = f.Amount + 50 }).ToList();
+var result = repository.Update<OrderDetail>(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters);
+//UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5
+//说明：
+//Price = 200 ，UpdatedBy = 2 ，ProductId = DBNull.Value 表达式更新，直接以SQL形式更新
+//DBNull.Value ,null 都可用来更新NULL字段
+//f.Quantity ，f.Amount 只成员访问，将作为后面参数更新的字段
+//后面参数的中，有Price，Quantity，Amount 字段，但是前面的表达式是 Price = 200，所以不生效，后面的只更新Quantity，Amount 字段
+```
+
+
+使用Update<T>，支持各种复杂更新操作
+
+```csharp
+//WithBy 单个更新，Where条件是主键
+var result = repository.Update<User>().WithBy(new { Name = "leafkevin1", Id = 1 }).Execute();
+//UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@kId
+```
+	
+	
+```csharp
+//WithBy 批量更新 Where条件是主键
+var parameters = await repository.From<OrderDetail>()
+    .Where(f => new int[] { 1, 2, 3, 4, 5, 6 }.Contains(f.Id))
+    .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
+    .ToListAsync();
+var sql = repository.Update<OrderDetail>().WithBy(parameters).ToSql(out _);
+//UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price5,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5
+```
+
+```csharp
+//WithBy 部分表达式，部分参数 批量更新 Where条件是主键
+var parameters = await repository.From<OrderDetail>()
+    .Where(f => new int[] { 1, 2, 3, 4, 5, 6 }.Contains(f.Id))
+    .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
+    .ToListAsync();
+var sql = repository.Update<OrderDetail>()
+    .WithBy(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters)
+    .ToSql(out _);
+//UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5
+	
+//原理同上
+```
+
+Update<T>  Set子句 联合表进行更新
+支持的数据库：
+Sql Server
+PostgreSql
+MySql
+Oracle
+
+```csharp
+//Set子句 From 多个字段
+var sql = repository.Update<Order>()
+    //new 表达式支持多字段
+    .Set((a, b) => new
+    {
+	TotalAmount = a.From<OrderDetail>('b')
+	    .Where(f => f.OrderId == b.Id)
+	    .Select(t => Sql.Sum(t.Amount)),
+	OrderNo = b.OrderNo + "_111",
+	BuyerId = DBNull.Value
+    })
+    .Where(a => a.BuyerId == 1)
+    .ToSql(out _);
+//UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1
+```
+	
+```csharp
+//Set子句 From 多个字段，与其他Set子句一起使用，单个字段、多个字段都支持
+var sql = repository.Update<Order>()
+    //new 表达式支持多字段 
+    .Set((a, b) => new
+    {
+	TotalAmount = a.From<OrderDetail>('b')
+	    .Where(f => f.OrderId == b.Id)
+	    .Select(t => Sql.Sum(t.Amount))
+    })
+    //单个字段+值方式
+    .Set(x => x.OrderNo, "ON_111")
+    //单个字段、多个字段 表达式方式
+    .Set(f => new { BuyerId = DBNull.Value })
+    .Where(a => a.BuyerId == 1)
+    .ToSql(out _);
+//UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1
+```
+
+Update<T> InnerJoin/LeftJoin 联合表更新
+支持的数据库：
+MySql
+
+```csharp
+//Update<T> InnerJoin 一个或多个字段
+var sql = repository.Update<Order>()
+    //可以关联一或多个表
+    .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
+    //单个字段+值方式
+    .Set(x => x.TotalAmount, 200.56)
+    //new 表达式支持多字段，这里用到了联表
+    .Set((a, b) => new
+    {
+	OrderNo = a.OrderNo + "_111",
+	BuyerId = DBNull.Value
+    })
+    .Where((a, b) => a.BuyerId == 1)
+    .ToSql(out _);
+//UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1
+
+```
+	
+```csharp
+//Update<T> InnerJoin 一个或多个字段
+var sql = repository.Update<Order>()
+    .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
+    .Set((x, y) => new
+    {
+	TotalAmount = y.Amount,
+	OrderNo = x.OrderNo + "_111",
+	BuyerId = DBNull.Value
+    })
+    .Where((a, b) => a.BuyerId == 1)
+    .ToSql(out _);
+//UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=b.`Amount`,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1
+```
+	
+```csharp	
+//Update<T> InnerJoin 一个或多个字段 + Set联合表子句
+var sql = repository.Update<Order>()
+    .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
+    //Set联合表子句，自己单独联合其他表进行更新
+    .Set(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
+	.Where(f => f.OrderId == y.Id)
+	.Select(t => Sql.Sum(t.Amount)))
+    //后面2个Set子句，都是和OrderDetail表联合进行更新的
+    .Set((a, b) => new { OrderNo = a.OrderNo + b.ProductId.ToString() })
+    .Set((x, y) => new { BuyerId = DBNull.Value })
+    .Where((a, b) => a.BuyerId == 1)
+    .ToSql(out _);
+//UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,CAST(b.`ProductId` AS CHAR)),a.`BuyerId`=NULL WHERE a.`BuyerId`=1
+```
+
+Set Null， 是用表达式，用DBNull.Value或是null都可以实现Set Null
+```csharp
+var sql = repository.Update<Order>()
+    .Set(x => new
+    {
+	BuyerId = DBNull.Value,
+	Seller = (int?)null
+    })
+    .Where(x => x.OrderNo == null)
+    .ToSql(out _);
+//UPDATE `sys_order` SET `BuyerId`=NULL,`Seller`=NULL WHERE `OrderNo` IS NULL
+```
+
+Update<T> From 联合表更新
+支持的数据库：
+Sql Server
+PostgreSql
+
+
+```csharp
+//Update<T> From 同样支持 一个或多个字段 + Set联合表子句
+var sql = repository.Update<Order>()
+    .From<OrderDetail>()
+    .Set(x => x.TotalAmount, 200.56)
+    .Set((a, b) => new
+    {
+	OrderNo = a.OrderNo + "_111",
+	BuyerId = DBNull.Value
+    })
+    .Where((x, y) => x.Id == y.OrderId && x.BuyerId == 1)
+    .ToSql(out _);
+//UPDATE [sys_order] SET [TotalAmount]=@TotalAmount,[OrderNo]=[sys_order].[OrderNo]+'_111',[BuyerId]=NULL FROM [sys_order_detail] b WHERE [sys_order].[Id]=b.[OrderId] AND [sys_order].[BuyerId]=1
+```
+
+
+```csharp
+//Update<T> From 同样支持 多个字段
+var sql = repository.Update<Order>()
+    .From<OrderDetail>()
+    .Set((x, y) => new
+    {
+	TotalAmount = y.Amount,
+	OrderNo = x.OrderNo + "_111",
+	BuyerId = DBNull.Value
+    })
+    .Where((x, y) => x.Id == y.OrderId && x.BuyerId == 1)
+    .ToSql(out _);
+//UPDATE [sys_order] SET [TotalAmount]=b.[Amount],[OrderNo]=[sys_order].[OrderNo]+'_111',[BuyerId]=NULL FROM [sys_order_detail] b WHERE [sys_order].[Id]=b.[OrderId] AND [sys_order].[BuyerId]=1
 ```  
 
 ```csharp
-//全量更新
-await repository.UpdateAsync(user);
-//更新
-await repository.UpdateAsync(builder.BuildSql(), user);
+//Update<T> From 同样支持 一个或多个字段 + Set联合表子句
+var sql = repository.Update<Order>()
+    .From<OrderDetail>()
+    .Set(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
+	.Where(f => f.OrderId == y.Id)
+	.Select(t => Sql.Sum(t.Amount)))
+    .Set((a, b) => new { OrderNo = a.OrderNo + b.ProductId.ToString() })
+    .Set((x, y) => new { BuyerId = DBNull.Value })
+    .Where((x, y) => x.Id == y.OrderId && x.BuyerId == 1)
+    .ToSql(out _);
+//UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(c.[Amount]) FROM [sys_order_detail] c WHERE c.[OrderId]=[sys_order].[Id]),[OrderNo]=[sys_order].[OrderNo]+CAST(b.[ProductId] AS NVARCHAR(MAX)),[BuyerId]=NULL FROM [sys_order_detail] b WHERE [sys_order].[Id]=b.[OrderId] AND [sys_order].[BuyerId]=1
+```	
 
-var count = await repository.UpdateAsync(f => 
-			f.RawSql("UPDATE Coin_User SET UserName=@UserName", user.UserName)
-			.AddField(user.Sex.HasValue, "Sex=@Sex", user.Sex)
-			.RawSql("WHERE Id=@UniqueId", user.UniqueId)
-			.AndWhere(beginDate.HasValue, "UpdatedAt>@UpdatedAt", user.UpdatedAt));
 
-var list = repository.QueryAsync(f => 
-			f.RawSql("SELECT * FROM Coin_User")
-			.AndWhere(user.Sex.HasValue, "Sex=@Sex", user.Sex)
-			.AndWhere(beginDate.HasValue, "UpdatedAt>@UpdatedAt", user.UpdatedAt)
-			.RawSql("ORDER BY UpdatedAt DESC"), user);
-			
-//查询字典
-var dictRepository = new Repository();
-var dict = await dictRepository.QueryDictionaryAsync<int, string>("SELECT Id Key,UserName Value FROM Coin_User");
+#### 删除
+
+```csharp
+//单个表达式
+var count = await repository.DeleteAsync<User>(f => f.Id == 1);	
+//DELETE FROM [sys_user] WHERE [Id]=1
+```
+
+```csharp
+//批量删除 表达式
+条件是带有主键的多个对象
+var count = await repository.DeleteAsync<User>(new[] { new { Id = 1 }, new { Id = 2 } });
+//DELETE FROM [sys_user] WHERE [Id]=@Id0;DELETE FROM [sys_user] WHERE [Id]=@Id1
+//批量删除会生成多个删除语句
+
+//多个主键值也可以，这种情况只适合只有一个主键字段
+var count = await repository.DeleteAsync<User>(new int[] { 1, 2 });
+//DELETE FROM [sys_user] WHERE [Id]=@Id0;DELETE FROM [sys_user] WHERE [Id]=@Id1
 ```
 
 
-支持事务操作
+```csharp
+//也支持Where条件表达式
+var count = await repository.DeleteAsync<User>(f => new int[] { 1, 2 }.Contains(f.Id));
+//DELETE FROM [sys_user] WHERE [Id] IN (1,2)
+```
+	
+同样支持Delete<T> 支持更多的删除操作
+```csharp
+repository.Delete<User>().Where(f => f.Id == 1).Execute();
+repository.Delete<User>().Where(new int[] { 1, 2 }).Execute()
+	
+bool? isMale = true;
+var sql = repository.Delete<User>()
+    .Where(f => f.Name.Contains("kevin"))
+    .And(isMale.HasValue, f => f.Age > 25)
+    .ToSql(out _);
+//DELETE FROM [sys_user] WHERE [Name] LIKE '%kevin%' AND [Age]>25
+```
+
+	
+仓储对象IRepository，提交事务，设置超时时间
 ------------------------------------------------------------
 
 ```csharp
- public class User
-{
-    [PrimaryKey("Id")]
-    public int UniqueId { get; set; }
-    public string UserName { get; set; }
-    [Column(typeof(string))]
-    public Sex? Sex { get; set; }
-    public int DeptId { get; set; }
-    public DateTime? UpdatedAt { get; set; }
-}
-public class Dept
-{
-    [PrimaryKey("Id")]
-    public int UniqueId { get; set; }
-    public string DeptName { get; set; }
-    public int PersonTotal { get; set; }
-    public DateTime? UpdatedAt { get; set; }
-}
-public class DeptInfo
-{
-    public int DeptId { get; set; }
-    public int PersonTotal { get; set; }
-}
-
-
-var context = new RepositoryContext();
-
-var repository = context.RepositoryFor();
-var repositoryUser = context.RepositoryFor<User>();
-var repositoryDept = context.RepositoryFor<Dept>();
-
-//事务开始
-context.Begin();
-var deptInfo = repository.QueryFirst<DeptInfo>("SELECT A.DeptId,B.PersonTotal FORM Coin_User A,Coin_Dept B WHERE A.DeptId=B.Id AND A.Id=@UniqueId", new { UniqueId = 1 });
-
-repositoryUser.Delete(new User { UniqueId = 1 });
-repositoryDept.Update(f => f.PersonTotal, new Dept { UniqueId = deptInfo.DeptId, PersonTotal = deptInfo.PersonTotal });
-
-//事务提交
-context.Commit();
-
-```
-对于枚举类型做了特殊支持
-------------------------------------------------------------
-枚举属性对应的数据库栏位可为数字类型或是字符串类型。
-如果字符串类型需要在枚举类型的属性上增加[Column(typeof(string))]特性，标注数据库栏位类型。
-
-
-```csharp
-CREATE TABLE Coin_User(
-	Id int NOT NULL,
-	UserName nvarchar(50) NULL,
-	Sex nvarchar(50) NULL,
-	UID uniqueidentifier NULL,
-	UpdatedAt datetime NULL,
-	Age int NULL,
-	CONSTRAINT PK_Coin_User PRIMARY KEY CLUSTERED 
-	(
-		Id ASC
-	)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON PRIMARY
-) ON PRIMARY
-
-GO
-
-public class User
-{
-    [PrimaryKey("Id")]
-    public int UniqueId { get; set; }
-    public string UserName { get; set; }
-    [Column(typeof(string))]
-    public Sex? Sex { get; set; }
-    public Guid? CardId { get; set; }
-    public DateTime? UpdatedAt { get; set; }
-}
-
-var repository = new Repository<User>();
-
-var user = repository.Get(new User { UniqueId = 1 });
-user = await repository.GetAsync(new User { UniqueId = 1 });
-
-repository.Update(f => f.Sex, user);
-await repository.UpdateAsync(f => f.Sex, user);
-
+using var repository = this.dbFactory.Create();
+bool? isMale = true;
+//设置60秒
+repository.Timeout(60);
+repository.BeginTransaction();
+repository.Update<User>()
+    .WithBy(new { Name = "leafkevin1", Id = 1 })
+    .Execute();
+repository.Delete<User>()
+    .Where(f => f.Name.Contains("kevin"))
+    .And(isMale.HasValue, f => f.Age > 25)
+    .Execute();
+repository.Commit();
 ```
 
-支持的DDD仓储操作
-------------------------------------------------------------
-
-Get方法，根据主键查找对象，需要使用PrimaryKey来标记主键
-
-```csharp
-public class User
-{
-    [PrimaryKey("Id")]
-    public int UniqueId { get; set; }
-    public string UserName { get; set; }
-    [Column(typeof(string))]
-    public Sex? Sex { get; set; }
-    public Guid? CardId { get; set; }
-    public DateTime? UpdatedAt { get; set; }
-}
-var repository = new Repository<User>();
-
-var user = repository.Get(new User { UniqueId = 1 });
-user = await repository.GetAsync(new User { UniqueId = 1 });
-
-```
-也可以多个字段联合主键
-```csharp
-public class User
-{
-    [PrimaryKey("Id")]
-    public int UniqueId { get; set; }
-	[PrimaryKey]
-    public string UserName { get; set; }
-    [Column(typeof(string))]
-    public Sex? Sex { get; set; }
-    public Guid? CardId { get; set; }
-    public DateTime? UpdatedAt { get; set; }
-}
-```
- 
- Create方法，将实体数据插入到数据库
- 
-```csharp
-var repository = new Repository<User>();
-
-var user = repository.Create(new User { UniqueId = 1, UserName = "Keivn" });
-user = await repository.CreateAsync(new User { UniqueId = 1, UserName = "Keivn" });
-```
-
-Delete方法，根据数据库主键删除数据
- 
-```csharp
-public class User
-{
-    [PrimaryKey("Id")]
-    public int UniqueId { get; set; }
-    public string UserName { get; set; }
-    [Column(typeof(string))]
-    public Sex? Sex { get; set; }
-    public Guid? CardId { get; set; }
-    public DateTime? UpdatedAt { get; set; }
-}
-
-var repository = new Repository<User>();
-var user = repository.Delete(new User { UniqueId = 1 });
-
-```
-Update方法，根据SQL和数据库主键进行更新
-```csharp
-var repository = new Repository<User>();
-var user = new User { UniqueId = 1, Sex = Sex.Male };
-
-repository.Update("UPDATE Coin_User SET Sex=@Sex WHERE ID=@UniqueId", user);
-await repository.UpdateAsync("UPDATE Coin_User SET Sex=@Sex WHERE ID=@UniqueId", user);
-
-```
-
-也可以不使用SQL,支持更新一个或多个字段
-```csharp
-var repository = new Repository<User>();
-var user = new User { UniqueId = 1, UserName = "Kevin", Sex = Sex.Male };
-
-repository.Update(f => f.Sex, user);
-repository.Update(f => new { f.UserName, f.Sex }, user);
-
-await repository.UpdateAsync(f => f.Sex, user);
-await repository.UpdateAsync(f => new { f.UserName, f.Sex }, user);
-
-```
-
-
-也支持动态SQL
-```csharp
-var repository = new Repository<User>();
-DateTime? beginDate = DateTime.Parse("2017-01-01");
-var user = new User { UniqueId = 1, UserName = "Kevin", Sex = Sex.Male };
-
-var builder = new SqlBuilder();
-builder.RawSql("UPDATE Coin_User SET UserName=@UserName",user.UserName)
-		   .AddField(user.Sex.HasValue, "Sex=@Sex",user.Sex)
-		   .RawSql("WHERE Id=@UniqueId",user.UniqueId)
-		   .AndWhere(beginDate.HasValue, "UpdatedAt>@UpdatedAt",user.UpdatedAt);
-
-repository.Update(builder.BuildSql(), user);
-
-await repository.UpdateAsync(builder.BuildSql(), user);
-
-或者
-
-var count = repository.Update(f => 
-			f.RawSql("UPDATE Coin_User SET UserName=@UserName",user.UserName)
-			.AddField(user.Sex.HasValue, "Sex=@Sex",user.Sex)
-			.RawSql("WHERE Id=@UniqueId",user.UniqueId)
-			.AndWhere(beginDate.HasValue, "UpdatedAt>@UpdatedAt",user.UpdatedAt));
-
-var count = await repository.UpdateAsync(f => 
-			f.RawSql("UPDATE Coin_User SET UserName=@UserName",user.UserName)
-			.AddField(user.Sex.HasValue, "Sex=@Sex",user.Sex)
-			.RawSql("WHERE Id=@UniqueId",user.UniqueId)
-			.AndWhere(beginDate.HasValue, "UpdatedAt>@UpdatedAt",user.UpdatedAt));
-
-			
-//动态SQL
-var list = repository.Query(f => 
-			f.RawSql("SELECT * FROM Coin_User")
-			.AndWhere(user.Sex.HasValue, "Sex=@Sex",user.Sex)
-			.AndWhere(beginDate.HasValue, "UpdatedAt>@UpdatedAt",user.UpdatedAt)
-			.RawSql("ORDER BY UpdatedAt DESC"));
-
-var list = repository.QueryAsync(f => 
-			f.RawSql("SELECT * FROM Coin_User")
-			.AndWhere(user.Sex.HasValue, "Sex=@Sex",user.Sex)
-			.AndWhere(beginDate.HasValue, "UpdatedAt>@UpdatedAt",user.UpdatedAt)
-			.RawSql("ORDER BY UpdatedAt DESC"));			
-```
-QueryFirst方法，根据SQL获取单条数据
-
-```csharp
-var repository = new Repository<User>();
-
-var user = repository.QueryFirst("SELECT UserName,Sex FROM User WHERE Id=@UniqueId", new User { UniqueId = 1 });
-user = await repository.QueryFirstAsync("SELECT UserName,Sex FROM User WHERE Id=@UniqueId", new User { UniqueId = 1 });
-
-```
-
-也可以返回其他类型的单条数据,可以是实体或是单个值
-
-```csharp
-public enum Sex : byte
-{
-    Male = 1,
-    Female = 2
-}  
-
-var repository = new Repository<User>();
-
-var sex = repository.QueryFirst<Sex>("SELECT Sex FROM User WHERE Id=@UniqueId", new User { UniqueId = 1 });
-sex = await repository.QueryFirstAsync<Sex>("SELECT Sex FROM User WHERE Id=@UniqueId", new User { UniqueId = 1 });
-
-```
-
-如果字段名称和实体属性名称不一致，SQL中要使用别名
-
-```csharp
-public class UserInfo
-{
-    public int UniqueId { get; set; }
-    public string UserName { get; set; }
-    public Sex Sex { get; set; }
-}
-var userInfo = repository.QueryFirst<UserInfo>("SELECT Id UniqueId,UserName,Sex FROM User WHERE Id=@UniqueId", new User { UniqueId = 1 });
-userInfo = await repository.QueryFirstAsync<UserInfo>("SELECT Id UniqueId,UserName,Sex FROM User WHERE Id=@UniqueId", new User { UniqueId = 1 });
-```
-
-或者在实体属性上增加特性
-
-```csharp
-public class UserInfo
-{
-	[PrimaryKey("Id")]
-    public int UniqueId { get; set; }
-    public string UserName { get; set; }
-    public Sex Sex { get; set; }
-}
-或者
-public class UserInfo
-{
-	[Column("Id")]
-    public int UniqueId { get; set; }
-    public string UserName { get; set; }
-    public Sex Sex { get; set; }
-}
-
-//实体属性上有特性，所以不需要加别名
-var userInfo = repository.QueryFirst<UserInfo>("SELECT Id,UserName,Sex FROM User WHERE Id=@UniqueId", new User { UniqueId = 1 });
-userInfo = await repository.QueryFirstAsync<UserInfo>("SELECT Id,UserName,Sex FROM User WHERE Id=@UniqueId", new User { UniqueId = 1 });
-
-```
-
-Query方法，根据SQL获取多条数据。
-
-使用功能同QueryFirst方法
-
-```csharp
-public enum Sex : byte
-{
-    Male = 1,
-    Female = 2
-}  
-
-var repository = new Repository<User>();
-
-var userList = repository.Query("SELECT UserName,Sex FROM User WHERE Id=@UniqueId", new User { UniqueId = 1 });
-userList = await repository.QueryAsync("SELECT UserName,Sex FROM User WHERE Id=@UniqueId", new User { UniqueId = 1 });
-
-var list = repository.Query(f => 
-			f.RawSql("SELECT * FROM Coin_User")
-			.AndWhere(user.Sex.HasValue, "Sex=@Sex",user.Sex)
-			.AndWhere(beginDate.HasValue, "UpdatedAt>@UpdatedAt",user.UpdatedAt)
-			.RawSql("ORDER BY UpdatedAt DESC"), user);
-
-var list = repository.QueryAsync(f => 
-			f.RawSql("SELECT * FROM Coin_User")
-			.AndWhere(user.Sex.HasValue, "Sex=@Sex",user.Sex)
-			.AndWhere(beginDate.HasValue, "UpdatedAt>@UpdatedAt",user.UpdatedAt)
-			.RawSql("ORDER BY UpdatedAt DESC"), user);
-
-var sexList = repository.Query<Sex>("SELECT Sex FROM User WHERE Id>@UniqueId", new User { UniqueId = 1 });
-sexList = await repository.QueryAsync<Sex>("SELECT Sex FROM User WHERE Id>@UniqueId", new User { UniqueId = 1 });
-
-public class UserInfo
-{
-    public int UniqueId { get; set; }
-    public string UserName { get; set; }
-    public Sex Sex { get; set; }
-}
-
-//如果字段名称和实体属性名称不一致，SQL中要使用别名
-var userInfoList = repository.Query<UserInfo>("SELECT Id UniqueId,UserName,Sex FROM User WHERE Id>@UniqueId", new User { UniqueId = 1 });
-userInfoList = await repository.QueryAsync<UserInfo>("SELECT Id UniqueId,UserName,Sex FROM User WHERE Id>@UniqueId", new User { UniqueId = 1 });
-
-//或者在实体属性上增加特性
-public class UserInfo
-{
-	[PrimaryKey("Id")]
-    public int UniqueId { get; set; }
-    public string UserName { get; set; }
-    public Sex Sex { get; set; }
-}
-
-或者
-
-public class UserInfo
-{
-	[Column("Id")]
-    public int UniqueId { get; set; }
-    public string UserName { get; set; }
-    public Sex Sex { get; set; }
-}
-
-//实体属性上有特性，所以不需要加别名
-var userInfoList = repository.Query<UserInfo>("SELECT Id,UserName,Sex FROM User WHERE Id>@UniqueId", new User { UniqueId = 1 });
-userInfoList = await repository.QueryAsync<UserInfo>("SELECT Id,UserName,Sex FROM User WHERE Id>@UniqueId", new User { UniqueId = 1 });
-
-```
-
-QueryPage方法，支持分页
-
-pageIndex：从0开始的索引
-orderBy：排序，可选
-使用功能同Query，QueryFirst方法
-
-```csharp
-var repository = new Repository<User>();
-
-var userList = repository.QueryPage("SELECT Id UniqueId,UserName,Sex FROM User WHERE Id>@UniqueId", 0, 10, null, new User { UniqueId = 1 });
-userList = await repository.QueryPageAsync("SELECT Id UniqueId,UserName,Sex FROM User WHERE Id>@UniqueId", "ORDER BY Id", new User { UniqueId = 1 });
-
-var list = repository.QueryPage(f => 
-			f.RawSql("SELECT * FROM Coin_User")
-			.AndWhere(user.Sex.HasValue, "Sex=@Sex",user.Sex)
-			.AndWhere(beginDate.HasValue, "UpdatedAt>@UpdatedAt",user.UpdatedAt)
-			.RawSql("ORDER BY UpdatedAt DESC"), 0, 10, "ORDER BY Id");
-
-var list = repository.QueryPageAsync(f => 
-			f.RawSql("SELECT * FROM Coin_User")
-			.AndWhere(user.Sex.HasValue, "Sex=@Sex",user.Sex)
-			.AndWhere(beginDate.HasValue, "UpdatedAt>@UpdatedAt",user.UpdatedAt)
-			.RawSql("ORDER BY UpdatedAt DESC"), 0, 10, "ORDER BY Id");
-
-var sexList = repository.QueryPage<Sex>("SELECT Sex FROM User WHERE Id>@UniqueId", 0, 10, null, new User { UniqueId = 1 });
-sexList = await repository.QueryPageAsync<Sex>("SELECT Sex FROM User WHERE Id>@UniqueId", 0, 10, "ORDER BY Id", new User { UniqueId = 1 });
-
-//如果字段名称和实体属性名称不一致，SQL中要使用别名
-var userInfoList = repository.QueryPage<UserInfo>("SELECT Id UniqueId,UserName,Sex FROM User WHERE Id>@UniqueId", 0, 10, null, new User { UniqueId = 1 });
-userInfoList = await repository.QueryPageAsync<UserInfo>("SELECT Id UniqueId,UserName,Sex FROM User WHERE Id>@UniqueId", 0, 10, "ORDER BY Id", new User { UniqueId = 1 });
-
-
-//或者在实体属性上增加特性
-public class UserInfo
-{
-	[PrimaryKey("Id")]
-    public int UniqueId { get; set; }
-    public string UserName { get; set; }
-    public Sex Sex { get; set; }
-}
-
-或者
-
-public class UserInfo
-{
-	[Column("Id")]
-    public int UniqueId { get; set; }
-    public string UserName { get; set; }
-    public Sex Sex { get; set; }
-}
-
-//实体属性上有特性，所以不需要加别名
-var userInfoList = repository.QueryPage<UserInfo>("SELECT Id,UserName,Sex FROM User WHERE Id>@UniqueId", 0, 10, null, new User { UniqueId = 1 });
-userInfoList = await repository.QueryPageAsync<UserInfo>("SELECT Id,UserName,Sex FROM User WHERE Id>@UniqueId", 0, 10, "ORDER BY Id", new User { UniqueId = 1 });
-
-```
-
-IOrmProvider接口中的IsMappingIgnoreCase，表示数据库中的字段映射到实体中，是否忽略大小写，有时候很有用，比如Postgresql的大小写问题。
-
-
-QueryMultiple方法，获取多个结果集，返回一个QueryReader对象。
-再根据Read<T>()，ReadList<T>，ReadPageList<T>三个方法进一步获取强类型对象。
-```csharp
-var order = new Order { Id = 1 };
-var orderRepository = new Repository<Order>(connString);
-var sql = "SELECT * FROM Coin_Order WHERE Id=@Id;SELECT * FROM Coin_OrderLine WHERE OrderId=@Id";
-var reader = orderRepository.QueryMultiple(sql, order);
-order = reader.Read<Order>();
-order.Lines = reader.ReadList<OrderLine>();
-
-order.Number = "123456789";
-orderRepository.Update(f => f.Number, order);
-
-```
-
-
-也可以使用QueryMap方法，直接返回你想要的结果。
-```csharp
-var order = new Order { Id = 1 };
-var orderRepository = new Repository<Order>(connString);
-var sql = "SELECT * FROM Coin_Order WHERE Id=@Id;SELECT * FROM Coin_OrderLine WHERE OrderId=@Id";
-
-order = orderRepository.QueryMap(map =>
-{
-    var result = map.Read();
-    result.Lines = map.ReadList<OrderLine>();
-    return result;
-}, sql, order);
-
-order.Number = "123456789";
-orderRepository.Update(f => f.Number, order);
-
-```
 
 欢迎大家使用
 ---------------------
