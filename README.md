@@ -482,7 +482,7 @@ using var repository = this.dbFactory.Create("fengling");
 各种操作命令
 ------------------------------------------------------------
 
-# 新增
+#### 新增
 ```csharp
 using var repository = this.dbFactory.Create();
 //扩展简化操作
@@ -767,7 +767,7 @@ var sql = repository.Create<OrderDetail>()
 
 
 
-# 更新
+#### 更新
 
 ```csharp
 //简化操作
@@ -1001,7 +1001,8 @@ var sql = repository.Update<Order>()
 //UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(c.[Amount]) FROM [sys_order_detail] c WHERE c.[OrderId]=[sys_order].[Id]),[OrderNo]=[sys_order].[OrderNo]+CAST(b.[ProductId] AS NVARCHAR(MAX)),[BuyerId]=NULL FROM [sys_order_detail] b WHERE [sys_order].[Id]=b.[OrderId] AND [sys_order].[BuyerId]=1
 ```	
 
-# 删除
+
+#### 删除
 
 ```csharp
 //单个表达式
