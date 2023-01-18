@@ -129,7 +129,7 @@ public class Company
 
     public List<User> Users { get; set; }
 }
-//瘦身版模型CompanyInfo，只有两个字段
+//值对象，就是瘦身版模型CompanyInfo，只有两个字段
 public class CompanyInfo
 {
     public int Id { get; set; }
