@@ -18,7 +18,7 @@ class DeleteVisitor : SqlVisitor
         this.tableSegment = new TableSegment
         {
             EntityType = entityType,
-            Mapper = dbFactory.GetEntityMap(entityType)
+            Mapper = this.dbFactory.GetEntityMap(entityType)
         };
     }
     public string BuildSql(out List<IDbDataParameter> dbParameters)
@@ -95,15 +95,6 @@ class DeleteVisitor : SqlVisitor
                 var memberMapper = this.tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
                 var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
 
-                if (sqlSegment.HasDeferred)
-                {
-                    sqlSegment.HasField = true;
-                    sqlSegment.IsConstantValue = false;
-                    sqlSegment.TableSegment = tableSegment;
-                    sqlSegment.FromMember = memberMapper.Member;
-                    sqlSegment.Value = fieldName;
-                    return this.VisitBooleanDeferred(sqlSegment);
-                }
                 sqlSegment.HasField = true;
                 sqlSegment.IsConstantValue = false;
                 sqlSegment.TableSegment = tableSegment;

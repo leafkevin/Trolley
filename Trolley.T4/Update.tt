@@ -646,8 +646,8 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         if (!commandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
         {
             int columnIndex = 0;
-            var entityMapper = dbFactory.GetEntityMap(entityType);
-            var parameterMapper = dbFactory.GetEntityMap(parameterType);
+            var entityMapper = this.dbFactory.GetEntityMap(entityType);
+            var parameterMapper = this.dbFactory.GetEntityMap(parameterType);
             var ormProvider = this.connection.OrmProvider;
             var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
             var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
@@ -744,8 +744,8 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         if (!commandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
         {
             int columnIndex = 0;
-            var entityMapper = dbFactory.GetEntityMap(entityType);
-            var parameterMapper = dbFactory.GetEntityMap(parameterType);
+            var entityMapper = this.dbFactory.GetEntityMap(entityType);
+            var parameterMapper = this.dbFactory.GetEntityMap(parameterType);
             var ormProvider = this.connection.OrmProvider;
             var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
             var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
@@ -820,7 +820,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         {
             int updateIndex = 0;
             var dict = parameter as Dictionary<string, object>;
-            var entityMapper = dbFactory.GetEntityMap(entityType);
+            var entityMapper = this.dbFactory.GetEntityMap(entityType);
 
             if (!isFixSetSql)
                 builder.Append($"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ");
@@ -879,7 +879,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         {
             int index = 0;
             var dict = parameter as Dictionary<string, object>;
-            var entityMapper = dbFactory.GetEntityMap(entityType);
+            var entityMapper = this.dbFactory.GetEntityMap(entityType);
             var sqlBuilder = new StringBuilder();
             if (!isFixSetSql)
                 sqlBuilder.Append($"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ");

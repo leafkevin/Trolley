@@ -639,8 +639,8 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         if (!commandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
         {
             int columnIndex = 0;
-            var entityMapper = dbFactory.GetEntityMap(entityType);
-            var parameterMapper = dbFactory.GetEntityMap(parameterType);
+            var entityMapper = this.dbFactory.GetEntityMap(entityType);
+            var parameterMapper = this.dbFactory.GetEntityMap(parameterType);
             var ormProvider = this.connection.OrmProvider;
             var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
             var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
@@ -691,7 +691,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant(ormProvider.GetFieldName(propMapper.FieldName) + "=")));
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.MemberName, propMapper.NativeDbType, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, null, parameterMemberMapper.MemberName, propMapper.NativeDbType, blockBodies);
                 columnIndex++;
             }
             columnIndex = 0;
@@ -712,7 +712,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 blockBodies.Add(Expression.Assign(parameterNameExpr, concatExpr));
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.MemberName, keyMapper.NativeDbType, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, null, parameterMemberMapper.MemberName, keyMapper.NativeDbType, blockBodies);
                 columnIndex++;
             }
             commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, StringBuilder, int, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, builderExpr, indexExpr, parameterExpr).Compile();
@@ -737,14 +737,14 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         if (!commandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
         {
             int columnIndex = 0;
-            var entityMapper = dbFactory.GetEntityMap(entityType);
-            var parameterMapper = dbFactory.GetEntityMap(parameterType);
+            var entityMapper = this.dbFactory.GetEntityMap(entityType);
+            var parameterMapper = this.dbFactory.GetEntityMap(parameterType);
             var ormProvider = this.connection.OrmProvider;
             var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
             var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");
-            var typedParameterExpr = Expression.Parameter(parameterType, "typedParameter");
 
+            var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
             blockParameters.Add(typedParameterExpr);
@@ -779,7 +779,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
                 sqlBuilder.Append($"{ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.MemberName, propMapper.NativeDbType, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, null, parameterMemberMapper.MemberName, propMapper.NativeDbType, blockBodies);
                 columnIndex++;
             }
             columnIndex = 0;
@@ -794,7 +794,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 var parameterName = ormProvider.ParameterPrefix + "k" + keyMapper.MemberName;
                 sqlBuilder.Append($"{ormProvider.GetFieldName(keyMapper.FieldName)}={parameterName}");
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.MemberName, keyMapper.NativeDbType, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, null, parameterMemberMapper.MemberName, keyMapper.NativeDbType, blockBodies);
                 columnIndex++;
             }
             var resultLabelExpr = Expression.Label(typeof(string));
@@ -813,7 +813,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         {
             int updateIndex = 0;
             var dict = parameter as Dictionary<string, object>;
-            var entityMapper = dbFactory.GetEntityMap(entityType);
+            var entityMapper = this.dbFactory.GetEntityMap(entityType);
 
             if (!isFixSetSql)
                 builder.Append($"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ");
@@ -872,7 +872,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         {
             int index = 0;
             var dict = parameter as Dictionary<string, object>;
-            var entityMapper = dbFactory.GetEntityMap(entityType);
+            var entityMapper = this.dbFactory.GetEntityMap(entityType);
             var sqlBuilder = new StringBuilder();
             if (!isFixSetSql)
                 sqlBuilder.Append($"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ");

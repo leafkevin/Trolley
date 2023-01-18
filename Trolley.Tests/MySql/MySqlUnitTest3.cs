@@ -491,4 +491,18 @@ public class MySqlUnitTest3
             .ToSql(out _);
         Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,CAST(b.`ProductId` AS CHAR)),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
     }
+    [Fact]
+    public void Update_SetNull_WhereNull()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository.Update<Order>()
+            .Set(x => new
+            {
+                BuyerId = DBNull.Value,
+                Seller = (int?)null
+            })
+            .Where(x => x.OrderNo == null)
+            .ToSql(out _);
+        Assert.True(sql == "UPDATE `sys_order` SET `BuyerId`=NULL,`Seller`=NULL WHERE `OrderNo` IS NULL");
+    }
 }

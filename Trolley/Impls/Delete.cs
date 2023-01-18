@@ -219,8 +219,8 @@ class Deleted<TEntity> : IDeleted<TEntity>
         var cacheKey = HashCode.Combine("DeleteBatch", connection.OrmProvider, string.Empty, entityType, parameterType);
         if (!commandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
         {
-            var entityMapper = dbFactory.GetEntityMap(entityType);
-            var parameterMapper = dbFactory.GetEntityMap(parameterType);
+            var entityMapper = this.dbFactory.GetEntityMap(entityType);
+            var parameterMapper = this.dbFactory.GetEntityMap(parameterType);
             var ormProvider = this.connection.OrmProvider;
             var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
             var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
@@ -274,8 +274,8 @@ class Deleted<TEntity> : IDeleted<TEntity>
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
                 if (isEntityType)
-                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, keyMapper.MemberName, keyMapper.NativeDbType, blockBodies);
-                else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, keyMapper.NativeDbType, blockBodies);
+                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, null, keyMapper.MemberName, keyMapper.NativeDbType, blockBodies);
+                else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, null, keyMapper.NativeDbType, blockBodies);
             }
             commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, StringBuilder, int, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, builderExpr, indexExpr, parameterExpr).Compile();
             commandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
@@ -335,7 +335,6 @@ class Deleted<TEntity> : IDeleted<TEntity>
             var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
             var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");
-
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
 
@@ -373,8 +372,8 @@ class Deleted<TEntity> : IDeleted<TEntity>
                 var parameterNameExpr = Expression.Constant(parameterName);
 
                 if (isEntityType)
-                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, keyMapper.MemberName, keyMapper.NativeDbType, blockBodies);
-                else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, keyMapper.NativeDbType, blockBodies);
+                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, null, keyMapper.MemberName, keyMapper.NativeDbType, blockBodies);
+                else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, null, keyMapper.NativeDbType, blockBodies);
                 index++;
             }
             var resultLabelExpr = Expression.Label(typeof(string));
@@ -387,43 +386,13 @@ class Deleted<TEntity> : IDeleted<TEntity>
         }
         return (Func<IDbCommand, IOrmProvider, object, string>)commandInitializerDelegate;
     }
-    private Action<IDbCommand, IOrmProvider, object> BuildCommandInitializer(string sql, Type entityType, Type parameterType)
-    {
-        var cacheKey = HashCode.Combine("Delete", connection.OrmProvider, sql, entityType, parameterType);
-        if (!commandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
-        {
-            var parameterMapper = this.dbFactory.GetEntityMap(parameterType);
-            var ormProvider = this.connection.OrmProvider;
-            var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
-            var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-            var parameterExpr = Expression.Parameter(typeof(object), "parameter");
-            var typedParameterExpr = Expression.Parameter(parameterType, "typedParameter");
-
-            var blockParameters = new List<ParameterExpression>();
-            var blockBodies = new List<Expression>();
-            blockParameters.Add(typedParameterExpr);
-            blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
-
-            foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
-            {
-                var parameterName = ormProvider.ParameterPrefix + parameterMemberMapper.MemberName;
-                if (!Regex.IsMatch(sql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                    continue;
-                var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.MemberName, null, blockBodies);
-            }
-            commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
-            commandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
-        }
-        return (Action<IDbCommand, IOrmProvider, object>)commandInitializerDelegate;
-    }
     private Func<IDbCommand, IOrmProvider, object, string> BuildCommandInitializer(Type entityType)
     {
         return (command, ormProvider, parameter) =>
         {
             int index = 0;
             var dict = parameter as Dictionary<string, object>;
-            var entityMapper = dbFactory.GetEntityMap(entityType);
+            var entityMapper = this.dbFactory.GetEntityMap(entityType);
             var builder = new StringBuilder($"DELETE FROM {ormProvider.GetTableName(entityMapper.TableName)} WHERE ");
 
             foreach (var keyMapper in entityMapper.KeyMembers)
@@ -443,21 +412,6 @@ class Deleted<TEntity> : IDeleted<TEntity>
                 index++;
             }
             return builder.ToString();
-        };
-    }
-    private Action<IDbCommand, IOrmProvider, object> BuildCommandInitializer(string sql)
-    {
-        return (command, ormProvider, parameter) =>
-        {
-            var dict = parameter as Dictionary<string, object>;
-            foreach (var item in dict)
-            {
-                var parameterName = ormProvider.ParameterPrefix + item.Key;
-                if (!Regex.IsMatch(sql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                    continue;
-                var dbParameter = ormProvider.CreateParameter(parameterName, dict[item.Key]);
-                command.Parameters.Add(dbParameter);
-            }
         };
     }
 }

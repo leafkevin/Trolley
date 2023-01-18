@@ -160,8 +160,8 @@ public class MySqlMethodCallUnitTest
                 TrimEnd = "Begin_" + f.OrderNo.TrimEnd() + "  123   ".TrimEnd() + "_End"
             })
             .ToList();
-        Assert.True(result.Count ==3);
-        Assert.True(result[0].Trim  == "Begin_ON-001123_End");
+        Assert.True(result.Count == 3);
+        Assert.True(result[0].Trim == "Begin_ON-001123_End");
         Assert.True(result[0].TrimStart == "Begin_ON-001 123   _End");
         Assert.True(result[0].TrimEnd == "Begin_ ON-001  123_End");
     }

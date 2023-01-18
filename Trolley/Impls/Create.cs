@@ -389,8 +389,8 @@ class Created<TEntity> : ICreated<TEntity>
         if (!commandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
         {
             int columnIndex = 0;
-            var entityMapper = dbFactory.GetEntityMap(entityType);
-            var parameterMapper = dbFactory.GetEntityMap(parameterType);
+            var entityMapper = this.dbFactory.GetEntityMap(entityType);
+            var parameterMapper = this.dbFactory.GetEntityMap(parameterType);
             var ormProvider = this.connection.OrmProvider;
             var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
             var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
@@ -398,6 +398,7 @@ class Created<TEntity> : ICreated<TEntity>
             var indexExpr = Expression.Parameter(typeof(int), "index");
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");
 
+            ParameterExpression objLocalExpr = null;
             var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
@@ -435,6 +436,17 @@ class Created<TEntity> : ICreated<TEntity>
                     || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                     continue;
 
+                ParameterExpression localExpr = null;
+                if (parameterMemberMapper.IsNullable)
+                {
+                    if (objLocalExpr == null)
+                    {
+                        objLocalExpr = Expression.Variable(typeof(object), "objLocal");
+                        blockParameters.Add(objLocalExpr);
+                    }
+                    localExpr = objLocalExpr;
+                }
+
                 if (columnIndex > 0)
                     blockBodies.Add(Expression.Call(builderExpr, methodInfo1, Expression.Constant(',')));
 
@@ -442,7 +454,8 @@ class Created<TEntity> : ICreated<TEntity>
                 var suffixExpr = Expression.Call(indexExpr, typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes));
                 var parameterNameExpr = Expression.Call(methodInfo3, Expression.Constant(parameterName), suffixExpr);
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.MemberName, propMapper.NativeDbType, blockBodies);
+
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, localExpr, parameterMemberMapper.MemberName, propMapper.NativeDbType, blockBodies);
                 columnIndex++;
             }
             blockBodies.Add(Expression.Call(builderExpr, methodInfo1, Expression.Constant(')')));
@@ -464,8 +477,9 @@ class Created<TEntity> : ICreated<TEntity>
             var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
             var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");
-            var typedParameterExpr = Expression.Parameter(parameterType, "typedParameter");
 
+            ParameterExpression objLocalExpr = null;
+            var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
             blockParameters.Add(typedParameterExpr);
@@ -479,6 +493,17 @@ class Created<TEntity> : ICreated<TEntity>
                     || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
                     continue;
 
+                ParameterExpression localExpr = null;
+                if (parameterMemberMapper.IsNullable)
+                {
+                    if (objLocalExpr == null)
+                    {
+                        objLocalExpr = Expression.Variable(typeof(object), "objLocal");
+                        blockParameters.Add(objLocalExpr);
+                    }
+                    localExpr = objLocalExpr;
+                }
+
                 if (columnIndex > 0)
                 {
                     insertBuilder.Append(',');
@@ -488,7 +513,8 @@ class Created<TEntity> : ICreated<TEntity>
                 var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
                 valuesBuilder.Append(parameterName);
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.MemberName, propMapper.NativeDbType, blockBodies);
+
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, localExpr, parameterMemberMapper.MemberName, propMapper.NativeDbType, blockBodies);
                 columnIndex++;
             }
             insertBuilder.Append(')');
@@ -519,8 +545,9 @@ class Created<TEntity> : ICreated<TEntity>
             var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
             var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");
-            var typedParameterExpr = Expression.Parameter(parameterType, "typedParameter");
 
+            ParameterExpression objLocalExpr = null;
+            var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
             blockParameters.Add(typedParameterExpr);
@@ -531,8 +558,20 @@ class Created<TEntity> : ICreated<TEntity>
                 var parameterName = ormProvider.ParameterPrefix + parameterMemberMapper.MemberName;
                 if (!Regex.IsMatch(sql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
                     continue;
+
+                ParameterExpression localExpr = null;
+                if (parameterMemberMapper.IsNullable)
+                {
+                    if (objLocalExpr == null)
+                    {
+                        objLocalExpr = Expression.Variable(typeof(object), "objLocal");
+                        blockParameters.Add(objLocalExpr);
+                    }
+                    localExpr = objLocalExpr;
+                }
+
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.MemberName, null, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, localExpr, parameterMemberMapper.MemberName, null, blockBodies);
             }
             commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
             commandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);

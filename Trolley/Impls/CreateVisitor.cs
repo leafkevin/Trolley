@@ -137,15 +137,6 @@ class CreateVisitor : SqlVisitor
                 //都需要带有别名
                 fieldName = tableSegment.AliasName + "." + fieldName;
 
-                if (sqlSegment.HasDeferred)
-                {
-                    sqlSegment.HasField = true;
-                    sqlSegment.IsConstantValue = false;
-                    sqlSegment.TableSegment = tableSegment;
-                    sqlSegment.FromMember = memberMapper.Member;
-                    sqlSegment.Value = fieldName;
-                    return this.VisitBooleanDeferred(sqlSegment);
-                }
                 sqlSegment.HasField = true;
                 sqlSegment.IsConstantValue = false;
                 sqlSegment.TableSegment = tableSegment;

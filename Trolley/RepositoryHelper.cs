@@ -10,10 +10,23 @@ namespace Trolley;
 class RepositoryHelper
 {
     public static void AddParameter(ParameterExpression commandExpr, ParameterExpression ormProviderExpr,
-        Expression parameterNameExpr, Expression parameterValueExpr, int? nativeDbType, List<Expression> blockBodies)
+        Expression parameterNameExpr, Expression parameterValueExpr, Expression objLocalExpr, int? nativeDbType, List<Expression> blockBodies)
     {
         //var parameter = ormProvider.CreateParameter("@Parameter", value);
-        var valueExpr = Expression.Convert(parameterValueExpr, typeof(object));
+        //if(value==null)objLocal=DBNull.Value;
+        //else objLocal=value;
+        //var parameter = ormProvider.CreateParameter("@Parameter", objLocal);
+        Expression valueExpr = null;
+        if (objLocalExpr != null)
+        {
+            var isNullExpr = Expression.Equal(parameterValueExpr, Expression.Constant(null));
+            var assignNullExpr = Expression.Assign(objLocalExpr, Expression.Constant(DBNull.Value));
+            var assignValueExpr = Expression.Assign(objLocalExpr, Expression.Convert(parameterValueExpr, typeof(object)));
+            blockBodies.Add(Expression.IfThenElse(isNullExpr, assignNullExpr, assignValueExpr));
+            valueExpr = objLocalExpr;
+        }
+        else valueExpr = Expression.Convert(parameterValueExpr, typeof(object));
+
         MethodInfo methodInfo = null;
         Expression dbParameterExpr = null;
         if (nativeDbType.HasValue)
@@ -37,10 +50,10 @@ class RepositoryHelper
         blockBodies.Add(addParameterExpr);
     }
     public static void AddParameter(ParameterExpression commandExpr, ParameterExpression ormProviderExpr,
-        Expression parameterNameExpr, Expression typedParameterExpr, string parameterMemberName, int? nativeDbType, List<Expression> blockBodies)
+        Expression parameterNameExpr, Expression typedParameterExpr, Expression objLocalExpr, string parameterMemberName, int? nativeDbType, List<Expression> blockBodies)
     {
         //var parameter = ormProvider.CreateParameter("@Parameter", nativeDbType, whereObj.Name);
         var valueExpr = Expression.PropertyOrField(typedParameterExpr, parameterMemberName);
-        AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, valueExpr, nativeDbType, blockBodies);
+        AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, valueExpr, objLocalExpr, nativeDbType, blockBodies);
     }
 }

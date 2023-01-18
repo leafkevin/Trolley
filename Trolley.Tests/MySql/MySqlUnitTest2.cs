@@ -755,4 +755,19 @@ public class MySqlUnitTest2
         var result = repository.From<Order>().First();
         Assert.NotNull(result);
     }
+    [Fact]
+    public void Query_SelectNull_WhereNull()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .Where(x => x.ProductCount == null)
+            .And(true, f => !f.ProductCount.HasValue)
+            .Select(x => new
+            {
+                NoOrderNo = x.OrderNo == null,
+                HasProduct = x.ProductCount.HasValue
+            })
+            .ToSql(out _);
+        Assert.True(sql == "SELECT (`OrderNo` IS NULL) AS NoOrderNo,(`ProductCount` IS NOT NULL) AS HasProduct FROM `sys_order` WHERE `ProductCount` IS NULL AND `ProductCount` IS NOT NULL");
+    }
 }

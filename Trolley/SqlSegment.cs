@@ -34,6 +34,7 @@ public class SqlSegment
     /// </summary>
     public bool IsConstantValue { get; set; }
     public bool IsExpression { get; set; }
+    public bool IsNeedParentheses { get; set; }
     public string ParameterName { get; set; }
     public MemberInfo FromMember { get; set; }
     public TableSegment TableSegment { get; set; }

@@ -422,7 +422,7 @@ public class NpgSqlProvider : BaseOrmProvider
                     //public static int Compare(String? strA, String? strB);
                     //public static int Compare(String? strA, String? strB, bool ignoreCase);
                     //public static int Compare(String? strA, String? strB, bool ignoreCase, CultureInfo? culture);
-                    if (parameterInfos.Length >= 2 && parameterInfos.Length <= 4)
+                    if (parameterInfos.Length >= 2)
                     {
                         methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
                         {
@@ -449,7 +449,7 @@ public class NpgSqlProvider : BaseOrmProvider
                     result = true;
                     break;
                 case "Trim":
-                    if (methodInfo.GetParameters().Length == 0)
+                    if (parameterInfos.Length == 0)
                     {
                         formatter = (target, deferExprs, args) =>
                         {
@@ -460,10 +460,9 @@ public class NpgSqlProvider : BaseOrmProvider
                         methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
                         result = true;
                     }
-                    else result = false;
                     break;
                 case "TrimStart":
-                    if (methodInfo.GetParameters().Length == 0)
+                    if (parameterInfos.Length == 0)
                     {
                         formatter = (target, deferExprs, args) =>
                         {
@@ -474,10 +473,9 @@ public class NpgSqlProvider : BaseOrmProvider
                         methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
                         result = true;
                     }
-                    else result = false;
                     break;
                 case "TrimEnd":
-                    if (methodInfo.GetParameters().Length == 0)
+                    if (parameterInfos.Length == 0)
                     {
                         formatter = (target, deferExprs, args) =>
                         {
@@ -488,7 +486,6 @@ public class NpgSqlProvider : BaseOrmProvider
                         methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
                         result = true;
                     }
-                    else result = false;
                     break;
                 case "ToUpper":
                     formatter = (target, deferExprs, args) =>

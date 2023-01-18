@@ -385,7 +385,7 @@ class QueryVisitor : SqlVisitor
             switch (lambdaExpr.Body.NodeType)
             {
                 case ExpressionType.MemberAccess:
-                    sqlSegment = this.Visit(new SqlSegment { Expression = lambdaExpr.Body });
+                    sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = lambdaExpr.Body });
                     sqlSegment.TableSegment.IsUsed = true;
                     body = sqlSegment.ToString();
                     break;
@@ -596,10 +596,10 @@ class QueryVisitor : SqlVisitor
                 {
                     sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.Null });
                     sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Not });
-                    return sqlSegment.Next(memberExpr.Expression);
+                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 }
                 else if (memberExpr.Member.Name == nameof(Nullable<bool>.Value))
-                    return sqlSegment.Next(memberExpr.Expression);
+                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 else throw new ArgumentException($"不支持的MemberAccess操作，表达式'{memberExpr}'返回值不是boolean类型");
             }
 
@@ -681,15 +681,7 @@ class QueryVisitor : SqlVisitor
                     if (this.isNeedAlias && !string.IsNullOrEmpty(tableSegment.AliasName))
                         fieldName = tableSegment.AliasName + "." + fieldName;
                     if (this.isSelect) tableSegment.IsUsed = true;
-                    if (sqlSegment.HasDeferred)
-                    {
-                        sqlSegment.HasField = true;
-                        sqlSegment.IsConstantValue = false;
-                        sqlSegment.TableSegment = tableSegment;
-                        sqlSegment.FromMember = memberMapper.Member;
-                        sqlSegment.Value = fieldName;
-                        return this.VisitBooleanDeferred(sqlSegment);
-                    }
+
                     sqlSegment.HasField = true;
                     sqlSegment.IsConstantValue = false;
                     sqlSegment.TableSegment = tableSegment;
@@ -719,7 +711,7 @@ class QueryVisitor : SqlVisitor
         {
             case ExpressionType.Parameter:
             case ExpressionType.MemberAccess:
-                sqlSegment = this.Visit(sqlSegment);
+                sqlSegment = this.VisitAndDeferred(sqlSegment);
                 if (elementExpr.Type.IsEntityType())
                 {
                     var tableReaderFields = sqlSegment.Value as List<ReaderField>;
@@ -742,6 +734,8 @@ class QueryVisitor : SqlVisitor
                 else
                 {
                     fieldName = sqlSegment.ToString();
+                    if (sqlSegment.IsExpression && sqlSegment.IsNeedParentheses)
+                        fieldName = $"({fieldName})";
                     if (sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.FromMember?.Name != memberInfo.Name)
                         fieldName += " AS " + memberInfo.Name;
                     readerFields.Add(new ReaderField
@@ -756,9 +750,11 @@ class QueryVisitor : SqlVisitor
                 }
                 break;
             default:
-                //常量或方法访问
-                sqlSegment = this.Visit(sqlSegment);
+                //常量或方法或表达式访问
+                sqlSegment = this.VisitAndDeferred(sqlSegment);
                 fieldName = sqlSegment.ToString();
+                if (sqlSegment.IsExpression && sqlSegment.IsNeedParentheses)
+                    fieldName = $"({fieldName})";
                 if (sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.FromMember?.Name != memberInfo.Name)
                     fieldName += " AS " + memberInfo.Name;
                 readerFields.Add(new ReaderField

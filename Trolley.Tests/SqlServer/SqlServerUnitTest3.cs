@@ -499,4 +499,18 @@ public class SqlServerUnitTest3
             .ToSql(out _);
         Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(c.[Amount]) FROM [sys_order_detail] c WHERE c.[OrderId]=[sys_order].[Id]),[OrderNo]=[sys_order].[OrderNo]+CAST(b.[ProductId] AS NVARCHAR(MAX)),[BuyerId]=NULL FROM [sys_order_detail] b WHERE [sys_order].[Id]=b.[OrderId] AND [sys_order].[BuyerId]=1");
     }
+    [Fact]
+    public void Update_SetNull_WhereNull()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository.Update<Order>()
+            .Set(x => new
+            {
+                BuyerId = DBNull.Value,
+                Seller = (int?)null
+            })
+            .Where(x => x.OrderNo == null)
+            .ToSql(out _);
+        Assert.True(sql == "UPDATE [sys_order] SET [BuyerId]=NULL,[Seller]=NULL WHERE [OrderNo] IS NULL");
+    }
 }
