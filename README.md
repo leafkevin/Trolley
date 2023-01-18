@@ -54,7 +54,7 @@ var dbFactory = builder.Build();
 
 ```
 在注册IOrmDbFactory的时候，同时也要把数据库结构的模型映射配置起来。  
-模型映射采用的是Fluent Api方式，类似EF，通常是继承IModelConfiguration的子类。 
+模型映射采用的是Fluent Api方式，类似EF，通常是继承IModelConfiguration的子类。  
 Trolley, 目前只支持Fluent Api方式，这样能使模型更加纯净，不受ORM污染。  
 
 导航属性的设置，是单向的，只需要把本模型内的导航属性列出来就可以了。  
