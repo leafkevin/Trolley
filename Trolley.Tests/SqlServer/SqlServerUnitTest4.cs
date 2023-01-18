@@ -22,7 +22,7 @@ public class SqlServerUnitTest4
         });
         var serviceProvider = services.BuildServiceProvider();
         this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
-    } 
+    }
     [Fact]
     public async void Delete()
     {
@@ -158,5 +158,32 @@ public class SqlServerUnitTest4
         Assert.Equal(2, count);
         count = await repository.DeleteAsync<User>(f => new int[] { 1, 2 }.Contains(f.Id));
         Assert.Equal(2, count);
+    }
+    [Fact]
+    public void Delete_Where_And()
+    {
+        using var repository = this.dbFactory.Create();
+        bool? isMale = true;
+        var sql = repository.Delete<User>()
+            .Where(f => f.Name.Contains("kevin"))
+            .And(isMale.HasValue, f => f.Age > 25)
+            .ToSql(out _);
+        Assert.True(sql == "DELETE FROM [sys_user] WHERE [Name] LIKE '%kevin%' AND [Age]>25");
+    }
+    [Fact]
+    public void Transation()
+    {
+        using var repository = this.dbFactory.Create();
+        bool? isMale = true;
+        repository.Timeout(60);
+        repository.BeginTransaction();
+        repository.Update<User>()
+            .WithBy(new { Name = "leafkevin1", Id = 1 })
+            .Execute();
+        repository.Delete<User>()
+            .Where(f => f.Name.Contains("kevin"))
+            .And(isMale.HasValue, f => f.Age > 25)
+            .Execute();
+        repository.Commit();
     }
 }

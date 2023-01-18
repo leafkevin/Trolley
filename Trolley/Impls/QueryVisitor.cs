@@ -84,16 +84,14 @@ class QueryVisitor : SqlVisitor
             builder.Append($" GROUP BY {this.groupBySql}");
 
         if (!string.IsNullOrEmpty(this.havingSql))
-        {
-            if (builder.Length > 0) builder.Append(' ');
-            builder.Append($"HAVING {this.havingSql}");
-        }
+            builder.Append($" HAVING {this.havingSql}");
+
         string orderBy = null;
         if (!string.IsNullOrEmpty(this.orderBySql))
         {
             orderBy = $"ORDER BY {this.orderBySql}";
-            if (builder.Length > 0) builder.Append(' ');
-            builder.Append(orderBy);
+            if (!this.skip.HasValue && !this.limit.HasValue)
+                builder.Append(" " + orderBy);
         }
         string others = builder.ToString();
 
@@ -160,16 +158,14 @@ class QueryVisitor : SqlVisitor
             builder.Append($" GROUP BY {this.groupBySql}");
 
         if (!string.IsNullOrEmpty(this.havingSql))
-        {
-            if (builder.Length > 0) builder.Append(' ');
-            builder.Append($"HAVING {this.havingSql}");
-        }
+            builder.Append($" HAVING {this.havingSql}");
+
         string orderBy = null;
         if (!string.IsNullOrEmpty(this.orderBySql))
         {
             orderBy = $"ORDER BY {this.orderBySql}";
-            if (builder.Length > 0) builder.Append(' ');
-            builder.Append(orderBy);
+            if (!this.skip.HasValue && !this.limit.HasValue)
+                builder.Append(" " + orderBy);
         }
         string others = builder.ToString();
 
