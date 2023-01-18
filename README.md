@@ -38,7 +38,7 @@ builder.Register("fengling", true, f => f.Add<MySqlProvider>(connectionString, t
     .Configure(f => new ModelConfiguration().OnModelCreating(f));
 var dbFactory = builder.Build();
 ```
-多租户，不同租户，不同数据库的场景
+多租户，不同租户，不同数据库的场景  
 
 ```csharp
 var connectionString1 = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
@@ -55,11 +55,11 @@ var dbFactory = builder.Build();
 ```
 在注册IOrmDbFactory的时候，同时也要把数据库结构的模型映射配置起来。  
 模型映射采用的是Fluent Api方式，类似EF，通常是继承IModelConfiguration的子类。 
-Trolley, 目前只支持Fluent Api方式，这样能使模型更加纯净，不受ORM污染。
+Trolley, 目前只支持Fluent Api方式，这样能使模型更加纯净，不受ORM污染。  
 
 导航属性的设置，是单向的，只需要把本模型内的导航属性列出来就可以了。  
 对应的导航属性类，再设置它所引用的模型映射。 
-这里的ModelConfiguration类，就是模型映射类，内容如下：
+这里的ModelConfiguration类，就是模型映射类，内容如下： 
 ```csharp
 class ModelConfiguration : IModelConfiguration
 {
@@ -97,13 +97,15 @@ class ModelConfiguration : IModelConfiguration
 }
 ```
 
-Trolley底层使用的DbType是各个数据库驱动的本地DbType，如：MySqlProvider使用的DbType是MySqlConnector.MySqlDbType。
-Trolley在配置各个数据库模型映射时是无侵入的，无需引入对应数据库的驱动，所以，通常把模型映射可以放到最外层项目中，比如：应用层或是Web Api中。
-在运行Trolley的项目中再引入对应的数据库.NET驱动就可以。
-对应的模型映射，每个列也可以指定对应的本地DbType，用int类型来指定。
-在Trolley build的时候，会把int类型数据转换成对应的数据库驱动的本地DbType类型。
-如果不设置NativeDbType类型映射，Trolley会根据类型自动完成映射。
-示例：
+Trolley底层使用的DbType是各个数据库驱动的本地DbType，  
+如：MySqlProvider使用的DbType是MySqlConnector.MySqlDbType。  
+Trolley在配置各个数据库模型映射时是无侵入的，无需引入对应数据库的驱动，  
+所以，通常把模型映射可以放到最外层项目中，比如：应用层或是Web Api中。  
+在运行Trolley的项目中再引入对应的数据库.NET驱动就可以。  
+对应的模型映射，每个列也可以指定对应的本地DbType，用int类型来指定。  
+在Trolley build的时候，会把int类型数据转换成对应的数据库驱动的本地DbType类型。  
+如果不设置NativeDbType类型映射，Trolley会根据类型自动完成映射。  
+示例：  
 ```csharp
 class ModelConfiguration: IModelConfiguration
 {
@@ -191,21 +193,21 @@ public class CompanyInfo
 
 其次，引用对应数据库的.NET驱动
 ------------------------------------------------------------
-Trolley是无侵入的，支持多个数据库操作。
-只需要把对应的数据库.NET驱动Nuget包引入到项目中来，就可以做后续操作了
+Trolley是无侵入的，支持多个数据库操作。  
+只需要把对应的数据库.NET驱动Nuget包引入到项目中来，就可以做后续操作了  
 
-MySql：MySqlConnector 社区版
-PostgreSql：Npgsql 官方版
-Sql Server：System.Data.SqlClient 官方版
-Oracle：Oracle.ManagedDataAccess 官方版
+MySql：MySqlConnector 社区版  
+PostgreSql：Npgsql 官方版  
+Sql Server：System.Data.SqlClient 官方版  
+Oracle：Oracle.ManagedDataAccess 官方版  
 
 
 
-最后，创建IRepository对象，就可以做各种操作了
+最后，创建IRepository对象，就可以做各种操作了  
 ------------------------------------------------------------
-所有的操作都是从创建IRepository对象开始的，IRepository可以开启事务，设置command超时时间、各种查询、命令的执行。 
+所有的操作都是从创建IRepository对象开始的，IRepository可以开启事务，设置command超时时间、各种查询、命令的执行。   
 不同模型的操作都是采用IRepository泛型方法来完成的。  
-所有的查询操作，都支持ToSql方法，可以查看生成SQL语句，方便诊断。
+所有的查询操作，都支持ToSql方法，可以查看生成SQL语句，方便诊断。  
 
 
 #### 查询
@@ -213,7 +215,7 @@ Oracle：Oracle.ManagedDataAccess 官方版
 
 ```csharp
 using var repository = this.dbFactory.Create();
-//扩展的简化查询，不支持ToSql方法，是由From语句来包装的，From语句支持ToSql查看SQL
+//扩展的简化查询，不支持ToSql方法，是由From语句来包装的，From语句支持ToSql查看SQL  
 //QueryFirst
 var result = repository.QueryFirst<User>(f => f.Id == 1);
 var result = await repository.QueryFirstAsync<User>(f => f.Name == "leafkevin");
