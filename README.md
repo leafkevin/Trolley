@@ -27,9 +27,6 @@
 在代入租户ID的时候，Trolley会根据租户ID自动找到对应的数据库，进行操作。  
 没有租户ID，就是默认的数据库，就是没有指定独立分库的其他所有租户的数据库。  
 
-在注册IOrmDbFactory的时候，同时也要把数据库结构的模型映射配置起来。  
-模型映射采用的是Fluent Api方式，类似EF，通常是继承IModelConfiguration的子类。  
-
 
 示例:
 
@@ -56,9 +53,12 @@ builder.Register("fengling", true, f =>
 var dbFactory = builder.Build();
 
 ```
+在注册IOrmDbFactory的时候，同时也要把数据库结构的模型映射配置起来。  
+模型映射采用的是Fluent Api方式，类似EF，通常是继承IModelConfiguration的子类。 
+Trolley, 目前只支持Fluent Api方式，这样能使模型更加纯净，不受ORM污染。
 
 导航属性的设置，是单向的，只需要把本模型内的导航属性列出来就可以了。  
-对应的导航属性类，再设置它所引用的模型映射。  
+对应的导航属性类，再设置它所引用的模型映射。 
 这里的ModelConfiguration类，就是模型映射类，内容如下：
 ```csharp
 class ModelConfiguration : IModelConfiguration
@@ -92,6 +92,57 @@ class ModelConfiguration : IModelConfiguration
         {
             f.ToTable("sys_order_detail").Key(f => f.Id);
             f.HasOne(t => t.Order).HasForeignKey(t => t.OrderId);
+        });
+    }
+}
+```
+
+Trolley底层使用的DbType是各个数据库驱动的本地DbType，如：MySqlProvider使用的DbType是MySqlConnector.MySqlDbType。
+Trolley在配置各个数据库模型映射时是无侵入的，无需引入对应数据库的驱动，所以，通常把模型映射可以放到最外层项目中，比如：应用层或是Web Api中。
+在运行Trolley的项目中再引入对应的数据库.NET驱动就可以。
+对应的模型映射，每个列也可以指定对应的本地DbType，用int类型来指定。
+在Trolley build的时候，会把int类型数据转换成对应的数据库驱动的本地DbType类型。
+如果不设置NativeDbType类型映射，Trolley会根据类型自动完成映射。
+示例：
+```csharp
+class ModelConfiguration: IModelConfiguration
+{
+    public void OnModelCreating(ModelBuilder builder)
+    {
+        builder.Entity<Payment>(f =>
+        {
+	    //主键要指定，如果是自增长也要指定
+            f.ToTable("pcs_payment").Key(t => t.PaymentId).AutoIncrement(t => t.Id);
+	    //8 是 System.Data.SqlDbType.Int
+            f.Member(t => t.PaymentId).Field("PaymentId").NativeDbType(8);
+	    //12 是 System.Data.SqlDbType.NVarChar
+            f.Member(t => t.OrderId).Field("OrderId").NativeDbType(12);
+	    //20 是 System.Data.SqlDbType.TinyInt
+            f.Member(t => t.PaymentType).Field("PaymentType").NativeDbType(20);
+            f.Member(t => t.Currency).Field("Currency").NativeDbType(12);
+	    //5 是 System.Data.SqlDbType.Decimal
+            f.Member(t => t.TotalAmount).Field("TotalAmount").NativeDbType(5);
+            f.Member(t => t.Fee).Field("Fee").NativeDbType(5);
+            f.Member(t => t.GatewayCode).Field("GatewayCode").NativeDbType(12);
+            f.Member(t => t.FromAccount).Field("FromAccount").NativeDbType(12);
+            f.Member(t => t.ToAccount).Field("ToAccount").NativeDbType(12);
+            f.Member(t => t.Status).Field("Status").NativeDbType(20);
+            f.Member(t => t.IsEnabled).Field("IsEnabled").NativeDbType(2);
+            f.Member(t => t.CreatedBy).Field("CreatedBy").NativeDbType(12);
+	    //4 是 System.Data.SqlDbType.DateTime
+            f.Member(t => t.CreatedAt).Field("CreatedAt").NativeDbType(4);
+            f.Member(t => t.UpdatedBy).Field("UpdatedBy").NativeDbType(12);
+            f.Member(t => t.UpdatedAt).Field("UpdatedAt").NativeDbType(4);
+	    
+	    //当然也可以指定特定类型，比如json类型，只需指定对应的int类型值即可。
+	    如：245是MySqlConnector.MySqlDbType.JSON类型
+	    f.Member(t => t.FromAccount).Field("FromAccount").NativeDbType(245);
+	    
+	    //枚举类型Status,数据库字段也可以指定字符串，代码中是枚举类型，只需指定NativeDbType为12即可，ORM会自动把字符串转换为枚举
+	    f.Member(t => t.Status).Field("Status").NativeDbType(12);
+	    
+	    如果不设置NativeDbType类型映射，Trolley会根据类型自动映射。
+	    
         });
     }
 }
@@ -138,17 +189,26 @@ public class CompanyInfo
 ```
 在实际应用中，值对象在模型中定义很常见，没必要引用整个模型，真正使用的就是几个栏位，轻量化模型结构。  
 
+其次，引用对应数据库的.NET驱动
+------------------------------------------------------------
+Trolley是无侵入的，支持多个数据库操作。
+只需要把对应的数据库.NET驱动Nuget包引入到项目中来，就可以做后续操作了
+
+MySql：MySqlConnector 社区版
+PostgreSql：Npgsql 官方版
+Sql Server：System.Data.SqlClient 官方版
+Oracle：Oracle.ManagedDataAccess 官方版
 
 
 
-其次，创建IRepository对象。
+最后，创建IRepository对象，就可以做各种操作了
 ------------------------------------------------------------
 所有的操作都是从创建IRepository对象开始的，IRepository可以开启事务，设置command超时时间、各种查询、命令的执行。 
 不同模型的操作都是采用IRepository泛型方法来完成的。  
 所有的查询操作，都支持ToSql方法，可以查看生成SQL语句，方便诊断。
 
 
-查询操作
+#### 查询
 查询类语句，只有String类型做了参数化，其他的数据类型都没有参数化。  
 
 ```csharp
