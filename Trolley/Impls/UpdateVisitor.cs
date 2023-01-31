@@ -409,6 +409,12 @@ class UpdateVisitor : SqlVisitor
                 var tableSegment = this.tableAlias[parameterName];
                 tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
                 var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
+
+                if (memberMapper.IsIgnore)
+                    throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
+                if (memberMapper.MemberType.IsEntityType() && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
+                    throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
+
                 var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
                 if (this.isNeedAlias)
                     fieldName = tableSegment.AliasName + "." + fieldName;
@@ -554,9 +560,14 @@ class UpdateVisitor : SqlVisitor
         {
             var parameterName = ormProvider.ParameterPrefix + memberMapper.MemberName;
             this.dbParameters ??= new();
+            IDbDataParameter dbParameter = null;
             if (memberMapper.NativeDbType.HasValue)
-                this.dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, fieldValue));
-            else this.dbParameters.Add(ormProvider.CreateParameter(parameterName, fieldValue));
+                dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, fieldValue);
+            else dbParameter = this.ormProvider.CreateParameter(parameterName, fieldValue);
+
+            if (memberMapper.TypeHandler != null)
+                memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, fieldValue);
+            this.dbParameters.Add(dbParameter);
             return new SetField { MemberMapper = memberMapper, Value = parameterName };
         }
     }
@@ -575,9 +586,14 @@ class UpdateVisitor : SqlVisitor
                 if (!sqlSegment.IsParameter)
                 {
                     this.dbParameters ??= new();
+                    IDbDataParameter dbParameter = null;
                     if (memberMapper.NativeDbType.HasValue)
-                        this.dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, sqlSegment.Value));
-                    else this.dbParameters.Add(ormProvider.CreateParameter(parameterName, sqlSegment.Value));
+                        dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, sqlSegment.Value);
+                    else dbParameter = this.ormProvider.CreateParameter(parameterName, sqlSegment.Value);
+
+                    if (memberMapper.TypeHandler != null)
+                        memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, sqlSegment.Value);
+                    this.dbParameters.Add(dbParameter);
                 }
                 return new SetField { MemberMapper = memberMapper, Value = parameterName };
             }

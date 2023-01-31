@@ -21,17 +21,8 @@ public class NpgSqlProvider : BaseOrmProvider
 
     public override DatabaseType DatabaseType => DatabaseType.Postgresql;
     public override string SelectIdentitySql => " RETURNING {0}";
-    public NpgSqlProvider()
+    static NpgSqlProvider()
     {
-        var connectionType = Type.GetType("Npgsql.NpgsqlConnection, Npgsql, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7");
-        createNativeConnectonDelegate = base.CreateConnectionDelegate(connectionType);
-        var dbTypeType = Type.GetType("Npgsql.NpgsqlParameter, Npgsql, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7");
-        var dbParameterType = Type.GetType("Npgsql.NpgsqlParameter, Npgsql, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7");
-        var dbTypePropertyInfo = dbParameterType.GetProperty("NpgsqlDbType");
-        createDefaultNativeParameterDelegate = base.CreateDefaultParameterDelegate(dbParameterType);
-        createNativeParameterDelegate = base.CreateParameterDelegate(dbTypeType, dbParameterType, dbTypePropertyInfo);
-
-
         nativeDbTypes[typeof(bool)] = 2;
         nativeDbTypes[typeof(sbyte)] = 18;
         nativeDbTypes[typeof(byte)] = 18;
@@ -98,6 +89,16 @@ public class NpgSqlProvider : BaseOrmProvider
         castTos[typeof(decimal?)] = "DECIMAL";
         castTos[typeof(bool?)] = "BOOLEAN";
         castTos[typeof(DateTime?)] = "TIMESTAMP";
+    }
+    public NpgSqlProvider()
+    {
+        var connectionType = Type.GetType("Npgsql.NpgsqlConnection, Npgsql, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7");
+        createNativeConnectonDelegate = base.CreateConnectionDelegate(connectionType);
+        var dbTypeType = Type.GetType("Npgsql.NpgsqlParameter, Npgsql, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7");
+        var dbParameterType = Type.GetType("Npgsql.NpgsqlParameter, Npgsql, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7");
+        var dbTypePropertyInfo = dbParameterType.GetProperty("NpgsqlDbType");
+        createDefaultNativeParameterDelegate = base.CreateDefaultParameterDelegate(dbParameterType);
+        createNativeParameterDelegate = base.CreateParameterDelegate(dbTypeType, dbParameterType, dbTypePropertyInfo);
 
         memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetMember(nameof(string.Empty))[0], target => "''");
         memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetProperty(nameof(string.Length)), target => $"LENGTH({this.GetQuotedValue(target)})");
@@ -137,7 +138,6 @@ public class NpgSqlProvider : BaseOrmProvider
         memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalMinutes)), target => $"(({this.GetQuotedValue(target)})/{(long)1000000 * 60})");
         memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalSeconds)), target => $"(({this.GetQuotedValue(target)})/1000000)");
     }
-
     public override IDbConnection CreateConnection(string connectionString)
         => createNativeConnectonDelegate.Invoke(connectionString);
     public override IDbDataParameter CreateParameter(string parameterName, object value)

@@ -18,7 +18,8 @@ public class MySqlMethodCallUnitTest
             var ormProvider = f.GetService<IOrmProvider>();
             var builder = new OrmDbFactoryBuilder();
             builder.Register("fengling", true, f => f.Add<MySqlProvider>(connectionString, true))
-                .Configure(f => new ModelConfiguration().OnModelCreating(f));
+                .AddTypeHandler<JsonTypeHandler>()
+                .Configure(f => new MySqlModelConfiguration().OnModelCreating(f));
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
@@ -115,7 +116,7 @@ public class MySqlMethodCallUnitTest
                 BuyerId = 1,
                 SellerId = 2,
                 TotalAmount = 500,
-                //Products = new  List<int>{1, 2},
+                Products = new List<int>{1, 2},
                 IsEnabled = true,
                 CreatedAt = DateTime.Now,
                 CreatedBy = 1,
@@ -129,7 +130,7 @@ public class MySqlMethodCallUnitTest
                 BuyerId = 2,
                 SellerId = 1,
                 TotalAmount = 350,
-                //Products = new  List<int>{1, 3},
+                Products = new List<int>{1, 3},
                 IsEnabled = true,
                 CreatedAt = DateTime.Now,
                 CreatedBy = 1,
@@ -143,7 +144,7 @@ public class MySqlMethodCallUnitTest
                 BuyerId = 1,
                 SellerId = 2,
                 TotalAmount = 199,
-                //Products = new  List<int>{2},
+                Products = new List<int>{2},
                 IsEnabled = true,
                 CreatedAt = DateTime.Now,
                 CreatedBy = 1,
@@ -178,6 +179,7 @@ public class MySqlMethodCallUnitTest
             .ToSql(out _);
         Assert.True(sql == "SELECT CONCAT(LOWER(`OrderNo`),UPPER('_AbCd')) AS Col1,CONCAT(UPPER(`OrderNo`),LOWER('_AbCd')) AS Col2 FROM `sys_order`");
 
+        repository.BeginTransaction();
         repository.Delete<Order>(1);
         repository.Create<Order>(new Order
         {
@@ -186,13 +188,14 @@ public class MySqlMethodCallUnitTest
             BuyerId = 1,
             SellerId = 2,
             TotalAmount = 500,
-            //Products = new  List<int>{1, 2},
+            Products = new List<int> { 1, 2 },
             IsEnabled = true,
             CreatedAt = DateTime.Now,
             CreatedBy = 1,
             UpdatedAt = DateTime.Now,
             UpdatedBy = 1
         });
+        repository.Commit();
         var result = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { 1, 2, 3 }))
             .Select(f => new

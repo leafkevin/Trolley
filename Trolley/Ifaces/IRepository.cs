@@ -16,7 +16,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     #endregion
 
     #region Query
-    IQuery<T> From<T>(char tableStartAs = 'a');
+    IQuery<T> From<T>(char tableStartAs = 'a', string suffixRawSql = null);
     IQuery<T1, T2> From<T1, T2>(char tableStartAs = 'a');
     IQuery<T1, T2, T3> From<T1, T2, T3>(char tableStartAs = 'a');
     IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableStartAs = 'a');

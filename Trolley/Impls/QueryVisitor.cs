@@ -63,9 +63,11 @@ class QueryVisitor : SqlVisitor
                 if (!string.IsNullOrEmpty(tableSegment.JoinType))
                     builder.Append($"{tableSegment.JoinType} ");
                 builder.Append(tableName);
+
                 if (this.isNeedAlias)
                     builder.Append(" " + tableSegment.AliasName);
-
+                if (!string.IsNullOrEmpty(tableSegment.SuffixRawSql))
+                    builder.Append(" " + tableSegment.SuffixRawSql);
                 if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                     builder.Append($" ON {tableSegment.OnExpr}");
 
@@ -80,9 +82,10 @@ class QueryVisitor : SqlVisitor
         }
 
         builder.Clear();
+        if (!string.IsNullOrEmpty(this.whereSql))
+            builder.Append(this.whereSql);
         if (!string.IsNullOrEmpty(this.groupBySql))
             builder.Append($" GROUP BY {this.groupBySql}");
-
         if (!string.IsNullOrEmpty(this.havingSql))
             builder.Append($" HAVING {this.havingSql}");
 
@@ -100,14 +103,14 @@ class QueryVisitor : SqlVisitor
 
         if (this.skip.HasValue || this.limit.HasValue)
         {
-            //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ WHERE /**conditions**/");
+            //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.ormProvider.GetPagingTemplate(this.skip ?? 0, this.limit, orderBy);
             pageSql = pageSql.Replace("/**fields**/", this.selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
-            pageSql = pageSql.Replace("/**conditions**/", this.whereSql.TrimStart());
-            return $"SELECT COUNT(*) FROM {tableSql}{this.whereSql};{pageSql}{others}";
+            pageSql = pageSql.Replace(" /**others**/", others);
+            return $"SELECT COUNT(*) FROM {tableSql}{this.whereSql};{pageSql}";
         }
-        else return $"SELECT {this.selectSql} FROM {tableSql}{this.whereSql}{others}";
+        else return $"SELECT {this.selectSql} FROM {tableSql}{others}";
     }
     public string BuildSql(Expression defaultExpr, out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields)
     {
@@ -137,8 +140,11 @@ class QueryVisitor : SqlVisitor
                 if (!string.IsNullOrEmpty(tableSegment.JoinType))
                     builder.Append($"{tableSegment.JoinType} ");
                 builder.Append(tableName);
+
                 if (this.isNeedAlias)
                     builder.Append(" " + tableSegment.AliasName);
+                if (!string.IsNullOrEmpty(tableSegment.SuffixRawSql))
+                    builder.Append(" " + tableSegment.SuffixRawSql);
 
                 if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                     builder.Append($" ON {tableSegment.OnExpr}");
@@ -154,9 +160,10 @@ class QueryVisitor : SqlVisitor
         }
 
         builder.Clear();
+        if (!string.IsNullOrEmpty(this.whereSql))
+            builder.Append(this.whereSql);
         if (!string.IsNullOrEmpty(this.groupBySql))
             builder.Append($" GROUP BY {this.groupBySql}");
-
         if (!string.IsNullOrEmpty(this.havingSql))
             builder.Append($" HAVING {this.havingSql}");
 
@@ -174,14 +181,14 @@ class QueryVisitor : SqlVisitor
 
         if (this.skip.HasValue || this.limit.HasValue)
         {
-            //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ WHERE /**conditions**/");
+            //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.ormProvider.GetPagingTemplate(this.skip ?? 0, this.limit, orderBy);
             pageSql = pageSql.Replace("/**fields**/", this.selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
-            pageSql = pageSql.Replace("/**others**/", this.whereSql.TrimStart());
-            return $"SELECT COUNT(*) FROM {tableSql}{this.whereSql};{pageSql}{others}";
+            pageSql = pageSql.Replace(" /**others**/", others);
+            return $"SELECT COUNT(*) FROM {tableSql}{this.whereSql};{pageSql}";
         }
-        else return $"SELECT {this.selectSql} FROM {tableSql}{this.whereSql}{others}";
+        else return $"SELECT {this.selectSql} FROM {tableSql}{others}";
     }
     public bool BuildIncludeSql(object parameter, out string sql)
     {
@@ -225,7 +232,7 @@ class QueryVisitor : SqlVisitor
         {
             if (!includeSegment.IsUsed)
                 continue;
-            var sqlFetcher = BuildAddIncludeFetchSqlInitializer(isMulti, targetType, includeSegment);
+            var sqlFetcher = this.BuildAddIncludeFetchSqlInitializer(isMulti, targetType, includeSegment);
             if (isMulti)
             {
                 var fetchSqlInitializer = sqlFetcher as Action<object, IOrmProvider, int, StringBuilder>;
@@ -274,6 +281,21 @@ class QueryVisitor : SqlVisitor
     {
         this.tableStartAs = tableStartAs;
         this.From(entityTypes);
+        return this;
+    }
+    public QueryVisitor From(char tableStartAs, Type entityType, string suffixRawSql)
+    {
+        this.tableStartAs = tableStartAs;
+        int tableIndex = tableStartAs + this.tables.Count;
+        this.tables.Add(new TableSegment
+        {
+            EntityType = entityType,
+            Mapper = this.dbFactory.GetEntityMap(entityType),
+            AliasName = $"{(char)tableIndex}",
+            SuffixRawSql = suffixRawSql,
+            Path = $"{(char)tableIndex}",
+            IsMaster = true
+        });
         return this;
     }
     public QueryVisitor AddTable(TableSegment tableSegment)
@@ -632,8 +654,11 @@ class QueryVisitor : SqlVisitor
                     fromSegment.Mapper ??= this.dbFactory.GetEntityMap(fromSegment.EntityType);
 
                     var vavigationMapper = fromSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
-                    if (!vavigationMapper.IsNavigation)
-                        throw new Exception($"类{tableSegment.EntityType.FullName}属性{memberExpr.Member.Name}未配置为导航属性");
+                    if (vavigationMapper.IsIgnore)
+                        throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}是忽略成员无法访问");
+
+                    if (!vavigationMapper.IsNavigation && vavigationMapper.TypeHandler == null)
+                        throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
 
                     path = memberExpr.ToString();
                     tableSegment = this.FindTableSegment(parameterName, path);
@@ -671,6 +696,10 @@ class QueryVisitor : SqlVisitor
 
                     tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
                     var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
+
+                    if (memberMapper.IsIgnore)
+                        throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
+
                     var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
 
                     //有联表时采用别名，如果当前类是IncludeMany的导航类时，没有别名
@@ -777,8 +806,10 @@ class QueryVisitor : SqlVisitor
                 int fieldCount = 0;
                 foreach (var memberMapper in readerField.TableSegment.Mapper.MemberMaps)
                 {
-                    if (memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.MemberType.IsEntityType())
+                    if (memberMapper.IsIgnore || memberMapper.IsNavigation
+                        || (memberMapper.MemberType.IsEntityType() && memberMapper.TypeHandler == null))
                         continue;
+
                     if (builder.Length > 0)
                         builder.Append(',');
                     if (this.isNeedAlias)
@@ -966,15 +997,17 @@ class QueryVisitor : SqlVisitor
     {
         var targetType = includeSegment.Mapper.EntityType;
         var foreignKey = includeSegment.FromMember.ForeignKey;
-        var cacheKey = HashCode.Combine(targetType, foreignKey);
+        var cacheKey = HashCode.Combine(this.connection, targetType, foreignKey);
         if (!sqlCache.TryGetValue(cacheKey, out var sql))
         {
             int index = 0;
             var builder = new StringBuilder("SELECT ");
             foreach (var memberMapper in includeSegment.Mapper.MemberMaps)
             {
-                if (memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.MemberType.IsEntityType())
+                if (memberMapper.IsIgnore || memberMapper.IsNavigation
+                    || (memberMapper.MemberType.IsEntityType() && memberMapper.TypeHandler == null))
                     continue;
+
                 if (index > 0) builder.Append(',');
                 builder.Append(this.ormProvider.GetFieldName(memberMapper.FieldName));
                 if (memberMapper.MemberName != memberMapper.FieldName)
@@ -992,7 +1025,7 @@ class QueryVisitor : SqlVisitor
         var fromType = includeSegment.FromTable.EntityType;
         includeSegment.FromTable.Mapper ??= this.dbFactory.GetEntityMap(fromType);
         var keyMember = includeSegment.FromTable.Mapper.KeyMembers[0];
-        var cacheKey = HashCode.Combine(targetType, fromType, keyMember.MemberName, isMulti);
+        var cacheKey = HashCode.Combine(this.connection, targetType, fromType, keyMember.MemberName, isMulti);
         if (!getterCache.TryGetValue(cacheKey, out var fetchSqlInitializer))
         {
             var readerField = this.readerFields.Find(f => f.TableSegment == includeSegment.FromTable);
@@ -1279,6 +1312,7 @@ class QueryVisitor : SqlVisitor
     private int GetIncludeSetterKey(Type targetType, List<TableSegment> includeSegments, bool isMulti)
     {
         var hashCode = new HashCode();
+        hashCode.Add(this.connection);
         hashCode.Add(targetType);
         hashCode.Add(includeSegments.Count);
         foreach (var includeSegment in includeSegments)

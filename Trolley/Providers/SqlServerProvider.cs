@@ -20,16 +20,8 @@ public class SqlServerProvider : BaseOrmProvider
 
     public override DatabaseType DatabaseType => DatabaseType.SqlServer;
     public override string SelectIdentitySql => ";SELECT SCOPE_IDENTITY()";
-    public SqlServerProvider()
+    static SqlServerProvider()
     {
-        var connectionType = Type.GetType("Microsoft.Data.SqlClient.SqlConnection, Microsoft.Data.SqlClient, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5");
-        createNativeConnectonDelegate = base.CreateConnectionDelegate(connectionType);
-        var dbTypeType = Type.GetType("System.Data.SqlDbType, System.Data.Common, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a");
-        var dbParameterType = Type.GetType("Microsoft.Data.SqlClient.SqlParameter, Microsoft.Data.SqlClient, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5");
-        var dbTypePropertyInfo = dbParameterType.GetProperty("SqlDbType");
-        createDefaultNativeParameterDelegate = base.CreateDefaultParameterDelegate(dbParameterType);
-        createNativeParameterDelegate = base.CreateParameterDelegate(dbTypeType, dbParameterType, dbTypePropertyInfo);
-
         nativeDbTypes[typeof(bool)] = 2;
         nativeDbTypes[typeof(sbyte)] = 20;
         nativeDbTypes[typeof(short)] = 16;
@@ -100,7 +92,16 @@ public class SqlServerProvider : BaseOrmProvider
         castTos[typeof(DateTime?)] = "DATETIME";
         castTos[typeof(TimeSpan?)] = "TIME";
         castTos[typeof(Guid?)] = "UNIQUEIDENTIFIER";
-
+    }
+    public SqlServerProvider()
+    {
+        var connectionType = Type.GetType("Microsoft.Data.SqlClient.SqlConnection, Microsoft.Data.SqlClient, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5");
+        createNativeConnectonDelegate = base.CreateConnectionDelegate(connectionType);
+        var dbTypeType = Type.GetType("System.Data.SqlDbType, System.Data.Common, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a");
+        var dbParameterType = Type.GetType("Microsoft.Data.SqlClient.SqlParameter, Microsoft.Data.SqlClient, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5");
+        var dbTypePropertyInfo = dbParameterType.GetProperty("SqlDbType");
+        createDefaultNativeParameterDelegate = base.CreateDefaultParameterDelegate(dbParameterType);
+        createNativeParameterDelegate = base.CreateParameterDelegate(dbTypeType, dbParameterType, dbTypePropertyInfo);
 
         memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetMember(nameof(string.Empty))[0], target => "''");
         memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetProperty(nameof(string.Length)), target => $"LEN({this.GetQuotedValue(target)})");
@@ -151,7 +152,7 @@ public class SqlServerProvider : BaseOrmProvider
     public override string GetPagingTemplate(int skip, int? limit, string orderBy = null)
     {
         if (string.IsNullOrEmpty(orderBy)) throw new ArgumentNullException("orderBy");
-        var builder = new StringBuilder("SELECT /**fields**/ FROM /**tables**/ WHERE /**conditions**/");
+        var builder = new StringBuilder("SELECT /**fields**/ FROM /**tables**/ /**others**/");
         if (!String.IsNullOrEmpty(orderBy)) builder.Append($" {orderBy}");
         builder.Append($" OFFSET {skip} ROWS");
         if (limit.HasValue) builder.AppendFormat($" FETCH NEXT {limit} ROWS ONLY", limit);

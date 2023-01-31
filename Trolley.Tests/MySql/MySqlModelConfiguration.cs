@@ -1,6 +1,6 @@
 ﻿namespace Trolley.Tests;
 
-class ModelConfiguration : IModelConfiguration
+class MySqlModelConfiguration : IModelConfiguration
 {
     public void OnModelCreating(ModelBuilder builder)
     {
@@ -22,7 +22,7 @@ class ModelConfiguration : IModelConfiguration
         {
             f.ToTable("sys_order").Key(t => t.Id);
             //特殊类型JSON
-            //f.Member(t => t.Products).NativeDbType(245);
+            f.Member(t => t.Products).NativeDbType(245).SetTypeHandler<JsonTypeHandler>();
             f.HasOne(t => t.Buyer).HasForeignKey(t => t.BuyerId);
             f.HasOne(t => t.Seller).HasForeignKey(t => t.SellerId).MapTo<User>();
             f.HasMany(t => t.Details).HasForeignKey(t => t.OrderId);

@@ -20,17 +20,8 @@ public class MySqlProvider : BaseOrmProvider
 
     public override DatabaseType DatabaseType => DatabaseType.MySql;
     public override string SelectIdentitySql => " RETURNING {0}";
-
-    public MySqlProvider()
+    static MySqlProvider()
     {
-        var connectionType = Type.GetType("MySqlConnector.MySqlConnection, MySqlConnector, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d33d3e53aa5f8c92");
-        createNativeConnectonDelegate = base.CreateConnectionDelegate(connectionType);
-        var dbTypeType = Type.GetType("MySqlConnector.MySqlDbType, MySqlConnector, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d33d3e53aa5f8c92");
-        var dbParameterType = Type.GetType("MySqlConnector.MySqlParameter, MySqlConnector, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d33d3e53aa5f8c92");
-        var dbTypePropertyInfo = dbParameterType.GetProperty("MySqlDbType");
-        createDefaultNativeParameterDelegate = base.CreateDefaultParameterDelegate(dbParameterType);
-        createNativeParameterDelegate = base.CreateParameterDelegate(dbTypeType, dbParameterType, dbTypePropertyInfo);
-
         nativeDbTypes[typeof(bool)] = -1;
         nativeDbTypes[typeof(sbyte)] = 1;
         nativeDbTypes[typeof(short)] = 2;
@@ -91,6 +82,16 @@ public class MySqlProvider : BaseOrmProvider
         castTos[typeof(ulong?)] = "UNSIGNED";
         castTos[typeof(decimal?)] = "DECIMAL(36,18)";
         castTos[typeof(DateTime?)] = "DATETIME";
+    }
+    public MySqlProvider()
+    {
+        var connectionType = Type.GetType("MySqlConnector.MySqlConnection, MySqlConnector, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d33d3e53aa5f8c92");
+        createNativeConnectonDelegate = base.CreateConnectionDelegate(connectionType);
+        var dbTypeType = Type.GetType("MySqlConnector.MySqlDbType, MySqlConnector, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d33d3e53aa5f8c92");
+        var dbParameterType = Type.GetType("MySqlConnector.MySqlParameter, MySqlConnector, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d33d3e53aa5f8c92");
+        var dbTypePropertyInfo = dbParameterType.GetProperty("MySqlDbType");
+        createDefaultNativeParameterDelegate = base.CreateDefaultParameterDelegate(dbParameterType);
+        createNativeParameterDelegate = base.CreateParameterDelegate(dbTypeType, dbParameterType, dbTypePropertyInfo);
 
         memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetMember(nameof(string.Empty))[0], target => "''");
         memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetProperty(nameof(string.Length)), target => $"CHAR_LENGTH({this.GetQuotedValue(target)})");

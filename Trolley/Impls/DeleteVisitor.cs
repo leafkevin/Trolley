@@ -93,8 +93,13 @@ class DeleteVisitor : SqlVisitor
                 //OrderBy(f=>new {f.Order.OrderId, ...})
                 //OrderBy(f=>f.Order.OrderId)                
                 var memberMapper = this.tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
-                var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
 
+                if (memberMapper.IsIgnore)
+                    throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
+                if (memberMapper.MemberType.IsEntityType() && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
+                    throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
+
+                var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
                 sqlSegment.HasField = true;
                 sqlSegment.IsConstantValue = false;
                 sqlSegment.TableSegment = tableSegment;
@@ -172,9 +177,14 @@ class DeleteVisitor : SqlVisitor
                 if (!sqlSegment.IsParameter)
                 {
                     this.dbParameters ??= new();
+                    IDbDataParameter dbParameter = null;
                     if (memberMapper.NativeDbType.HasValue)
-                        this.dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, sqlSegment.Value));
-                    else this.dbParameters.Add(ormProvider.CreateParameter(parameterName, sqlSegment.Value));
+                        dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, sqlSegment.Value);
+                    else dbParameter = this.ormProvider.CreateParameter(parameterName, sqlSegment.Value);
+
+                    if (memberMapper.TypeHandler != null)
+                        memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, sqlSegment.Value);
+                    this.dbParameters.Add(dbParameter);
                     sqlSegment.IsParameter = true;
                     sqlSegment.IsConstantValue = false;
                 }

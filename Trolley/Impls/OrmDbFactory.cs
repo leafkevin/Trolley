@@ -9,6 +9,7 @@ class OrmDbFactory : IOrmDbFactory
     private readonly ConcurrentDictionary<Type, IOrmProvider> ormProviders = new();
     private readonly ConcurrentDictionary<string, TheaDatabase> databases = new();
     private readonly ConcurrentDictionary<Type, EntityMap> entityMappers = new();
+    private readonly ConcurrentDictionary<Type, ITypeHandler> typeHandlers = new();
     private TheaDatabase defaultDatabase;
 
     public TheaDatabase Register(string dbKey, bool isDefault, Action<TheaDatabaseBuilder> databaseInitializer)
@@ -34,6 +35,13 @@ class OrmDbFactory : IOrmDbFactory
 
         this.ormProviders.TryAdd(ormProvider.GetType(), ormProvider);
     }
+    public void AddTypeHandler(ITypeHandler typeHandler)
+    {
+        if (typeHandler == null)
+            throw new ArgumentNullException(nameof(typeHandler));
+
+        this.typeHandlers.TryAdd(typeHandler.GetType(), typeHandler);
+    }
     public void AddEntityMap(Type entityType, EntityMap mapper)
     {
         if (entityType == null)
@@ -49,6 +57,13 @@ class OrmDbFactory : IOrmDbFactory
             throw new ArgumentNullException(nameof(entityType));
 
         return this.entityMappers.TryGetValue(entityType, out mapper);
+    }
+    public bool TryGetTypeHandler(Type handlerType, out ITypeHandler typeHandler)
+    {
+        if (handlerType == null)
+            throw new ArgumentNullException(nameof(handlerType));
+
+        return this.typeHandlers.TryGetValue(handlerType, out typeHandler);
     }
 
     public IRepository Create(TheaConnection connection) => new Repository(this, connection);

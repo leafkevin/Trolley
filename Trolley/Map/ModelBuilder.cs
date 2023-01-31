@@ -15,7 +15,7 @@ public class ModelBuilder
             throw new ArgumentNullException(nameof(initializer));
 
         var mapper = new EntityMap(entityType);
-        var builder = new EntityBuilder<TEntity>(mapper);
+        var builder = new EntityBuilder<TEntity>(this.dbFactory, mapper);
         initializer.Invoke(builder);
         this.dbFactory.AddEntityMap(entityType, builder.Build());
         return this;

@@ -109,4 +109,5 @@ public abstract class BaseOrmProvider : IOrmProvider
        };
     public abstract bool TryGetMemberAccessSqlFormatter(SqlSegment originalSegment, MemberInfo memberInfo, out MemberAccessSqlFormatter formatter);
     public abstract bool TryGetMethodCallSqlFormatter(SqlSegment originalSegment, MethodInfo methodInfo, out MethodCallSqlFormatter formatter);
+    public override int GetHashCode() => HashCode.Combine(this.DatabaseType);
 }

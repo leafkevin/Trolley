@@ -11,6 +11,16 @@ public class OrmDbFactoryBuilder
         this.dbFactory.Register(dbKey, isDefault, databaseInitializer);
         return this;
     }
+    public OrmDbFactoryBuilder AddTypeHandler(ITypeHandler typeHandler)
+    {
+        this.dbFactory.AddTypeHandler(typeHandler);
+        return this;
+    }
+    public OrmDbFactoryBuilder AddTypeHandler<TTypeHandler>() where TTypeHandler : class, ITypeHandler, new()
+    {
+        this.dbFactory.AddTypeHandler<TTypeHandler>();
+        return this;
+    }
     public OrmDbFactoryBuilder Configure(IModelConfiguration configuration)
     {
         this.dbFactory.Configure(f => configuration.OnModelCreating(f));

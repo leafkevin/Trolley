@@ -92,9 +92,9 @@ public class EntityMap
                 var memberMapper = new MemberMap(this, this.FieldPrefix, memberInfo);
                 this.AddMemberMap(memberInfo.Name, memberMapper);
 
-                //检查导航属性配置，在Build的时候，就把错误暴漏出来
-                if (memberMapper.MemberType.IsEntityType() && !memberMapper.IsNavigation)
-                    throw new Exception($"模型{this.EntityType.FullName}的成员{memberInfo.Name}未配置为导航属性！");
+                //检查导航属性和TypeHandler配置，在Build的时候，就把错误暴漏出来
+                if (memberMapper.MemberType.IsEntityType() && (!memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler == null))
+                    throw new Exception($"类{this.EntityType.FullName}的成员{memberInfo.Name}不是值类型，未配置为导航属性也没有配置TypeHandler，也不是忽略成员");
             }
         }
         if (this.memberMaps.Count > 0)

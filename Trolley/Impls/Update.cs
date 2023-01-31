@@ -318,7 +318,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         bool isFixSetSql = false;
         var ormProvider = this.connection.OrmProvider;
         using var command = this.connection.CreateCommand();
-
+        command.Transaction = this.transaction;
         if (this.setFields != null)
         {
             var builder = new StringBuilder();
@@ -396,7 +396,6 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
 
             command.CommandText = sql;
             command.CommandType = CommandType.Text;
-            command.Transaction = this.transaction;
             this.connection.Open();
             var result = command.ExecuteNonQuery();
             command.Dispose();
@@ -430,7 +429,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         bool isFixSetSql = false;
         var ormProvider = this.connection.OrmProvider;
         using var cmd = this.connection.CreateCommand();
-
+        cmd.Transaction = this.transaction;
         if (this.setFields != null)
         {
             var builder = new StringBuilder();
@@ -511,7 +510,6 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
 
             cmd.CommandText = sql;
             cmd.CommandType = CommandType.Text;
-            cmd.Transaction = this.transaction;
             if (cmd is not DbCommand command)
                 throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
@@ -628,7 +626,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         ConcurrentDictionary<int, object> commandInitializerCache = null;
         if (this.setFields == null)
         {
-            cacheKey = HashCode.Combine("UpdateBatch", connection.OrmProvider, entityType, parameterType);
+            cacheKey = HashCode.Combine("UpdateBatch", this.connection, entityType, parameterType);
             commandInitializerCache = objCommandInitializerCache;
         }
         else
@@ -652,6 +650,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             var parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
+            var localParameters = new Dictionary<Type, ParameterExpression>();
             blockParameters.Add(typedParameterExpr);
             blockParameters.Add(parameterNameExpr);
             blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
@@ -666,7 +665,8 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
                 if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper)
-                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
+                    || propMapper.IsIgnore || propMapper.IsNavigation
+                    || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
                     continue;
 
                 if (this.setFields != null)
@@ -691,7 +691,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant(ormProvider.GetFieldName(propMapper.FieldName) + "=")));
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, null, parameterMemberMapper.MemberName, propMapper.NativeDbType, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.IsNullable, parameterMemberMapper.NativeDbType, propMapper, localParameters, blockParameters, blockBodies);
                 columnIndex++;
             }
             columnIndex = 0;
@@ -712,7 +712,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 blockBodies.Add(Expression.Assign(parameterNameExpr, concatExpr));
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, null, parameterMemberMapper.MemberName, keyMapper.NativeDbType, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, false, keyMapper.NativeDbType, keyMapper, localParameters, blockParameters, blockBodies);
                 columnIndex++;
             }
             commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, StringBuilder, int, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, builderExpr, indexExpr, parameterExpr).Compile();
@@ -726,7 +726,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         ConcurrentDictionary<int, object> commandInitializerCache = null;
         if (this.setFields == null)
         {
-            cacheKey = HashCode.Combine("Update", connection.OrmProvider, entityType, parameterType);
+            cacheKey = HashCode.Combine("Update", this.connection, entityType, parameterType);
             commandInitializerCache = objCommandInitializerCache;
         }
         else
@@ -747,6 +747,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
+            var localParameters = new Dictionary<Type, ParameterExpression>();
             blockParameters.Add(typedParameterExpr);
             blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
 
@@ -760,7 +761,8 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
                 if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper)
-                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
+                    || propMapper.IsIgnore || propMapper.IsNavigation
+                    || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
                     continue;
 
                 if (this.setFields != null)
@@ -779,7 +781,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
                 sqlBuilder.Append($"{ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, null, parameterMemberMapper.MemberName, propMapper.NativeDbType, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.IsNullable, parameterMemberMapper.NativeDbType, propMapper, localParameters, blockParameters, blockBodies);
                 columnIndex++;
             }
             columnIndex = 0;
@@ -794,7 +796,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 var parameterName = ormProvider.ParameterPrefix + "k" + keyMapper.MemberName;
                 sqlBuilder.Append($"{ormProvider.GetFieldName(keyMapper.FieldName)}={parameterName}");
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, null, parameterMemberMapper.MemberName, keyMapper.NativeDbType, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, false, keyMapper.NativeDbType, keyMapper, localParameters, blockParameters, blockBodies);
                 columnIndex++;
             }
             var resultLabelExpr = Expression.Label(typeof(string));
@@ -821,7 +823,8 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             foreach (var item in dict)
             {
                 if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper)
-                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
+                    || propMapper.IsIgnore || propMapper.IsNavigation
+                    || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
                     continue;
 
                 if (setFields != null)
@@ -880,7 +883,8 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             foreach (var item in dict)
             {
                 if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper)
-                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.MemberType.IsEntityType())
+                    || propMapper.IsIgnore || propMapper.IsNavigation
+                    || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
                     continue;
 
                 if (setFields != null)

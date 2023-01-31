@@ -16,7 +16,6 @@ public class MemberMap
     public bool IsKey { get; set; }
     public bool IsAutoIncrement { get; set; }
     public string FieldName { get; set; }
-    //public DbType DbType { get; set; }
     public int? NativeDbType { get; set; }
     public bool IsIgnore { get; set; }
 
@@ -34,6 +33,8 @@ public class MemberMap
     /// 外键成员，是类属性
     /// </summary>
     public string ForeignKey { get; set; }
+
+    public ITypeHandler TypeHandler { get; set; }
 
     public MemberMap(EntityMap parent, string fieldPrefix, MemberInfo memberInfo)
     {
@@ -95,6 +96,7 @@ public class MemberMap
         result.IsEnum = result.UnderlyingType.IsEnum;
         if (result.IsEnum)
             result.EnumUnderlyingType = result.UnderlyingType.GetEnumUnderlyingType();
+        result.TypeHandler = this.TypeHandler;
         return result;
     }
 }

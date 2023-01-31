@@ -133,6 +133,12 @@ class CreateVisitor : SqlVisitor
                 var tableSegment = this.tableAlias[parameterName];
                 tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
                 var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
+
+                if (memberMapper.IsIgnore)
+                    throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
+                if (memberMapper.MemberType.IsEntityType() && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
+                    throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
+
                 var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
                 //都需要带有别名
                 fieldName = tableSegment.AliasName + "." + fieldName;
@@ -233,9 +239,14 @@ class CreateVisitor : SqlVisitor
                 if (!sqlSegment.IsParameter)
                 {
                     this.dbParameters ??= new();
+                    IDbDataParameter dbParameter = null;
                     if (memberMapper.NativeDbType.HasValue)
-                        this.dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, sqlSegment.Value));
-                    else this.dbParameters.Add(ormProvider.CreateParameter(parameterName, sqlSegment.Value));
+                        dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, sqlSegment.Value);
+                    else dbParameter = this.ormProvider.CreateParameter(parameterName, sqlSegment.Value);
+
+                    if (memberMapper.TypeHandler != null)
+                        memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, sqlSegment.Value);
+                    this.dbParameters.Add(dbParameter);
                     sqlSegment.IsParameter = true;
                     sqlSegment.IsConstantValue = false;
                 }

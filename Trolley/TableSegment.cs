@@ -14,12 +14,16 @@ public class TableSegment
     /// <summary>
     /// 父亲实体中的成员访问，如：Order中的Details
     /// </summary>
-    public MemberMap FromMember { get; set; }    
+    public MemberMap FromMember { get; set; }
     /// <summary>
     /// 当前表Mapper，如：OrderDetail
     /// </summary>
     public EntityMap Mapper { get; set; }
     public string Body { get; set; }
+    /// <summary>
+    /// SqlServer在表名后，会接一个后缀字符串，如：select * from A WITH (UPDLOCK)
+    /// </summary>
+    public string SuffixRawSql { get; set; }
     public bool IsInclude { get; set; }
     public bool IsMaster { get; set; }
     public string Path { get; set; }

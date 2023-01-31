@@ -7,7 +7,6 @@ using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -216,7 +215,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
     }
     private Action<IDbCommand, IOrmProvider, StringBuilder, int, object> BuildBatchCommandInitializer(Type entityType, Type parameterType)
     {
-        var cacheKey = HashCode.Combine("DeleteBatch", connection.OrmProvider, string.Empty, entityType, parameterType);
+        var cacheKey = HashCode.Combine("DeleteBatch", this.connection, string.Empty, entityType, parameterType);
         if (!commandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
         {
             var entityMapper = this.dbFactory.GetEntityMap(entityType);
@@ -230,6 +229,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
 
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
+            var localParameters = new Dictionary<Type, ParameterExpression>();
             ParameterExpression typedParameterExpr = null;
             var parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
             bool isEntityType = false;
@@ -274,8 +274,8 @@ class Deleted<TEntity> : IDeleted<TEntity>
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
                 if (isEntityType)
-                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, null, keyMapper.MemberName, keyMapper.NativeDbType, blockBodies);
-                else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, null, keyMapper.NativeDbType, blockBodies);
+                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, false, keyMapper.NativeDbType, keyMapper, localParameters, blockParameters, blockBodies);
+                else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, keyMapper.NativeDbType, blockBodies);
             }
             commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, StringBuilder, int, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, builderExpr, indexExpr, parameterExpr).Compile();
             commandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
@@ -325,7 +325,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
     }
     private Func<IDbCommand, IOrmProvider, object, string> BuildCommandInitializer(Type entityType, Type parameterType)
     {
-        var cacheKey = HashCode.Combine("Delete", connection.OrmProvider, string.Empty, entityType, parameterType);
+        var cacheKey = HashCode.Combine("Delete", this.connection, string.Empty, entityType, parameterType);
         if (!commandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
         {
             int index = 0;
@@ -337,6 +337,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
+            var localParameters = new Dictionary<Type, ParameterExpression>();
 
             EntityMap parameterMapper = null;
             ParameterExpression typedParameterExpr = null;
@@ -372,8 +373,8 @@ class Deleted<TEntity> : IDeleted<TEntity>
                 var parameterNameExpr = Expression.Constant(parameterName);
 
                 if (isEntityType)
-                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, null, keyMapper.MemberName, keyMapper.NativeDbType, blockBodies);
-                else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, null, keyMapper.NativeDbType, blockBodies);
+                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, false, keyMapper.NativeDbType, keyMapper, localParameters, blockParameters, blockBodies);
+                else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, keyMapper.NativeDbType, blockBodies);
                 index++;
             }
             var resultLabelExpr = Expression.Label(typeof(string));

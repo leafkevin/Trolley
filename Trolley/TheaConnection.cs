@@ -8,7 +8,7 @@ namespace Trolley;
 
 public sealed class TheaConnection : IDbConnection
 {
-    private IDbConnection baseConnection;
+    private readonly IDbConnection baseConnection;
     public string DbKey { get; set; }
     public string ConnectionString { get; set; }
     public IOrmProvider OrmProvider { get; private set; }
@@ -46,7 +46,7 @@ public sealed class TheaConnection : IDbConnection
         else throw new Exception("当前数据库驱动不支持异步操作");
     }
     public void ChangeDatabase(string databaseName) => this.baseConnection.ChangeDatabase(databaseName);
-    public void Close() => this.baseConnection.Close();
+    public void Close() => this.Dispose();
     public IDbCommand CreateCommand()
     {
         var command = this.baseConnection.CreateCommand();
@@ -71,12 +71,7 @@ public sealed class TheaConnection : IDbConnection
         }
         else throw new Exception("当前数据库驱动不支持异步操作");
     }
-    public async Task CloseAsync()
-    {
-        if (this.baseConnection is DbConnection connection)
-            await connection.CloseAsync();
-        else throw new Exception("当前数据库驱动不支持异步操作");
-    }
+    public async Task CloseAsync() => await this.DisposeAsync();
     public void Dispose() => this.baseConnection.Dispose();
     public async Task DisposeAsync()
     {
@@ -84,5 +79,5 @@ public sealed class TheaConnection : IDbConnection
             await connection.DisposeAsync();
         else throw new Exception("当前数据库驱动不支持异步操作");
     }
-    public override int GetHashCode() => HashCode.Combine(this.ConnectionString);
+    public override int GetHashCode() => HashCode.Combine(this.ConnectionString, this.OrmProvider);
 }

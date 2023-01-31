@@ -17,7 +17,8 @@ public class SqlServerUnitTest4
             var ormProvider = f.GetService<IOrmProvider>();
             var builder = new OrmDbFactoryBuilder();
             builder.Register("fengling", true, f => f.Add<SqlServerProvider>(connectionString, true))
-                .Configure(f => new ModelConfiguration().OnModelCreating(f));
+                .AddTypeHandler<JsonTypeHandler>()
+                .Configure(f => new SqlServerModelConfiguration().OnModelCreating(f));
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
@@ -27,6 +28,7 @@ public class SqlServerUnitTest4
     public async void Delete()
     {
         using var repository = this.dbFactory.Create();
+        repository.BeginTransaction();
         repository.Delete<User>(f => f.Id == 1);
         var count = repository.Create<User>(new User
         {
@@ -43,12 +45,14 @@ public class SqlServerUnitTest4
         });
         Assert.Equal(1, count);
         count = await repository.DeleteAsync<User>(f => f.Id == 1);
+        repository.Commit();
         Assert.Equal(1, count);
     }
     [Fact]
     public async void Delete_Multi()
     {
         using var repository = this.dbFactory.Create();
+        repository.BeginTransaction();
         repository.Delete<User>(new[] { new { Id = 1 }, new { Id = 2 } });
         var count = repository.Create<User>(new[]
         {
@@ -81,12 +85,14 @@ public class SqlServerUnitTest4
         });
         Assert.Equal(2, count);
         count = await repository.DeleteAsync<User>(new[] { new { Id = 1 }, new { Id = 2 } });
+        repository.Commit();
         Assert.Equal(2, count);
     }
     [Fact]
     public async void Delete_Multi1()
     {
         using var repository = this.dbFactory.Create();
+        repository.BeginTransaction();
         repository.Delete<User>(new[] { 1, 2 });
         var count = repository.Create<User>(new[]
         {
@@ -119,12 +125,14 @@ public class SqlServerUnitTest4
         });
         Assert.Equal(2, count);
         count = await repository.DeleteAsync<User>(new int[] { 1, 2 });
+        repository.Commit();
         Assert.Equal(2, count);
     }
     [Fact]
     public async void Delete_Multi_Where()
     {
         using var repository = this.dbFactory.Create();
+        repository.BeginTransaction();
         repository.Delete<User>(f => new int[] { 1, 2 }.Contains(f.Id));
         var count = repository.Create<User>(new[]
         {
@@ -157,6 +165,7 @@ public class SqlServerUnitTest4
         });
         Assert.Equal(2, count);
         count = await repository.DeleteAsync<User>(f => new int[] { 1, 2 }.Contains(f.Id));
+        repository.Commit();
         Assert.Equal(2, count);
     }
     [Fact]

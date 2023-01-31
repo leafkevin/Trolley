@@ -1,20 +1,26 @@
 ﻿using System;
 using System.Data;
+using System.Text.Json;
 
 namespace Trolley;
 
 public class JsonTypeHandler : ITypeHandler
 {
-    public void SetValue(IOrmProvider ormProvider, int nativeDbType, object value, out IDbDataParameter parameter)
+    public virtual void SetValue(IOrmProvider ormProvider, IDbDataParameter parameter, object value)
     {
-        throw new NotImplementedException();
+        if (value == null)
+            parameter.Value = DBNull.Value;
+        else parameter.Value = JsonSerializer.Serialize(value);
     }
-    public void SetValue(IOrmProvider ormProvider, int nativeDbType, object value, out string sqlValue)
+    public virtual void SetValue(IOrmProvider ormProvider, object value, out string sqlValue)
     {
-        throw new NotImplementedException();
+        if (value == null)
+            sqlValue = "NULL";
+        else sqlValue = JsonSerializer.Serialize(value);
     }
-    public object Parse(IOrmProvider ormProvider, int nativeDbType, Type TargetType, object value)
+    public virtual object Parse(IOrmProvider ormProvider, Type TargetType, object value)
     {
-        throw new NotImplementedException();
+        if (value is DBNull) return null;
+        return JsonSerializer.Deserialize(value as string, TargetType);
     }
 }
