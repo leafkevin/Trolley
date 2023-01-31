@@ -471,4 +471,3 @@ class Deleting<TEntity> : IDeleting<TEntity>
     }
     public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
 }
-

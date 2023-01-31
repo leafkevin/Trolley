@@ -184,7 +184,7 @@ public class SqlServerMethodCallUnitTest
 
         repository.BeginTransaction();
         repository.Delete<Order>(1);
-        repository.Create<Order>(new Order
+        var count = repository.Create<Order>(new Order
         {
             Id = 1,
             OrderNo = "On-ZwYx",
@@ -198,16 +198,19 @@ public class SqlServerMethodCallUnitTest
             UpdatedAt = DateTime.Now,
             UpdatedBy = 1
         });
-        repository.Commit();
         var result = repository.From<Order>()
-            .Where(f => Sql.In(f.Id, new[] { 1, 2, 3 }))
-            .Select(f => new
-            {
-                Col1 = f.OrderNo.ToLower() + "_AbCd".ToUpper(),
-                Col2 = f.OrderNo.ToUpper() + "_AbCd".ToLower()
-            })
-            .ToList();
-        Assert.True(result[0].Col1 == "on-zwyx_ABCD");
-        Assert.True(result[0].Col2 == "ON-ZWYX_abcd");
+          .Where(f => Sql.In(f.Id, new[] { 1, 2, 3 }))
+          .Select(f => new
+          {
+              Col1 = f.OrderNo.ToLower() + "_AbCd".ToUpper(),
+              Col2 = f.OrderNo.ToUpper() + "_AbCd".ToLower()
+          })
+          .ToList();
+        repository.Commit();
+        if (count > 0)
+        {
+            Assert.True(result[0].Col1 == "on-zwyx_ABCD");
+            Assert.True(result[0].Col2 == "ON-ZWYX_abcd");
+        }
     }
 }

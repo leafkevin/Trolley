@@ -39,6 +39,8 @@ public static class TrolleyExtensions
     }
     public static void AddTypeHandler<TTypeHandler>(this IOrmDbFactory dbFactory) where TTypeHandler : class, ITypeHandler, new()
         => dbFactory.AddTypeHandler(new TTypeHandler());
+    public static T Parse<T>(this ITypeHandler typeHandler, IOrmProvider ormProvider, object value)
+        => (T)typeHandler.Parse(ormProvider, typeof(T), value);
 
 
     public static TEntity QueryFirst<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate = null)
@@ -90,8 +92,7 @@ public static class TrolleyExtensions
 
 
 
-    public static T Parse<T>(this ITypeHandler typeHandler, IOrmProvider ormProvider, object value)
-        => (T)typeHandler.Parse(ormProvider, typeof(T), value);
+
 
     public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
     {
