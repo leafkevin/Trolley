@@ -7,7 +7,6 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -28,6 +27,22 @@ public static class TrolleyExtensions
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
 
 
+    public static IOrmProvider GetOrmProvider(this IOrmDbFactory dbFactory, string dbKey, int? tenantId = null)
+    {
+        var dbProvider = dbFactory.GetDatabaseProvider(dbKey);
+        var database = dbProvider.GetDatabase(tenantId);
+        if (dbFactory.TryGetOrmProvider(database.OrmProviderType, out var ormProvider))
+            return ormProvider;
+        return null;
+    }
+    public static IEntityMapProvider GetEntityMapProvider(this IOrmDbFactory dbFactory, string dbKey, int? tenantId = null)
+    {
+        var dbProvider = dbFactory.GetDatabaseProvider(dbKey);
+        var database = dbProvider.GetDatabase(tenantId);
+        if (dbProvider.TryGetEntityMapProvider(database.OrmProviderType, out var entityMapProvider))
+            return entityMapProvider;
+        return null;
+    }
     public static TenantDatabaseBuilder Add<TOrmProvider>(this TheaDatabaseBuilder builder, string connectionString, bool isDefault) where TOrmProvider : IOrmProvider, new()
     {
         return builder.Add(new TheaDatabase
