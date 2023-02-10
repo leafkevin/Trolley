@@ -22,11 +22,13 @@ public interface IOrmProvider
     string SelectIdentitySql { get; }
     IDbConnection CreateConnection(string connectionString);
     IDbDataParameter CreateParameter(string parameterName, object value);
-    IDbDataParameter CreateParameter(string parameterName, int nativeDbType, object value);
+    IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
     string GetTableName(string entityName);
     string GetFieldName(string propertyName);
     string GetPagingTemplate(int skip, int? limit, string orderBy = null);
-    int GetNativeDbType(Type type);
+    object GetNativeDbType(Type type);
+    object GetNativeDbType(int nativeDbType);
+    bool IsStringDbType(int nativeDbType);
     string CastTo(Type type);
     string GetQuotedValue(Type fieldType, object value);
     string GetBinaryOperator(ExpressionType nodeType);

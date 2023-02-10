@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -12,15 +13,15 @@ class CreateVisitor : SqlVisitor
     private string selectSql = null;
     private string whereSql = null;
 
-    public CreateVisitor(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, Type entityType, char tableStartAs = 'a')
-        : base(dbFactory, connection, transaction, tableStartAs)
+    public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, char tableAsStart = 'a')
+        : base(dbKey, ormProvider, mapProvider, tableAsStart)
     {
         this.tables = new();
         this.tableAlias = new();
         this.tables.Add(new TableSegment
         {
             EntityType = entityType,
-            Mapper = this.dbFactory.GetEntityMap(entityType)
+            Mapper = this.mapProvider.GetEntityMap(entityType)
         });
     }
     public string BuildSql(out List<IDbDataParameter> dbParameters)
@@ -33,7 +34,7 @@ class CreateVisitor : SqlVisitor
             var tableName = tableSegment.Body;
             if (string.IsNullOrEmpty(tableName))
             {
-                tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
+                tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
                 tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
             }
             if (i > 1) builder.Append(',');
@@ -53,8 +54,8 @@ class CreateVisitor : SqlVisitor
             var tableSegment = new TableSegment
             {
                 EntityType = parameterExpr.Type,
-                Mapper = this.dbFactory.GetEntityMap(parameterExpr.Type),
-                AliasName = $"{(char)(this.tableStartAs + i)}"
+                Mapper = this.mapProvider.GetEntityMap(parameterExpr.Type),
+                AliasName = $"{(char)(this.tableAsStart + i)}"
             };
             this.tables.Add(tableSegment);
         }
@@ -131,7 +132,7 @@ class CreateVisitor : SqlVisitor
                 //OrderBy(f=>new {f.Order.OrderId, ...})
                 //OrderBy(f=>f.Order.OrderId)
                 var tableSegment = this.tableAlias[parameterName];
-                tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
+                tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
                 var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
 
                 if (memberMapper.IsIgnore)
@@ -207,7 +208,7 @@ class CreateVisitor : SqlVisitor
     private void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.tableAlias.Clear();
-        lambdaExpr.Body.GetParameterNames(out var parameters);
+        lambdaExpr.Body.GetParameters(out var parameters);
         if (parameters == null || parameters.Count == 0)
             return;
         for (int i = 0; i < lambdaExpr.Parameters.Count; i++)
@@ -240,12 +241,19 @@ class CreateVisitor : SqlVisitor
                 {
                     this.dbParameters ??= new();
                     IDbDataParameter dbParameter = null;
-                    if (memberMapper.NativeDbType.HasValue)
-                        dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, sqlSegment.Value);
+                    if (memberMapper.NativeDbType != null)
+                        dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
                     else dbParameter = this.ormProvider.CreateParameter(parameterName, sqlSegment.Value);
 
                     if (memberMapper.TypeHandler != null)
+                    {
+                        if (sqlSegment.IsArray)
+                        {
+                            var sqlSegments = sqlSegment.Value as List<SqlSegment>;
+                            sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
+                        }
                         memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, sqlSegment.Value);
+                    }
                     this.dbParameters.Add(dbParameter);
                     sqlSegment.IsParameter = true;
                     sqlSegment.IsConstantValue = false;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -6,9 +7,6 @@ using System.Text;
 
 namespace Trolley;
 
-public delegate IDbConnection CreateNativeDbConnectionDelegate(string connectionString);
-public delegate IDbDataParameter CreateDefaultNativeParameterDelegate(string name, object value);
-public delegate IDbDataParameter CreateNativeParameterDelegate(string name, int nativeDbType, object value);
 public abstract class BaseOrmProvider : IOrmProvider
 {
     public abstract DatabaseType DatabaseType { get; }
@@ -17,7 +15,7 @@ public abstract class BaseOrmProvider : IOrmProvider
 
     public abstract IDbConnection CreateConnection(string connectionString);
     public abstract IDbDataParameter CreateParameter(string parameterName, object value);
-    public abstract IDbDataParameter CreateParameter(string parameterName, int nativeDbType, object value);
+    public abstract IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
     public virtual string GetTableName(string entityName) => entityName;
     public virtual string GetFieldName(string propertyName) => propertyName;
     public virtual string GetPagingTemplate(int skip, int? limit, string orderBy = null)
@@ -28,7 +26,9 @@ public abstract class BaseOrmProvider : IOrmProvider
         builder.Append($" OFFSET {skip}");
         return builder.ToString();
     }
-    public abstract int GetNativeDbType(Type type);
+    public abstract object GetNativeDbType(Type type);
+    public abstract object GetNativeDbType(int nativeDbType);
+    public abstract bool IsStringDbType(int nativeDbType);
     public abstract string CastTo(Type type);
     public virtual string GetQuotedValue(Type expectType, object value)
     {
@@ -45,43 +45,6 @@ public abstract class BaseOrmProvider : IOrmProvider
             return this.GetQuotedValue(sqlSegment.Value);
         }
         return value.ToString();
-    }
-    public virtual CreateNativeDbConnectionDelegate CreateConnectionDelegate(Type connectionType)
-    {
-        var constructor = connectionType.GetConstructor(new Type[] { typeof(string) });
-        var connStringExpr = Expression.Parameter(typeof(string), "connectionString");
-        var instanceExpr = Expression.New(constructor, connStringExpr);
-        return Expression.Lambda<CreateNativeDbConnectionDelegate>(
-             Expression.Convert(instanceExpr, typeof(IDbConnection))
-             , connStringExpr).Compile();
-    }
-    public virtual CreateDefaultNativeParameterDelegate CreateDefaultParameterDelegate(Type dbParameterType)
-    {
-        var constructor = dbParameterType.GetConstructor(new Type[] { typeof(string), typeof(object) });
-        var parametersExpr = new ParameterExpression[] {
-            Expression.Parameter(typeof(string), "name"),
-            Expression.Parameter(typeof(object), "value") };
-        var instanceExpr = Expression.New(constructor, parametersExpr[0], parametersExpr[1]);
-        var convertExpr = Expression.Convert(instanceExpr, typeof(IDbDataParameter));
-        return Expression.Lambda<CreateDefaultNativeParameterDelegate>(convertExpr, parametersExpr).Compile();
-    }
-    public virtual CreateNativeParameterDelegate CreateParameterDelegate(Type dbTypeType, Type dbParameterType, PropertyInfo dbTypePropertyInfo)
-    {
-        var constructor = dbParameterType.GetConstructor(new Type[] { typeof(string), typeof(object) });
-        var parametersExpr = new ParameterExpression[] {
-            Expression.Parameter(typeof(string), "name"),
-            Expression.Parameter(typeof(int), "dbType"),
-            Expression.Parameter(typeof(object), "value") };
-
-        var returnLabel = Expression.Label(typeof(IDbDataParameter));
-        var instanceExpr = Expression.New(constructor, parametersExpr[0], parametersExpr[2]);
-        var dbTypeExpr = Expression.Convert(parametersExpr[1], dbTypeType);
-        return Expression.Lambda<CreateNativeParameterDelegate>(
-            Expression.Block(
-                Expression.Call(instanceExpr, dbTypePropertyInfo.GetSetMethod(), dbTypeExpr),
-                Expression.Return(returnLabel, Expression.Convert(instanceExpr, typeof(IDbDataParameter))),
-                Expression.Label(returnLabel, Expression.Default(typeof(IDbDataParameter))))
-            , parametersExpr).Compile();
     }
     public virtual string GetBinaryOperator(ExpressionType nodeType) =>
        nodeType switch
@@ -110,4 +73,43 @@ public abstract class BaseOrmProvider : IOrmProvider
     public abstract bool TryGetMemberAccessSqlFormatter(SqlSegment originalSegment, MemberInfo memberInfo, out MemberAccessSqlFormatter formatter);
     public abstract bool TryGetMethodCallSqlFormatter(SqlSegment originalSegment, MethodInfo methodInfo, out MethodCallSqlFormatter formatter);
     public override int GetHashCode() => HashCode.Combine(this.DatabaseType);
+
+    public static Func<string, IDbConnection> CreateConnectionDelegate(Type connectionType)
+    {
+        var constructor = connectionType.GetConstructor(new Type[] { typeof(string) });
+        var connStringExpr = Expression.Parameter(typeof(string), "connectionString");
+        var instanceExpr = Expression.New(constructor, connStringExpr);
+        return Expression.Lambda<Func<string, IDbConnection>>(
+             Expression.Convert(instanceExpr, typeof(IDbConnection))
+             , connStringExpr).Compile();
+    }
+    public static Func<string, object, IDbDataParameter> CreateDefaultParameterDelegate(Type dbParameterType)
+    {
+        var constructor = dbParameterType.GetConstructor(new Type[] { typeof(string), typeof(object) });
+        var parametersExpr = new ParameterExpression[] {
+            Expression.Parameter(typeof(string), "name"),
+            Expression.Parameter(typeof(object), "value") };
+        var instanceExpr = Expression.New(constructor, parametersExpr[0], parametersExpr[1]);
+        var convertExpr = Expression.Convert(instanceExpr, typeof(IDbDataParameter));
+        return Expression.Lambda<Func<string, object, IDbDataParameter>>(convertExpr, parametersExpr).Compile();
+    }
+    public static Func<string, object, object, IDbDataParameter> CreateParameterDelegate(Type dbTypeType, Type dbParameterType, PropertyInfo valuePropertyInfo)
+    {
+        var constructor = dbParameterType.GetConstructor(new Type[] { typeof(string), dbTypeType });
+        var blockParameters = new List<ParameterExpression>();
+        var blockBodies = new List<Expression>();
+        var nameExpr = Expression.Parameter(typeof(string), "name");
+        var dbTypeExpr = Expression.Parameter(typeof(object), "dbType");
+        var valueExpr = Expression.Parameter(typeof(object), "value");
+        var resultExpr = Expression.Variable(dbParameterType, "result");
+        blockParameters.Add(resultExpr);
+
+        var nativeDbTypeExpr = Expression.Convert(dbTypeExpr, dbTypeType);
+        blockBodies.Add(Expression.Assign(resultExpr, Expression.New(constructor, nameExpr, nativeDbTypeExpr)));
+        blockBodies.Add(Expression.Call(resultExpr, valuePropertyInfo.GetSetMethod(), valueExpr));
+        var resultLabelExpr = Expression.Label(typeof(IDbDataParameter));
+        blockBodies.Add(Expression.Return(resultLabelExpr, Expression.Convert(resultExpr, typeof(IDbDataParameter))));
+        blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(IDbDataParameter))));
+        return Expression.Lambda<Func<string, object, object, IDbDataParameter>>(Expression.Block(blockParameters, blockBodies), nameExpr, dbTypeExpr, valueExpr).Compile();
+    }
 }

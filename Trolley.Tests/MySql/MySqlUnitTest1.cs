@@ -14,12 +14,14 @@ public class MySqlUnitTest1
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
-            var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
-            var ormProvider = f.GetService<IOrmProvider>();
-            var builder = new OrmDbFactoryBuilder();
-            builder.Register("fengling", true, f => f.Add<MySqlProvider>(connectionString, true))
-                .AddTypeHandler<JsonTypeHandler>()
-                .Configure(f => new MySqlModelConfiguration().OnModelCreating(f));
+            var builder = new OrmDbFactoryBuilder()
+            .Register("fengling", true, f =>
+            {
+                var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
+                f.Add<MySqlProvider>(connectionString, true)
+                 .Configure(new MySqlModelConfiguration());
+            })
+            .AddTypeHandler<JsonTypeHandler>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();

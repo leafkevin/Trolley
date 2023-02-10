@@ -10,53 +10,76 @@ namespace Trolley;
 
 public class SqlServerProvider : BaseOrmProvider
 {
-    private static CreateNativeDbConnectionDelegate createNativeConnectonDelegate = null;
-    private static CreateDefaultNativeParameterDelegate createDefaultNativeParameterDelegate = null;
-    private static CreateNativeParameterDelegate createNativeParameterDelegate = null;
+    private static Func<string, IDbConnection> createNativeConnectonDelegate = null;
+    private static Func<string, object, IDbDataParameter> createDefaultNativeParameterDelegate = null;
+    private static Func<string, object, object, IDbDataParameter> createNativeParameterDelegate = null;
     private static ConcurrentDictionary<MemberInfo, MemberAccessSqlFormatter> memberAccessSqlFormatterCahe = new();
     private static ConcurrentDictionary<MethodInfo, MethodCallSqlFormatter> methodCallSqlFormatterCahe = new();
-    private static Dictionary<Type, int> nativeDbTypes = new();
+    private static Dictionary<Type, object> defaultDbTypes = new();
+    private static Dictionary<int, object> nativeDbTypes = new();
     private static Dictionary<Type, string> castTos = new();
 
     public override DatabaseType DatabaseType => DatabaseType.SqlServer;
     public override string SelectIdentitySql => ";SELECT SCOPE_IDENTITY()";
     static SqlServerProvider()
     {
-        nativeDbTypes[typeof(bool)] = 2;
-        nativeDbTypes[typeof(sbyte)] = 20;
-        nativeDbTypes[typeof(short)] = 16;
-        nativeDbTypes[typeof(int)] = 8;
-        nativeDbTypes[typeof(long)] = 0;
-        nativeDbTypes[typeof(float)] = 13;
-        nativeDbTypes[typeof(double)] = 6;
-        nativeDbTypes[typeof(TimeSpan)] = 32;
-        nativeDbTypes[typeof(DateTime)] = 4;
-        nativeDbTypes[typeof(DateTimeOffset)] = 34;
-        nativeDbTypes[typeof(string)] = 12;
-        nativeDbTypes[typeof(byte)] = 20;
-        nativeDbTypes[typeof(ushort)] = 16;
-        nativeDbTypes[typeof(uint)] = 8;
-        nativeDbTypes[typeof(ulong)] = 0;
-        nativeDbTypes[typeof(Guid)] = 14;
-        nativeDbTypes[typeof(decimal)] = 5;
-        nativeDbTypes[typeof(byte[])] = 1;
+        var connectionType = Type.GetType("Microsoft.Data.SqlClient.SqlConnection, Microsoft.Data.SqlClient, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5");
+        createNativeConnectonDelegate = BaseOrmProvider.CreateConnectionDelegate(connectionType);
+        var dbTypeType = Type.GetType("System.Data.SqlDbType, System.Data.Common, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a");
+        var dbParameterType = Type.GetType("Microsoft.Data.SqlClient.SqlParameter, Microsoft.Data.SqlClient, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5");
+        var valuePropertyInfo = dbParameterType.GetProperty("Value");
+        createDefaultNativeParameterDelegate = BaseOrmProvider.CreateDefaultParameterDelegate(dbParameterType);
+        createNativeParameterDelegate = BaseOrmProvider.CreateParameterDelegate(dbTypeType, dbParameterType, valuePropertyInfo);
 
-        nativeDbTypes[typeof(bool?)] = 2;
-        nativeDbTypes[typeof(sbyte?)] = 20;
-        nativeDbTypes[typeof(short?)] = 16;
-        nativeDbTypes[typeof(int?)] = 8;
-        nativeDbTypes[typeof(long?)] = 0;
-        nativeDbTypes[typeof(float?)] = 13;
-        nativeDbTypes[typeof(double?)] = 6;
-        nativeDbTypes[typeof(TimeSpan?)] = 32;
-        nativeDbTypes[typeof(DateTime?)] = 4;
-        nativeDbTypes[typeof(DateTimeOffset?)] = 34;
-        nativeDbTypes[typeof(byte?)] = 20;
-        nativeDbTypes[typeof(ushort?)] = 16;
-        nativeDbTypes[typeof(uint?)] = 8;
-        nativeDbTypes[typeof(ulong?)] = 0;
-        nativeDbTypes[typeof(Guid?)] = 14;
-        nativeDbTypes[typeof(decimal?)] = 5;
+
+        defaultDbTypes[typeof(bool)] = Enum.ToObject(dbTypeType, 2);
+        defaultDbTypes[typeof(sbyte)] = Enum.ToObject(dbTypeType, 20);
+        defaultDbTypes[typeof(short)] = Enum.ToObject(dbTypeType, 16);
+        defaultDbTypes[typeof(int)] = Enum.ToObject(dbTypeType, 8);
+        defaultDbTypes[typeof(long)] = Enum.ToObject(dbTypeType, 0);
+        defaultDbTypes[typeof(float)] = Enum.ToObject(dbTypeType, 13);
+        defaultDbTypes[typeof(double)] = Enum.ToObject(dbTypeType, 6);
+        defaultDbTypes[typeof(TimeSpan)] = Enum.ToObject(dbTypeType, 32);
+        defaultDbTypes[typeof(DateTime)] = Enum.ToObject(dbTypeType, 4);
+        defaultDbTypes[typeof(DateTimeOffset)] = Enum.ToObject(dbTypeType, 34);
+        defaultDbTypes[typeof(string)] = Enum.ToObject(dbTypeType, 12);
+        defaultDbTypes[typeof(byte)] = Enum.ToObject(dbTypeType, 20);
+        defaultDbTypes[typeof(ushort)] = Enum.ToObject(dbTypeType, 16);
+        defaultDbTypes[typeof(uint)] = Enum.ToObject(dbTypeType, 8);
+        defaultDbTypes[typeof(ulong)] = Enum.ToObject(dbTypeType, 0);
+        defaultDbTypes[typeof(Guid)] = Enum.ToObject(dbTypeType, 14);
+        defaultDbTypes[typeof(decimal)] = Enum.ToObject(dbTypeType, 5);
+        defaultDbTypes[typeof(byte[])] = Enum.ToObject(dbTypeType, 1);
+
+        defaultDbTypes[typeof(bool?)] = Enum.ToObject(dbTypeType, 2);
+        defaultDbTypes[typeof(sbyte?)] = Enum.ToObject(dbTypeType, 20);
+        defaultDbTypes[typeof(short?)] = Enum.ToObject(dbTypeType, 16);
+        defaultDbTypes[typeof(int?)] = Enum.ToObject(dbTypeType, 8);
+        defaultDbTypes[typeof(long?)] = Enum.ToObject(dbTypeType, 0);
+        defaultDbTypes[typeof(float?)] = Enum.ToObject(dbTypeType, 13);
+        defaultDbTypes[typeof(double?)] = Enum.ToObject(dbTypeType, 6);
+        defaultDbTypes[typeof(TimeSpan?)] = Enum.ToObject(dbTypeType, 32);
+        defaultDbTypes[typeof(DateTime?)] = Enum.ToObject(dbTypeType, 4);
+        defaultDbTypes[typeof(DateTimeOffset?)] = Enum.ToObject(dbTypeType, 34);
+        defaultDbTypes[typeof(byte?)] = Enum.ToObject(dbTypeType, 20);
+        defaultDbTypes[typeof(ushort?)] = Enum.ToObject(dbTypeType, 16);
+        defaultDbTypes[typeof(uint?)] = Enum.ToObject(dbTypeType, 8);
+        defaultDbTypes[typeof(ulong?)] = Enum.ToObject(dbTypeType, 0);
+        defaultDbTypes[typeof(Guid?)] = Enum.ToObject(dbTypeType, 14);
+        defaultDbTypes[typeof(decimal?)] = Enum.ToObject(dbTypeType, 5);
+
+        nativeDbTypes[2] = Enum.ToObject(dbTypeType, 2);
+        nativeDbTypes[20] = Enum.ToObject(dbTypeType, 20);
+        nativeDbTypes[16] = Enum.ToObject(dbTypeType, 16);
+        nativeDbTypes[8] = Enum.ToObject(dbTypeType, 8);
+        nativeDbTypes[0] = Enum.ToObject(dbTypeType, 0);
+        nativeDbTypes[13] = Enum.ToObject(dbTypeType, 13);
+        nativeDbTypes[6] = Enum.ToObject(dbTypeType, 6);
+        nativeDbTypes[32] = Enum.ToObject(dbTypeType, 32);
+        nativeDbTypes[4] = Enum.ToObject(dbTypeType, 4);
+        nativeDbTypes[34] = Enum.ToObject(dbTypeType, 34);
+        nativeDbTypes[14] = Enum.ToObject(dbTypeType, 14);
+        nativeDbTypes[5] = Enum.ToObject(dbTypeType, 5);
 
 
         castTos[typeof(string)] = "NVARCHAR(MAX)";
@@ -95,13 +118,6 @@ public class SqlServerProvider : BaseOrmProvider
     }
     public SqlServerProvider()
     {
-        var connectionType = Type.GetType("Microsoft.Data.SqlClient.SqlConnection, Microsoft.Data.SqlClient, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5");
-        createNativeConnectonDelegate = base.CreateConnectionDelegate(connectionType);
-        var dbTypeType = Type.GetType("System.Data.SqlDbType, System.Data.Common, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a");
-        var dbParameterType = Type.GetType("Microsoft.Data.SqlClient.SqlParameter, Microsoft.Data.SqlClient, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5");
-        var dbTypePropertyInfo = dbParameterType.GetProperty("SqlDbType");
-        createDefaultNativeParameterDelegate = base.CreateDefaultParameterDelegate(dbParameterType);
-        createNativeParameterDelegate = base.CreateParameterDelegate(dbTypeType, dbParameterType, dbTypePropertyInfo);
 
         memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetMember(nameof(string.Empty))[0], target => "''");
         memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetProperty(nameof(string.Length)), target => $"LEN({this.GetQuotedValue(target)})");
@@ -145,7 +161,7 @@ public class SqlServerProvider : BaseOrmProvider
         => createNativeConnectonDelegate.Invoke(connectionString);
     public override IDbDataParameter CreateParameter(string parameterName, object value)
         => createDefaultNativeParameterDelegate.Invoke(parameterName, value);
-    public override IDbDataParameter CreateParameter(string parameterName, int nativeDbType, object value)
+    public override IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value)
         => createNativeParameterDelegate.Invoke(parameterName, nativeDbType, value);
     public override string GetFieldName(string propertyName) => "[" + propertyName + "]";
     public override string GetTableName(string entityName) => "[" + entityName + "]";
@@ -158,11 +174,36 @@ public class SqlServerProvider : BaseOrmProvider
         if (limit.HasValue) builder.AppendFormat($" FETCH NEXT {limit} ROWS ONLY", limit);
         return builder.ToString();
     }
-    public override int GetNativeDbType(Type type)
+    public override object GetNativeDbType(Type type)
     {
-        if (nativeDbTypes.TryGetValue(type, out var dbType))
-            return dbType;
-        return 0;
+        if (!defaultDbTypes.TryGetValue(type, out var dbType))
+            throw new Exception($"类型{type.FullName}没有对应的System.Data.SqlDbType映射类型");
+        return dbType;
+    }
+    public override object GetNativeDbType(int nativeDbType)
+    {
+        if (nativeDbTypes.TryGetValue(nativeDbType, out var result))
+            return result;
+        var dbTypeType = Type.GetType("System.Data.SqlDbType, System.Data.Common, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a");
+        result = Enum.ToObject(dbTypeType, nativeDbType);
+        if (result != null)
+        {
+            lock (this)
+            {
+                if (nativeDbTypes.TryGetValue(nativeDbType, out result))
+                    return result;
+                result = Enum.ToObject(dbTypeType, nativeDbType);
+                nativeDbTypes.TryAdd(nativeDbType, result);
+            }
+            return result;
+        }
+        throw new Exception($"数值{nativeDbType}没有对应的System.Data.SqlDbType映射类型");
+    }
+    public override bool IsStringDbType(int nativeDbType)
+    {
+        if (nativeDbType == 3 || nativeDbType == 10 || nativeDbType == 11 || nativeDbType == 12 || nativeDbType == 18 || nativeDbType == 22)
+            return true;
+        return false;
     }
     public override string CastTo(Type type)
     {

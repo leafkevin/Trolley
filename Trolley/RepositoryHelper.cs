@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
@@ -9,40 +10,60 @@ namespace Trolley;
 
 class RepositoryHelper
 {
-    public static void AddParameter(ParameterExpression commandExpr, ParameterExpression ormProviderExpr, Expression parameterNameExpr, Expression parameterValueExpr,
-        bool isNullable, int? nativeDbType, Dictionary<Type, ParameterExpression> localExprs, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
+    private static ConcurrentDictionary<Type, Func<object, DbType>> getDbTypeDelegates = new();
+    public static void AddParameter(ParameterExpression commandExpr, ParameterExpression ormProviderExpr, Expression parameterNameExpr, Expression parameterValueExpr, bool isExpectNullable,
+        object nativeDbType, IOrmProvider ormProvider, Dictionary<string, int> localParameters, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
     {
         //var parameter = ormProvider.CreateParameter("@Parameter", value);
         //if(value==null)objLocal=DBNull.Value;
         //else objLocal=value;
         //var parameter = ormProvider.CreateParameter("@Parameter", objLocal);
-        Expression valueExpr = null;
-        if (isNullable)
+        Expression valueExpr = parameterValueExpr;
+        MethodInfo methodInfo = null;
+
+        //int? age = 25;
+        //age.Value;
+        if (valueExpr.Type.IsNullableType(out var underlyingType))
+            valueExpr = Expression.Property(valueExpr, "Value");
+
+        //Gender? gender = Gender.Male;
+        //(int)gender.Value;
+        if (underlyingType.IsEnumType(out var enumUnderlyingType))
         {
-            if (!localExprs.TryGetValue(typeof(object), out var objLocalExpr))
+            if (nativeDbType != null && ormProvider.IsStringDbType((int)nativeDbType))
             {
-                objLocalExpr = Expression.Variable(typeof(object), "objLocal");
-                blockParameters.Add(objLocalExpr);
-                localExprs.TryAdd(typeof(object), objLocalExpr);
+                methodInfo = typeof(Enum).GetMethod(nameof(Enum.GetName), new Type[] { typeof(Type), typeof(object) });
+                valueExpr = Expression.Call(methodInfo, Expression.Constant(underlyingType), valueExpr);
             }
+            else valueExpr = Expression.Convert(valueExpr, enumUnderlyingType);
+        }
+        valueExpr = Expression.Convert(valueExpr, typeof(object));
+
+        if (isExpectNullable)
+        {
+            //object localValue;
+            //if(gender == null)
+            //  localValue = DBNull.Value;
+            //else localValue = (int)gender.Value;
             var isNullExpr = Expression.Equal(parameterValueExpr, Expression.Constant(null));
+            var objLocalExpr = DefineLocalParameter("objLocal", typeof(object), localParameters, blockParameters);
             var assignNullExpr = Expression.Assign(objLocalExpr, Expression.Constant(DBNull.Value));
-            var assignValueExpr = Expression.Assign(objLocalExpr, Expression.Convert(parameterValueExpr, typeof(object)));
+            var assignValueExpr = Expression.Assign(objLocalExpr, valueExpr);
             blockBodies.Add(Expression.IfThenElse(isNullExpr, assignNullExpr, assignValueExpr));
             valueExpr = objLocalExpr;
         }
-        else valueExpr = Expression.Convert(parameterValueExpr, typeof(object));
 
-        MethodInfo methodInfo = null;
         Expression dbParameterExpr = null;
-        if (nativeDbType.HasValue)
+        if (nativeDbType != null)
         {
-            var dbTypeExpr = Expression.Constant(nativeDbType.Value, typeof(int));
-            methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(int), typeof(object) });
+            //var dbParameter = ormProvider.CreateParameter("@Name", SqlDbType.VarChar);
+            var dbTypeExpr = Expression.Constant(nativeDbType, typeof(object));
+            methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });
             dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, dbTypeExpr, valueExpr);
         }
         else
         {
+            //var dbParameter = ormProvider.CreateParameter("@Name", "kevin");
             methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object) });
             dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, valueExpr);
         }
@@ -55,55 +76,100 @@ class RepositoryHelper
         var addParameterExpr = Expression.Call(parametersExpr, methodInfo, dbParameterExpr);
         blockBodies.Add(addParameterExpr);
     }
+    /// <summary>
+    /// Where条件，参数是单纯的值类型主键
+    /// </summary>
+    /// <param name="commandExpr"></param>
+    /// <param name="ormProviderExpr"></param>
+    /// <param name="parameterNameExpr"></param>
+    /// <param name="parameterValueExpr"></param>
+    /// <param name="nativeDbType"></param>
+    /// <param name="blockBodies"></param>
     public static void AddParameter(ParameterExpression commandExpr, ParameterExpression ormProviderExpr,
-        Expression parameterNameExpr, Expression parameterValueExpr, int? nativeDbType, List<Expression> blockBodies)
-        => AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterValueExpr, false, nativeDbType, null, null, blockBodies);
-    public static void AddParameter(ParameterExpression commandExpr, ParameterExpression ormProviderExpr, Expression parameterNameExpr, Expression typedParameterExpr,
-        bool isNullable, int? nativeDbType, MemberMap memberMapper, Dictionary<Type, ParameterExpression> localParameters, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
+        Expression parameterNameExpr, Expression parameterValueExpr, object nativeDbType, IOrmProvider ormProvider, List<Expression> blockBodies)
+        => AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterValueExpr, false, nativeDbType, ormProvider, null, null, blockBodies);
+    /// <summary>
+    /// Where条件，参数是实体的成员，值有可能是null，有TypeHandler处理
+    /// 批量操作可能有为null的参数，插入有可能有为null的参数，其他场景都是不能有为null的参数
+    /// </summary>
+    /// <param name="commandExpr"></param>
+    /// <param name="ormProviderExpr"></param>
+    /// <param name="parameterNameExpr"></param>
+    /// <param name="typedParameterExpr"></param>
+    /// <param name="isExpectNullable"></param>
+    /// <param name="nativeDbType"></param>
+    /// <param name="memberMapper"></param>
+    /// <param name="localParameters"></param>
+    /// <param name="blockParameters"></param>
+    /// <param name="blockBodies"></param>
+    public static void AddParameter(ParameterExpression commandExpr, ParameterExpression ormProviderExpr, Expression parameterNameExpr, Expression typedParameterExpr, bool isExpectNullable,
+        object nativeDbType, MemberMap memberMapper, IOrmProvider ormProvider, Dictionary<string, int> localParameters, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
     {
+        //只有插入场景有可能有为null的参数，其他场景都期望参数是不可能为null，如果为null,将会报错
+        //如果字段想要更新为null，请使用明确的表达式Update，如：repository.Update<Order>().Set(f => new { BuyerId = DBNull.Value }).Where(a => a.BuyerId == 1).Execute();
+
         //var parameter = ormProvider.CreateParameter("@Parameter", nativeDbType, whereObj.Name);
-        var valueExpr = Expression.PropertyOrField(typedParameterExpr, memberMapper.MemberName);
+        var parameterValueExpr = Expression.PropertyOrField(typedParameterExpr, memberMapper.MemberName);
+        Expression valueExpr = parameterValueExpr;
+        MethodInfo methodInfo = null;
+
         if (memberMapper.TypeHandler != null)
         {
-            var typeHandlerExpr = Expression.Constant(memberMapper.TypeHandler);
-            var objValueExpr = Expression.Convert(valueExpr, typeof(object));
-            if (!localParameters.TryGetValue(typeof(IDbDataParameter), out var dbParameterExpr))
+            //var dbParameter = ormProvider.CreateParameter("@Name", SqlDbType.VarChar);
+            var dbParameterExpr = DefineLocalParameter("dbParameter", typeof(IDbDataParameter), localParameters, blockParameters);
+            if (nativeDbType != null)
             {
-                dbParameterExpr = Expression.Variable(typeof(IDbDataParameter), "dbParameter");
-                blockParameters.Add(dbParameterExpr);
-                localParameters.TryAdd(typeof(IDbDataParameter), dbParameterExpr);
-            }
-            MethodInfo methodInfo = null;
-            if (nativeDbType.HasValue)
-            {
-                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(int), typeof(object) });
-                var newParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, Expression.Constant(nativeDbType.Value), objValueExpr);
-                blockBodies.Add(Expression.Assign(dbParameterExpr, newParameterExpr));
+                var dbTypeExpr = Expression.Constant(nativeDbType, typeof(object));
+                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });
+                var callExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, dbTypeExpr, valueExpr);
+                blockBodies.Add(Expression.Assign(dbParameterExpr, callExpr));
             }
             else
             {
+                //var dbParameter = ormProvider.CreateParameter("@Name", "kevin");
                 methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object) });
-                var newParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, objValueExpr);
+                var newParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, valueExpr);
                 blockBodies.Add(Expression.Assign(dbParameterExpr, newParameterExpr));
             }
-            methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.SetValue), new Type[] { typeof(IOrmProvider), typeof(IDbDataParameter), typeof(object) });
-            blockBodies.Add(Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, dbParameterExpr, objValueExpr));
 
-            //command.Parameters.Add(parameter);
+            //typeHandler.SetValue(ormProvider, dbParameter, value);
+            var typeHandlerExpr = Expression.Constant(memberMapper.TypeHandler);
+            methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.SetValue), new Type[] { typeof(IOrmProvider), typeof(IDbDataParameter), typeof(object) });
+            blockBodies.Add(Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, dbParameterExpr, valueExpr));
+
+            //command.Parameters.Add(dbParameter);
             var propertyInfo = typeof(IDbCommand).GetProperty(nameof(IDbCommand.Parameters));
             var parametersExpr = Expression.MakeMemberAccess(commandExpr, propertyInfo);
             methodInfo = typeof(IList).GetMethod(nameof(IDbCommand.Parameters.Add));
             var addParameterExpr = Expression.Call(parametersExpr, methodInfo, dbParameterExpr);
             blockBodies.Add(addParameterExpr);
         }
-        else AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, valueExpr, isNullable, nativeDbType, localParameters, blockParameters, blockBodies);
+        else AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, valueExpr, isExpectNullable, nativeDbType, ormProvider, localParameters, blockParameters, blockBodies);
     }
+    /// <summary>
+    /// SQL中使用的参数，没有TypeHandler处理，值不可能为null
+    /// </summary>
+    /// <param name="commandExpr"></param>
+    /// <param name="ormProviderExpr"></param>
+    /// <param name="parameterNameExpr"></param>
+    /// <param name="typedParameterExpr"></param>
+    /// <param name="memberMapper"></param>
+    /// <param name="blockBodies"></param>
     public static void AddParameter(ParameterExpression commandExpr, ParameterExpression ormProviderExpr,
-        Expression parameterNameExpr, Expression typedParameterExpr, MemberMap memberMapper, List<Expression> blockBodies)
+        Expression parameterNameExpr, Expression typedParameterExpr, MemberMap memberMapper, IOrmProvider ormProvider, List<Expression> blockBodies)
     {
-        //没有TypeHandler处理,主要是主键
+        //单纯SQL,没有TypeHandler处理
         //var parameter = ormProvider.CreateParameter("@Parameter", nativeDbType, whereObj.Name);
         var valueExpr = Expression.PropertyOrField(typedParameterExpr, memberMapper.MemberName);
-        AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, valueExpr, false, memberMapper.NativeDbType, null, null, blockBodies);
+        AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, valueExpr, false, memberMapper.NativeDbType, ormProvider, null, null, blockBodies);
+    }
+    private static ParameterExpression DefineLocalParameter(string namePrefix, Type localVariableType, Dictionary<string, int> localParameters, List<ParameterExpression> blockParameters)
+    {
+        if (!localParameters.TryGetValue(namePrefix, out var index))
+            index = 0;
+        localParameters[namePrefix] = index + 1;
+        var objLocalExpr = Expression.Variable(localVariableType, $"{namePrefix}{index + 1}");
+        blockParameters.Add(objLocalExpr);
+        return objLocalExpr;
     }
 }

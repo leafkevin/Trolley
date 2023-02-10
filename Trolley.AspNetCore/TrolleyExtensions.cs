@@ -13,24 +13,25 @@ public static class TrolleyExtensions
         services.AddSingleton(builder.Build());
         return services;
     }
-    public static IOrmDbFactory LoadFromConfiguration(this OrmDbFactoryBuilder builder, IConfiguration configuration, string sectionName)
+    public static OrmDbFactoryBuilder LoadFromConfiguration(this OrmDbFactoryBuilder builder, IConfiguration configuration, string sectionName)
     {
         var databases = configuration.GetSection(sectionName).GetChildren();
         foreach (var configInfo in databases)
         {
-            var database = new TheaDatabase { DbKey = configInfo.Key };
-            configInfo.Bind(database);
+            var databaseProvider = new TheaDatabaseProvider { DbKey = configInfo.Key };
+            configInfo.Bind(databaseProvider);
             var connStrings = configInfo.GetSection("ConnectionStrings").GetChildren();
             foreach (var connString in connStrings)
             {
-                var connectionInfo = new TheaConnectionInfo { DbKey = configInfo.Key };
-                connString.Bind(connectionInfo);
+                var database = new TheaDatabase { DbKey = configInfo.Key };
+                connString.Bind(database);
+
                 var ormProviderTypeName = connString.GetValue<string>("OrmProvider");
                 var ormProviderType = typeof(IOrmDbFactory).Assembly.GetType(ormProviderTypeName);
-                connectionInfo.OrmProvider = Activator.CreateInstance(ormProviderType) as IOrmProvider;
-                builder.Register(database.DbKey, connectionInfo.IsDefault, f => f.Add(connectionInfo));
+                builder.Register(database.DbKey, database.IsDefault, f =>
+                    f.Add(database).Use(ormProviderType));
             }
         }
-        return builder.Build();
+        return builder;
     }
 }

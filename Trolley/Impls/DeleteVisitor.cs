@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -12,13 +13,13 @@ class DeleteVisitor : SqlVisitor
     private readonly TableSegment tableSegment;
     private string whereSql = string.Empty;
 
-    public DeleteVisitor(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, Type entityType, char tableStartAs = 'a')
-        : base(dbFactory, connection, transaction, tableStartAs)
+    public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, char tableAsStart = 'a')
+        : base(dbKey, ormProvider, mapProvider, tableAsStart)
     {
         this.tableSegment = new TableSegment
         {
             EntityType = entityType,
-            Mapper = this.dbFactory.GetEntityMap(entityType)
+            Mapper = this.mapProvider.GetEntityMap(entityType)
         };
     }
     public string BuildSql(out List<IDbDataParameter> dbParameters)
@@ -178,12 +179,19 @@ class DeleteVisitor : SqlVisitor
                 {
                     this.dbParameters ??= new();
                     IDbDataParameter dbParameter = null;
-                    if (memberMapper.NativeDbType.HasValue)
-                        dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, sqlSegment.Value);
+                    if (memberMapper.NativeDbType != null)
+                        dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
                     else dbParameter = this.ormProvider.CreateParameter(parameterName, sqlSegment.Value);
 
                     if (memberMapper.TypeHandler != null)
+                    {
+                        if (sqlSegment.IsArray)
+                        {
+                            var sqlSegments = sqlSegment.Value as List<SqlSegment>;
+                            sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
+                        }
                         memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, sqlSegment.Value);
+                    }
                     this.dbParameters.Add(dbParameter);
                     sqlSegment.IsParameter = true;
                     sqlSegment.IsConstantValue = false;

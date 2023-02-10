@@ -11,52 +11,77 @@ namespace Trolley;
 
 public class NpgSqlProvider : BaseOrmProvider
 {
-    private static CreateNativeDbConnectionDelegate createNativeConnectonDelegate = null;
-    private static CreateDefaultNativeParameterDelegate createDefaultNativeParameterDelegate = null;
-    private static CreateNativeParameterDelegate createNativeParameterDelegate = null;
+    private static Func<string, IDbConnection> createNativeConnectonDelegate = null;
+    private static Func<string, object, IDbDataParameter> createDefaultNativeParameterDelegate = null;
+    private static Func<string, object, object, IDbDataParameter> createNativeParameterDelegate = null;
     private static ConcurrentDictionary<MemberInfo, MemberAccessSqlFormatter> memberAccessSqlFormatterCahe = new();
     private static ConcurrentDictionary<MethodInfo, MethodCallSqlFormatter> methodCallSqlFormatterCahe = new();
-    private static Dictionary<Type, int> nativeDbTypes = new();
+    private static Dictionary<Type, object> defaultDbTypes = new();
+    private static Dictionary<int, object> nativeDbTypes = new();
     private static Dictionary<Type, string> castTos = new();
 
     public override DatabaseType DatabaseType => DatabaseType.Postgresql;
     public override string SelectIdentitySql => " RETURNING {0}";
     static NpgSqlProvider()
     {
-        nativeDbTypes[typeof(bool)] = 2;
-        nativeDbTypes[typeof(sbyte)] = 18;
-        nativeDbTypes[typeof(byte)] = 18;
-        nativeDbTypes[typeof(char)] = 6;
-        nativeDbTypes[typeof(short)] = 18;
-        nativeDbTypes[typeof(int)] = 9;
-        nativeDbTypes[typeof(uint)] = 41;//NpgsqlDbType.Oid
-        nativeDbTypes[typeof(long)] = 1;
-        nativeDbTypes[typeof(ulong)] = 1;
-        nativeDbTypes[typeof(float)] = 17;
-        nativeDbTypes[typeof(double)] = 8;
-        nativeDbTypes[typeof(TimeSpan)] = 20;
-        nativeDbTypes[typeof(DateTime)] = 21;
-        nativeDbTypes[typeof(string)] = 22;
-        nativeDbTypes[typeof(Guid)] = 27;
-        nativeDbTypes[typeof(decimal)] = 13;
-        nativeDbTypes[typeof(byte[])] = 4;
+        var connectionType = Type.GetType("Npgsql.NpgsqlConnection, Npgsql, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7");
+        createNativeConnectonDelegate = BaseOrmProvider.CreateConnectionDelegate(connectionType);
+        var dbTypeType = Type.GetType("NpgsqlTypes.NpgsqlDbType, Npgsql, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7");
+        var dbParameterType = Type.GetType("Npgsql.NpgsqlParameter, Npgsql, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7");
+        var valuePropertyInfo = dbParameterType.GetProperty("Value");
+        createDefaultNativeParameterDelegate = BaseOrmProvider.CreateDefaultParameterDelegate(dbParameterType);
+        createNativeParameterDelegate = BaseOrmProvider.CreateParameterDelegate(dbTypeType, dbParameterType, valuePropertyInfo);
 
-        nativeDbTypes[typeof(bool?)] = 2;
-        nativeDbTypes[typeof(sbyte?)] = 18;
-        nativeDbTypes[typeof(byte?)] = 18;
-        nativeDbTypes[typeof(char?)] = 6;
-        nativeDbTypes[typeof(ushort?)] = 18;
-        nativeDbTypes[typeof(short?)] = 18;
-        nativeDbTypes[typeof(int?)] = 9;
-        nativeDbTypes[typeof(uint?)] = 41;
-        nativeDbTypes[typeof(long?)] = 1;
-        nativeDbTypes[typeof(ulong?)] = 1;
-        nativeDbTypes[typeof(float?)] = 17;
-        nativeDbTypes[typeof(double?)] = 8;
-        nativeDbTypes[typeof(TimeSpan?)] = 20;
-        nativeDbTypes[typeof(DateTime?)] = 21;
-        nativeDbTypes[typeof(Guid?)] = 27;
-        nativeDbTypes[typeof(decimal?)] = 13;
+
+        defaultDbTypes[typeof(bool)] = Enum.ToObject(dbTypeType, 2);
+        defaultDbTypes[typeof(sbyte)] = Enum.ToObject(dbTypeType, 18);
+        defaultDbTypes[typeof(byte)] = Enum.ToObject(dbTypeType, 18);
+        defaultDbTypes[typeof(char)] = Enum.ToObject(dbTypeType, 6);
+        defaultDbTypes[typeof(short)] = Enum.ToObject(dbTypeType, 18);
+        defaultDbTypes[typeof(int)] = Enum.ToObject(dbTypeType, 9);
+        defaultDbTypes[typeof(uint)] = Enum.ToObject(dbTypeType, 41);//NpgsqlDbType.Oid
+        defaultDbTypes[typeof(long)] = Enum.ToObject(dbTypeType, 1);
+        defaultDbTypes[typeof(ulong)] = Enum.ToObject(dbTypeType, 1);
+        defaultDbTypes[typeof(float)] = Enum.ToObject(dbTypeType, 17);
+        defaultDbTypes[typeof(double)] = Enum.ToObject(dbTypeType, 8);
+        defaultDbTypes[typeof(TimeSpan)] = Enum.ToObject(dbTypeType, 20);
+        defaultDbTypes[typeof(DateTime)] = Enum.ToObject(dbTypeType, 21);
+        defaultDbTypes[typeof(string)] = Enum.ToObject(dbTypeType, 22);
+        defaultDbTypes[typeof(Guid)] = Enum.ToObject(dbTypeType, 27);
+        defaultDbTypes[typeof(decimal)] = Enum.ToObject(dbTypeType, 13);
+        defaultDbTypes[typeof(byte[])] = Enum.ToObject(dbTypeType, 4);
+
+        defaultDbTypes[typeof(bool?)] = Enum.ToObject(dbTypeType, 2);
+        defaultDbTypes[typeof(sbyte?)] = Enum.ToObject(dbTypeType, 18);
+        defaultDbTypes[typeof(byte?)] = Enum.ToObject(dbTypeType, 18);
+        defaultDbTypes[typeof(char?)] = Enum.ToObject(dbTypeType, 6);
+        defaultDbTypes[typeof(ushort?)] = Enum.ToObject(dbTypeType, 18);
+        defaultDbTypes[typeof(short?)] = Enum.ToObject(dbTypeType, 18);
+        defaultDbTypes[typeof(int?)] = Enum.ToObject(dbTypeType, 9);
+        defaultDbTypes[typeof(uint?)] = Enum.ToObject(dbTypeType, 41);
+        defaultDbTypes[typeof(long?)] = Enum.ToObject(dbTypeType, 1);
+        defaultDbTypes[typeof(ulong?)] = Enum.ToObject(dbTypeType, 1);
+        defaultDbTypes[typeof(float?)] = Enum.ToObject(dbTypeType, 17);
+        defaultDbTypes[typeof(double?)] = Enum.ToObject(dbTypeType, 8);
+        defaultDbTypes[typeof(TimeSpan?)] = Enum.ToObject(dbTypeType, 20);
+        defaultDbTypes[typeof(DateTime?)] = Enum.ToObject(dbTypeType, 21);
+        defaultDbTypes[typeof(Guid?)] = Enum.ToObject(dbTypeType, 27);
+        defaultDbTypes[typeof(decimal?)] = Enum.ToObject(dbTypeType, 13);
+
+        nativeDbTypes[2] = Enum.ToObject(dbTypeType, 2);
+        nativeDbTypes[18] = Enum.ToObject(dbTypeType, 18);
+        nativeDbTypes[6] = Enum.ToObject(dbTypeType, 6);
+        nativeDbTypes[9] = Enum.ToObject(dbTypeType, 9);
+        nativeDbTypes[41] = Enum.ToObject(dbTypeType, 41);
+        nativeDbTypes[1] = Enum.ToObject(dbTypeType, 1);
+        nativeDbTypes[17] = Enum.ToObject(dbTypeType, 17);
+        nativeDbTypes[8] = Enum.ToObject(dbTypeType, 8);
+        nativeDbTypes[20] = Enum.ToObject(dbTypeType, 20);
+        nativeDbTypes[21] = Enum.ToObject(dbTypeType, 21);
+        nativeDbTypes[22] = Enum.ToObject(dbTypeType, 22);
+        nativeDbTypes[27] = Enum.ToObject(dbTypeType, 27);
+        nativeDbTypes[13] = Enum.ToObject(dbTypeType, 13);
+        nativeDbTypes[4] = Enum.ToObject(dbTypeType, 4);
 
         //Npgsql支持数据类型，值为各自值|int.MinValue
         //如, int[]类型: int.MinValue | NpgsqlDbType.Integer
@@ -92,14 +117,6 @@ public class NpgSqlProvider : BaseOrmProvider
     }
     public NpgSqlProvider()
     {
-        var connectionType = Type.GetType("Npgsql.NpgsqlConnection, Npgsql, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7");
-        createNativeConnectonDelegate = base.CreateConnectionDelegate(connectionType);
-        var dbTypeType = Type.GetType("Npgsql.NpgsqlParameter, Npgsql, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7");
-        var dbParameterType = Type.GetType("Npgsql.NpgsqlParameter, Npgsql, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7");
-        var dbTypePropertyInfo = dbParameterType.GetProperty("NpgsqlDbType");
-        createDefaultNativeParameterDelegate = base.CreateDefaultParameterDelegate(dbParameterType);
-        createNativeParameterDelegate = base.CreateParameterDelegate(dbTypeType, dbParameterType, dbTypePropertyInfo);
-
         memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetMember(nameof(string.Empty))[0], target => "''");
         memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetProperty(nameof(string.Length)), target => $"LENGTH({this.GetQuotedValue(target)})");
 
@@ -142,23 +159,53 @@ public class NpgSqlProvider : BaseOrmProvider
         => createNativeConnectonDelegate.Invoke(connectionString);
     public override IDbDataParameter CreateParameter(string parameterName, object value)
         => createDefaultNativeParameterDelegate.Invoke(parameterName, value);
-    public override IDbDataParameter CreateParameter(string parameterName, int nativeDbType, object value)
+    public override IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value)
         => createNativeParameterDelegate.Invoke(parameterName, nativeDbType, value);
     public override string GetFieldName(string propertyName) => "\"" + propertyName + "\"";
     public override string GetTableName(string entityName) => "\"" + entityName + "\"";
-    public override int GetNativeDbType(Type type)
+    public override object GetNativeDbType(Type type)
     {
-        if (nativeDbTypes.TryGetValue(type, out var dbType))
+        if (defaultDbTypes.TryGetValue(type, out var dbType))
             return dbType;
 
         //数组类型
         if (typeof(IEnumerable).IsAssignableFrom(type))
         {
-            var genericType = type.GetGenericArguments().FirstOrDefault();
-            if (nativeDbTypes.TryGetValue(genericType, out dbType))
-                return int.MinValue | dbType;
+            lock (this)
+            {
+                var genericType = type.GetGenericArguments().FirstOrDefault();
+                if (defaultDbTypes.TryGetValue(genericType, out dbType))
+                    return dbType;
+                defaultDbTypes.TryAdd(type, dbType = this.GetNativeDbType(int.MinValue | (int)dbType));
+            }
+            return dbType;
         }
-        return 0;
+        throw new Exception($"类型{type.FullName}没有对应的NpgsqlTypes.NpgsqlDbType映射类型");
+    }
+    public override object GetNativeDbType(int nativeDbType)
+    {
+        if (nativeDbTypes.TryGetValue(nativeDbType, out var result))
+            return result;
+        var dbTypeType = Type.GetType("NpgsqlTypes.NpgsqlDbType, Npgsql, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7");
+        result = Enum.ToObject(dbTypeType, nativeDbType);
+        if (result != null)
+        {
+            lock (this)
+            {
+                if (nativeDbTypes.TryGetValue(nativeDbType, out result))
+                    return result;
+                result = Enum.ToObject(dbTypeType, nativeDbType);
+                nativeDbTypes.TryAdd(nativeDbType, result);
+            }
+            return result;
+        }
+        throw new Exception($"数值{nativeDbType}没有对应的NpgsqlTypes.NpgsqlDbType映射类型");
+    }
+    public override bool IsStringDbType(int nativeDbType)
+    {
+        if (nativeDbType == 6 || nativeDbType == 19 || nativeDbType == 22 || nativeDbType == 32 || nativeDbType == 51 || nativeDbType == 38)
+            return true;
+        return false;
     }
     public override string CastTo(Type type)
     {

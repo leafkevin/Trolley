@@ -22,29 +22,31 @@ namespace Trolley;
 /// <typeparam name="TEntity"></typeparam>
 class Create<TEntity> : ICreate<TEntity>
 {
-    private readonly IOrmDbFactory dbFactory;
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
+    private readonly IOrmProvider ormProvider;
+    private readonly IEntityMapProvider mapProvider;
 
-    public Create(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction)
+    public Create(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
     {
-        this.dbFactory = dbFactory;
         this.connection = connection;
         this.transaction = transaction;
+        this.ormProvider = ormProvider;
+        this.mapProvider = mapProvider;
     }
     public ICreated<TEntity> RawSql(string rawSql, object parameters)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        return new Created<TEntity>(this.dbFactory, this.connection, this.transaction, rawSql, parameters);
+        return new Created<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider, rawSql, parameters);
     }
     public ICreated<TEntity> WithBy<TInsertObject>(TInsertObject insertObjs, int bulkCount = 500)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
 
-        return new Created<TEntity>(this.dbFactory, this.connection, this.transaction, null, insertObjs, bulkCount);
+        return new Created<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider, null, insertObjs, bulkCount);
     }
     public ICreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector)
     {
@@ -52,8 +54,8 @@ class Create<TEntity> : ICreate<TEntity>
             throw new ArgumentNullException(nameof(fieldSelector));
 
         var entityType = typeof(TEntity);
-        var visitor = new CreateVisitor(this.dbFactory, this.connection, this.transaction, entityType).From(fieldSelector);
-        return new Create<TEntity, TSource>(visitor);
+        var visitor = new CreateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType).From(fieldSelector);
+        return new Create<TEntity, TSource>(this.connection, this.transaction, visitor);
     }
     public ICreate<TEntity, T1, T2> From<T1, T2>(Expression<Func<T1, T2, object>> fieldSelector)
     {
@@ -61,8 +63,8 @@ class Create<TEntity> : ICreate<TEntity>
             throw new ArgumentNullException(nameof(fieldSelector));
 
         var entityType = typeof(TEntity);
-        var visitor = new CreateVisitor(this.dbFactory, this.connection, this.transaction, entityType).From(fieldSelector);
-        return new Create<TEntity, T1, T2>(visitor);
+        var visitor = new CreateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType).From(fieldSelector);
+        return new Create<TEntity, T1, T2>(this.connection, this.transaction, visitor);
     }
     public ICreate<TEntity, T1, T2, T3> From<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> fieldSelector)
     {
@@ -70,8 +72,8 @@ class Create<TEntity> : ICreate<TEntity>
             throw new ArgumentNullException(nameof(fieldSelector));
 
         var entityType = typeof(TEntity);
-        var visitor = new CreateVisitor(this.dbFactory, this.connection, this.transaction, entityType).From(fieldSelector);
-        return new Create<TEntity, T1, T2, T3>(visitor);
+        var visitor = new CreateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType).From(fieldSelector);
+        return new Create<TEntity, T1, T2, T3>(this.connection, this.transaction, visitor);
     }
     public ICreate<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, object>> fieldSelector)
     {
@@ -79,8 +81,8 @@ class Create<TEntity> : ICreate<TEntity>
             throw new ArgumentNullException(nameof(fieldSelector));
 
         var entityType = typeof(TEntity);
-        var visitor = new CreateVisitor(this.dbFactory, this.connection, this.transaction, entityType).From(fieldSelector);
-        return new Create<TEntity, T1, T2, T3, T4>(visitor);
+        var visitor = new CreateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType).From(fieldSelector);
+        return new Create<TEntity, T1, T2, T3, T4>(this.connection, this.transaction, visitor);
     }
     public ICreate<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, object>> fieldSelector)
     {
@@ -88,25 +90,27 @@ class Create<TEntity> : ICreate<TEntity>
             throw new ArgumentNullException(nameof(fieldSelector));
 
         var entityType = typeof(TEntity);
-        var visitor = new CreateVisitor(this.dbFactory, this.connection, this.transaction, entityType).From(fieldSelector);
-        return new Create<TEntity, T1, T2, T3, T4, T5>(visitor);
+        var visitor = new CreateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType).From(fieldSelector);
+        return new Create<TEntity, T1, T2, T3, T4, T5>(this.connection, this.transaction, visitor);
     }
 }
 class Created<TEntity> : ICreated<TEntity>
 {
     private static ConcurrentDictionary<int, object> commandInitializerCache = new();
-    private readonly IOrmDbFactory dbFactory;
     private readonly TheaConnection connection;
+    private readonly IOrmProvider ormProvider;
+    private readonly IEntityMapProvider mapProvider;
     private readonly IDbTransaction transaction;
     private string rawSql = null;
     private object parameters = null;
     private int? bulkCount;
 
-    public Created(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, string rawSql, object parameters, int? bulkCount = null)
+    public Created(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, string rawSql, object parameters, int? bulkCount = null)
     {
-        this.dbFactory = dbFactory;
         this.connection = connection;
         this.transaction = transaction;
+        this.ormProvider = ormProvider;
+        this.mapProvider = mapProvider;
         this.rawSql = rawSql;
         this.parameters = parameters;
         this.bulkCount = bulkCount;
@@ -148,7 +152,7 @@ class Created<TEntity> : ICreated<TEntity>
             command.Transaction = this.transaction;
             foreach (var entity in entities)
             {
-                commandInitializer.Invoke(command, this.connection.OrmProvider, sqlBuilder, index, entity);
+                commandInitializer.Invoke(command, this.ormProvider, sqlBuilder, index, entity);
                 if (index >= this.bulkCount)
                 {
                     command.CommandText = sqlBuilder.ToString();
@@ -182,7 +186,7 @@ class Created<TEntity> : ICreated<TEntity>
                 if (isDictionary)
                     commandInitializer = this.BuildCommandInitializer(entityType);
                 else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
-                sql = commandInitializer.Invoke(command, this.connection.OrmProvider, this.parameters);
+                sql = commandInitializer.Invoke(command, this.ormProvider, this.parameters);
             }
             else
             {
@@ -191,13 +195,13 @@ class Created<TEntity> : ICreated<TEntity>
                 if (isDictionary)
                     commandInitializer = this.BuildCommandInitializer(sql);
                 else commandInitializer = this.BuildCommandInitializer(sql, entityType, parameterType);
-                commandInitializer.Invoke(command, this.connection.OrmProvider, this.parameters);
+                commandInitializer.Invoke(command, this.ormProvider, this.parameters);
             }
             command.CommandText = sql;
             command.CommandType = CommandType.Text;
             command.Transaction = this.transaction;
             this.connection.Open();
-            var entityMapper = this.dbFactory.GetEntityMap(entityType);
+            var entityMapper = this.mapProvider.GetEntityMap(entityType);
             if (entityMapper.IsAutoIncrement)
             {
                 using var reader = command.ExecuteReader();
@@ -253,7 +257,7 @@ class Created<TEntity> : ICreated<TEntity>
 
             foreach (var entity in entities)
             {
-                commandInitializer.Invoke(command, this.connection.OrmProvider, sqlBuilder, index, entity);
+                commandInitializer.Invoke(command, this.ormProvider, sqlBuilder, index, entity);
                 if (index >= this.bulkCount)
                 {
                     command.CommandText = sqlBuilder.ToString();
@@ -286,7 +290,7 @@ class Created<TEntity> : ICreated<TEntity>
                 if (isDictionary)
                     commandInitializer = this.BuildCommandInitializer(entityType);
                 else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
-                sql = commandInitializer.Invoke(cmd, this.connection.OrmProvider, this.parameters);
+                sql = commandInitializer.Invoke(cmd, this.ormProvider, this.parameters);
             }
             else
             {
@@ -295,7 +299,7 @@ class Created<TEntity> : ICreated<TEntity>
                 if (isDictionary)
                     commandInitializer = this.BuildCommandInitializer(sql);
                 else commandInitializer = this.BuildCommandInitializer(sql, entityType, parameterType);
-                commandInitializer.Invoke(cmd, this.connection.OrmProvider, this.parameters);
+                commandInitializer.Invoke(cmd, this.ormProvider, this.parameters);
             }
             cmd.CommandText = sql;
             cmd.CommandType = CommandType.Text;
@@ -304,7 +308,7 @@ class Created<TEntity> : ICreated<TEntity>
                 throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
             await this.connection.OpenAsync(cancellationToken);
-            var entityMapper = this.dbFactory.GetEntityMap(entityType);
+            var entityMapper = this.mapProvider.GetEntityMap(entityType);
             if (entityMapper.IsAutoIncrement)
             {
                 using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -356,7 +360,7 @@ class Created<TEntity> : ICreated<TEntity>
             using var command = this.connection.CreateCommand();
             foreach (var entity in entities)
             {
-                commandInitializer.Invoke(command, this.connection.OrmProvider, sqlBuilder, index, entity);
+                commandInitializer.Invoke(command, this.ormProvider, sqlBuilder, index, entity);
                 if (index >= this.bulkCount)
                     break;
                 index++;
@@ -377,7 +381,7 @@ class Created<TEntity> : ICreated<TEntity>
                 commandInitializer = this.BuildCommandInitializer(entityType);
             else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
             using var command = this.connection.CreateCommand();
-            var sql = commandInitializer?.Invoke(command, this.connection.OrmProvider, this.parameters);
+            var sql = commandInitializer?.Invoke(command, this.ormProvider, this.parameters);
             if (command.Parameters != null && command.Parameters.Count > 0)
                 dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
             command.Cancel();
@@ -391,9 +395,8 @@ class Created<TEntity> : ICreated<TEntity>
         if (!commandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
         {
             int columnIndex = 0;
-            var entityMapper = this.dbFactory.GetEntityMap(entityType);
-            var parameterMapper = this.dbFactory.GetEntityMap(parameterType);
-            var ormProvider = this.connection.OrmProvider;
+            var entityMapper = this.mapProvider.GetEntityMap(entityType);
+            var parameterMapper = this.mapProvider.GetEntityMap(parameterType);
             var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
             var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
             var builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
@@ -403,11 +406,11 @@ class Created<TEntity> : ICreated<TEntity>
             var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
-            var localParameters = new Dictionary<Type, ParameterExpression>();
+            var localParameters = new Dictionary<string, int>();
             blockParameters.Add(typedParameterExpr);
             blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
 
-            var insertBuilder = new StringBuilder($"INSERT INTO {ormProvider.GetTableName(entityMapper.TableName)} (");
+            var insertBuilder = new StringBuilder($"INSERT INTO {this.ormProvider.GetTableName(entityMapper.TableName)} (");
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
                 if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper)
@@ -417,7 +420,7 @@ class Created<TEntity> : ICreated<TEntity>
 
                 if (columnIndex > 0)
                     insertBuilder.Append(',');
-                insertBuilder.Append(ormProvider.GetFieldName(propMapper.FieldName));
+                insertBuilder.Append(this.ormProvider.GetFieldName(propMapper.FieldName));
                 columnIndex++;
             }
             insertBuilder.Append(") VALUES ");
@@ -443,12 +446,13 @@ class Created<TEntity> : ICreated<TEntity>
                 if (columnIndex > 0)
                     blockBodies.Add(Expression.Call(builderExpr, methodInfo1, Expression.Constant(',')));
 
-                var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
+                var parameterName = this.ormProvider.ParameterPrefix + propMapper.MemberName;
                 var suffixExpr = Expression.Call(indexExpr, typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes));
                 var parameterNameExpr = Expression.Call(methodInfo3, Expression.Constant(parameterName), suffixExpr);
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.IsNullable, propMapper.NativeDbType, propMapper, localParameters, blockParameters, blockBodies);
+                var isNullable = parameterMemberMapper.MemberType.IsNullableType(out _);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, isNullable, propMapper.NativeDbType, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
                 columnIndex++;
             }
             blockBodies.Add(Expression.Call(builderExpr, methodInfo1, Expression.Constant(')')));
@@ -464,9 +468,8 @@ class Created<TEntity> : ICreated<TEntity>
         if (!commandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
         {
             int columnIndex = 0;
-            var entityMapper = this.dbFactory.GetEntityMap(entityType);
-            var parameterMapper = this.dbFactory.GetEntityMap(parameterType);
-            var ormProvider = this.connection.OrmProvider;
+            var entityMapper = this.mapProvider.GetEntityMap(entityType);
+            var parameterMapper = this.mapProvider.GetEntityMap(parameterType);
             var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
             var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");
@@ -474,11 +477,11 @@ class Created<TEntity> : ICreated<TEntity>
             var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
-            var localParameters = new Dictionary<Type, ParameterExpression>();
+            var localParameters = new Dictionary<string, int>();
             blockParameters.Add(typedParameterExpr);
             blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
 
-            var insertBuilder = new StringBuilder($"INSERT INTO {ormProvider.GetTableName(entityMapper.TableName)} (");
+            var insertBuilder = new StringBuilder($"INSERT INTO {this.ormProvider.GetTableName(entityMapper.TableName)} (");
             var valuesBuilder = new StringBuilder(" VALUES(");
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
@@ -492,19 +495,20 @@ class Created<TEntity> : ICreated<TEntity>
                     insertBuilder.Append(',');
                     valuesBuilder.Append(',');
                 }
-                insertBuilder.Append(ormProvider.GetFieldName(propMapper.FieldName));
-                var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName;
+                insertBuilder.Append(this.ormProvider.GetFieldName(propMapper.FieldName));
+                var parameterName = this.ormProvider.ParameterPrefix + propMapper.MemberName;
                 valuesBuilder.Append(parameterName);
-                var parameterNameExpr = Expression.Constant(parameterName);
 
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.IsNullable, propMapper.NativeDbType, propMapper, localParameters, blockParameters, blockBodies);
+                var parameterNameExpr = Expression.Constant(parameterName);
+                var isNullable = parameterMemberMapper.MemberType.IsNullableType(out _);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, isNullable, propMapper.NativeDbType, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
                 columnIndex++;
             }
             insertBuilder.Append(')');
             valuesBuilder.Append(')');
 
             if (entityMapper.IsAutoIncrement)
-                valuesBuilder.AppendFormat(ormProvider.SelectIdentitySql, entityMapper.AutoIncrementField);
+                valuesBuilder.AppendFormat(this.ormProvider.SelectIdentitySql, entityMapper.AutoIncrementField);
             var sql = insertBuilder.ToString() + valuesBuilder.ToString();
 
             var returnExpr = Expression.Constant(sql, typeof(string));
@@ -523,8 +527,7 @@ class Created<TEntity> : ICreated<TEntity>
         var cacheKey = HashCode.Combine("Create", this.connection, sql, entityType, parameterType);
         if (!commandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
         {
-            var parameterMapper = this.dbFactory.GetEntityMap(parameterType);
-            var ormProvider = this.connection.OrmProvider;
+            var parameterMapper = this.mapProvider.GetEntityMap(parameterType);
             var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
             var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
             var parameterExpr = Expression.Parameter(typeof(object), "parameter");
@@ -532,18 +535,20 @@ class Created<TEntity> : ICreated<TEntity>
             var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
-            var localParameters = new Dictionary<Type, ParameterExpression>();
+            var localParameters = new Dictionary<string, int>();
             blockParameters.Add(typedParameterExpr);
             blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
 
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
-                var parameterName = ormProvider.ParameterPrefix + parameterMemberMapper.MemberName;
+                var parameterName = this.ormProvider.ParameterPrefix + parameterMemberMapper.MemberName;
                 if (!Regex.IsMatch(sql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
                     continue;
 
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.IsNullable, parameterMemberMapper.NativeDbType, parameterMemberMapper, localParameters, blockParameters, blockBodies);
+                //明确的SQL，传入的参数有可能为NULL,为NULL则插入NULL值
+                var isNullable = parameterMemberMapper.MemberType.IsNullableType(out _);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, isNullable, parameterMemberMapper.NativeDbType, parameterMemberMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
             }
             commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
             commandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
@@ -556,7 +561,7 @@ class Created<TEntity> : ICreated<TEntity>
         {
             int columnIndex = 0;
             var dict = parameter as Dictionary<string, object>;
-            var entityMapper = this.dbFactory.GetEntityMap(entityType);
+            var entityMapper = this.mapProvider.GetEntityMap(entityType);
             if (index == 0)
             {
                 builder.Append($"INSERT INTO {ormProvider.GetTableName(entityMapper.TableName)} (");
@@ -588,8 +593,8 @@ class Created<TEntity> : ICreated<TEntity>
                 var parameterName = ormProvider.ParameterPrefix + propMapper.MemberName + index.ToString();
                 builder.Append(parameterName);
 
-                if (propMapper.NativeDbType.HasValue)
-                    command.Parameters.Add(ormProvider.CreateParameter(parameterName, propMapper.NativeDbType.Value, item.Value));
+                if (propMapper.NativeDbType != null)
+                    command.Parameters.Add(ormProvider.CreateParameter(parameterName, propMapper.NativeDbType, item.Value));
                 else command.Parameters.Add(ormProvider.CreateParameter(parameterName, item.Value));
                 columnIndex++;
             }
@@ -602,7 +607,7 @@ class Created<TEntity> : ICreated<TEntity>
         {
             int index = 0;
             var dict = parameter as Dictionary<string, object>;
-            var entityMapper = this.dbFactory.GetEntityMap(entityType);
+            var entityMapper = this.mapProvider.GetEntityMap(entityType);
             var insertBuilder = new StringBuilder($"INSERT INTO {ormProvider.GetTableName(entityMapper.TableName)} (");
             var valuesBuilder = new StringBuilder(" VALUES(");
             foreach (var item in dict)
@@ -621,15 +626,15 @@ class Created<TEntity> : ICreated<TEntity>
                 insertBuilder.Append(ormProvider.GetFieldName(propMapper.FieldName));
                 valuesBuilder.Append(parameterName);
 
-                if (propMapper.NativeDbType.HasValue)
-                    command.Parameters.Add(ormProvider.CreateParameter(parameterName, propMapper.NativeDbType.Value, item.Value));
+                if (propMapper.NativeDbType != null)
+                    command.Parameters.Add(ormProvider.CreateParameter(parameterName, propMapper.NativeDbType, item.Value));
                 else command.Parameters.Add(ormProvider.CreateParameter(parameterName, item.Value));
                 index++;
             }
             insertBuilder.Append(')');
             valuesBuilder.Append(')');
             if (entityMapper.IsAutoIncrement)
-                valuesBuilder.AppendFormat(connection.OrmProvider.SelectIdentitySql, entityMapper.AutoIncrementField);
+                valuesBuilder.AppendFormat(ormProvider.SelectIdentitySql, entityMapper.AutoIncrementField);
             return insertBuilder.ToString() + valuesBuilder.ToString();
         };
     }
@@ -655,11 +660,11 @@ class CreateBase
     protected readonly IDbTransaction transaction;
     protected readonly CreateVisitor visitor;
 
-    public CreateBase(CreateVisitor visitor)
+    public CreateBase(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
     {
+        this.connection = connection;
+        this.transaction = transaction;
         this.visitor = visitor;
-        this.connection = visitor.connection;
-        this.transaction = visitor.transaction;
     }
     public int Execute()
     {
@@ -701,8 +706,8 @@ class CreateBase
 }
 class Create<TEntity, T1> : CreateBase, ICreate<TEntity, T1>
 {
-    public Create(CreateVisitor visitor)
-        : base(visitor) { }
+    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+        : base(connection, transaction, visitor) { }
     public ICreate<TEntity, T1> Where(Expression<Func<T1, bool>> predicate)
     {
         if (predicate == null)
@@ -723,8 +728,8 @@ class Create<TEntity, T1> : CreateBase, ICreate<TEntity, T1>
 }
 class Create<TEntity, T1, T2> : CreateBase, ICreate<TEntity, T1, T2>
 {
-    public Create(CreateVisitor visitor)
-        : base(visitor) { }
+    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+        : base(connection, transaction, visitor) { }
     public ICreate<TEntity, T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
     {
         if (predicate == null)
@@ -745,8 +750,8 @@ class Create<TEntity, T1, T2> : CreateBase, ICreate<TEntity, T1, T2>
 }
 class Create<TEntity, T1, T2, T3> : CreateBase, ICreate<TEntity, T1, T2, T3>
 {
-    public Create(CreateVisitor visitor)
-        : base(visitor) { }
+    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+        : base(connection, transaction, visitor) { }
     public ICreate<TEntity, T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
     {
         if (predicate == null)
@@ -767,8 +772,8 @@ class Create<TEntity, T1, T2, T3> : CreateBase, ICreate<TEntity, T1, T2, T3>
 }
 class Create<TEntity, T1, T2, T3, T4> : CreateBase, ICreate<TEntity, T1, T2, T3, T4>
 {
-    public Create(CreateVisitor visitor)
-        : base(visitor) { }
+    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+        : base(connection, transaction, visitor) { }
     public ICreate<TEntity, T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
     {
         if (predicate == null)
@@ -789,8 +794,8 @@ class Create<TEntity, T1, T2, T3, T4> : CreateBase, ICreate<TEntity, T1, T2, T3,
 }
 class Create<TEntity, T1, T2, T3, T4, T5> : CreateBase, ICreate<TEntity, T1, T2, T3, T4, T5>
 {
-    public Create(CreateVisitor visitor)
-        : base(visitor) { }
+    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+        : base(connection, transaction, visitor) { }
     public ICreate<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
     {
         if (predicate == null)

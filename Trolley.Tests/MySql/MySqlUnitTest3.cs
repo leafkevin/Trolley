@@ -14,12 +14,14 @@ public class MySqlUnitTest3
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
-            var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
-            var ormProvider = f.GetService<IOrmProvider>();
-            var builder = new OrmDbFactoryBuilder();
-            builder.Register("fengling", true, f => f.Add<MySqlProvider>(connectionString, true))
-                .AddTypeHandler<JsonTypeHandler>()
-                .Configure(f => new MySqlModelConfiguration().OnModelCreating(f));
+            var builder = new OrmDbFactoryBuilder()
+            .Register("fengling", true, f =>
+            {
+                var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
+                f.Add<MySqlProvider>(connectionString, true)
+                 .Configure(new MySqlModelConfiguration());
+            })
+            .AddTypeHandler<JsonTypeHandler>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
@@ -199,7 +201,7 @@ public class MySqlUnitTest3
             })
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
     }
     [Fact]
     public void Update_InnerJoin_Multi()
@@ -215,7 +217,7 @@ public class MySqlUnitTest3
             })
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=b.`Amount`,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=b.`Amount`,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
     }
     [Fact]
     public void Update_InnerJoin_Fields()
@@ -223,14 +225,15 @@ public class MySqlUnitTest3
         using var repository = this.dbFactory.Create();
         var sql = repository.Update<Order>()
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-            .Set(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
+            .Set(f => f.TotalAmount, (x, y) => x
+                .From<OrderDetail>('c')
                 .Where(f => f.OrderId == y.Id)
                 .Select(t => Sql.Sum(t.Amount)))
             .Set((a, b) => new { OrderNo = a.OrderNo + b.ProductId.ToString() })
             .Set((x, y) => new { BuyerId = DBNull.Value })
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,CAST(b.`ProductId` AS CHAR)),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,CAST(b.`ProductId` AS CHAR)),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
     }
     [Fact]
     public void Update_SetNull_WhereNull()
@@ -247,14 +250,39 @@ public class MySqlUnitTest3
         Assert.True(sql == "UPDATE `sys_order` SET `BuyerId`=NULL,`Seller`=NULL WHERE `OrderNo` IS NULL");
     }
     [Fact]
-    public void Update_Json()
+    public void Update_SetJson()
     {
         using var repository = this.dbFactory.Create();
         repository.BeginTransaction();
         var result = repository.Update<Order>()
-             .Set(f => f.Products, new List<int> { 1, 2, 3 })
-             .Where(x => x.Id == 1)
-             .Execute();
+            .Set(f => f.Products, new List<int> { 1, 2, 3 })
+            .Where(x => x.Id == 1)
+            .Execute();
+        var order = repository.Get<Order>(1);
+        repository.Commit();
+        if (result > 0)
+        {
+            Assert.NotEmpty(order.Products);
+            Assert.True(order.Products.Count == 3);
+            Assert.True(order.Products[0] == 1);
+            Assert.True(order.Products[1] == 2);
+            Assert.True(order.Products[2] == 3);
+        }
+    }
+    [Fact]
+    public void Update_SetJson1()
+    {
+        using var repository = this.dbFactory.Create();
+        repository.BeginTransaction();
+        var result = repository.Update<Order>()
+            .Set(f => new
+            {
+                OrderNo = f.OrderNo + "111",
+                Products = new List<int> { 1, 2, 3 },
+                BuyerId = DBNull.Value
+            })
+            .Where(x => x.Id == 1)
+            .Execute();
         var order = repository.Get<Order>(1);
         repository.Commit();
         if (result > 0)

@@ -15,41 +15,65 @@ class FromGroupingQuery<T, TGrouping> : IFromGroupingQuery<T, TGrouping>
     private readonly QueryVisitor visitor;
 
     public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+
     public IFromGroupingQuery<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
     {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
         this.visitor.Having(predicate);
         return this;
     }
     public IFromGroupingQuery<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
     {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
         if (condition) this.visitor.Having(predicate);
         return this;
     }
     public IFromGroupingQuery<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
     {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
         this.visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IFromGroupingQuery<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
     {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
         this.visitor.OrderBy("DESC", fieldsExpr);
+        return this;
+    }
+    public IFromGroupingQuery<T, TGrouping> Distinct()
+    {
+        this.visitor.Distinct();
         return this;
     }
     public IFromQuery<TGrouping> Select()
     {
-        Expression<Func<TGrouping, TGrouping>> defaultExpr = f => f;
-        this.visitor.Select(null, defaultExpr);
+        this.visitor.SelectGrouping();
         return new FromQuery<TGrouping>(this.visitor);
+    }
+    public IQueryAnonymousObject Select(string fields = "*")
+    {
+        if (string.IsNullOrEmpty(fields))
+            throw new ArgumentNullException(nameof(fields));
+
+        this.visitor.Select(fields);
+        return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
     {
-        Expression<Func<TGrouping, TGrouping>> defaultExpr = f => f;
         this.visitor.Select(null, fieldsExpr);
         return new FromQuery<TTarget>(this.visitor);
     }
 }
 <#
-    var count = 10;
+    var count = 15;
     var tables = "T1";
     for (int i = 2; i < count; i++)
     {
@@ -60,36 +84,90 @@ class FromGroupingQuery<<#=tables#>, TGrouping> : IFromGroupingQuery<<#=tables#>
     private readonly QueryVisitor visitor;
 
     public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+
     public IFromGroupingQuery<<#=tables#>, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
     {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
         this.visitor.Having(predicate);
         return this;
     }
     public IFromGroupingQuery<<#=tables#>, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
     {
-        if (condition) this.visitor.Having(predicate);
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        if (condition) 
+            this.visitor.Having(predicate);
         return this;
     }
     public IFromGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
     {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
         this.visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IFromGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
     {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     public IFromQuery<TGrouping> Select()
     {
-        Expression<Func<TGrouping, TGrouping>> defaultExpr = f => f;
-        this.visitor.Select(null, defaultExpr);
+        this.visitor.SelectGrouping();
         return new FromQuery<TGrouping>(this.visitor);
+    }
+    public IQueryAnonymousObject Select(string fields = "*")
+    {
+        if (string.IsNullOrEmpty(fields))
+            throw new ArgumentNullException(nameof(fields));
+
+        this.visitor.Select(fields);
+        return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
     {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
         this.visitor.Select(null, fieldsExpr);
         return new FromQuery<TTarget>(this.visitor);
     }
 }
-<#  }#>
+<#  }
+    tables += $", T{count}";
+#>
+class FromGroupingQuery<<#=tables#>, TGrouping> : IFromGroupingQuery<<#=tables#>, TGrouping>
+{
+    private readonly QueryVisitor visitor;
+
+    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+
+    public IFromQuery<TGrouping> Select()
+    {
+        this.visitor.SelectGrouping();
+        return new FromQuery<TGrouping>(this.visitor);
+    }
+    public IQueryAnonymousObject Select(string fields = "*")
+    {
+        if (string.IsNullOrEmpty(fields))
+            throw new ArgumentNullException(nameof(fields));
+
+        this.visitor.Select(fields);
+        return new QueryAnonymousObject(this.visitor);
+    }
+    public IFromQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        this.visitor.Select(null, fieldsExpr);
+        return new FromQuery<TTarget>(this.visitor);
+    }
+}

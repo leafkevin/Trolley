@@ -7,7 +7,9 @@ class SqlServerModelConfiguration : IModelConfiguration
         builder.Entity<User>(f =>
         {
             f.ToTable("sys_user").Key(t => t.Id);
-
+            f.Member(t => t.Id).NativeDbType(8);
+            f.Member(t => t.Name).NativeDbType(12);
+            f.Member(t => t.Gender).NativeDbType(20);
             f.HasOne(t => t.Company).HasForeignKey(t => t.CompanyId).MapTo<Company>();
             f.HasMany(t => t.Orders).HasForeignKey(t => t.BuyerId);
         });

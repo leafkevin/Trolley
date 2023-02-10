@@ -24,7 +24,7 @@ public interface IGroupingQuery<T, TGrouping>
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr);  
 }
 <#
-    var count = 16;
+    var count = 15;
     var tables = "T1";
     for (int i = 2; i < count; i++)
     {
@@ -45,4 +45,5 @@ public interface IGroupingQuery<<#=tables#>, TGrouping>
 public interface IGroupingQuery<<#=tables#>, TGrouping>
 {
     IQuery<TGrouping> Select();
+    IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr);
 }

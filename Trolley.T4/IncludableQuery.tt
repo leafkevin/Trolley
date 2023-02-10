@@ -7,28 +7,29 @@
 <#@ output extension=".cs" #>
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq.Expressions;
 
 namespace Trolley;
 
 class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember>
 {
-    public IncludableQuery(QueryVisitor visitor)
-        : base(visitor) { }
+    public IncludableQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+        : base(connection, transaction, visitor) { }
 
     public IIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
         this.visitor.ThenInclude(member);
-        return new IncludableQuery<T, TNavigation>(this.visitor);
+        return new IncludableQuery<T, TNavigation>(this.connection, this.transaction, this.visitor);
     }
     public IIncludableQuery<T, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.ThenInclude(member, true, filter);
-        return new IncludableQuery<T, TElment>(this.visitor);
+        return new IncludableQuery<T, TElment>(this.connection, this.transaction, this.visitor);
     }
 }
 <#
-    var count = 16;
+    var count = 15;
     var tables = "T1";
     for (int i = 2; i < count; i++)
     {
@@ -36,18 +37,18 @@ class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember>
 #>
 class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IIncludableQuery<<#=tables#>, TMember>
 {
-    public IncludableQuery(QueryVisitor visitor)
-        : base(visitor) { }
+    public IncludableQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+        : base(connection, transaction, visitor) { }
 
     public IIncludableQuery<<#=tables#>, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
         this.visitor.ThenInclude(member);
-        return new IncludableQuery<<#=tables#>, TNavigation>(this.visitor);
+        return new IncludableQuery<<#=tables#>, TNavigation>(this.connection, this.transaction, this.visitor);
     }
     public IIncludableQuery<<#=tables#>, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.ThenInclude(member, true, filter);
-        return new IncludableQuery<<#=tables#>, TElment>(this.visitor);
+        return new IncludableQuery<<#=tables#>, TElment>(this.connection, this.transaction, this.visitor);
     }
 }
 <#  }
@@ -55,6 +56,6 @@ class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IIncludableQue
 #>
 class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IIncludableQuery<<#=tables#>, TMember>
 {
-    public IncludableQuery(QueryVisitor visitor)
-        : base(visitor) { }
+    public IncludableQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+        : base(connection, transaction, visitor) { }
 }

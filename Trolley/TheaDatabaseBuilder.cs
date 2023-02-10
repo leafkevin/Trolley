@@ -1,48 +1,52 @@
-﻿using System.Collections.Generic;
+﻿using System;
 
 namespace Trolley;
 
-public class TheaDatabaseBuilder
+public class TenantDatabaseBuilder
 {
-    private readonly IOrmDbFactory dbFactory;
+    private readonly TheaDatabaseProvider databaseProvider;
     private readonly TheaDatabase database;
 
-    public TheaDatabaseBuilder(IOrmDbFactory dbFactory, TheaDatabase database)
+    public TenantDatabaseBuilder(TheaDatabaseProvider databaseProvider, TheaDatabase database)
     {
-        this.dbFactory = dbFactory;
+        this.databaseProvider = databaseProvider;
         this.database = database;
     }
-    public TheaDatabaseBuilder Add(TheaConnectionInfo connectionInfo)
+    public TenantDatabaseBuilder With(params int[] tenantIds)
     {
-        this.dbFactory.AddOrmProvider(connectionInfo.OrmProvider);
-        this.database.ConnectionInfos.Add(connectionInfo);
+        if (tenantIds != null)
+            this.database.TenantIds = tenantIds;
         return this;
     }
-    public TheaDatabaseBuilder Add(string connectionString, IOrmProvider ormProvider, bool isDefault, List<int> tenantIds = null)
+    public TenantDatabaseBuilder Use(Type ormProviderType)
     {
-        this.dbFactory.AddOrmProvider(ormProvider);
-        this.database.ConnectionInfos.Add(new TheaConnectionInfo
-        {
-            DbKey = this.database.DbKey,
-            ConnectionString = connectionString,
-            IsDefault = isDefault,
-            OrmProvider = ormProvider,
-            TenantIds = tenantIds
-        });
+        if (ormProviderType == null)
+            throw new ArgumentNullException(nameof(ormProviderType));
+
+        this.database.OrmProviderType = ormProviderType;
         return this;
     }
-    public TheaDatabaseBuilder Add<TOrmProvider>(string connectionString, bool isDefault, List<int> tenantIds = null) where TOrmProvider : IOrmProvider, new()
+    public TenantDatabaseBuilder Configure(IModelConfiguration configuration)
     {
-        var ormProvider = new TOrmProvider();
-        this.dbFactory.AddOrmProvider(ormProvider);
-        this.database.ConnectionInfos.Add(new TheaConnectionInfo
-        {
-            DbKey = this.database.DbKey,
-            ConnectionString = connectionString,
-            IsDefault = isDefault,
-            OrmProvider = ormProvider,
-            TenantIds = tenantIds
-        });
+        if (!this.databaseProvider.TryGetEntityMapProvider(this.database.OrmProviderType, out var mapProvider))
+            this.databaseProvider.AddEntityMapProvider(this.database.OrmProviderType, mapProvider = new EntityMapProvider());
+
+        var modelBuilder = new ModelBuilder(mapProvider);
+        configuration.OnModelCreating(modelBuilder);
         return this;
+    }
+}
+public class TheaDatabaseBuilder
+{
+    private readonly TheaDatabaseProvider database;
+
+    public TheaDatabaseBuilder(TheaDatabaseProvider database) => this.database = database;
+    public TenantDatabaseBuilder Add(TheaDatabase connectionInfo)
+    {
+        if (connectionInfo == null)
+            throw new ArgumentNullException(nameof(connectionInfo));
+
+        this.database.AddDatabase(connectionInfo);
+        return new TenantDatabaseBuilder(this.database, connectionInfo);
     }
 }

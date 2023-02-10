@@ -14,12 +14,14 @@ public class SqlServerUnitTest3
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
-            var connectionString = "Server=.;Database=fengling;Uid=sa;password=Angangyur123456;TrustServerCertificate=true";
-            var ormProvider = f.GetService<IOrmProvider>();
-            var builder = new OrmDbFactoryBuilder();
-            builder.Register("fengling", true, f => f.Add<SqlServerProvider>(connectionString, true))
-                .AddTypeHandler<JsonTypeHandler>()
-                .Configure(f => new SqlServerModelConfiguration().OnModelCreating(f));
+            var builder = new OrmDbFactoryBuilder()
+            .Register("fengling", true, f =>
+            {
+                var connectionString = "Server=.;Database=fengling;Uid=sa;password=Angangyur123456;TrustServerCertificate=true";
+                f.Add<SqlServerProvider>(connectionString, true)
+                 .Configure(new SqlServerModelConfiguration());
+            })
+            .AddTypeHandler<JsonTypeHandler>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
@@ -247,14 +249,39 @@ public class SqlServerUnitTest3
         Assert.True(sql == "UPDATE [sys_order] SET [BuyerId]=NULL,[Seller]=NULL WHERE [OrderNo] IS NULL");
     }
     [Fact]
-    public void Update_Json()
+    public void Update_SetJson()
     {
         using var repository = this.dbFactory.Create();
         repository.BeginTransaction();
         var result = repository.Update<Order>()
-             .Set(f => f.Products, new List<int> { 1, 2, 3 })
-             .Where(x => x.Id == 1)
-             .Execute();
+            .Set(f => f.Products, new List<int> { 1, 2, 3 })
+            .Where(x => x.Id == 1)
+            .Execute();
+        var order = repository.Get<Order>(1);
+        repository.Commit();
+        if (result > 0)
+        {
+            Assert.NotEmpty(order.Products);
+            Assert.True(order.Products.Count == 3);
+            Assert.True(order.Products[0] == 1);
+            Assert.True(order.Products[1] == 2);
+            Assert.True(order.Products[2] == 3);
+        }
+    }
+    [Fact]
+    public void Update_SetJson1()
+    {
+        using var repository = this.dbFactory.Create();
+        repository.BeginTransaction();
+        var result = repository.Update<Order>()
+            .Set(f => new
+            {
+                OrderNo = f.OrderNo + "111",
+                Products = new List<int> { 1, 2, 3 },
+                BuyerId = DBNull.Value
+            })
+            .Where(x => x.Id == 1)
+            .Execute();
         var order = repository.Get<Order>(1);
         repository.Commit();
         if (result > 0)

@@ -1,90 +1,88 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 
 namespace Trolley;
 
 class OrmDbFactory : IOrmDbFactory
 {
+    private TheaDatabaseProvider defaultDatabaseProvider;
     private readonly ConcurrentDictionary<Type, IOrmProvider> ormProviders = new();
-    private readonly ConcurrentDictionary<string, TheaDatabase> databases = new();
-    private readonly ConcurrentDictionary<Type, EntityMap> entityMappers = new();
-    private readonly ConcurrentDictionary<Type, ITypeHandler> typeHandlers = new();
-    private TheaDatabase defaultDatabase;
+    private readonly ConcurrentDictionary<string, TheaDatabaseProvider> databaseProviders = new();
+    private readonly ITypeHandlerProvider typeHandlerProvider = new TypeHandlerProvider();
 
-    public TheaDatabase Register(string dbKey, bool isDefault, Action<TheaDatabaseBuilder> databaseInitializer)
+    public void Register(string dbKey, bool isDefault, Action<TheaDatabaseBuilder> databaseInitializer)
     {
-        if (!this.databases.TryGetValue(dbKey, out var database))
+        if (!this.databaseProviders.TryGetValue(dbKey, out var database))
         {
-            this.databases.TryAdd(dbKey, database = new TheaDatabase
+            this.databaseProviders.TryAdd(dbKey, database = new TheaDatabaseProvider
             {
                 DbKey = dbKey,
-                IsDefault = isDefault,
-                ConnectionInfos = new List<TheaConnectionInfo>()
+                IsDefault = isDefault
             });
         }
-        if (isDefault) this.defaultDatabase = database;
-        var builder = new TheaDatabaseBuilder(this, database);
+        if (isDefault) this.defaultDatabaseProvider = database;
+        var builder = new TheaDatabaseBuilder(database);
         databaseInitializer?.Invoke(builder);
-        return database;
     }
+    public void AddTypeHandler(ITypeHandler typeHandler)
+        => this.typeHandlerProvider.AddTypeHandler(typeHandler);
+
+    public bool TryGetTypeHandler(Type handlerType, out ITypeHandler typeHandler)
+        => this.typeHandlerProvider.TryGetTypeHandler(handlerType, out typeHandler);
+
     public void AddOrmProvider(IOrmProvider ormProvider)
     {
         if (ormProvider == null)
             throw new ArgumentNullException(nameof(ormProvider));
 
-        this.ormProviders.TryAdd(ormProvider.GetType(), ormProvider);
+        var ormProviderType = ormProvider.GetType();
+        this.ormProviders.TryAdd(ormProviderType, ormProvider);
     }
-    public void AddTypeHandler(ITypeHandler typeHandler)
+    public bool TryGetOrmProvider(Type ormProviderType, out IOrmProvider ormProvider)
     {
-        if (typeHandler == null)
-            throw new ArgumentNullException(nameof(typeHandler));
+        if (ormProviderType == null)
+            throw new ArgumentNullException(nameof(ormProviderType));
 
-        this.typeHandlers.TryAdd(typeHandler.GetType(), typeHandler);
+        return this.ormProviders.TryGetValue(ormProviderType, out ormProvider);
     }
-    public void AddEntityMap(Type entityType, EntityMap mapper)
-    {
-        if (entityType == null)
-            throw new ArgumentNullException(nameof(entityType));
-        if (mapper == null)
-            throw new ArgumentNullException(nameof(mapper));
-
-        this.entityMappers.TryAdd(entityType, mapper);
-    }
-    public bool TryGetEntityMap(Type entityType, out EntityMap mapper)
-    {
-        if (entityType == null)
-            throw new ArgumentNullException(nameof(entityType));
-
-        return this.entityMappers.TryGetValue(entityType, out mapper);
-    }
-    public bool TryGetTypeHandler(Type handlerType, out ITypeHandler typeHandler)
-    {
-        if (handlerType == null)
-            throw new ArgumentNullException(nameof(handlerType));
-
-        return this.typeHandlers.TryGetValue(handlerType, out typeHandler);
-    }
-
-    public IRepository Create(TheaConnection connection) => new Repository(this, connection);
     public IRepository Create(string dbKey = null, int? tenantId = null)
     {
-        var connectionInfo = this.GetConnectionInfo(dbKey, tenantId);
-        var connection = new TheaConnection(connectionInfo);
-        return new Repository(this, connection);
+        var databaseProvider = this.GetDatabaseProvider(dbKey);
+        var database = databaseProvider.GetDatabase(tenantId);
+        if (!this.TryGetOrmProvider(database.OrmProviderType, out var ormProvider))
+            throw new Exception($"未注册类型为{database.OrmProviderType.FullName}的OrmProvider");
+
+        var baseConnection = ormProvider.CreateConnection(database.ConnectionString);
+        if (!databaseProvider.TryGetEntityMapProvider(database.OrmProviderType, out var entityMapProvider))
+            throw new Exception($"未注册Key为{database.OrmProviderType.FullName}的EntityMapProvider");
+
+        var connection = new TheaConnection()
+        {
+            DbKey = dbKey,
+            ConnectionString = database.ConnectionString,
+            BaseConnection = baseConnection
+        };
+        return new Repository(connection, ormProvider, entityMapProvider);
     }
-    public TheaDatabase GetDatabase(string dbKey = null)
+    public TheaDatabaseProvider GetDatabaseProvider(string dbKey = null)
     {
-        TheaDatabase database = null;
         if (string.IsNullOrEmpty(dbKey))
-            database = this.defaultDatabase;
-        else if (!this.databases.TryGetValue(dbKey, out database))
-            throw new Exception($"未配置dbKey:{dbKey}数据库连接串");
+        {
+            if (this.defaultDatabaseProvider == null)
+                throw new Exception($"未配置默认数据库连接串");
+            return this.defaultDatabaseProvider;
+        }
+        if (!this.databaseProviders.TryGetValue(dbKey, out var database))
+            throw new Exception($"dbKey:{dbKey}未配置任何数据库连接串");
         return database;
     }
-    public TheaConnectionInfo GetConnectionInfo(string dbKey = null, int? tenantId = null)
+
+    internal IOrmDbFactory Build()
     {
-        var database = this.GetDatabase(dbKey);
-        return database.GetConnectionInfo(tenantId);
+        foreach (var databaseProvider in this.databaseProviders.Values)
+        {
+            databaseProvider.Build(this, this.typeHandlerProvider);
+        }
+        return this;
     }
 }

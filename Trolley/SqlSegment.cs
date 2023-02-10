@@ -34,40 +34,19 @@ public class SqlSegment
     /// </summary>
     public bool IsConstantValue { get; set; }
     public bool IsExpression { get; set; }
+    /// <summary>
+    /// 是否需要外面加括弧()
+    /// </summary>
     public bool IsNeedParentheses { get; set; }
+    public bool IsArray { get; set; }
     public string ParameterName { get; set; }
-    public MemberInfo FromMember { get; set; }
     public TableSegment TableSegment { get; set; }
+    public ReaderFieldType MemberType { get; set; }
+    public MemberInfo FromMember { get; set; }
     public object Value { get; set; }
     public Expression Expression { get; set; }
     public bool HasDeferred => this.DeferredExprs != null && this.DeferredExprs.Count > 0;
 
-    public SqlSegment Merge(SqlSegment right)
-    {
-        this.isFixValue = false;
-        this.HasField = this.HasField || right.HasField;
-        this.IsParameter = this.IsParameter || right.IsParameter;
-        this.IsExpression = this.IsExpression || right.IsExpression;
-        this.IsConstantValue = this.IsConstantValue && right.IsConstantValue;
-        this.Value = right.Value;
-        if (right.HasDeferred)
-        {
-            if (!this.HasDeferred)
-                this.DeferredExprs = right.DeferredExprs;
-            else
-            {
-                while (right.TryPop(out var deferredExpr))
-                    this.Push(deferredExpr);
-            }
-        }
-        return this;
-    }
-    public SqlSegment Merge(SqlSegment right, object value)
-    {
-        this.Merge(right);
-        this.Value = value;
-        return this;
-    }
     public SqlSegment Change(object value, bool isConstantValue = true)
     {
         this.isFixValue = false;

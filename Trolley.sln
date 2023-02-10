@@ -5,13 +5,15 @@ VisualStudioVersion = 17.2.32526.322
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trolley", "Trolley\Trolley.csproj", "{80FC8005-083A-4DE7-B0D7-9FA4FC5404B1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trolley.AspNetCore", "Trolley.AspNetCore\Trolley.AspNetCore.csproj", "{E9C16CDB-1361-4A95-B337-F8575C41C066}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trolley.T4", "Trolley.T4\Trolley.T4.csproj", "{B4AA60A0-AAB9-47F9-B048-BF75493FF15B}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleAppTest", "ConsoleAppTest\ConsoleAppTest.csproj", "{020302F7-0622-484E-9FE6-4A7FD472A765}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trolley.Tests", "Trolley.Tests\Trolley.Tests.csproj", "{1D7C82EF-8098-4A3B-8816-BACEB0F5A299}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Trolley.WebApiTest", "Trolley.WebApiTest\Trolley.WebApiTest.csproj", "{95A3B382-3AF4-4ECC-A857-734B64122402}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trolley.AspNetCore", "Trolley.AspNetCore\Trolley.AspNetCore.csproj", "{1890A140-6BF5-402F-9082-2CE42F4A405C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,10 +25,6 @@ Global
 		{80FC8005-083A-4DE7-B0D7-9FA4FC5404B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{80FC8005-083A-4DE7-B0D7-9FA4FC5404B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{80FC8005-083A-4DE7-B0D7-9FA4FC5404B1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E9C16CDB-1361-4A95-B337-F8575C41C066}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E9C16CDB-1361-4A95-B337-F8575C41C066}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E9C16CDB-1361-4A95-B337-F8575C41C066}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E9C16CDB-1361-4A95-B337-F8575C41C066}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B4AA60A0-AAB9-47F9-B048-BF75493FF15B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B4AA60A0-AAB9-47F9-B048-BF75493FF15B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B4AA60A0-AAB9-47F9-B048-BF75493FF15B}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -39,6 +37,14 @@ Global
 		{1D7C82EF-8098-4A3B-8816-BACEB0F5A299}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1D7C82EF-8098-4A3B-8816-BACEB0F5A299}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1D7C82EF-8098-4A3B-8816-BACEB0F5A299}.Release|Any CPU.Build.0 = Release|Any CPU
+		{95A3B382-3AF4-4ECC-A857-734B64122402}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95A3B382-3AF4-4ECC-A857-734B64122402}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95A3B382-3AF4-4ECC-A857-734B64122402}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95A3B382-3AF4-4ECC-A857-734B64122402}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1890A140-6BF5-402F-9082-2CE42F4A405C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1890A140-6BF5-402F-9082-2CE42F4A405C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1890A140-6BF5-402F-9082-2CE42F4A405C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1890A140-6BF5-402F-9082-2CE42F4A405C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

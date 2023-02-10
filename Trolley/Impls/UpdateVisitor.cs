@@ -14,16 +14,16 @@ class UpdateVisitor : SqlVisitor
     private string whereSql = string.Empty;
     private string setSql = string.Empty;
 
-    public UpdateVisitor(IOrmDbFactory dbFactory, TheaConnection connection, IDbTransaction transaction, Type entityType, char tableStartAs = 'a')
-        : base(dbFactory, connection, transaction, tableStartAs)
+    public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, char tableAsStart = 'a')
+        : base(dbKey, ormProvider, mapProvider, tableAsStart)
     {
         this.tables = new();
         this.tableAlias = new();
         this.tables.Add(new TableSegment
         {
             EntityType = entityType,
-            Mapper = this.dbFactory.GetEntityMap(entityType),
-            AliasName = tableStartAs.ToString()
+            Mapper = this.mapProvider.GetEntityMap(entityType),
+            AliasName = tableAsStart.ToString()
         });
         switch (this.ormProvider.DatabaseType)
         {
@@ -48,11 +48,11 @@ class UpdateVisitor : SqlVisitor
                         var tableName = tableSegment.Body;
                         if (string.IsNullOrEmpty(tableName))
                         {
-                            tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
+                            tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
                             tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
                         }
                         builder.Append($"{tableSegment.JoinType} {tableName} {tableSegment.AliasName}");
-                        builder.Append($" ON {tableSegment.OnExpr}");
+                        builder.Append($" ON {tableSegment.OnExpr} ");
                     }
                 }
                 builder.Append("SET ");
@@ -71,10 +71,10 @@ class UpdateVisitor : SqlVisitor
                         var tableName = tableSegment.Body;
                         if (string.IsNullOrEmpty(tableName))
                         {
-                            tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
+                            tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
                             tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
                         }
-                        builder.Append($"{tableName} {tableSegment.AliasName}");
+                        builder.Append($"{tableName} {tableSegment.AliasName} ");
                     }
                 }
                 break;
@@ -90,7 +90,7 @@ class UpdateVisitor : SqlVisitor
                         var tableName = tableSegment.Body;
                         if (string.IsNullOrEmpty(tableName))
                         {
-                            tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
+                            tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
                             tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
                         }
                         builder.Append($"{tableName} {tableSegment.AliasName}");
@@ -121,7 +121,7 @@ class UpdateVisitor : SqlVisitor
             case DatabaseType.Oracle:
                 throw new NotSupportedException("Oracle不支持Update From语法，支持Update Set Field=(subQuery)语法");
         }
-        int tableIndex = this.tableStartAs + this.tables.Count;
+        int tableIndex = this.tableAsStart + this.tables.Count;
         for (int i = 0; i < entityTypes.Length; i++)
         {
             this.tables.Add(new TableSegment
@@ -267,8 +267,9 @@ class UpdateVisitor : SqlVisitor
 
                 if (valueExpr.GetParameters(out argumentParameters)
                    && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
-                {
+                {                  
                     var lambdaValuesExpr = valueExpr as LambdaExpression;
+                    this.InitTableAlias(lambdaValuesExpr);
                     var newLambdaExpr = Expression.Lambda(lambdaValuesExpr.Body, lambdaValuesExpr.Parameters.ToList());
                     var sql = this.VisitFromQuery(newLambdaExpr, out var isNeedAlias);
                     setFields.Add(new SetField { MemberMapper = memberMapper, Value = $"({sql})" });
@@ -407,7 +408,7 @@ class UpdateVisitor : SqlVisitor
                 //OrderBy(f=>new {f.Order.OrderId, ...})
                 //OrderBy(f=>f.Order.OrderId)
                 var tableSegment = this.tableAlias[parameterName];
-                tableSegment.Mapper ??= this.dbFactory.GetEntityMap(tableSegment.EntityType);
+                tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
                 var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
 
                 if (memberMapper.IsIgnore)
@@ -561,8 +562,8 @@ class UpdateVisitor : SqlVisitor
             var parameterName = ormProvider.ParameterPrefix + memberMapper.MemberName;
             this.dbParameters ??= new();
             IDbDataParameter dbParameter = null;
-            if (memberMapper.NativeDbType.HasValue)
-                dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, fieldValue);
+            if (memberMapper.NativeDbType != null)
+                dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
             else dbParameter = this.ormProvider.CreateParameter(parameterName, fieldValue);
 
             if (memberMapper.TypeHandler != null)
@@ -587,12 +588,19 @@ class UpdateVisitor : SqlVisitor
                 {
                     this.dbParameters ??= new();
                     IDbDataParameter dbParameter = null;
-                    if (memberMapper.NativeDbType.HasValue)
-                        dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType.Value, sqlSegment.Value);
+                    if (memberMapper.NativeDbType != null)
+                        dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
                     else dbParameter = this.ormProvider.CreateParameter(parameterName, sqlSegment.Value);
 
                     if (memberMapper.TypeHandler != null)
+                    {
+                        if (sqlSegment.IsArray)
+                        {
+                            var sqlSegments = sqlSegment.Value as List<SqlSegment>;
+                            sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
+                        }
                         memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, sqlSegment.Value);
+                    }
                     this.dbParameters.Add(dbParameter);
                 }
                 return new SetField { MemberMapper = memberMapper, Value = parameterName };

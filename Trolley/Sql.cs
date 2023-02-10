@@ -4,8 +4,12 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-public class Sql
+public static class Sql
 {
+    public static TTarget ToFlatten<TTarget>(this object source, Expression<Func<TTarget>> sameMemberInitializer = null)
+    {
+        throw new NotImplementedException();
+    }
     public static bool In<TElement>(TElement value, params TElement[] list)
     {
         throw new NotImplementedException();
@@ -15,6 +19,10 @@ public class Sql
         throw new NotImplementedException();
     }
     public static bool In<TElement>(TElement value, Func<IFromQuery, IFromQuery<TElement>> subQuery)
+    {
+        throw new NotImplementedException();
+    }
+    public static bool Exists(Func<IFromQuery, IQueryAnonymousObject> subQuery)
     {
         throw new NotImplementedException();
     }

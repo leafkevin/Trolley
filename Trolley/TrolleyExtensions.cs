@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,28 +21,45 @@ public static class TrolleyExtensions
         typeof(TimeSpan),typeof(byte[]),typeof(byte?),typeof(sbyte?),typeof(short?),typeof(ushort?),
         typeof(int?),typeof(uint?),typeof(long?),typeof(ulong?),typeof(float?),typeof(double?),typeof(decimal?),
         typeof(bool?),typeof(char?),typeof(Guid?) ,typeof(DateTime?),typeof(DateTimeOffset?),typeof(TimeSpan?) };
+
     private static readonly ConcurrentDictionary<int, Delegate> typeReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> valueTupleReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
 
 
-    public static void Configure(this IOrmDbFactory dbFactory, IModelConfiguration configuration)
-        => configuration.OnModelCreating(new ModelBuilder(dbFactory));
-    public static void Configure<TModelConfiguration>(this IOrmDbFactory dbFactory) where TModelConfiguration : class, IModelConfiguration, new()
-        => new TModelConfiguration().OnModelCreating(new ModelBuilder(dbFactory));
-    public static void Configure(this IOrmDbFactory dbFactory, Action<ModelBuilder> initializer)
+    public static TenantDatabaseBuilder Add<TOrmProvider>(this TheaDatabaseBuilder builder, string connectionString, bool isDefault) where TOrmProvider : IOrmProvider, new()
     {
-        if (initializer == null)
-            throw new ArgumentNullException(nameof(initializer));
-
-        initializer.Invoke(new ModelBuilder(dbFactory));
+        return builder.Add(new TheaDatabase
+        {
+            ConnectionString = connectionString,
+            IsDefault = isDefault,
+            OrmProviderType = typeof(TOrmProvider)
+        });
     }
-    public static void AddTypeHandler<TTypeHandler>(this IOrmDbFactory dbFactory) where TTypeHandler : class, ITypeHandler, new()
-        => dbFactory.AddTypeHandler(new TTypeHandler());
+    public static OrmDbFactoryBuilder AddTypeHandler<TTypeHandler>(this OrmDbFactoryBuilder builder) where TTypeHandler : class, ITypeHandler, new()
+        => builder.AddTypeHandler(new TTypeHandler());
     public static T Parse<T>(this ITypeHandler typeHandler, IOrmProvider ormProvider, object value)
-        => (T)typeHandler.Parse(ormProvider, typeof(T), value);
-
+       => (T)typeHandler.Parse(ormProvider, typeof(T), value);
+    public static EntityMap GetEntityMap(this IEntityMapProvider mapProvider, Type entityType)
+    {
+        if (!mapProvider.TryGetEntityMap(entityType, out var mapper))
+        {
+            mapper = EntityMap.CreateDefaultMap(entityType);
+            mapProvider.AddEntityMap(entityType, mapper);
+        }
+        return mapper;
+    }
+    public static EntityMap GetEntityMap(this IEntityMapProvider mapProvider, Type entityType, Type mapToType)
+    {
+        if (!mapProvider.TryGetEntityMap(entityType, out var mapper))
+        {
+            var mapToMapper = mapProvider.GetEntityMap(mapToType);
+            mapper = EntityMap.CreateDefaultMap(entityType, mapToMapper);
+            mapProvider.AddEntityMap(entityType, mapper);
+        }
+        return mapper;
+    }
 
     public static TEntity QueryFirst<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate = null)
         => repository.From<TEntity>().Where(predicate).First();
@@ -91,32 +109,10 @@ public static class TrolleyExtensions
         => await repository.Delete<TEntity>().Where(keys).ExecuteAsync(cancellationToken);
 
 
-
-
-
     public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
     {
         if (value == null) return "NULL";
         return ormProvider.GetQuotedValue(value.GetType(), value);
-    }
-    public static EntityMap GetEntityMap(this IOrmDbFactory dbFactory, Type entityType)
-    {
-        if (!dbFactory.TryGetEntityMap(entityType, out var mapper))
-        {
-            mapper = EntityMap.CreateDefaultMap(entityType);
-            dbFactory.AddEntityMap(entityType, mapper);
-        }
-        return mapper;
-    }
-    public static EntityMap GetEntityMap(this IOrmDbFactory dbFactory, Type entityType, Type mapToType)
-    {
-        if (!dbFactory.TryGetEntityMap(entityType, out var mapper))
-        {
-            var mapToMapper = dbFactory.GetEntityMap(mapToType);
-            mapper = EntityMap.CreateDefaultMap(entityType, mapToMapper);
-            dbFactory.AddEntityMap(entityType, mapper);
-        }
-        return mapper;
     }
     public static bool IsEntityType(this Type type)
     {
@@ -155,6 +151,32 @@ public static class TrolleyExtensions
             }
         }
         return true;
+    }
+    public static bool IsNullableType(this Type type, out Type underlyingType)
+    {
+        if (type.IsValueType)
+        {
+            underlyingType = Nullable.GetUnderlyingType(type);
+            if (underlyingType == null)
+            {
+                underlyingType = type;
+                return false;
+            }
+            return true;
+        }
+        underlyingType = type;
+        return false;
+    }
+    public static bool IsEnumType(this Type type, out Type enumUnderlyingType)
+    {
+        type.IsNullableType(out var underlyingType);
+        if (underlyingType.IsEnum)
+        {
+            enumUnderlyingType = underlyingType.GetEnumUnderlyingType();
+            return true;
+        }
+        enumUnderlyingType = null;
+        return false;
     }
     public static Type GetMemberType(this MemberInfo member)
     {
@@ -221,46 +243,48 @@ public static class TrolleyExtensions
         var deserializer = (Func<IDataReader, int, TValue>)converter;
         return deserializer.Invoke(reader, columnIndex);
     }
-    internal static TEntity To<TEntity>(this IDataReader reader, IOrmDbFactory dbFactory, TheaConnection connection)
+    internal static TEntity To<TEntity>(this IDataReader reader, string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
     {
         var entityType = typeof(TEntity);
+        var ormProviderType = ormProvider.GetType();
         var isValueTuple = entityType.FullName.StartsWith("System.ValueTuple`");
 
         int cacheKey = 0;
         ConcurrentDictionary<int, Delegate> deserializerCache = null;
         if (isValueTuple)
         {
-            cacheKey = GetValueTupleReaderKey(entityType, connection, reader);
+            cacheKey = GetValueTupleReaderKey(entityType, dbKey, ormProviderType, reader);
             deserializerCache = valueTupleReaderDeserializerCache;
         }
         else
         {
-            cacheKey = GetTypeReaderKey(entityType, connection, reader);
+            cacheKey = GetTypeReaderKey(entityType, dbKey, ormProviderType, reader);
             deserializerCache = typeReaderDeserializerCache;
         }
         if (!deserializerCache.TryGetValue(cacheKey, out var deserializer))
         {
-            deserializer = CreateReaderDeserializer(connection, reader, dbFactory, entityType, isValueTuple);
+            deserializer = CreateReaderDeserializer(ormProvider, mapProvider, reader, entityType, isValueTuple);
             deserializerCache.TryAdd(cacheKey, deserializer);
         }
         return ((Func<IDataReader, TEntity>)deserializer).Invoke(reader);
     }
-    internal static TEntity To<TEntity>(this IDataReader reader, TheaConnection connection, List<ReaderField> readerFields)
+    internal static TEntity To<TEntity>(this IDataReader reader, string dbKey, IOrmProvider ormProvider, bool isTarget, List<ReaderField> readerFields)
     {
         var entityType = typeof(TEntity);
-        var cacheKey = GetTypeReaderKey(entityType, connection, reader);
+        var ormProviderType = ormProvider.GetType();
+        var cacheKey = GetTypeReaderKey(entityType, dbKey, ormProviderType, reader);
         if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
         {
-            deserializer = CreateReaderDeserializer(connection, reader, entityType, readerFields);
+            deserializer = CreateReaderDeserializer(ormProvider, reader, entityType, isTarget, readerFields);
             queryReaderDeserializerCache.TryAdd(cacheKey, deserializer);
         }
         return ((Func<IDataReader, TEntity>)deserializer).Invoke(reader);
     }
-    private static Delegate CreateReaderDeserializer(TheaConnection connection, IDataReader reader, IOrmDbFactory dbFactory, Type entityType, bool isValueTuple)
+    private static Delegate CreateReaderDeserializer(IOrmProvider ormProvider, IEntityMapProvider mapProvider, IDataReader reader, Type entityType, bool isValueTuple)
     {
         var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
-        var ormProviderExpr = Expression.Constant(connection.OrmProvider);
-        var entityMapper = dbFactory.GetEntityMap(entityType);
+        var ormProviderExpr = Expression.Constant(ormProvider);
+        var entityMapper = mapProvider.GetEntityMap(entityType);
         var index = 0;
         var target = NewBuildInfo(entityType);
         var blockParameters = new List<ParameterExpression>();
@@ -291,12 +315,12 @@ public static class TrolleyExtensions
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
         return Expression.Lambda(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
     }
-    private static Delegate CreateReaderDeserializer(TheaConnection connection, IDataReader reader, Type entityType, List<ReaderField> readerFields)
+    private static Delegate CreateReaderDeserializer(IOrmProvider ormProvider, IDataReader reader, Type entityType, bool isTarget, List<ReaderField> readerFields)
     {
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
         var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
-        var ormProviderExpr = Expression.Constant(connection.OrmProvider);
+        var ormProviderExpr = Expression.Constant(ormProvider);
 
         int index = 0, readerIndex = 0;
         var root = NewBuildInfo(entityType);
@@ -306,57 +330,49 @@ public static class TrolleyExtensions
         while (readerIndex < readerFields.Count)
         {
             var readerField = readerFields[readerIndex];
-            if (readerField.Type == ReaderFieldType.Entity || readerField.Type == ReaderFieldType.AnonymousField)
+            if (readerField.FieldType == ReaderFieldType.Entity || readerField.FieldType == ReaderFieldType.AnonymousObject)
             {
                 //第一个是实体，如果是entityType类型，则是Parameter类型表达式访问
                 //如果不是entityType类型，就是子类型，则是New或是MemeberInit类型表达式访问
-                bool isTarget = false;
-                if (readerIndex == 0)
-                    isTarget = readerField.TableSegment.EntityType == entityType;
-
                 EntityBuildInfo parent = null;
-                if (!isTarget)
+                if (readerIndex > 0 || !isTarget)
                 {
                     if (readerField.ParentIndex.HasValue)
                         parent = readerBuilders[readerField.ParentIndex.Value];
                     else parent = root;
-                    current = NewBuildInfo(readerField.TableSegment.EntityType, readerField.TargetMember, parent);
+                    //current = NewBuildInfo(readerField.FromMember.GetMemberType(), readerField.TargetMember ?? readerField.FromMember, parent);
+                    current = NewBuildInfo(readerField.FromMember.GetMemberType(), readerField.FromMember, parent);
                 }
                 readerBuilders.Add(readerField.Index, current);
+                int endIndex = index + readerField.ReaderFields.Count;
+                var childIndex = 0;
+                while (index < endIndex)
+                {
+                    var memberName = reader.GetName(index);
+                    var fieldType = reader.GetFieldType(index);
+                    var fieldMember = readerField.ReaderFields[childIndex].FromMember;
+                    Expression readerValueExpr = null;
 
-                if (readerField.Type == ReaderFieldType.AnonymousField)
-                {
-                    int endIndex = index + readerField.FieldCount;
-                    while (index < endIndex)
+                    if (readerField.FieldType == ReaderFieldType.AnonymousObject)
                     {
-                        var fieldType = reader.GetFieldType(index);
-                        var readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                            readerFields[index].FromMember.GetMemberType(), fieldType, null, blockParameters, blockBodies);
-                        if (current.IsDefault) current.Bindings.Add(Expression.Bind(readerFields[index].FromMember, readerValueExpr));
-                        else current.Arguments.Add(readerValueExpr);
-                        index++;
+                        readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
+                            fieldMember.GetMemberType(), fieldType, null, blockParameters, blockBodies);
                     }
-                    readerIndex += readerField.FieldCount - 1;
-                }
-                else
-                {
-                    var entityMapper = readerField.TableSegment.Mapper;
-                    var fieldCount = index + readerField.FieldCount;
-                    while (index < fieldCount)
+                    else
                     {
-                        var memberName = reader.GetName(index);
+                        var entityMapper = readerField.TableSegment.Mapper;
                         if (!entityMapper.TryGetMemberMap(memberName, out var memberMapper))
                             break;
-                        var fieldType = reader.GetFieldType(index);
-                        var readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
+                        readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
                             memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
-                        if (current.IsDefault) current.Bindings.Add(Expression.Bind(memberMapper.Member, readerValueExpr));
-                        else current.Arguments.Add(readerValueExpr);
-                        index++;
                     }
-                }
 
-                if (!isTarget)
+                    if (current.IsDefault) current.Bindings.Add(Expression.Bind(fieldMember, readerValueExpr));
+                    else current.Arguments.Add(readerValueExpr);
+                    childIndex++;
+                    index++;
+                }
+                if (readerIndex > 0 || !isTarget)
                 {
                     if (readerField.HasNextInclude)
                         deferredBuilds.Push(current);
@@ -403,9 +419,7 @@ public static class TrolleyExtensions
         => GetReaderValue(null, readerExpr, indexExpr, targetType, fieldType, null, blockParameters, blockBodies);
     private static Expression GetReaderValue(Expression ormProviderExpr, ParameterExpression readerExpr, Expression indexExpr, Type targetType, Type fieldType, ITypeHandler typeHandler, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
     {
-        var underlyingType = Nullable.GetUnderlyingType(targetType);
-        bool isNullable = underlyingType != null;
-        underlyingType ??= targetType;
+        bool isNullable = targetType.IsNullableType(out var underlyingType);
         var methodInfo = typeof(IDataRecord).GetMethod(nameof(IDataRecord.GetValue), new Type[] { typeof(int) });
         var objLocalExpr = AssignLocalParameter(typeof(object), Expression.Call(readerExpr, methodInfo, indexExpr), blockParameters, blockBodies);
         Expression typedValueExpr = null;
@@ -555,10 +569,11 @@ public static class TrolleyExtensions
         blockBodies.Add(Expression.Assign(objLocalExpr, valueExpr));
         return objLocalExpr;
     }
-    private static int GetTypeReaderKey(Type entityType, TheaConnection connection, IDataReader reader)
+    private static int GetTypeReaderKey(Type entityType, string dbKey, Type ormProviderType, IDataReader reader)
     {
         var hashCode = new HashCode();
-        hashCode.Add(connection);
+        hashCode.Add(dbKey);
+        hashCode.Add(ormProviderType);
         hashCode.Add(entityType);
         hashCode.Add(reader.FieldCount);
         for (int i = 0; i < reader.FieldCount; i++)
@@ -567,10 +582,11 @@ public static class TrolleyExtensions
         }
         return hashCode.ToHashCode();
     }
-    private static int GetValueTupleReaderKey(Type entityType, TheaConnection connection, IDataReader reader)
+    private static int GetValueTupleReaderKey(Type entityType, string dbKey, Type ormProviderType, IDataReader reader)
     {
         var hashCode = new HashCode();
-        hashCode.Add(connection);
+        hashCode.Add(dbKey);
+        hashCode.Add(ormProviderType);
         hashCode.Add(entityType);
         hashCode.Add(reader.FieldCount);
         for (int i = 0; i < reader.FieldCount; i++)

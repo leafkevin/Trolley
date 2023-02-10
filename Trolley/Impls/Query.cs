@@ -9,22 +9,136 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
+class QueryAnonymousObject : IQueryAnonymousObject
+{
+    private readonly QueryVisitor visitor;
+    public QueryAnonymousObject(QueryVisitor visitor)
+        => this.visitor = visitor;
+    public string ToSql(out List<IDbDataParameter> dbParameters)
+        => this.visitor.BuildSql(out dbParameters, out _);
+}
 class Query<T> : IQuery<T>
 {
     private int withIndex = 0;
     private int unionIndex = 0;
-    protected readonly IOrmDbFactory dbFactory;
+    protected readonly string dbKey;
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
     protected readonly QueryVisitor visitor;
 
-    public Query(QueryVisitor visitor)
+    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
     {
+        this.connection = connection;
+        this.transaction = transaction;
         this.visitor = visitor;
-        this.dbFactory = visitor.dbFactory;
-        this.connection = visitor.connection;
-        this.transaction = visitor.transaction;
+        this.dbKey = visitor.dbKey;
     }
+
+    #region Union
+    public IQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var dbParameters = new List<IDbDataParameter>();
+        var sql = this.ToSql(out var parameters);
+        if (parameters != null && parameters.Count > 0)
+            dbParameters.AddRange(parameters);
+
+        var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
+
+
+        var query = subQuery.Invoke(fromQuery);
+        sql += " UNION " + query.ToSql(out parameters);
+        if (parameters != null && parameters.Count > 0)
+            dbParameters.AddRange(parameters);
+
+        this.visitor.Union(typeof(T), sql, dbParameters);
+        return this;
+    }
+    public IQuery<T> UnionAll(Func<IFromQuery, IFromQuery<T>> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var dbParameters = new List<IDbDataParameter>();
+        var sql = this.ToSql(out var parameters);
+        if (parameters != null && parameters.Count > 0)
+            dbParameters.AddRange(parameters);
+
+        var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
+        var query = subQuery.Invoke(fromQuery);
+        sql += " UNION ALL " + query.ToSql(out parameters);
+        if (parameters != null && parameters.Count > 0)
+            dbParameters.AddRange(parameters);
+
+        this.visitor.Union(typeof(T), sql, dbParameters);
+        return this;
+    }
+    #endregion
+
+    #region Join
+    public IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return new Query<T, TOther>(this.connection, this.transaction, this.visitor);
+    }
+    public IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return new Query<T, TOther>(this.connection, this.transaction, this.visitor);
+    }
+    public IQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return new Query<T, TOther>(this.connection, this.transaction, this.visitor);
+    }
+    public IQuery<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var newVisitor = this.visitor.Clone('a', $"p{this.withIndex++}w");
+        subQuery.Invoke(new FromQuery(newVisitor));
+        var sql = newVisitor.BuildSql(out var dbDataParameters, out var readerFields);
+        this.visitor.WithTable(typeof(TOther), sql, dbDataParameters, readerFields);
+        this.visitor.Join("INNER JOIN", null, joinOn);
+        return new Query<T, TOther>(this.connection, this.transaction, this.visitor);
+    }
+    public IQuery<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var newVisitor = this.visitor.Clone('a', $"p{this.withIndex++}w");
+        subQuery.Invoke(new FromQuery(newVisitor));
+        var sql = newVisitor.BuildSql(out var dbDataParameters, out var readerFields);
+        this.visitor.WithTable(typeof(TOther), sql, dbDataParameters, readerFields);
+        this.visitor.Join("LEFT JOIN", null, joinOn);
+        return new Query<T, TOther>(this.connection, this.transaction, this.visitor);
+    }
+    public IQuery<T, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var newVisitor = this.visitor.Clone('a', $"p{this.withIndex++}w");
+        subQuery.Invoke(new FromQuery(newVisitor));
+        var sql = newVisitor.BuildSql(out var dbDataParameters, out var readerFields);
+        this.visitor.WithTable(typeof(TOther), sql, dbDataParameters, readerFields);
+        this.visitor.Join("RIGHT JOIN", null, joinOn);
+        return new Query<T, TOther>(this.connection, this.transaction, this.visitor);
+    }
+    #endregion
 
     #region Include
     public IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
@@ -33,7 +147,7 @@ class Query<T> : IQuery<T>
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T, TMember>(this.visitor);
+        return new IncludableQuery<T, TMember>(this.connection, this.transaction, this.visitor);
     }
     public IIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
@@ -41,155 +155,9 @@ class Query<T> : IQuery<T>
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T, TElment>(this.visitor);
+        return new IncludableQuery<T, TElment>(this.connection, this.transaction, this.visitor);
     }
-    #endregion
-
-    #region Join
-    public IQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-    {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-
-        var sql = subQuery.ToSql(out var dbDataParameters);
-        this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T, TOther>(this.visitor);
-    }
-    public IQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
-    {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.withIndex++}w");
-        var query = subQuery.Invoke(fromQuery);
-        var sql = query.ToSql(out var dbDataParameters);
-        this.visitor.WithTable(typeof(TOther), sql, dbDataParameters);
-        return new Query<T, TOther>(this.visitor);
-    }
-    public IQuery<T> InnerJoin(Expression<Func<T, bool>> joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.visitor.Join("INNER JOIN", null, joinOn);
-        return this;
-    }
-    public IQuery<T> LeftJoin(Expression<Func<T, bool>> joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.visitor.Join("LEFT JOIN", null, joinOn);
-        return this;
-    }
-    public IQuery<T> RightJoin(Expression<Func<T, bool>> joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.visitor.Join("RIGHT JOIN", null, joinOn);
-        return this;
-    }
-    public IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T, TOther>(this.visitor);
-    }
-    public IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T, TOther>(this.visitor);
-    }
-    public IQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T, TOther>(this.visitor);
-    }
-    #endregion
-
-    #region Union
-    public IQuery<T> Union<TOther>(IQuery<TOther> subQuery)
-    {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-
-        var dbParameters = new List<IDbDataParameter>();
-        var sql = this.ToSql(out var parameters);
-        if (parameters != null && parameters.Count > 0)
-            dbParameters.AddRange(parameters);
-
-        sql += " UNION " + subQuery.ToSql(out parameters);
-        if (parameters != null && parameters.Count > 0)
-            dbParameters.AddRange(parameters);
-
-        this.visitor.Union(typeof(TOther), sql, dbParameters);
-        return this;
-    }
-    public IQuery<T> Union<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
-    {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-
-        var dbParameters = new List<IDbDataParameter>();
-        var sql = this.ToSql(out var parameters);
-        if (parameters != null && parameters.Count > 0)
-            dbParameters.AddRange(parameters);
-
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
-        var query = subQuery.Invoke(fromQuery);
-        sql += " UNION " + query.ToSql(out parameters);
-        if (parameters != null && parameters.Count > 0)
-            dbParameters.AddRange(parameters);
-
-        this.visitor.Union(typeof(TOther), sql, dbParameters);
-        return this;
-    }
-    public IQuery<T> UnionAll<TOther>(IQuery<TOther> subQuery)
-    {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-
-        var dbParameters = new List<IDbDataParameter>();
-        var sql = this.ToSql(out var parameters);
-        if (parameters != null && parameters.Count > 0)
-            dbParameters.AddRange(parameters);
-
-        sql += " UNION ALL " + subQuery.ToSql(out parameters);
-        if (parameters != null && parameters.Count > 0)
-            dbParameters.AddRange(parameters);
-
-        this.visitor.Union(typeof(TOther), sql, dbParameters);
-        return this;
-    }
-    public IQuery<T> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
-    {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-
-        var dbParameters = new List<IDbDataParameter>();
-        var sql = this.ToSql(out var parameters);
-        if (parameters != null && parameters.Count > 0)
-            dbParameters.AddRange(parameters);
-
-        var fromQuery = new FromQuery(this.dbFactory, this.connection, this.transaction, $"p{this.unionIndex++}u");
-        var query = subQuery.Invoke(fromQuery);
-        sql += " UNION ALL " + query.ToSql(out parameters);
-        if (parameters != null && parameters.Count > 0)
-            dbParameters.AddRange(parameters);
-
-        this.visitor.Union(typeof(TOther), sql, dbParameters);
-        return this;
-    }
-    #endregion
+    #endregion    
 
     #region Where
     public IQuery<T> Where(Expression<Func<T, bool>> predicate = null)
@@ -213,7 +181,7 @@ class Query<T> : IQuery<T>
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T, TGrouping>(this.visitor);
+        return new GroupingQuery<T, TGrouping>(this.connection, this.transaction, this.visitor);
     }
     public IQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
     {
@@ -245,7 +213,7 @@ class Query<T> : IQuery<T>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
     {
@@ -253,7 +221,7 @@ class Query<T> : IQuery<T>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
     public IQuery<T> Distinct()
     {
@@ -398,7 +366,7 @@ class Query<T> : IQuery<T>
     public T First()
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, out var dbParameters, out var readerFields);
+        var sql = this.visitor.BuildSql(defaultExpr, null, null, out var dbParameters, out var readerFields);
         using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
@@ -414,7 +382,7 @@ class Query<T> : IQuery<T>
         {
             var entityType = typeof(T);
             if (entityType.IsEntityType())
-                result = reader.To<T>(this.connection, readerFields);
+                result = reader.To<T>(this.visitor.dbKey, this.visitor.ormProvider, this.visitor.isTarget, readerFields);
             else result = reader.To<T>();
         }
         reader.Close();
@@ -425,7 +393,7 @@ class Query<T> : IQuery<T>
             command.CommandText = sql;
             command.Parameters.Clear();
             using var includeReader = command.ExecuteReader(behavior);
-            this.visitor.SetIncludeValues(result, includeReader, this.connection);
+            this.visitor.SetIncludeValues(result, includeReader);
         }
         command.Dispose();
         return result;
@@ -433,7 +401,7 @@ class Query<T> : IQuery<T>
     public async Task<T> FirstAsync(CancellationToken cancellationToken = default)
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, out var dbParameters, out var readerFields);
+        var sql = this.visitor.BuildSql(defaultExpr, null, null, out var dbParameters, out var readerFields); ;
 
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
@@ -454,7 +422,7 @@ class Query<T> : IQuery<T>
         {
             var entityType = typeof(T);
             if (entityType.IsEntityType())
-                result = reader.To<T>(this.connection, readerFields);
+                result = reader.To<T>(this.dbKey, this.visitor.ormProvider, this.visitor.isTarget, readerFields);
             else result = reader.To<T>();
         }
         await reader.CloseAsync();
@@ -465,7 +433,84 @@ class Query<T> : IQuery<T>
             command.CommandText = sql;
             command.Parameters.Clear();
             using var includeReader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-            this.visitor.SetIncludeValues(result, includeReader, this.connection);
+            this.visitor.SetIncludeValues(result, includeReader);
+        }
+        await command.DisposeAsync();
+        return result;
+    }
+    public TTarget First<TTarget>(Expression<Func<T, TTarget>> toTargetExpr)
+    {
+        var entityType = typeof(T);
+        Expression<Func<T, T>> defaultExpr = f => f;
+        var sql = this.visitor.BuildSql(defaultExpr, entityType, toTargetExpr, out var dbParameters, out var readerFields);
+        using var command = this.connection.CreateCommand();
+        command.CommandText = sql;
+        command.CommandType = CommandType.Text;
+        command.Transaction = this.transaction;
+        if (dbParameters != null && dbParameters.Count > 0)
+            dbParameters.ForEach(f => command.Parameters.Add(f));
+
+        var targetType = typeof(TTarget);
+        TTarget result = default;
+        this.connection.Open();
+        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        using var reader = command.ExecuteReader(behavior);
+        if (reader.Read())
+        {
+            if (targetType.IsEntityType())
+                result = reader.To<TTarget>(this.visitor.dbKey, this.visitor.ormProvider, this.visitor.isTarget, readerFields);
+            else result = reader.To<TTarget>();
+        }
+        reader.Close();
+        reader.Dispose();
+
+        if (this.visitor.BuildIncludeSql(result, out sql))
+        {
+            command.CommandText = sql;
+            command.Parameters.Clear();
+            using var includeReader = command.ExecuteReader(behavior);
+            this.visitor.SetIncludeValues(result, includeReader);
+        }
+        command.Dispose();
+        return result;
+    }
+    public async Task<TTarget> FirstAsync<TTarget>(Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default)
+    {
+        var entityType = typeof(T);
+        Expression<Func<T, T>> defaultExpr = f => f;
+        var sql = this.visitor.BuildSql(defaultExpr, entityType, toTargetExpr, out var dbParameters, out var readerFields);
+
+        using var cmd = this.connection.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.CommandType = CommandType.Text;
+        cmd.Transaction = this.transaction;
+
+        if (dbParameters != null && dbParameters.Count > 0)
+            dbParameters.ForEach(f => cmd.Parameters.Add(f));
+
+        if (cmd is not DbCommand command)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+
+        var targetType = typeof(TTarget);
+        TTarget result = default;
+        await this.connection.OpenAsync(cancellationToken);
+        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
+        {
+            if (targetType.IsEntityType())
+                result = reader.To<TTarget>(this.dbKey, this.visitor.ormProvider, this.visitor.isTarget, readerFields);
+            else result = reader.To<TTarget>();
+        }
+        await reader.CloseAsync();
+        await reader.DisposeAsync();
+
+        if (this.visitor.BuildIncludeSql(result, out sql))
+        {
+            command.CommandText = sql;
+            command.Parameters.Clear();
+            using var includeReader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+            this.visitor.SetIncludeValues(result, includeReader);
         }
         await command.DisposeAsync();
         return result;
@@ -473,7 +518,7 @@ class Query<T> : IQuery<T>
     public List<T> ToList()
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, out var dbParameters, out var readerFields);
+        var sql = this.visitor.BuildSql(defaultExpr, null, null, out var dbParameters, out var readerFields);
 
         using var command = this.connection.CreateCommand();
         command.CommandText = sql;
@@ -492,7 +537,7 @@ class Query<T> : IQuery<T>
         {
             while (reader.Read())
             {
-                result.Add(reader.To<T>(this.connection, readerFields));
+                result.Add(reader.To<T>(this.dbKey, this.visitor.ormProvider, this.visitor.isTarget, readerFields));
             }
         }
         else
@@ -510,7 +555,7 @@ class Query<T> : IQuery<T>
             command.CommandText = sql;
             command.Parameters.Clear();
             using var includeReader = command.ExecuteReader(behavior);
-            this.visitor.SetIncludeValues(result, includeReader, this.connection);
+            this.visitor.SetIncludeValues(result, includeReader);
         }
         command.Dispose();
         return result;
@@ -518,7 +563,7 @@ class Query<T> : IQuery<T>
     public async Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, out var dbParameters, out var readerFields);
+        var sql = this.visitor.BuildSql(defaultExpr, null, null, out var dbParameters, out var readerFields);
 
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
@@ -541,7 +586,7 @@ class Query<T> : IQuery<T>
         {
             while (await reader.ReadAsync(cancellationToken))
             {
-                result.Add(reader.To<T>(this.connection, readerFields));
+                result.Add(reader.To<T>(this.visitor.dbKey, this.visitor.ormProvider, this.visitor.isTarget, readerFields));
             }
         }
         else
@@ -559,7 +604,101 @@ class Query<T> : IQuery<T>
             command.CommandText = sql;
             command.Parameters.Clear();
             using var includeReader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-            this.visitor.SetIncludeValues(result, includeReader, this.connection);
+            this.visitor.SetIncludeValues(result, includeReader);
+        }
+        await command.DisposeAsync();
+        return result;
+    }
+    public List<TTarget> ToList<TTarget>(Expression<Func<T, TTarget>> toTargetExpr)
+    {
+        var entityType = typeof(TTarget);
+        Expression<Func<T, T>> defaultExpr = f => f;
+        var sql = this.visitor.BuildSql(defaultExpr, entityType, toTargetExpr, out var dbParameters, out var readerFields);
+
+        using var command = this.connection.CreateCommand();
+        command.CommandText = sql;
+        command.CommandType = CommandType.Text;
+        command.Transaction = this.transaction;
+
+        if (dbParameters != null && dbParameters.Count > 0)
+            dbParameters.ForEach(f => command.Parameters.Add(f));
+
+        var result = new List<TTarget>();
+        this.connection.Open();
+        var behavior = CommandBehavior.SequentialAccess;
+        using var reader = command.ExecuteReader(behavior);
+        if (entityType.IsEntityType())
+        {
+            while (reader.Read())
+            {
+                result.Add(reader.To<TTarget>(this.dbKey, this.visitor.ormProvider, this.visitor.isTarget, readerFields));
+            }
+        }
+        else
+        {
+            while (reader.Read())
+            {
+                result.Add(reader.To<TTarget>());
+            }
+        }
+        reader.Close();
+        reader.Dispose();
+
+        if (this.visitor.BuildIncludeSql(result, out sql))
+        {
+            command.CommandText = sql;
+            command.Parameters.Clear();
+            using var includeReader = command.ExecuteReader(behavior);
+            this.visitor.SetIncludeValues(result, includeReader);
+        }
+        command.Dispose();
+        return result;
+    }
+    public async Task<List<TTarget>> ToListAsync<TTarget>(Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default)
+    {
+        var entityType = typeof(TTarget);
+        Expression<Func<T, T>> defaultExpr = f => f;
+        var sql = this.visitor.BuildSql(defaultExpr, entityType, toTargetExpr, out var dbParameters, out var readerFields);
+
+        using var cmd = this.connection.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.CommandType = CommandType.Text;
+        cmd.Transaction = this.transaction;
+
+        if (dbParameters != null && dbParameters.Count > 0)
+            dbParameters.ForEach(f => cmd.Parameters.Add(f));
+
+        if (cmd is not DbCommand command)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+
+        var result = new List<TTarget>();
+        await this.connection.OpenAsync(cancellationToken);
+        var behavior = CommandBehavior.SequentialAccess;
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+
+        if (entityType.IsEntityType())
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                result.Add(reader.To<TTarget>(this.visitor.dbKey, this.visitor.ormProvider, this.visitor.isTarget, readerFields));
+            }
+        }
+        else
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                result.Add(reader.To<TTarget>());
+            }
+        }
+        await reader.CloseAsync();
+        await reader.DisposeAsync();
+
+        if (this.visitor.BuildIncludeSql(result, out sql))
+        {
+            command.CommandText = sql;
+            command.Parameters.Clear();
+            using var includeReader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+            this.visitor.SetIncludeValues(result, includeReader);
         }
         await command.DisposeAsync();
         return result;
@@ -568,7 +707,7 @@ class Query<T> : IQuery<T>
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.visitor.Page(pageIndex, pageSize);
-        var sql = this.visitor.BuildSql(defaultExpr, out var dbParameters, out var readerFields);
+        var sql = this.visitor.BuildSql(defaultExpr, null, null, out var dbParameters, out var readerFields);
 
         using var command = this.connection.CreateCommand();
         command.CommandText = sql;
@@ -591,7 +730,7 @@ class Query<T> : IQuery<T>
         reader.NextResult();
         while (reader.Read())
         {
-            result.Items.Add(reader.To<T>(this.connection, readerFields));
+            result.Items.Add(reader.To<T>(this.dbKey, this.visitor.ormProvider, this.visitor.isTarget, readerFields));
         }
         reader.Close();
         reader.Dispose();
@@ -602,7 +741,7 @@ class Query<T> : IQuery<T>
             command.CommandText = sql;
             command.Parameters.Clear();
             using var includeReader = command.ExecuteReader(behavior);
-            this.visitor.SetIncludeValues(result, includeReader, this.connection);
+            this.visitor.SetIncludeValues(result, includeReader);
         }
         command.Dispose();
         return result;
@@ -611,7 +750,7 @@ class Query<T> : IQuery<T>
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.visitor.Page(pageIndex, pageSize);
-        var sql = this.visitor.BuildSql(defaultExpr, out var dbParameters, out var readerFields);
+        var sql = this.visitor.BuildSql(defaultExpr, null, null, out var dbParameters, out var readerFields);
 
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
@@ -636,7 +775,7 @@ class Query<T> : IQuery<T>
         await reader.NextResultAsync();
         while (await reader.ReadAsync())
         {
-            result.Items.Add(reader.To<T>(this.connection, readerFields));
+            result.Items.Add(reader.To<T>(this.dbKey, this.visitor.ormProvider, this.visitor.isTarget, readerFields));
         }
         await reader.CloseAsync();
         await reader.DisposeAsync();
@@ -647,7 +786,97 @@ class Query<T> : IQuery<T>
             command.CommandText = sql;
             command.Parameters.Clear();
             using var includeReader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-            this.visitor.SetIncludeValues(result, includeReader, this.connection);
+            this.visitor.SetIncludeValues(result, includeReader);
+        }
+        await command.DisposeAsync();
+        return result;
+    }
+    public IPagedList<TTarget> ToPageList<TTarget>(int pageIndex, int pageSize, Expression<Func<T, TTarget>> toTargetExpr)
+    {
+        var entityType = typeof(TTarget);
+        Expression<Func<T, T>> defaultExpr = f => f;
+        this.visitor.Page(pageIndex, pageSize);
+        var sql = this.visitor.BuildSql(defaultExpr, entityType, toTargetExpr, out var dbParameters, out var readerFields);
+
+        using var command = this.connection.CreateCommand();
+        command.CommandText = sql;
+        command.CommandType = CommandType.Text;
+        command.Transaction = this.transaction;
+
+        if (dbParameters != null && dbParameters.Count > 0)
+            dbParameters.ForEach(f => command.Parameters.Add(f));
+
+        int recordsTotal = 0;
+        var result = new PagedList<TTarget>();
+        result.Items = new List<TTarget>();
+
+        this.connection.Open();
+        var behavior = CommandBehavior.SequentialAccess;
+        using var reader = command.ExecuteReader(behavior);
+        if (reader.Read())
+            recordsTotal = reader.To<int>();
+
+        reader.NextResult();
+        while (reader.Read())
+        {
+            result.Items.Add(reader.To<TTarget>(this.dbKey, this.visitor.ormProvider, this.visitor.isTarget, readerFields));
+        }
+        reader.Close();
+        reader.Dispose();
+        result.RecordsTotal = recordsTotal;
+
+        if (this.visitor.BuildIncludeSql(result, out sql))
+        {
+            command.CommandText = sql;
+            command.Parameters.Clear();
+            using var includeReader = command.ExecuteReader(behavior);
+            this.visitor.SetIncludeValues(result, includeReader);
+        }
+        command.Dispose();
+        return result;
+    }
+    public async Task<IPagedList<TTarget>> ToPageListAsync<TTarget>(int pageIndex, int pageSize, Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default)
+    {
+        var entityType = typeof(TTarget);
+        Expression<Func<T, T>> defaultExpr = f => f;
+        this.visitor.Page(pageIndex, pageSize);
+        var sql = this.visitor.BuildSql(defaultExpr, entityType, toTargetExpr, out var dbParameters, out var readerFields);
+
+        using var cmd = this.connection.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.CommandType = CommandType.Text;
+        cmd.Transaction = this.transaction;
+        if (dbParameters != null && dbParameters.Count > 0)
+            dbParameters.ForEach(f => cmd.Parameters.Add(f));
+
+        if (cmd is not DbCommand command)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+
+        int recordsTotal = 0;
+        var result = new PagedList<TTarget>();
+        result.Items = new List<TTarget>();
+
+        await this.connection.OpenAsync(cancellationToken);
+        var behavior = CommandBehavior.SequentialAccess;
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync())
+            recordsTotal = reader.To<int>();
+
+        await reader.NextResultAsync();
+        while (await reader.ReadAsync())
+        {
+            result.Items.Add(reader.To<TTarget>(this.dbKey, this.visitor.ormProvider, this.visitor.isTarget, readerFields));
+        }
+        await reader.CloseAsync();
+        await reader.DisposeAsync();
+        result.RecordsTotal = recordsTotal;
+
+        if (this.visitor.BuildIncludeSql(result, out sql))
+        {
+            command.CommandText = sql;
+            command.Parameters.Clear();
+            using var includeReader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+            this.visitor.SetIncludeValues(result, includeReader);
         }
         await command.DisposeAsync();
         return result;
@@ -674,7 +903,7 @@ class Query<T> : IQuery<T>
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        return this.visitor.BuildSql(defaultExpr, out dbParameters, out _);
+        return this.visitor.BuildSql(defaultExpr, null, null, out dbParameters, out _);
     }
 
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)

@@ -10,53 +10,78 @@ namespace Trolley;
 
 public class MySqlProvider : BaseOrmProvider
 {
-    private static CreateNativeDbConnectionDelegate createNativeConnectonDelegate = null;
-    private static CreateDefaultNativeParameterDelegate createDefaultNativeParameterDelegate = null;
-    private static CreateNativeParameterDelegate createNativeParameterDelegate = null;
+    private static Func<string, IDbConnection> createNativeConnectonDelegate = null;
+    private static Func<string, object, IDbDataParameter> createDefaultNativeParameterDelegate = null;
+    private static Func<string, object, object, IDbDataParameter> createNativeParameterDelegate = null;
     private static ConcurrentDictionary<MemberInfo, MemberAccessSqlFormatter> memberAccessSqlFormatterCahe = new();
     private static ConcurrentDictionary<MethodInfo, MethodCallSqlFormatter> methodCallSqlFormatterCahe = new();
-    private static Dictionary<Type, int> nativeDbTypes = new();
+    private static Dictionary<Type, object> defaultDbTypes = new();
+    private static Dictionary<int, object> nativeDbTypes = new();
     private static Dictionary<Type, string> castTos = new();
 
     public override DatabaseType DatabaseType => DatabaseType.MySql;
     public override string SelectIdentitySql => " RETURNING {0}";
     static MySqlProvider()
     {
-        nativeDbTypes[typeof(bool)] = -1;
-        nativeDbTypes[typeof(sbyte)] = 1;
-        nativeDbTypes[typeof(short)] = 2;
-        nativeDbTypes[typeof(int)] = 3;
-        nativeDbTypes[typeof(long)] = 8;
-        nativeDbTypes[typeof(float)] = 4;
-        nativeDbTypes[typeof(double)] = 5;
-        nativeDbTypes[typeof(TimeSpan)] = 11;
-        nativeDbTypes[typeof(DateTime)] = 12;
-        nativeDbTypes[typeof(string)] = 253;
-        nativeDbTypes[typeof(byte)] = 501;
-        nativeDbTypes[typeof(ushort)] = 502;
-        nativeDbTypes[typeof(uint)] = 503;
-        nativeDbTypes[typeof(ulong)] = 508;
-        nativeDbTypes[typeof(Guid)] = 253;
-        nativeDbTypes[typeof(decimal)] = 0;
-        nativeDbTypes[typeof(byte[])] = 601;
+        var connectionType = Type.GetType("MySqlConnector.MySqlConnection, MySqlConnector, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d33d3e53aa5f8c92");
+        createNativeConnectonDelegate = BaseOrmProvider.CreateConnectionDelegate(connectionType);
+        var dbTypeType = Type.GetType("MySqlConnector.MySqlDbType, MySqlConnector, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d33d3e53aa5f8c92");
+        var dbParameterType = Type.GetType("MySqlConnector.MySqlParameter, MySqlConnector, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d33d3e53aa5f8c92");
+        var valuePropertyInfo = dbParameterType.GetProperty("Value");
+        createDefaultNativeParameterDelegate = BaseOrmProvider.CreateDefaultParameterDelegate(dbParameterType);
+        createNativeParameterDelegate = BaseOrmProvider.CreateParameterDelegate(dbTypeType, dbParameterType, valuePropertyInfo);
 
-        nativeDbTypes[typeof(bool?)] = -1;
-        nativeDbTypes[typeof(sbyte?)] = 1;
-        nativeDbTypes[typeof(short?)] = 2;
-        nativeDbTypes[typeof(int?)] = 3;
-        nativeDbTypes[typeof(long?)] = 8;
-        nativeDbTypes[typeof(float?)] = 4;
-        nativeDbTypes[typeof(double?)] = 5;
-        nativeDbTypes[typeof(TimeSpan?)] = 11;
-        nativeDbTypes[typeof(DateTime?)] = 12;
-        nativeDbTypes[typeof(string)] = 253;
-        nativeDbTypes[typeof(byte?)] = 501;
-        nativeDbTypes[typeof(ushort?)] = 502;
-        nativeDbTypes[typeof(uint?)] = 503;
-        nativeDbTypes[typeof(ulong?)] = 508;
-        nativeDbTypes[typeof(Guid?)] = 253;
-        nativeDbTypes[typeof(decimal?)] = 0;
 
+        defaultDbTypes[typeof(bool)] = Enum.ToObject(dbTypeType, -1);
+        defaultDbTypes[typeof(sbyte)] = Enum.ToObject(dbTypeType, 1);
+        defaultDbTypes[typeof(short)] = Enum.ToObject(dbTypeType, 2);
+        defaultDbTypes[typeof(int)] = Enum.ToObject(dbTypeType, 3);
+        defaultDbTypes[typeof(long)] = Enum.ToObject(dbTypeType, 8);
+        defaultDbTypes[typeof(float)] = Enum.ToObject(dbTypeType, 4);
+        defaultDbTypes[typeof(double)] = Enum.ToObject(dbTypeType, 5);
+        defaultDbTypes[typeof(TimeSpan)] = Enum.ToObject(dbTypeType, 11);
+        defaultDbTypes[typeof(DateTime)] = Enum.ToObject(dbTypeType, 12);
+        defaultDbTypes[typeof(string)] = Enum.ToObject(dbTypeType, 253);
+        defaultDbTypes[typeof(byte)] = Enum.ToObject(dbTypeType, 501);
+        defaultDbTypes[typeof(ushort)] = Enum.ToObject(dbTypeType, 502);
+        defaultDbTypes[typeof(uint)] = Enum.ToObject(dbTypeType, 503);
+        defaultDbTypes[typeof(ulong)] = Enum.ToObject(dbTypeType, 508);
+        defaultDbTypes[typeof(Guid)] = Enum.ToObject(dbTypeType, 253);
+        defaultDbTypes[typeof(decimal)] = Enum.ToObject(dbTypeType, 0);
+        defaultDbTypes[typeof(byte[])] = Enum.ToObject(dbTypeType, 601);
+
+        defaultDbTypes[typeof(bool?)] = Enum.ToObject(dbTypeType, -1);
+        defaultDbTypes[typeof(sbyte?)] = Enum.ToObject(dbTypeType, 1);
+        defaultDbTypes[typeof(short?)] = Enum.ToObject(dbTypeType, 2);
+        defaultDbTypes[typeof(int?)] = Enum.ToObject(dbTypeType, 3);
+        defaultDbTypes[typeof(long?)] = Enum.ToObject(dbTypeType, 8);
+        defaultDbTypes[typeof(float?)] = Enum.ToObject(dbTypeType, 4);
+        defaultDbTypes[typeof(double?)] = Enum.ToObject(dbTypeType, 5);
+        defaultDbTypes[typeof(TimeSpan?)] = Enum.ToObject(dbTypeType, 11);
+        defaultDbTypes[typeof(DateTime?)] = Enum.ToObject(dbTypeType, 12);
+        defaultDbTypes[typeof(string)] = Enum.ToObject(dbTypeType, 253);
+        defaultDbTypes[typeof(byte?)] = Enum.ToObject(dbTypeType, 501);
+        defaultDbTypes[typeof(ushort?)] = Enum.ToObject(dbTypeType, 502);
+        defaultDbTypes[typeof(uint?)] = Enum.ToObject(dbTypeType, 503);
+        defaultDbTypes[typeof(ulong?)] = Enum.ToObject(dbTypeType, 508);
+        defaultDbTypes[typeof(Guid?)] = Enum.ToObject(dbTypeType, 253);
+        defaultDbTypes[typeof(decimal?)] = Enum.ToObject(dbTypeType, 0);
+
+        nativeDbTypes[-1] = Enum.ToObject(dbTypeType, -1);
+        nativeDbTypes[1] = Enum.ToObject(dbTypeType, 1);
+        nativeDbTypes[2] = Enum.ToObject(dbTypeType, 2);
+        nativeDbTypes[3] = Enum.ToObject(dbTypeType, 3);
+        nativeDbTypes[8] = Enum.ToObject(dbTypeType, 8);
+        nativeDbTypes[4] = Enum.ToObject(dbTypeType, 4);
+        nativeDbTypes[5] = Enum.ToObject(dbTypeType, 5);
+        nativeDbTypes[11] = Enum.ToObject(dbTypeType, 11);
+        nativeDbTypes[12] = Enum.ToObject(dbTypeType, 12);
+        nativeDbTypes[253] = Enum.ToObject(dbTypeType, 253);
+        nativeDbTypes[501] = Enum.ToObject(dbTypeType, 501);
+        nativeDbTypes[502] = Enum.ToObject(dbTypeType, 502);
+        nativeDbTypes[503] = Enum.ToObject(dbTypeType, 503);
+        nativeDbTypes[508] = Enum.ToObject(dbTypeType, 508);
+        nativeDbTypes[0] = Enum.ToObject(dbTypeType, 0);
 
         castTos[typeof(string)] = "CHAR";
         castTos[typeof(bool)] = "SIGNED";
@@ -85,14 +110,6 @@ public class MySqlProvider : BaseOrmProvider
     }
     public MySqlProvider()
     {
-        var connectionType = Type.GetType("MySqlConnector.MySqlConnection, MySqlConnector, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d33d3e53aa5f8c92");
-        createNativeConnectonDelegate = base.CreateConnectionDelegate(connectionType);
-        var dbTypeType = Type.GetType("MySqlConnector.MySqlDbType, MySqlConnector, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d33d3e53aa5f8c92");
-        var dbParameterType = Type.GetType("MySqlConnector.MySqlParameter, MySqlConnector, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d33d3e53aa5f8c92");
-        var dbTypePropertyInfo = dbParameterType.GetProperty("MySqlDbType");
-        createDefaultNativeParameterDelegate = base.CreateDefaultParameterDelegate(dbParameterType);
-        createNativeParameterDelegate = base.CreateParameterDelegate(dbTypeType, dbParameterType, dbTypePropertyInfo);
-
         memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetMember(nameof(string.Empty))[0], target => "''");
         memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetProperty(nameof(string.Length)), target => $"CHAR_LENGTH({this.GetQuotedValue(target)})");
 
@@ -135,15 +152,42 @@ public class MySqlProvider : BaseOrmProvider
         => createNativeConnectonDelegate.Invoke(connectionString);
     public override IDbDataParameter CreateParameter(string parameterName, object value)
         => createDefaultNativeParameterDelegate.Invoke(parameterName, value);
-    public override IDbDataParameter CreateParameter(string parameterName, int nativeDbType, object value)
+    public override IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value)
         => createNativeParameterDelegate.Invoke(parameterName, nativeDbType, value);
     public override string GetTableName(string entityName) => "`" + entityName + "`";
     public override string GetFieldName(string propertyName) => "`" + propertyName + "`";
-    public override int GetNativeDbType(Type type)
+    public override object GetNativeDbType(Type type)
     {
-        if (nativeDbTypes.TryGetValue(type, out var dbType))
-            return dbType;
-        return 0;
+        if (!defaultDbTypes.TryGetValue(type, out var dbType))
+            throw new Exception($"类型{type.FullName}没有对应的MySqlConnector.MySqlDbType映射类型");
+        return dbType;
+    }
+    public override object GetNativeDbType(int nativeDbType)
+    {
+        if (nativeDbTypes.TryGetValue(nativeDbType, out var result))
+            return result;
+        var dbTypeType = Type.GetType("MySqlConnector.MySqlDbType, MySqlConnector, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d33d3e53aa5f8c92");
+        result = Enum.ToObject(dbTypeType, nativeDbType);
+        if (result != null)
+        {
+            lock (this)
+            {
+                if (nativeDbTypes.TryGetValue(nativeDbType, out result))
+                    return result;
+                result = Enum.ToObject(dbTypeType, nativeDbType);
+                nativeDbTypes.TryAdd(nativeDbType, result);
+            }
+            return result;
+        }
+        throw new Exception($"数值{nativeDbType}没有对应的MySqlConnector.MySqlDbType映射类型");
+    }
+    public override bool IsStringDbType(int nativeDbType)
+    {
+        if (nativeDbType == 15 || nativeDbType == 253 || nativeDbType == 254)
+            return true;
+        if (nativeDbType >= 749 && nativeDbType <= 752)
+            return true;
+        return false;
     }
     public override string CastTo(Type type)
     {

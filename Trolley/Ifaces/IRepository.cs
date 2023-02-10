@@ -16,16 +16,17 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     #endregion
 
     #region Query
-    IQuery<T> From<T>(char tableStartAs = 'a', string suffixRawSql = null);
-    IQuery<T1, T2> From<T1, T2>(char tableStartAs = 'a');
-    IQuery<T1, T2, T3> From<T1, T2, T3>(char tableStartAs = 'a');
-    IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableStartAs = 'a');
-    IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableStartAs = 'a');
-    IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableStartAs = 'a');
-    IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableStartAs = 'a');
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableStartAs = 'a');
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableStartAs = 'a');
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableStartAs = 'a');
+    IQuery<T> From<T>(char tableAsStart = 'a', string suffixRawSql = null);
+    IQuery<T> From<T>(Func<IFromQuery, IFromQuery<T>> subQuery);
+    IQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a');
+    IQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a');
+    IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a');
+    IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a');
+    IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a');
+    IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a');
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a');
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a');
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a');
     TEntity QueryFirst<TEntity>(string rawSql, object parameters = null);
     Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
     TEntity QueryFirst<TEntity>(object whereObj);

@@ -16,6 +16,20 @@ namespace Trolley;
 
 public interface IQuery<T>
 {
+    #region Union
+    IQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery);
+    IQuery<T> UnionAll(Func<IFromQuery, IFromQuery<T>> subQuery);
+    #endregion    
+
+    #region Join
+    IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    IQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    IQuery<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    IQuery<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    IQuery<T, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    #endregion
+
     #region Include
     /// <summary>
     /// 单表查询，包含1:1关联方式的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系。
@@ -34,45 +48,6 @@ public interface IQuery<T>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回实体对象，带有导航属性</returns>
     IIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
-    #endregion
-
-    #region Join
-    /// <summary>
-    /// 添加子查询表，方便后续关联,如：
-    /// 如：WithTable(f => repository.From&lt;Order, OrderDetail&gt;().Where((a, b) => a.Id == b.OrderId).SelectAggregate((a, b, c) => new { b.OrderNo, ProductCount = a.Count(c.Id) })))
-    /// </summary>
-    /// <typeparam name="TOther"></typeparam>
-    /// <param name="subQuery">子查询表达式，如：
-    /// WithTable(f => repository.From&lt;Order, OrderDetail&gt;().Where((a, b) => a.Id == b.OrderId).SelectAggregate((a, b, c) => new { b.OrderNo, ProductCount = a.Count(c.Id) })))</param>
-    /// <returns></returns>
-    IQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
-    /// <summary>
-    /// 添加子查询表，方便后续关联,如：
-    /// 如：WithTable(f => f.From&lt;Order, OrderDetail&gt;().Where((a, b) => a.Id == b.OrderId).SelectAggregate((a, b, c) => new { b.OrderNo, ProductCount = a.Count(c.Id) })))
-    /// </summary>
-    /// <typeparam name="TOther"></typeparam>
-    /// <param name="subQuery">子查询表达式，如：
-    /// WithTable(f => f.From&lt;Order, OrderDetail&gt;().Where((a, b) => a.Id == b.OrderId).SelectAggregate((a, b, c) => new { b.OrderNo, ProductCount = a.Count(c.Id) })))</param>
-    /// <returns></returns>
-    IQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
-    /// <summary>
-    /// 实体中导航表关联，如: rep.From&lt;Order&gt;().InnerJoin(f => f.BuyerId == f.Buyer.Id);
-    /// </summary>
-    /// <param name="joinOn"></param>
-    /// <returns></returns>
-    IQuery<T> InnerJoin(Expression<Func<T, bool>> joinOn);
-    IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
-    IQuery<T> LeftJoin(Expression<Func<T, bool>> joinOn);
-    IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
-    IQuery<T> RightJoin(Expression<Func<T, bool>> joinOn);
-    IQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
-    #endregion
-
-    #region Union
-    IQuery<T> Union<TOther>(IQuery<TOther> subQuery);
-    IQuery<T> Union<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
-    IQuery<T> UnionAll<TOther>(IQuery<TOther> subQuery);
-    IQuery<T> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
     #endregion
 
     #region Where
@@ -129,7 +104,7 @@ public interface IQuery<T>
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 <#
-    var count = 16;
+    var count = 15;
     string tables = "T1";
     for (int i = 2; i < count; i++)
     {
@@ -140,16 +115,12 @@ public interface IQuery<<#=tables#>>
     IIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector);
     IIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
 
-    IQuery<<#=tables#>, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
-    IQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn);
     IQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
-    IQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn);
     IQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
-    IQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn);
     IQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
-
-    IQuery<<#=tables#>> Union<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
-    IQuery<<#=tables#>> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IQuery<<#=tables#>, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    IQuery<<#=tables#>, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    IQuery<<#=tables#>, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
 
     IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
     IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate);
@@ -158,7 +129,6 @@ public interface IQuery<<#=tables#>>
     IQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     IQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
 
-    IQuery<<#=tables#>> Distinct();
     IQuery<<#=tables#>> Skip(int offset);
     IQuery<<#=tables#>> Take(int limit);
     IQuery<<#=tables#>> ToChunk(int size);
@@ -198,13 +168,6 @@ public interface IQuery<<#=tables#>>
     IIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector);
     IIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
 
-    IQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn);
-    IQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn);
-    IQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn);
-
-    IQuery<<#=tables#>> Union<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
-    IQuery<<#=tables#>> UnionAll<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
-
     IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
     IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate);
 
@@ -212,7 +175,6 @@ public interface IQuery<<#=tables#>>
     IQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     IQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
 
-    IQuery<<#=tables#>> Distinct();
     IQuery<<#=tables#>> Skip(int offset);
     IQuery<<#=tables#>> Take(int limit);
     IQuery<<#=tables#>> ToChunk(int size);

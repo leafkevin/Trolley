@@ -1,16 +1,11 @@
-﻿using System;
-
-namespace Trolley;
+﻿namespace Trolley;
 
 public class MemberBuilder<TMember>
 {
-    private readonly IOrmDbFactory dbFactory;
     private readonly MemberMap mapper;
-    public MemberBuilder(IOrmDbFactory dbFactory, MemberMap mapper)
-    {
-        this.dbFactory = dbFactory;
-        this.mapper = mapper;
-    }
+
+    public MemberBuilder(MemberMap mapper) => this.mapper = mapper;
+
     public virtual MemberBuilder<TMember> Name(string memberName)
     {
         this.mapper.MemberName = memberName;
@@ -23,14 +18,12 @@ public class MemberBuilder<TMember>
     }
     public virtual MemberBuilder<TMember> NativeDbType(int nativeDbType)
     {
-        this.mapper.NativeDbType = nativeDbType;
+        this.mapper.nativeDbType = nativeDbType;
         return this;
     }
     public virtual MemberBuilder<TMember> SetTypeHandler<TTypeHandler>() where TTypeHandler : class, ITypeHandler, new()
     {
-        if (!this.dbFactory.TryGetTypeHandler(typeof(TTypeHandler), out var typeHandler))
-            throw new Exception($"{typeof(TTypeHandler).FullName}类型TypeHandler没有注册");
-        this.mapper.TypeHandler = typeHandler;
+        this.mapper.typeHandlerType = typeof(TTypeHandler);
         return this;
     }
     public virtual MemberBuilder<TMember> Ignore()
@@ -38,5 +31,4 @@ public class MemberBuilder<TMember>
         this.mapper.IsIgnore = true;
         return this;
     }
-    public MemberMap Build() => this.mapper;
 }

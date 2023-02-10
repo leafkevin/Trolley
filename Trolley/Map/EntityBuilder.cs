@@ -8,14 +8,9 @@ namespace Trolley;
 
 public class EntityBuilder<TEntity> where TEntity : class
 {
-    private readonly IOrmDbFactory dbFactory;
     private readonly EntityMap mapper;
 
-    public EntityBuilder(IOrmDbFactory dbFactory, EntityMap mapper)
-    {
-        this.dbFactory = dbFactory;
-        this.mapper = mapper;
-    }
+    public EntityBuilder(EntityMap mapper) => this.mapper = mapper;
 
     public virtual EntityBuilder<TEntity> ToTable(string tableName)
     {
@@ -66,7 +61,7 @@ public class EntityBuilder<TEntity> where TEntity : class
         var memberName = memberExpr.Member.Name;
         if (!this.mapper.TryGetMemberMap(memberName, out var memberMapper))
             this.mapper.AddMemberMap(memberName, memberMapper = new MemberMap(this.mapper, this.mapper.FieldPrefix, memberExpr.Member));
-        return new MemberBuilder<TMember>(this.dbFactory, memberMapper);
+        return new MemberBuilder<TMember>(memberMapper);
     }
     public virtual Navigation<TEntity> Navigation<TMember>(Expression<Func<TEntity, TMember>> memberSelector) where TMember : class
         => this.HasOne(memberSelector);
@@ -102,5 +97,4 @@ public class EntityBuilder<TEntity> where TEntity : class
         memberMapper.MapType = typeof(TElement);
         return new Navigation<TElement>(memberMapper);
     }
-    public EntityMap Build() => this.mapper.Build();
 }

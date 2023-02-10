@@ -1,7 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Trolley;
 
+public enum TableType : byte
+{
+    Master = 1,
+    Include = 2,
+    IncludeMany = 3,
+    MapTable = 4
+}
 public class TableSegment
 {
     public string JoinType { get; set; }
@@ -19,15 +27,27 @@ public class TableSegment
     /// 当前表Mapper，如：OrderDetail
     /// </summary>
     public EntityMap Mapper { get; set; }
+    /// <summary>
+    /// 嵌套表的SQL内容，如：select * from (...) a
+    /// </summary>
     public string Body { get; set; }
     /// <summary>
     /// SqlServer在表名后，会接一个后缀字符串，如：select * from A WITH (UPDLOCK)
     /// </summary>
     public string SuffixRawSql { get; set; }
-    public bool IsInclude { get; set; }
+    public TableType TableType { get; set; }
     public bool IsMaster { get; set; }
     public string Path { get; set; }
     public string Filter { get; set; }
     public string OnExpr { get; set; }
+    public List<ReaderField> ReaderFields { get; set; }
     public bool IsUsed { get; set; }
+
+    public override bool Equals(object obj)
+    {
+        if (obj == null) return false;
+        var right = (TableSegment)obj;
+        return this.Path == right.Path;
+    }
+    public override int GetHashCode() => HashCode.Combine(this.Path);
 }

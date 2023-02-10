@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Collections.Generic;
+using System.Reflection;
 
 namespace Trolley;
 
@@ -7,14 +8,18 @@ public enum ReaderFieldType : byte
     Field = 1,
     Entity = 2,
     /// <summary>
-    /// 像Grouping这种的接口提供的临时实体
+    /// 临时的匿名对象，像Grouping，FromQuery中的参数访问的实体类成员
     /// </summary>
-    AnonymousField = 3
+    AnonymousObject = 3,
+    /// <summary>
+    /// 访问了实体的IncludeMany的成员，当前字段是主表主键字段
+    /// </summary>
+    MasterField = 4
 }
 public class ReaderField
 {
     public int Index { get; set; }
-    public ReaderFieldType Type { get; set; }
+    public ReaderFieldType FieldType { get; set; }
     public int? ParentIndex { get; set; }
     /// <summary>
     /// 当前查询中的Table，如：User表
@@ -33,11 +38,8 @@ public class ReaderField
     /// </summary>
     public string Body { get; set; }
     /// <summary>
-    /// 如果是实体，字段个数，主要用于匿名对象
-    /// </summary>
-    public int FieldCount { get; set; }
-    /// <summary>
     /// 是否有后续的子对象
     /// </summary>
     public bool HasNextInclude { get; set; }
+    public List<ReaderField> ReaderFields { get; set; }
 }

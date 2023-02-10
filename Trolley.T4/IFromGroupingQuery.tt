@@ -17,10 +17,11 @@ public interface IFromGroupingQuery<T, TGrouping>
     IFromGroupingQuery<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     IFromGroupingQuery<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     IFromQuery<TGrouping> Select();
+    IQueryAnonymousObject Select(string fields = "*");
     IFromQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr);
 }
 <#
-    var count = 10;
+    var count = 15;
     var tables = "T1";
     for (int i = 2; i < count; i++)
     {
@@ -33,6 +34,15 @@ public interface IFromGroupingQuery<<#=tables#>, TGrouping>
     IFromGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
     IFromGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
     IFromQuery<TGrouping> Select();
+    IQueryAnonymousObject Select(string fields = "*");
     IFromQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr);
 }
-<#  }#>
+<#  }
+    tables += $", T{count}";
+#>
+public interface IFromGroupingQuery<<#=tables#>, TGrouping>
+{
+    IFromQuery<TGrouping> Select();
+    IQueryAnonymousObject Select(string fields = "*");
+    IFromQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr);
+}
