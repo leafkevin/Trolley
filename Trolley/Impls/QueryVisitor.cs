@@ -1321,7 +1321,7 @@ class QueryVisitor : SqlVisitor
                 index++;
             }
             var breakLabel = Expression.Label();
-            var toMethodInfo = typeof(TrolleyExtensions).GetMethod(nameof(TrolleyExtensions.To),
+            var toMethodInfo = typeof(Extensions).GetMethod(nameof(Extensions.To),
                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static,
                    new Type[] { typeof(IDataReader), typeof(string), typeof(IOrmProvider), typeof(IEntityMapProvider) });
 

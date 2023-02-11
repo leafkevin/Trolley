@@ -8,11 +8,10 @@ public class TheaDatabaseProvider
 {
     public TheaDatabase defaultDatabase;
     private readonly ConcurrentDictionary<int, TheaDatabase> tenantDatabases = new();
-    private readonly ConcurrentDictionary<Type, IEntityMapProvider> entityMapProviders = new();
 
     public string DbKey { get; set; }
     public bool IsDefault { get; set; }
-    public List<TheaDatabase> Databases { get; set; } = new();
+    public List<TheaDatabase> Databases { get; private set; } = new();
 
     public TheaDatabase GetDatabase(int? tenantId = null)
     {
@@ -40,38 +39,6 @@ public class TheaDatabaseProvider
         {
             this.defaultDatabase = database;
             this.tenantDatabases[0] = database;
-        }
-    }
-    public void AddEntityMapProvider(Type ormProviderType, IEntityMapProvider entityMapProvider)
-    {
-        if (ormProviderType == null)
-            throw new ArgumentNullException(nameof(ormProviderType));
-        if (entityMapProvider == null)
-            throw new ArgumentNullException(nameof(entityMapProvider));
-
-        this.entityMapProviders.TryAdd(ormProviderType, entityMapProvider);
-    }
-    public bool TryGetEntityMapProvider(Type ormProviderType, out IEntityMapProvider entityMapProvider)
-    {
-        if (ormProviderType == null)
-            throw new ArgumentNullException(nameof(ormProviderType));
-
-        return this.entityMapProviders.TryGetValue(ormProviderType, out entityMapProvider);
-    }
-    public void Build(IOrmDbFactory dbFactory, ITypeHandlerProvider typeHandlerProvider)
-    {
-        foreach (var ormProviderType in this.entityMapProviders.Keys)
-        {
-            var mapProvider = this.entityMapProviders[ormProviderType];
-            if (!dbFactory.TryGetOrmProvider(ormProviderType, out var ormProvider))
-            {
-                ormProvider = Activator.CreateInstance(ormProviderType) as IOrmProvider;
-                dbFactory.AddOrmProvider(ormProvider);
-            }
-            foreach (var entityMapper in mapProvider.EntityMaps)
-            {
-                entityMapper.Build(ormProvider, typeHandlerProvider);
-            }
         }
     }
 }

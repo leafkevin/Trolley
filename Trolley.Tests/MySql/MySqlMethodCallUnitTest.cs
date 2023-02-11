@@ -18,10 +18,10 @@ public class MySqlMethodCallUnitTest
             .Register("fengling", true, f =>
             {
                 var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
-                f.Add<MySqlProvider>(connectionString, true)
-                 .Configure(new MySqlModelConfiguration());
+                f.Add<MySqlProvider>(connectionString, true);
             })
-            .AddTypeHandler<JsonTypeHandler>();
+            .AddTypeHandler<JsonTypeHandler>()
+            .Configure<MySqlProvider, MySqlModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();

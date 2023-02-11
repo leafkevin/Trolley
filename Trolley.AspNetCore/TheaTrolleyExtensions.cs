@@ -4,7 +4,7 @@ using System;
 
 namespace Trolley.AspNetCore;
 
-public static class TrolleyExtensions
+public static class TheaTrolleyExtensions
 {
     public static IServiceCollection AddTrolley(this IServiceCollection services, Action<OrmDbFactoryBuilder> initializer)
     {

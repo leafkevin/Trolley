@@ -23,10 +23,10 @@ public class NpgsqlUnitTest4
             .Register("fengling", true, f =>
             {
                 var connectionString = "Host=localhost;Username=postgres;Password=123456;Database=fengling;Maximum Pool Size=20";
-                f.Add<NpgSqlProvider>(connectionString, true)
-                 .Configure(new NpgsqlModelConfiguration());
+                f.Add<NpgSqlProvider>(connectionString, true);
             })
-            .AddTypeHandler<JsonTypeHandler>();
+            .AddTypeHandler<JsonTypeHandler>()
+            .Configure<NpgSqlProvider, NpgsqlModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();

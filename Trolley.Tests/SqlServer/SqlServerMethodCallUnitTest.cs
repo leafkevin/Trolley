@@ -18,10 +18,10 @@ public class SqlServerMethodCallUnitTest
             .Register("fengling", true, f =>
             {
                 var connectionString = "Server=.;Database=fengling;Uid=sa;password=Angangyur123456;TrustServerCertificate=true";
-                f.Add<SqlServerProvider>(connectionString, true)
-                 .Configure(new SqlServerModelConfiguration());
+                f.Add<SqlServerProvider>(connectionString, true);
             })
-            .AddTypeHandler<JsonTypeHandler>();
+            .AddTypeHandler<JsonTypeHandler>()
+            .Configure<SqlServerProvider, SqlServerModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
