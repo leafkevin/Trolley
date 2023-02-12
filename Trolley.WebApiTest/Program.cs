@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Trolley;
 using Trolley.AspNetCore;
+using Trolley.WebApiTest;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,7 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddTrolley(f =>
     f.LoadFromConfiguration(builder.Configuration, "Database")
-     .AddTypeHandler<JsonTypeHandler>());
+     .AddTypeHandler<JsonTypeHandler>()
+     .Configure<MySqlProvider, ModelConfiguration>());
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

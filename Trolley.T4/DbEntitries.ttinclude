@@ -1,0 +1,82 @@
+﻿<#+
+class TableInfo
+{
+    public string TableName { get; set; }
+    public string Description { get; set; }
+}
+class ColumnInfo
+{
+    public string ColumnName { get; set; }
+    public string DataType { get; set; }
+    public string ColumnType { get; set; }
+    public ulong Length { get; set; }
+    public int Scale { get; set; }
+    public int Precision { get; set; }
+    public bool IsPrimaryKey { get; set; }
+    public bool IsIdentity { get; set; }
+    public bool IsNullable { get; set; }
+    public string Description { get; set; }
+    public string DefaultValue { get; set; }
+}
+class DbHelper
+{
+    public T ToValue<T>(object obj)
+    {        
+        var targetType = typeof(T);
+        if (obj == null || obj is DBNull)
+        {
+            if(targetType == typeof(string))
+                return (T)(object)(string.Empty);
+            else return default;
+        }
+        var type = obj.GetType();
+        if (targetType.IsAssignableFrom(type))
+            return (T)obj;
+        var underlyingType = Nullable.GetUnderlyingType(targetType);
+        if (underlyingType == null) underlyingType = targetType;
+        object result = obj;
+        if (underlyingType.IsEnum)
+        {
+            var enumObj = Convert.ChangeType(result, underlyingType.GetEnumUnderlyingType());
+            return (T)Enum.ToObject(underlyingType, enumObj);
+        }
+        return (T)Convert.ChangeType(result, underlyingType);
+    }
+    public string ToClassName(string tableName, string removePrefix = null, char separator = '_')
+    {
+        var className = tableName;
+        if (!string.IsNullOrEmpty(removePrefix))
+            className = className.Replace(removePrefix, string.Empty);
+        return this.ToBigCamel(className, separator);
+    }
+    public string ToBigCamel(string value, char separator = '_')
+    {
+        if (string.IsNullOrEmpty(value))
+            return null;
+        value = value.Trim();
+        if (value.Length <= 0)
+            return null;
+        var words = value.Split(separator);
+        var builder = new StringBuilder();
+        foreach (string word in words)
+        {
+            builder.Append(this.ToBigCamel(word));
+        }
+        return builder.ToString();
+    }
+    public string ToCamel(string value)
+    {
+        if (value == null) return null;
+        if (value.Trim().Length <= 0)
+            return string.Empty;
+        return value.Substring(0, 1).ToLower() + value.Substring(1);
+    }
+    public string ToBigCamel(string value)
+    {
+        if (value == null) return null;
+        if (value.Trim().Length <= 0)
+            return string.Empty;
+        return value.Substring(0, 1).ToUpper() + value.Substring(1);
+    }
+}
+#>

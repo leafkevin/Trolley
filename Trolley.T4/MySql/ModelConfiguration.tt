@@ -1,0 +1,69 @@
+﻿<#@ template debug="true" hostspecific="true" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="System.Data" #>
+<#@ assembly name="System.Data.Linq"#>
+<#@ assembly name="System.Data.Common"#>
+<#@ assembly name="EnvDTE" #>
+<#@ assembly name="System.Xml"#>
+<#@ assembly name="System.Xml.Linq"#>
+<#@ import namespace="System" #>
+<#@ import namespace="System.CodeDom"#>
+<#@ import namespace="System.CodeDom.Compiler"#>
+<#@ import namespace="System.Collections" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Data"#>
+<#@ import namespace="System.Data.Linq"#>
+<#@ import namespace="System.Data.Linq.Mapping"#>
+<#@ import namespace="System.IO"#>
+<#@ import namespace="System.Linq"#>
+<#@ import namespace="System.Reflection"#>
+<#@ import namespace="System.Text"#>
+<#@ import namespace="System.Xml.Linq"#>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
+<#@ output encoding="utf-8" #>
+<#
+    var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
+	var dbProvider = new MySqlProvider(connectionString);
+
+    var databaseName = "fengling";
+	var tableName = "sys_user";
+    var removePrefix = "sys_";
+    var separator = '_';
+    var className = dbProvider.ToClassName(tableName, removePrefix, separator);
+	var tableInfo = dbProvider.GetTableInfo(databaseName, tableName);
+	var columnList = dbProvider.GetColumnList(databaseName, tableInfo.TableName);
+#>
+using PaymentCenter.Domain.Models;
+using Thea.Orm;
+
+namespace PaymentCenter;
+
+class ModelConfiguration : IModelConfiguration
+{
+    public void OnModelCreating(ModelBuilder builder)
+    {
+        builder.Entity<<#=className#>>(f =>
+        {
+<#
+    foreach(ColumnInfo columnInfo in columnList)
+    {
+        var propertyName = columnInfo.ColumnName;
+        if(columnInfo.IsPrimaryKey)
+        {#>
+            f.ToTable("<#=tableName#>").Key(t => t.<#=propertyName#>);
+<#      }
+    }#>
+<#
+    foreach(ColumnInfo columnInfo in columnList)
+    {
+        var propertyName = columnInfo.ColumnName;
+        var nativeDbType = dbProvider.MapNativeDbType(columnInfo.DataType);
+#>
+            f.Member(t => t.<#=propertyName#>).Field("<#=columnInfo.ColumnName#>").NativeDbType(<#=nativeDbType#>);
+<#}#>
+        });
+    }
+}
+<#@ include file="$(ProjectDir)\Manager.ttinclude" once="true"#>
+<#@ include file="$(ProjectDir)\DbEntitries.ttinclude" once="true"#>
+<#@ include file="MySqlProvider.ttinclude" once="true"#>

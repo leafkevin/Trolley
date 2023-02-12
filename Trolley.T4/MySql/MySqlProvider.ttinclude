@@ -1,0 +1,165 @@
+﻿<#@ assembly name="$(ProjectDir)\Plugins\MySql\MySql.Data.dll" #>
+<#@ import namespace="MySql.Data.MySqlClient" #>
+<#+  
+class MySqlProvider : DbHelper
+{
+    private readonly string connectionString;
+    public MySqlProvider(string connectionString)
+        => this.connectionString = connectionString;
+    public List<TableInfo> GetTableList(string database, string tableNamefilter)
+    {
+        var sql = @"SELECT TABLE_NAME,TABLE_COMMENT FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='{0}' AND TABLE_NAME LIKE '%{1}%'";
+        sql = string.Format(sql, database, tableNamefilter);
+        var result = new List<TableInfo>();
+        using var connection = new MySqlConnection(this.connectionString);
+        using var command = new MySqlCommand(sql, connection);
+        connection.Open();
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection);
+        while (reader.Read())
+        {
+            result.Add(new TableInfo
+            {
+                TableName = this.ToValue<string>(reader[0]),
+                Description = this.ToValue<string>(reader[1])
+            });
+        }
+        reader.Close();
+        connection.Close();
+        return result;
+    }
+    public TableInfo GetTableInfo(string database, string tableName)
+    {
+        var sql = @"SELECT TABLE_NAME,TABLE_COMMENT FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='{0}' AND TABLE_NAME='{1}'";
+        sql = string.Format(sql, database, tableName);
+        TableInfo result = null;
+        using var connection = new MySqlConnection(this.connectionString);
+        using var command = new MySqlCommand(sql, connection);
+        connection.Open();
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection);
+        if (reader.Read())
+        {
+            result = new TableInfo
+            {
+                TableName = this.ToValue<string>(reader[0]),
+                Description = this.ToValue<string>(reader[1])
+            };
+        }
+        reader.Close();
+        connection.Close();
+        return result;
+    }
+    public List<ColumnInfo> GetColumnList(string database, string tableName)
+    {
+        var sql = @"SELECT A.COLUMN_NAME,
+				           A.DATA_TYPE,
+					       A.COLUMN_TYPE,
+				           A.CHARACTER_MAXIMUM_LENGTH,
+				           A.NUMERIC_SCALE,
+				           A.NUMERIC_PRECISION,
+				           A.COLUMN_COMMENT,
+				           A.COLUMN_DEFAULT,
+				           A.COLUMN_KEY,
+				           A.EXTRA,
+				           A.IS_NULLABLE
+				       FROM INFORMATION_SCHEMA.COLUMNS A
+				       WHERE A.TABLE_SCHEMA='{0}' AND A.TABLE_NAME='{1}'";
+
+        sql = String.Format(sql, database, tableName);
+        var result = new List<ColumnInfo>();
+        using var connection = new MySqlConnection(this.connectionString);
+        using var command = new MySqlCommand(sql, connection);
+        connection.Open();
+        using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection);
+        while (reader.Read())
+        {
+            result.Add(new ColumnInfo
+            {
+                ColumnName = this.ToValue<string>(reader[0]),
+                DataType = this.ToValue<string>(reader[1]),
+                ColumnType = this.ToValue<string>(reader[2]),
+                Length = this.ToValue<ulong>(reader[3]),
+                Scale = this.ToValue<int>(reader[4]),
+                Precision = this.ToValue<int>(reader[5]),
+                Description = this.ToValue<string>(reader[6]),
+                DefaultValue = this.ToValue<string>(reader[7]),
+                IsPrimaryKey = this.ToValue<string>(reader[8]) == "PRI",
+                IsNullable = this.ToValue<string>(reader[9]).Contains("auto_increment"),
+                IsIdentity = this.ToValue<string>(reader[10]) == "YES"
+            });
+        }
+        reader.Close();
+        connection.Close();
+        return result;
+    }
+    public string MapMemberType(string dataType, string columnType)
+    {
+        bool bUnsigned = columnType.Contains("unsigned");
+        switch (dataType)
+        {
+            case "bigint": return bUnsigned ? "ulong" : "long";
+            case "int": return bUnsigned ? "uint" : "int";
+            case "smallint": return bUnsigned ? "ushort" : "short";
+            case "guid": return "Guid";
+            case "smalldatetime":
+            case "date":
+            case "datetime":
+            case "timestamp": return "DateTime";
+            case "float": return "float";
+            case "double": return "double";
+            case "numeric":
+            case "smallmoney":
+            case "decimal":
+            case "money": return "decimal";
+            case "bit":
+            case "bool":
+            case "boolean": return "bool";
+            case "tinyint": return bUnsigned ? "byte" : "sbyte";
+            case "image":
+            case "binary":
+            case "blob":
+            case "mediumblob":
+            case "longblob":
+            case "varbinary": return "byte[]";
+        }
+        return "string";
+    }
+    public string MapNativeDbType(string dataType)
+    {
+        switch (dataType)
+        {
+            case "bigint": return "0";
+            case "binary": return "1";
+            case "bit": return "2";
+            case "char": return "3";
+            case "datetime": return "4";
+            case "decimal": return "5";
+            case "float": return "6";
+            case "image": return "7";
+            case "int": return "8";
+            case "money": return "9";
+            case "nchar": return "10";
+            case "ntext": return "11";
+            case "nvarchar": return "12";
+            case "real": return "13";
+            case "uniqueidentifier": return "14";
+            case "smalldatetime": return "15";
+            case "smallint": return "16";
+            case "smallmoney": return "17";
+            case "text": return "18";
+            case "timestamp": return "19";
+            case "tinyint": return "20";
+            case "varbinary": return "21";
+            case "varchar": return "22";
+            case "variant": return "23";
+            case "xml": return "25";
+            case "udt": return "29";
+            case "structured": return "30";
+            case "date": return "31";
+            case "time": return "32";
+            case "datetime2": return "33";
+            case "datetimeoffset": return "34";
+        }
+        return "string";
+    }
+}
+#>

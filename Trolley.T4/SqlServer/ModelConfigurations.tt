@@ -1,0 +1,86 @@
+﻿<#@ template debug="true" hostspecific="true" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="System.Data" #>
+<#@ assembly name="System.Data.Linq"#>
+<#@ assembly name="System.Data.Common"#>
+<#@ assembly name="EnvDTE" #>
+<#@ assembly name="System.Xml"#>
+<#@ assembly name="System.Xml.Linq"#>
+<#@ import namespace="System" #>
+<#@ import namespace="System.CodeDom"#>
+<#@ import namespace="System.CodeDom.Compiler"#>
+<#@ import namespace="System.Collections" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Data"#>
+<#@ import namespace="System.Data.Linq"#>
+<#@ import namespace="System.Data.Linq.Mapping"#>
+<#@ import namespace="System.IO"#>
+<#@ import namespace="System.Linq"#>
+<#@ import namespace="System.Reflection"#>
+<#@ import namespace="System.Text"#>
+<#@ import namespace="System.Xml.Linq"#>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
+<#@ output encoding="utf-8" #>
+<#
+    var connectionString = "Server=.;Database=fengling;Uid=sa;password=Angangyur123456;TrustServerCertificate=true";
+	var dbProvider = new SqlServerProvider(connectionString);
+
+    var tableFilter = "sys_";
+    var removePrefix = "sys_";
+    var separator = '_';
+    var tableList = dbProvider.GetTableList(tableFilter);
+#>
+using PaymentCenter.Domain.Models;
+using Thea.Orm;
+
+namespace PaymentCenter;
+
+class ModelConfiguration : IModelConfiguration
+{
+    public void OnModelCreating(ModelBuilder builder)
+    {<#
+    foreach(var tableInfo in tableList)
+    {
+        var className = dbProvider.ToClassName(tableInfo.TableName, removePrefix, separator);
+        var columnList = dbProvider.GetColumnList(tableInfo.TableName);
+#>
+        builder.Entity<<#=className#>>(f =>
+        {
+            f.ToTable("<#=tableInfo.TableName#>").Key(t => <#
+        var pKeyColumns = columnList.FindAll(f => f.IsPrimaryKey);
+        if(pKeyColumns.Count > 1)
+        {
+            #>new { <#
+            for(int i = 0;i < pKeyColumns.Count; i++)
+            {
+                var propertyName = pKeyColumns[i].ColumnName;
+                if(i > 0)
+                {
+                    #>, <#
+                }
+                #>t.<#=propertyName#><#
+            }
+            #>});
+<#
+        }
+        else
+        {
+            var propertyName = pKeyColumns[0].ColumnName;
+            #>t.<#=propertyName#>);
+<#
+        }
+        foreach(ColumnInfo columnInfo in columnList)
+        {
+            var propertyName = columnInfo.ColumnName;
+            var nativeDbType = dbProvider.MapNativeDbType(columnInfo.DataType);
+#>
+            f.Member(t => t.<#=propertyName#>).Field("<#=columnInfo.ColumnName#>").NativeDbType(<#=nativeDbType#>);
+<#
+        }#>
+        });<#
+    }#>
+    }
+}
+<#@ include file="$(ProjectDir)\Manager.ttinclude" once="true"#>
+<#@ include file="$(ProjectDir)\DbEntitries.ttinclude" once="true"#>
+<#@ include file="SqlServerProvider.ttinclude" once="true"#>

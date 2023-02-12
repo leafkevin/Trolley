@@ -1,0 +1,165 @@
+﻿<#@ import namespace="System.Data" #>
+<#@ import namespace="System.Data.SqlClient" #>
+<#+
+class SqlServerProvider : DbHelper
+{
+    private readonly string connectionString;
+    public SqlServerProvider(string connectionString)
+        => this.connectionString = connectionString;
+    public List<TableInfo> GetTableList(string tableNamefilter)
+    {
+        var sql = "SELECT A.NAME,B.VALUE FROM SYS.SYSOBJECTS A LEFT JOIN SYS.EXTENDED_PROPERTIES B ON A.ID=B.MAJOR_ID AND B.MAJOR_ID=0 AND B.NAME='MS_Description' WHERE A.xtype='U' AND A.NAME LIKE '%{0}%'";
+        sql = string.Format(sql, tableNamefilter);
+        var result = new List<TableInfo>();
+        using var connection = new SqlConnection(this.connectionString);
+        using var command = new SqlCommand(sql, connection);
+        connection.Open();
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection);
+        while (reader.Read())
+        {
+            result.Add(new TableInfo
+            {
+                TableName = this.ToValue<string>(reader[0]),
+                Description = this.ToValue<string>(reader[1])
+            });
+        }
+        reader.Close();
+        connection.Close();
+        return result;
+    }
+    public List<ColumnInfo> GetColumnList(string tableName)
+    {
+        var sql = @"SELECT A.name,LOWER(C.name),								
+					       (CASE WHEN C.name IN ('NVARCHAR','NCHAR','NTEXT') THEN C.length/2 ELSE C.length END),
+					       A.xprec,A.xscale,D.value,F.text,E.keyno,A.isnullable,
+							COLUMNPROPERTY(A.id,A.name,'IsIdentity')
+					  FROM SYS.syscolumns A 
+				INNER JOIN SYS.sysobjects B ON A.id=B.id
+				INNER JOIN SYS.systypes C ON A.xusertype = C.xusertype 
+				 LEFT JOIN SYS.extended_properties D ON D.major_id  = A.ID AND D.minor_id = A.colid AND D.name = 'MS_Description'
+				 LEFT JOIN SYS.sysindexkeys E ON B.id=E.id AND A.colid=E.colid
+				 LEFT JOIN SYS.syscomments F ON A.cdefault=F.id
+					 WHERE B.xtype='U' AND B.name='{0}' ORDER BY A.COLID";
+
+        sql = string.Format(sql, tableName);
+        var result = new List<ColumnInfo>();
+        using var connection = new SqlConnection(this.connectionString);
+        using var command = new SqlCommand(sql, connection);
+        connection.Open();
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection);
+        while (reader.Read())
+        {
+            result.Add(new ColumnInfo
+            {
+                ColumnName = this.ToValue<string>(reader[0]),
+                DataType = this.ToValue<string>(reader[1]),
+                Length = this.ToValue<ulong>(reader[2]),
+                Scale = this.ToValue<int>(reader[3]),
+                Precision = this.ToValue<int>(reader[4]),
+                Description = this.ToValue<string>(reader[5]),
+                DefaultValue = this.ToValue<string>(reader[6]),
+                IsPrimaryKey = this.ToValue<int>(reader[7]) == 1,
+                IsNullable = this.ToValue<int>(reader[8]) == 1,
+                IsIdentity = this.ToValue<int>(reader[9]) == 1
+            });
+        }
+        reader.Close();
+        connection.Close();
+        return result;
+    }
+    public TableInfo GetTableInfo(string tableName)
+    {
+        var sql = "SELECT A.NAME,B.VALUE FROM SYS.SYSOBJECTS A LEFT JOIN SYS.EXTENDED_PROPERTIES B ON A.ID=B.MAJOR_ID AND B.MAJOR_ID=0 AND B.NAME='MS_Description' WHERE A.xtype='U' AND A.NAME='{0}'";
+        sql = string.Format(sql, tableName);
+        TableInfo result = null;
+        using var connection = new SqlConnection(this.connectionString);
+        using var command = new SqlCommand(sql, connection);
+        connection.Open();
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection);
+        if (reader.Read())
+        {
+            result = new TableInfo
+            {
+                TableName = this.ToValue<string>(reader[0]),
+                Description = this.ToValue<string>(reader[1])
+            };
+        }
+        reader.Close();
+        connection.Close();
+        return result;
+    }
+    public string MapMemberType(string dataType)
+    {
+        switch (dataType)
+        {
+            case "bit": return "bool";
+            case "char":
+            case "varchar":
+            case "text":
+            case "ntext":return "string";
+            case "bigint": return "long";
+            case "int": return "int";
+            case "smallint": return "short";            
+            case "tinyint": return "byte";            
+            case "smalldatetime":
+            case "datetime":
+            case "datetime2":
+            case "date": return "DateTime";
+            case "time": return "TimeSpan";
+            case "datetimeoffset": return "DateTimeOffset";
+            case "float": return "double";
+            case "real": return "float";
+            case "numeric":
+            case "smallmoney":
+            case "decimal":
+            case "money": return "decimal";
+            case "image":
+            case "binary":
+            case "varbinary":
+            case "timestamp": return "byte[]";
+            case "uniqueidentifier": return "Guid";
+            case "geography": return "Microsoft.SqlServer.Types.SqlGeography";
+            case "geometry": return "Microsoft.SqlServer.Types.SqlGeometry";
+        }
+        return "string";
+    }
+    public string MapNativeDbType(string dataType)
+    {
+        switch (dataType)
+        {
+            case "bigint": return "0";
+            case "binary": return "1";
+            case "bit": return "2";
+            case "char": return "3";
+            case "datetime": return "4";
+            case "decimal": return "5";
+            case "float": return "6";
+            case "image": return "7";
+            case "int": return "8";
+            case "money": return "9";
+            case "nchar": return "10";
+            case "ntext": return "11";
+            case "nvarchar": return "12";
+            case "real": return "13";
+            case "uniqueidentifier": return "14";
+            case "smalldatetime": return "15";
+            case "smallint": return "16";
+            case "smallmoney": return "17";
+            case "text": return "18";
+            case "timestamp": return "19";
+            case "tinyint": return "20";
+            case "varbinary": return "21";
+            case "varchar": return "22";
+            case "variant": return "23";
+            case "xml": return "25";
+            case "udt": return "29";
+            case "structured": return "30";
+            case "date": return "31";
+            case "time": return "32";
+            case "datetime2": return "33";
+            case "datetimeoffset": return "34";
+        }
+        return "string";
+    }
+}
+#>
