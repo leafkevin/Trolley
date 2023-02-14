@@ -48,7 +48,7 @@ namespace Thea.Services.Domain.Models
     {
 <#foreach(ColumnInfo columnInfo in columnList){
 var propertyName = columnInfo.ColumnName;
-var propertyType = dbProvider.MapMemberType(columnInfo.DataType, columnInfo.ColumnType);
+var propertyType = dbProvider.MapMemberType(columnInfo);
 if(!String.IsNullOrEmpty(columnInfo.Description))
 {#>
         /// <summary>

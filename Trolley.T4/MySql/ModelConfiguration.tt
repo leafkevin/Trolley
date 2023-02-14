@@ -57,7 +57,7 @@ class ModelConfiguration : IModelConfiguration
     foreach(ColumnInfo columnInfo in columnList)
     {
         var propertyName = columnInfo.ColumnName;
-        var nativeDbType = dbProvider.MapNativeDbType(columnInfo.DataType);
+        var nativeDbType = dbProvider.MapNativeDbType(columnInfo);
 #>
             f.Member(t => t.<#=propertyName#>).Field("<#=columnInfo.ColumnName#>").NativeDbType(<#=nativeDbType#>);
 <#}#>

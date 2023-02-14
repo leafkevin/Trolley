@@ -123,43 +123,40 @@ class SqlServerProvider : DbHelper
         }
         return "string";
     }
-    public string MapNativeDbType(string dataType)
+    public int MapNativeDbType(string dataType)
     {
         switch (dataType)
         {
-            case "bigint": return "0";
-            case "binary": return "1";
-            case "bit": return "2";
-            case "char": return "3";
-            case "datetime": return "4";
-            case "decimal": return "5";
-            case "float": return "6";
-            case "image": return "7";
-            case "int": return "8";
-            case "money": return "9";
-            case "nchar": return "10";
-            case "ntext": return "11";
-            case "nvarchar": return "12";
-            case "real": return "13";
-            case "uniqueidentifier": return "14";
-            case "smalldatetime": return "15";
-            case "smallint": return "16";
-            case "smallmoney": return "17";
-            case "text": return "18";
-            case "timestamp": return "19";
-            case "tinyint": return "20";
-            case "varbinary": return "21";
-            case "varchar": return "22";
-            case "variant": return "23";
-            case "xml": return "25";
-            case "udt": return "29";
-            case "structured": return "30";
-            case "date": return "31";
-            case "time": return "32";
-            case "datetime2": return "33";
-            case "datetimeoffset": return "34";
+            case "bit": return (int)SqlDbType.Bit;
+            case "tinyint": return (int)SqlDbType.TinyInt;
+            case "smallint": return (int)SqlDbType.SmallInt;
+            case "int": return (int)SqlDbType.Int;
+            case "bigint": return (int)SqlDbType.BigInt;
+            case "numeric":
+            case "decimal": return (int)SqlDbType.Decimal;
+            case "smallmoney": return (int)SqlDbType.SmallMoney;
+            case "money": return (int)SqlDbType.Money;
+            case "float": return (int)SqlDbType.Float;
+            case "real": return (int)SqlDbType.Real;
+            case "date": return (int)SqlDbType.Date;
+            case "datetime": return (int)SqlDbType.DateTime;
+            case "datetime2": return (int)SqlDbType.DateTime2;
+            case "datetimeoffset": return (int)SqlDbType.DateTimeOffset;
+            case "smalldatetime": return (int)SqlDbType.SmallDateTime;
+            case "time": return (int)SqlDbType.Time;
+            case "char": return (int)SqlDbType.Char;
+            case "varchar": return (int)SqlDbType.VarChar;
+            case "text": return (int)SqlDbType.Text;
+            case "nchar": return (int)SqlDbType.NChar;
+            case "nvarchar": return (int)SqlDbType.NVarChar;
+            case "ntext": return (int)SqlDbType.NText;
+            case "binary": return (int)SqlDbType.Binary;
+            case "varbinary": return (int)SqlDbType.VarBinary;
+            case "image": return (int)SqlDbType.Image;
+            case "timestamp": return (int)SqlDbType.Timestamp;
+            case "uniqueidentifier": return (int)SqlDbType.UniqueIdentifier;
+            default: return (int)SqlDbType.Variant;
         }
-        return "string";
     }
 }
 #>

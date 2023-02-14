@@ -118,7 +118,6 @@ public class SqlServerProvider : BaseOrmProvider
     }
     public SqlServerProvider()
     {
-
         memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetMember(nameof(string.Empty))[0], target => "''");
         memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetProperty(nameof(string.Length)), target => $"LEN({this.GetQuotedValue(target)})");
 

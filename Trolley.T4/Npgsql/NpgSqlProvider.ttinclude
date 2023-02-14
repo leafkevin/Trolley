@@ -1,0 +1,236 @@
+﻿<#@ assembly name="$(ProjectDir)\Plugins\Npgsql.dll" #>
+<#@ import namespace="Npgsql" #>
+<#+
+class NpgSqlProvider : DbHelper
+{
+    private readonly string connectionString;
+    public NpgSqlProvider(string connectionString)
+        => this.connectionString = connectionString;
+    public List<TableInfo> GetTableList(string tableNamefilter)
+    {
+        var sql = @"SELECT a.relname,b.description FROM pg_class a LEFT JOIN pg_description b ON b.objsubid=0 AND a.oid=b.objoid
+            WHERE a.relnamespace=(SELECT oid FROM pg_namespace WHERE nspname='public') AND a.relkind='r' AND a.relname LIKE '%{0}%'";
+        sql = string.Format(sql, tableNamefilter);
+        var result = new List<TableInfo>();
+        using var connection = new NpgsqlConnection(this.connectionString);
+        using var command = new NpgsqlCommand(sql, connection);
+        connection.Open();
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection);
+        while (reader.Read())
+        {
+            result.Add(new TableInfo
+            {
+                TableName = this.ToValue<string>(reader[0]),
+                Description = this.ToValue<string>(reader[1])
+            });
+        }
+        reader.Close();
+        connection.Close();
+        return result;
+    }
+    public List<ColumnInfo> GetColumnList(string tableName)
+    {
+        var sql = @"select b.attname,c.typname,b.attndims,case when c.typname='varchar' or c.typname='char' then b.atttypmod-4 else 0 end,
+        d.description,pg_get_expr(g.adbin,g.adrelid),e.conname is not null,b.attnotnull,h.refobjid is not null
+		from (select a.oid,a.relkind,a.relname from pg_class a,pg_namespace b where a.relnamespace=b.oid and b.nspname='public') a 
+		inner join pg_attribute b on a.oid=b.attrelid inner join pg_type c on b.atttypid=c.oid
+		left join pg_description d on d.objoid=a.oid and d.objsubid=b.attnum
+		left join pg_constraint e on a.oid=e.conrelid and e.contype='p' and e.conkey @> array[b.attnum]
+		left join pg_constraint f on a.oid=f.conrelid and f.contype='u' and f.conkey @> array[b.attnum]
+		left join pg_attrdef g on a.oid=g.adrelid and b.attnum=g.adnum
+		left join (select dp.refobjid,dp.refobjsubid from pg_depend dp,pg_class cs where dp.objid=cs.oid and cs.relkind='S') h 
+		on a.oid=h.refobjid and b.attnum=h.refobjsubid where a.relkind='r' and b.attnum>0 and a.relname='{0}' order by b.attnum asc";
+
+        sql = string.Format(sql, tableName);
+        var result = new List<ColumnInfo>();
+        using var connection = new NpgsqlConnection(this.connectionString);
+        using var command = new NpgsqlCommand(sql, connection);
+        connection.Open();
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection);
+        while (reader.Read())
+        {
+            result.Add(new ColumnInfo
+            {
+                ColumnName = this.ToValue<string>(reader[0]),
+                DataType = this.ToValue<string>(reader[1]),
+                ArrayDimens = this.ToValue<int>(reader[2]),
+                Length = this.ToValue<ulong>(reader[3]),                
+                Description = this.ToValue<string>(reader[4]),
+                DefaultValue = this.ToValue<string>(reader[5]),
+                IsPrimaryKey = this.ToValue<bool>(reader[6]) ,
+                IsNullable = !this.ToValue<bool>(reader[7]),
+                IsIdentity = this.ToValue<bool>(reader[8])
+            });
+        }
+        reader.Close();
+        connection.Close();
+        return result;
+    }
+    public TableInfo GetTableInfo(string tableName)
+    {
+        var sql = @"SELECT a.relname,b.description FROM pg_class a LEFT JOIN pg_description b ON b.objsubid=0 AND a.oid=b.objoid
+            WHERE a.relnamespace=(SELECT oid FROM pg_namespace WHERE nspname='public') AND a.relkind='r' AND a.relname='{0}'";
+        sql = string.Format(sql, tableName);
+        TableInfo result = null;
+        using var connection = new NpgsqlConnection(this.connectionString);
+        using var command = new NpgsqlCommand(sql, connection);
+        connection.Open();
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection);
+        if (reader.Read())
+        {
+            result = new TableInfo
+            {
+                TableName = this.ToValue<string>(reader[0]),
+                Description = this.ToValue<string>(reader[1])
+            };
+        }
+        reader.Close();
+        connection.Close();
+        return result;
+    }
+    public string MapMemberType(ColumnInfo columnInfo)
+    {        
+        string dataType = columnInfo.DataType;
+        bool isArray = dataType.Contains('_');
+        if (isArray) dataType = dataType.Substring(1);
+        string result = "string";
+        switch (dataType)
+        {
+            case "int2": result = "short"; break;
+            case "int4": result = "int"; break;
+            case "int8": result = "long"; break;
+            case "float4": result = "float"; break;
+            case "float8": result = "double"; break;
+
+            case "numeric":
+            case "money": result = "decimal"; break;
+
+            case "bpchar": result = "char"; break;
+            case "varchar": 
+            case "text": result = "string"; break;
+
+            case "date": 
+            case "timestamp": result = "DateTime"; break;
+            case "timestamptz": result = "DateTimeOffset"; break;
+            
+            case "time":
+            case "timetz":
+            case "interval": result = "TimeSpan"; break;
+
+            case "bool": result = "bool"; break;
+
+            case "bytea": result = "byte[]"; break;
+
+            case "bit": result = "bool"; break;
+            case "varbit": result = "BitArray"; break;
+
+            case "point":
+            case "line":
+            case "lseg":
+            case "box":
+            case "path":
+            case "polygon":
+            case "circle": result = "object"; break;
+
+            case "cidr":
+            case "inet": result = "ValueTuple<IPAddress, int>"; break;
+            case "macaddr": result = "PhysicalAddress"; break;
+
+            case "json":
+            case "jsonb": result = "object"; break;
+
+            case "uuid": result = "Guid"; break;
+
+            case "int4range": result = "int"; break;
+            case "int8range": result = "long"; break;
+            case "numrange": result = "decimal"; break;
+            case "tsrange": result = "DateTime"; break;
+            case "tstzrange": result = "DateTimeOffset"; break;
+            case "daterange": result = "int"; break;
+
+            case "hstore": result = "Dictionary<string, string>"; break;
+            case "geometry": result = "object"; break;
+        }
+        if (isArray)
+        {
+            result += "[";
+            var arrayDimens = columnInfo.ArrayDimens - 1;
+            for (int i = 0; i < arrayDimens; i++)
+            {
+                result += ",";
+            }
+            result += "]";
+        }
+        return result;
+    }
+    public int MapNativeDbType(ColumnInfo columnInfo)
+    {
+        string dataType = columnInfo.DataType;
+        bool isArray = dataType.Contains('_');
+        if (isArray) dataType = dataType.Substring(1);
+        int result = default;
+        switch (dataType)
+        {
+            case "int2": result = 18; break;
+            case "int4": result = 9; break;
+            case "int8": result = 1; break;
+            case "numeric": result = 13; break;
+            case "float4": result = 17; break;
+            case "float8": result = 8; break;
+            case "money": result = 12; break;
+
+            case "bpchar": result = 6; break;
+            case "varchar": result = 22; break;
+            case "text": result = 19; break;
+
+            case "timestamp": result = 21; break;
+            case "timestamptz": result = 26; break;
+            case "date": result = 7; break;
+            case "time": result = 20; break;
+            case "timetz": result = 31; break;
+            case "interval": result = 30; break;
+
+            case "bool": result = 2; break;
+            case "bytea": result = 4; break;
+            case "bit": result = 25; break;
+            case "varbit": result = 39; break;
+
+            case "point": result = 15; break;
+            case "line": result = 10; break;
+            case "lseg": result = 11; break;
+            case "box": result = 3; break;
+            case "path": result = 14; break;
+            case "polygon": result = 16; break;
+            case "circle": result = 5; break;
+
+            case "cidr": result = 44; break;
+            case "inet": result = 24; break;
+            case "macaddr": result = 34; break;
+            case "macaddr8": result = 54; break;
+
+            case "json": result = 35; break;
+            case "jsonb": result = 36; break;
+            case "jsonpath": result = 57; break;
+
+            case "uuid": result = 27; break;
+
+            case "xml": result = 28; break;
+
+            case "int4range": result = 0x40000000 | 9; break;
+            case "int8range": result = 0x40000000 | 1; break;
+            case "numrange": result = 0x40000000 | 13; break;
+            case "tsrange": result = 0x40000000 | 21; break;
+            case "tstzrange": result = 0x40000000 | 26; break;
+            case "daterange": result = 0x40000000 | 7; break;
+
+            case "hstore": result = 37; break;
+
+            case "geometry": result = 50; break;
+            case "Geography": result = 55; break;
+        }
+        if (isArray)
+            result = result | int.MinValue;
+        return (int)result;
+    }
+}
+#>

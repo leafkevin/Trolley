@@ -13,7 +13,7 @@
 <#@ import namespace="System.Collections.Generic" #>
 <#@ import namespace="System.Data"#>
 <#@ import namespace="System.Data.Linq"#>
-<#@ import namespace="System.Data.Linq.Mapping"#> 
+<#@ import namespace="System.Data.Linq.Mapping"#>
 <#@ import namespace="System.IO"#>
 <#@ import namespace="System.Linq"#>
 <#@ import namespace="System.Reflection"#>
@@ -22,47 +22,48 @@
 <#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
 <#@ output encoding="utf-8" #>
 <#
-    var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
-	var dbProvider = new MySqlProvider(connectionString);
+    var connectionString = "Host=localhost;Username=postgres;Password=123456;Database=fengling;Maximum Pool Size=20";
+	var dbProvider = new NpgSqlProvider(connectionString);
     var manager = Manager.Create(Host, GenerationEnvironment);
 
-    var databaseName = "fengling";
-	var tableName = "sys_user";
+    var tableFilter = "sys_";
     var removePrefix = "sys_";
     var separator = '_';
-    var className = dbProvider.ToClassName(tableName, removePrefix, separator);
-	var tableInfo = dbProvider.GetTableInfo(databaseName, tableName);
-	var columnList = dbProvider.GetColumnList(databaseName, tableInfo.TableName);
-	manager.StartNewFile(className + ".cs");
+	var tableList = dbProvider.GetTableList(tableFilter);    
+    foreach(var tableInfo in tableList)
+    {
+        var className = dbProvider.ToClassName(tableInfo.TableName, removePrefix, separator);
+	    var columnList = dbProvider.GetColumnList(tableInfo.TableName);
+	    manager.StartNewFile(className + ".cs");
 #>
 using System;
 
-namespace Thea.Services.Domain.Models
+namespace Thea.Services.Domain.Models;
+
+/// <summary>
+/// <#=tableInfo.Description#>
+/// </summary>
+public class <#=className#>
 {
-    /// <summary>
-    /// <#=tableInfo.Description#>
-    /// </summary>
-	public class <#=className#>
-    {
 <#foreach(ColumnInfo columnInfo in columnList){
 var propertyName = columnInfo.ColumnName;
 var propertyType = dbProvider.MapMemberType(columnInfo);
 if(!String.IsNullOrEmpty(columnInfo.Description))
 {#>
-        /// <summary>
-        /// <#=columnInfo.Description#>
-        /// </summary>
+    /// <summary>
+    /// <#=columnInfo.Description#>
+    /// </summary>
 <#}#>
 <#if(columnInfo.IsPrimaryKey){#>
 <#}#>
-        public <#=propertyType#> <#=propertyName#> { get; set; }
+    public <#=propertyType#> <#=propertyName#> { get; set; }
 <#}#>
-    }
 }
 <#
 manager.EndBlock();
+}
 manager.Process(true);
 #>
 <#@ include file="$(ProjectDir)\Manager.ttinclude" once="true"#>
 <#@ include file="$(ProjectDir)\DbEntitries.ttinclude" once="true"#>
-<#@ include file="MySqlProvider.ttinclude" once="true"#>
+<#@ include file="NpgSqlProvider.ttinclude" once="true"#>

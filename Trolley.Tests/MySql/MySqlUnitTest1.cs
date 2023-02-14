@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using Xunit;
 
 namespace Trolley.Tests;
@@ -18,7 +17,7 @@ public class MySqlUnitTest1
             .Register("fengling", true, f =>
             {
                 var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
-                f.Add<MySqlProvider>(connectionString, true) ;
+                f.Add<MySqlProvider>(connectionString, true);
             })
             .AddTypeHandler<JsonTypeHandler>()
             .Configure<MySqlProvider, MySqlModelConfiguration>();

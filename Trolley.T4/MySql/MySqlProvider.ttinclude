@@ -1,5 +1,5 @@
-﻿<#@ assembly name="$(ProjectDir)\Plugins\MySql\MySql.Data.dll" #>
-<#@ import namespace="MySql.Data.MySqlClient" #>
+﻿<#@ assembly name="$(ProjectDir)\Plugins\MySqlConnector.dll" #>
+<#@ import namespace="MySqlConnector" #>
 <#+  
 class MySqlProvider : DbHelper
 {
@@ -91,75 +91,131 @@ class MySqlProvider : DbHelper
         connection.Close();
         return result;
     }
-    public string MapMemberType(string dataType, string columnType)
+    public string MapMemberType(ColumnInfo columnInfo)
     {
-        bool bUnsigned = columnType.Contains("unsigned");
-        switch (dataType)
+        bool isUnsigned = columnInfo.ColumnType.Contains("unsigned");
+        switch (columnInfo.DataType)
         {
-            case "bigint": return bUnsigned ? "ulong" : "long";
-            case "int": return bUnsigned ? "uint" : "int";
-            case "smallint": return bUnsigned ? "ushort" : "short";
-            case "guid": return "Guid";
+            case "bit":
+            case "bool": return "bool";
+
+            case "tinyint": return isUnsigned ? "byte" : "sbyte";
+            case "smallint": return isUnsigned ? "ushort" : "short";
+            case "mediumint": return isUnsigned ? "uint" : "int";
+            case "int": return isUnsigned ? "uint" : "int";
+            case "bigint": return isUnsigned ? "ulong" : "long"; 
+
+            case "float": return "float";
+            case "real":
+            case "double": return "double";            
+
+            case "numeric":
+            case "smallmoney":
+            case "money":
+            case "decimal": return "decimal";
+
+            case "year": return "int";
+            case "time": return "TimeSpan";
+
             case "smalldatetime":
             case "date":
             case "datetime":
             case "timestamp": return "DateTime";
-            case "float": return "float";
-            case "double": return "double";
-            case "numeric":
-            case "smallmoney":
-            case "decimal":
-            case "money": return "decimal";
-            case "bit":
-            case "bool":
-            case "boolean": return "bool";
-            case "tinyint": return bUnsigned ? "byte" : "sbyte";
-            case "image":
-            case "binary":
+            
+            case "tinyblob":
             case "blob":
             case "mediumblob":
             case "longblob":
+            case "image":
+            case "binary":
             case "varbinary": return "byte[]";
+
+            case "tinytext":
+            case "text":
+            case "mediumtext":
+            case "longtext": return "string";
+
+            case "char": return columnInfo.Length == 36 ? "Guid" : "string";
+            case "varchar": return "string";
+
+            case "guid": return "Guid";
+
+            case "set":
+            case "enum": return "int";
+
+            case "point": 
+            case "linestring":
+            case "polygon":
+            case "geometry":
+            case "multipoint":
+            case "multilinestring":
+            case "multipolygon":
+            case "geometrycollection": return "object";
+
+            default: return "string";
         }
         return "string";
     }
-    public string MapNativeDbType(string dataType)
+    public int MapNativeDbType(ColumnInfo columnInfo)
     {
-        switch (dataType)
+        bool isUnsigned = columnInfo.ColumnType.Contains("unsigned");
+        switch (columnInfo.DataType)
         {
-            case "bigint": return "0";
-            case "binary": return "1";
-            case "bit": return "2";
-            case "char": return "3";
-            case "datetime": return "4";
-            case "decimal": return "5";
-            case "float": return "6";
-            case "image": return "7";
-            case "int": return "8";
-            case "money": return "9";
-            case "nchar": return "10";
-            case "ntext": return "11";
-            case "nvarchar": return "12";
-            case "real": return "13";
-            case "uniqueidentifier": return "14";
-            case "smalldatetime": return "15";
-            case "smallint": return "16";
-            case "smallmoney": return "17";
-            case "text": return "18";
-            case "timestamp": return "19";
-            case "tinyint": return "20";
-            case "varbinary": return "21";
-            case "varchar": return "22";
-            case "variant": return "23";
-            case "xml": return "25";
-            case "udt": return "29";
-            case "structured": return "30";
-            case "date": return "31";
-            case "time": return "32";
-            case "datetime2": return "33";
-            case "datetimeoffset": return "34";
+            case "bit": return 16;
+
+            case "bool": return -1;
+
+            case "tinyint": return isUnsigned ? 501 : 1;
+            case "smallint": return isUnsigned ? 502 : 2;
+            case "mediumint": return isUnsigned ? 509 : 9;
+            case "int": return isUnsigned ? 503 : 3;
+            case "bigint": return isUnsigned ? 508 : 8;
+
+            case "float": return 4;
+            case "real":
+            case "double": return 5;
+           
+            case "smallmoney":
+            case "money":
+            case "numeric":
+            case "decimal": return 0;
+
+            case "year": return 13;
+            case "time": return 11;
+            case "date": return 10;
+            case "timestamp": return 7;
+            case "datetime": return 12;
+
+            case "tinyblob": return 249;
+            case "blob": return 252;
+            case "mediumblob": return 250;
+            case "longblob": return 251;
+
+            case "binary": return 600;
+            case "varbinary": return 601;
+
+            case "tinytext": return 749;
+            case "text": return 752;
+            case "mediumtext": return 750;
+            case "longtext": return 751;
+
+            case "char": return columnInfo.Length == 36 ? 800 : 254;
+            case "varchar": return 253;
+
+            case "set": return 248;
+            case "enum": return 247;
+
+            case "point":
+            case "linestring":
+            case "polygon":
+            case "geometry":
+            case "multipoint":
+            case "multilinestring":
+            case "multipolygon":
+            case "geometrycollection": return 255;
+
+            default: return 254;
         }
-        return "string";
     }
 }
 #>
