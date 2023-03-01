@@ -653,11 +653,12 @@ class SqlVisitor
         if (objValue == null)
             return SqlSegment.Null;
 
+        sqlSegment.Change(objValue);
         //只有字符串会变成参数，有可能sql注入
         var type = sqlSegment.Expression.Type;
         if (type == typeof(string) || this.IsEnumerableString(type))
             return this.ToParameter(sqlSegment);
-        return sqlSegment.Change(objValue);
+        return sqlSegment;
     }
     public virtual SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment)
     {
@@ -920,9 +921,11 @@ class SqlVisitor
         }
         else
         {
+            string parameterName = null;
             if (!string.IsNullOrEmpty(sqlSegment.ParameterName))
-                return sqlSegment.Change(sqlSegment.ParameterName, false);
-            var parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
+                parameterName = sqlSegment.ParameterName;
+            else parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
+            this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, sqlSegment.Value));
             return sqlSegment.Change(parameterName, false);
         }
     }

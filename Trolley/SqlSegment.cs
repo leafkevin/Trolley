@@ -71,15 +71,6 @@ public class SqlSegment
         this.DeferredExprs ??= new();
         this.DeferredExprs.Push(deferredExpr);
     }
-    public bool TryPop(out DeferredExpr deferredExpr)
-    {
-        if (!this.HasDeferred)
-        {
-            deferredExpr = default;
-            return false;
-        }
-        return this.DeferredExprs.TryPop(out deferredExpr);
-    }
     public bool TryPop(OperationType[] operationTypes, out DeferredExpr deferredExpr)
     {
         if (!this.HasDeferred)
@@ -89,7 +80,6 @@ public class SqlSegment
         }
         return this.DeferredExprs.TryPop(f => operationTypes.Contains(f.OperationType), out deferredExpr);
     }
-
     public override string ToString()
     {
         if (this.Value == null)

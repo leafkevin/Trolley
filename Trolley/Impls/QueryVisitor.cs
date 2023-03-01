@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
-using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -878,6 +877,37 @@ class QueryVisitor : SqlVisitor
                 else
                 {
                     sqlSegment = this.VisitParameter(sqlSegment);
+                    var tableReaderFields = sqlSegment.Value as List<ReaderField>;
+                    tableReaderFields[0].FromMember = memberInfo;
+                    readerFields.AddRange(tableReaderFields);
+                }
+                break;
+            case ExpressionType.New:
+                {
+                    sqlSegment = this.VisitNew(sqlSegment);
+                    var tableReaderFields = sqlSegment.Value as List<ReaderField>;
+                    tableReaderFields[0].FromMember = memberInfo;
+                    readerFields.AddRange(tableReaderFields);
+                }
+                break;
+            case ExpressionType.MemberInit:
+                if (this.IsGroupingAggregateMember(elementExpr as MemberExpression))
+                {
+                    foreach (var readerField in this.groupFields)
+                    {
+                        readerField.TableSegment.IsUsed = true;
+                    }
+                    readerFields.Add(new ReaderField
+                    {
+                        Index = readerFields.Count,
+                        FieldType = ReaderFieldType.AnonymousObject,
+                        FromMember = memberInfo,
+                        ReaderFields = this.groupFields
+                    });
+                }
+                else
+                {
+                    sqlSegment = this.VisitMemberInit(sqlSegment);
                     var tableReaderFields = sqlSegment.Value as List<ReaderField>;
                     tableReaderFields[0].FromMember = memberInfo;
                     readerFields.AddRange(tableReaderFields);
