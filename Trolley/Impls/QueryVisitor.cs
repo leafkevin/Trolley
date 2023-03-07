@@ -22,7 +22,7 @@ class QueryVisitor : SqlVisitor
     private int? skip = null;
     private int? limit = null;
     private bool isDistinct = false;
-    private List<string> cteTableSqls = null;
+    private string cteTableSql = null;
     private List<TableSegment> includeSegments = null;
     private TableSegment lastIncludeSegment = null;
     private List<ReaderField> groupFields = null;
@@ -40,18 +40,10 @@ class QueryVisitor : SqlVisitor
             this.Select("*");
 
         var builder = new StringBuilder();
-        if (this.cteTableSqls != null && this.cteTableSqls.Count > 0)
-        {
-            int index = 0;
-            foreach (var cteSql in this.cteTableSqls)
-            {
-                if (index > 0) builder.AppendLine(",");
-                builder.AppendLine(cteSql);
-                index++;
-            }
-        }
-
+        if (!string.IsNullOrEmpty(this.cteTableSql))
+            builder.AppendLine(this.cteTableSql);
         this.AddReaderFields(this.readerFields, builder);
+
         string selectSql = null;
         if (this.isDistinct)
             selectSql = "DISTINCT " + builder.ToString();
@@ -143,16 +135,8 @@ class QueryVisitor : SqlVisitor
         else targetFields = this.readerFields;
 
         var builder = new StringBuilder();
-        if (this.cteTableSqls != null && this.cteTableSqls.Count > 0)
-        {
-            int index = 0;
-            foreach (var cteSql in this.cteTableSqls)
-            {
-                if (index > 0) builder.AppendLine(",");
-                builder.AppendLine(cteSql);
-                index++;
-            }
-        }
+        if (!string.IsNullOrEmpty(this.cteTableSql))
+            builder.AppendLine(this.cteTableSql);
         this.AddReaderFields(targetFields, builder);
 
         string selectSql = null;
@@ -414,22 +398,20 @@ class QueryVisitor : SqlVisitor
         }
         return this;
     }
-    public QueryVisitor WithCteTable(Type entityType, string cteTableName, string rawSql, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null, string joinType = "")
+    public QueryVisitor WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null, string joinType = "")
     {
         int tableIndex = this.tableAsStart + this.tables.Count;
         if (string.IsNullOrEmpty(joinType) && this.tables.Count > 0)
             joinType = "INNER JOIN";
 
-        if (this.ormProvider.DatabaseType == DatabaseType.MySql)
+        if (isRecursive && (this.ormProvider.DatabaseType == DatabaseType.MySql
+            || this.ormProvider.DatabaseType == DatabaseType.Postgresql))
             cteTableName = "RECURSIVE " + cteTableName;
 
         var builder = new StringBuilder();
-        if (this.cteTableSqls == null)
-        {
-            this.cteTableSqls = new List<string>();
+        if (string.IsNullOrEmpty(this.cteTableSql))
             builder.Append($"WITH {cteTableName}(");
-        }
-        else builder.Append($"{cteTableName}(");
+        else builder.Append($",{cteTableName}(");
 
         int index = 0;
         foreach (var readerField in readerFields)
@@ -442,7 +424,7 @@ class QueryVisitor : SqlVisitor
         builder.AppendLine("(");
         builder.Append(rawSql);
         builder.Append(')');
-        this.cteTableSqls.Add(builder.ToString());
+        this.cteTableSql = builder.ToString();
 
         var tableSegment = new TableSegment
         {
@@ -467,8 +449,10 @@ class QueryVisitor : SqlVisitor
     }
     public void Union(Type entityType, string body, List<IDbDataParameter> dbParameters = null)
     {
-        //TODO:清理所有变量值
-        this.WithTable(entityType, body, dbParameters);
+        var sql = this.BuildSql(out _, out _);
+        sql += body;
+        this.Clear();
+        this.WithTable(entityType, sql, dbParameters);
     }
     public void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null)
     {
@@ -1647,5 +1631,24 @@ class QueryVisitor : SqlVisitor
     {
         if (memberExpr == null) return false;
         return typeof(IAggregateSelect).IsAssignableFrom(memberExpr.Member.DeclaringType) && memberExpr.Member.Name == "Grouping";
+    }
+    private void Clear()
+    {
+        this.whereSql = string.Empty;
+        this.groupBySql = string.Empty;
+        this.havingSql = string.Empty;
+        this.orderBySql = string.Empty;
+        this.skip = null;
+        this.limit = null;
+        this.isDistinct = false;
+        this.cteTableSql = null;
+        this.includeSegments = null;
+        this.lastIncludeSegment = null;
+        this.groupFields = null;
+        this.isFromQuery = false;
+        this.isNeedAlias = false;
+        this.isSelect = false;
+        this.isWhere = false;
+        this.tables.Clear();
     }
 }

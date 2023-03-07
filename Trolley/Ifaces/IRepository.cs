@@ -20,6 +20,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     IQuery<T> From<T>(Func<IFromQuery, IFromQuery<T>> subQuery, char tableAsStart = 'a');
     IQuery<T> From<T>(string rawSql, object parameters = null, char tableAsStart = 'a');
     IQuery<T> FromWith<T>(Func<IFromQuery, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    IQuery<T> FromWithRecursive<T>(Func<IFromQuery, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
 
     IQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a');
     IQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a');

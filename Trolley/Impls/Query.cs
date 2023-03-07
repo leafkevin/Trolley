@@ -40,17 +40,9 @@ class Query<T> : IQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var dbParameters = new List<IDbDataParameter>();
-        var sql = this.ToSql(out var parameters);
-        if (parameters != null && parameters.Count > 0)
-            dbParameters.AddRange(parameters);
-
         var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
         var query = subQuery.Invoke(fromQuery);
-        sql += " UNION " + query.ToSql(out parameters);
-        if (parameters != null && parameters.Count > 0)
-            dbParameters.AddRange(parameters);
-
+        var sql = " UNION " + query.ToSql(out var dbParameters);
         this.visitor.Union(typeof(T), sql, dbParameters);
         return this;
     }
@@ -59,17 +51,9 @@ class Query<T> : IQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var dbParameters = new List<IDbDataParameter>();
-        var sql = this.ToSql(out var parameters);
-        if (parameters != null && parameters.Count > 0)
-            dbParameters.AddRange(parameters);
-
         var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
         var query = subQuery.Invoke(fromQuery);
-        sql += " UNION ALL " + query.ToSql(out parameters);
-        if (parameters != null && parameters.Count > 0)
-            dbParameters.AddRange(parameters);
-
+        var sql = " UNION ALL " + query.ToSql(out var dbParameters);
         this.visitor.Union(typeof(T), sql, dbParameters);
         return this;
     }
@@ -82,7 +66,17 @@ class Query<T> : IQuery<T>
 
         cteSubQuery.Invoke(new FromQuery(this.visitor));
         var rawSql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
-        this.visitor.WithCteTable(typeof(TTarget), cteTableName, rawSql, dbDataParameters, readerFields);
+        this.visitor.WithCteTable(typeof(TTarget), cteTableName, false, rawSql, dbDataParameters, readerFields);
+        return new Query<TTarget>(this.connection, this.transaction, visitor);
+    }
+    public IQuery<TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
+    {
+        if (cteSubQuery == null)
+            throw new ArgumentNullException(nameof(cteSubQuery));
+
+        cteSubQuery.Invoke(new FromQuery(this.visitor));
+        var rawSql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
+        this.visitor.WithCteTable(typeof(TTarget), cteTableName, true, rawSql, dbDataParameters, readerFields);
         return new Query<TTarget>(this.connection, this.transaction, visitor);
     }
 

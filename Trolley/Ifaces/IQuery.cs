@@ -12,7 +12,12 @@ public interface IQuery<T>
     #region Union
     IQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery);
     IQuery<T> UnionAll(Func<IFromQuery, IFromQuery<T>> subQuery);
-    #endregion    
+    #endregion
+
+    #region WithCte
+    IQuery<TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    IQuery<TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    #endregion
 
     #region Join
     IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
