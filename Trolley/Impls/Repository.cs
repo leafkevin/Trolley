@@ -52,15 +52,29 @@ public class Repository : IRepository
         visitor.From(tableAsStart, typeof(T), suffixRawSql);
         return new Query<T>(this.connection, this.Transaction, visitor);
     }
-    public IQuery<T> From<T>(Func<IFromQuery, IFromQuery<T>> subQuery)
+    public IQuery<T> From<T>(Func<IFromQuery, IFromQuery<T>> subQuery, char tableAsStart = 'a')
     {
-        var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, 'a', "p1w");
+        var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart, "p1w");
         subQuery.Invoke(new FromQuery(visitor));
         var sql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
         var newVisitor = visitor.Clone();
         newVisitor.WithTable(typeof(T), sql, dbDataParameters, readerFields);
         return new Query<T>(this.connection, this.Transaction, newVisitor);
     }
+    public IQuery<T> From<T>(string rawSql, object parameters = null, char tableAsStart = 'a')
+    {
+        var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart);
+        visitor.WithTable(typeof(T), rawSql, parameters);
+        return new Query<T>(this.connection, this.Transaction, visitor);
+    }
+    public IQuery<T> FromWith<T>(Func<IFromQuery, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
+    {
+        var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart, "p1w");
+        cteSubQuery.Invoke(new FromQuery(visitor));
+        var rawSql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
+        visitor.WithCteTable(typeof(T), cteTableName, rawSql, dbDataParameters, readerFields);
+        return new Query<T>(this.connection, this.Transaction, visitor);
+    }    
     public IQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
         var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart);

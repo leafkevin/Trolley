@@ -59,7 +59,7 @@ class ModelConfiguration : IModelConfiguration
         var propertyName = columnInfo.ColumnName;
         var nativeDbType = dbProvider.MapNativeDbType(columnInfo);
 #>
-            f.Member(t => t.<#=propertyName#>).Field("<#=columnInfo.ColumnName#>").NativeDbType(<#=nativeDbType#>);
+            f.Member(t => t.<#=propertyName#>).Field(nameof(<#=className#>.<#=propertyName#>)).NativeDbType(<#=nativeDbType#>);
 <#}#>
         });
     }

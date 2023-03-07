@@ -46,8 +46,6 @@ class Query<T> : IQuery<T>
             dbParameters.AddRange(parameters);
 
         var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
-
-
         var query = subQuery.Invoke(fromQuery);
         sql += " UNION " + query.ToSql(out parameters);
         if (parameters != null && parameters.Count > 0)
@@ -76,6 +74,17 @@ class Query<T> : IQuery<T>
         return this;
     }
     #endregion
+
+    public IQuery<TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
+    {
+        if (cteSubQuery == null)
+            throw new ArgumentNullException(nameof(cteSubQuery));
+
+        cteSubQuery.Invoke(new FromQuery(this.visitor));
+        var rawSql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
+        this.visitor.WithCteTable(typeof(TTarget), cteTableName, rawSql, dbDataParameters, readerFields);
+        return new Query<TTarget>(this.connection, this.transaction, visitor);
+    }
 
     #region Join
     public IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)

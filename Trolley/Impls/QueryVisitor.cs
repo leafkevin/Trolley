@@ -22,7 +22,7 @@ class QueryVisitor : SqlVisitor
     private int? skip = null;
     private int? limit = null;
     private bool isDistinct = false;
-    private bool isUnion = false;
+    private List<string> cteTableSqls = null;
     private List<TableSegment> includeSegments = null;
     private TableSegment lastIncludeSegment = null;
     private List<ReaderField> groupFields = null;
@@ -40,6 +40,17 @@ class QueryVisitor : SqlVisitor
             this.Select("*");
 
         var builder = new StringBuilder();
+        if (this.cteTableSqls != null && this.cteTableSqls.Count > 0)
+        {
+            int index = 0;
+            foreach (var cteSql in this.cteTableSqls)
+            {
+                if (index > 0) builder.AppendLine(",");
+                builder.AppendLine(cteSql);
+                index++;
+            }
+        }
+
         this.AddReaderFields(this.readerFields, builder);
         string selectSql = null;
         if (this.isDistinct)
@@ -130,7 +141,18 @@ class QueryVisitor : SqlVisitor
         if (toTargetExpr != null)
             targetFields = this.FlattenReaderFields(entityType, toTargetExpr);
         else targetFields = this.readerFields;
+
         var builder = new StringBuilder();
+        if (this.cteTableSqls != null && this.cteTableSqls.Count > 0)
+        {
+            int index = 0;
+            foreach (var cteSql in this.cteTableSqls)
+            {
+                if (index > 0) builder.AppendLine(",");
+                builder.AppendLine(cteSql);
+                index++;
+            }
+        }
         this.AddReaderFields(targetFields, builder);
 
         string selectSql = null;
@@ -337,6 +359,34 @@ class QueryVisitor : SqlVisitor
             this.isNeedAlias = true;
         return this;
     }
+    public QueryVisitor WithTable(Type entityType, string rawSql, object parameters = null, List<ReaderField> readerFields = null, string joinType = "")
+    {
+        int tableIndex = this.tableAsStart + this.tables.Count;
+        if (string.IsNullOrEmpty(joinType) && this.tables.Count > 0)
+            joinType = "INNER JOIN";
+        var tableSegment = new TableSegment
+        {
+            JoinType = joinType,
+            EntityType = entityType,
+            AliasName = $"{(char)tableIndex}",
+            Body = rawSql,
+            Path = $"{(char)tableIndex}",
+            ReaderFields = readerFields,
+            TableType = TableType.MapTable,
+            IsMaster = true
+        };
+        this.tables.Add(tableSegment);
+        this.InitMapTableReaderFields(tableSegment, (char)tableIndex, readerFields);
+
+        if (parameters != null)
+        {
+            var dbParameters = RepositoryHelper.CreateDbParameters(this.ormProvider, rawSql, parameters);
+            if (this.dbParameters == null)
+                this.dbParameters = dbParameters;
+            else this.dbParameters.AddRange(dbParameters);
+        }
+        return this;
+    }
     public QueryVisitor WithTable(Type entityType, string body, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null, string joinType = "")
     {
         int tableIndex = this.tableAsStart + this.tables.Count;
@@ -364,10 +414,60 @@ class QueryVisitor : SqlVisitor
         }
         return this;
     }
+    public QueryVisitor WithCteTable(Type entityType, string cteTableName, string rawSql, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null, string joinType = "")
+    {
+        int tableIndex = this.tableAsStart + this.tables.Count;
+        if (string.IsNullOrEmpty(joinType) && this.tables.Count > 0)
+            joinType = "INNER JOIN";
+
+        if (this.ormProvider.DatabaseType == DatabaseType.MySql)
+            cteTableName = "RECURSIVE " + cteTableName;
+
+        var builder = new StringBuilder();
+        if (this.cteTableSqls == null)
+        {
+            this.cteTableSqls = new List<string>();
+            builder.Append($"WITH {cteTableName}(");
+        }
+        else builder.Append($"{cteTableName}(");
+
+        int index = 0;
+        foreach (var readerField in readerFields)
+        {
+            var memberInfo = readerField.FromMember;
+            if (index > 0) builder.Append(',');
+            builder.Append(memberInfo.Name);
+        }
+        builder.AppendLine(") AS ");
+        builder.AppendLine("(");
+        builder.Append(rawSql);
+        builder.Append(')');
+        this.cteTableSqls.Add(builder.ToString());
+
+        var tableSegment = new TableSegment
+        {
+            JoinType = joinType,
+            EntityType = entityType,
+            AliasName = $"{(char)tableIndex}",
+            Body = cteTableName,
+            Path = $"{(char)tableIndex}",
+            ReaderFields = readerFields,
+            TableType = TableType.CteTable,
+            IsMaster = true
+        };
+        this.tables.Add(tableSegment);
+
+        if (dbParameters != null)
+        {
+            if (this.dbParameters == null)
+                this.dbParameters = dbParameters;
+            else this.dbParameters.AddRange(dbParameters);
+        }
+        return this;
+    }
     public void Union(Type entityType, string body, List<IDbDataParameter> dbParameters = null)
     {
         //TODO:清理所有变量值
-        this.isUnion = true;
         this.WithTable(entityType, body, dbParameters);
     }
     public void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null)
@@ -1099,6 +1199,9 @@ class QueryVisitor : SqlVisitor
     }
     private void InitMapTableReaderFields(TableSegment tableSegment, char tableAlias, List<ReaderField> readerFields)
     {
+        if (readerFields == null || readerFields.Count == 0)
+            return;
+
         foreach (var readerField in readerFields)
         {
             if (readerField.FieldType == ReaderFieldType.Entity

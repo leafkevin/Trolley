@@ -47,10 +47,5 @@ class SqlServerModelConfiguration : IModelConfiguration
             f.HasMany(t => t.Products).HasForeignKey(t => t.BrandId);
             f.HasOne(t => t.Company).HasForeignKey(t => t.CompanyId).MapTo<Company>();
         });
-        builder.Entity<LookupValue>(f =>
-        {
-            f.ToTable("sys_lookup_value").Key("LookupId", "LookupValue");
-            f.Member(f => f.Value).Field("lookup_value");
-        });
     }
 }

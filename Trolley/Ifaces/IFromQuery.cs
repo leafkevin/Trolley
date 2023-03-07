@@ -12,6 +12,7 @@ public interface IQueryAnonymousObject
 public interface IFromQuery
 {
     IFromQuery<T> From<T>(char tableAsStart = 'a');
+    IFromQuery<T> From<T>(string rawSql, object parameters = null, char tableAsStart = 'a');
     IFromQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a');
     IFromQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a');
     IFromQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a');

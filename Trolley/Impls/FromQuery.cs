@@ -17,6 +17,12 @@ class FromQuery : IFromQuery
         this.visitor.From(typeof(T));
         return new FromQuery<T>(this.visitor);
     }
+    public IFromQuery<T> From<T>(string rawSql, object parameters = null, char tableAsStart = 'a')
+    {
+        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.WithTable(typeof(T), rawSql, parameters);
+        return new FromQuery<T>(this.visitor);
+    }
     public IFromQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
         this.visitor.tableAsStart = tableAsStart;
