@@ -2,6 +2,12 @@
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
 	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+	  <Optimize>False</Optimize>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <Optimize>True</Optimize>
+	</PropertyGroup>
 	<ItemGroup>
 	  <Content Remove="E:\AppData\.nuget\packages\microsoft.testplatform.testhost\17.4.1\build\netcoreapp3.1\x64\testhost.dll" />
 	  <Content Remove="E:\AppData\.nuget\packages\microsoft.testplatform.testhost\17.4.1\build\netcoreapp3.1\x64\testhost.exe" />
@@ -24,6 +30,6 @@
 		</PackageReference>
 	</ItemGroup>
 	<ItemGroup>
-	  <ProjectReference Include="..\Trolley\Trolley.csproj" />
+	  <ProjectReference Include="..\..\src\Trolley\Trolley.csproj" />
 	</ItemGroup>
 </Project>

@@ -6,6 +6,7 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 
 namespace Trolley;
@@ -15,6 +16,7 @@ class QueryVisitor : SqlVisitor
     private static ConcurrentDictionary<int, string> sqlCache = new();
     private static ConcurrentDictionary<int, object> getterCache = new();
     private static ConcurrentDictionary<int, object> setterCache = new();
+    private string unionSql = string.Empty;
     private string whereSql = string.Empty;
     private string groupBySql = string.Empty;
     private string havingSql = string.Empty;
@@ -22,6 +24,7 @@ class QueryVisitor : SqlVisitor
     private int? skip = null;
     private int? limit = null;
     private bool isDistinct = false;
+    private bool isUnion = false;
     private string cteTableSql = null;
     private List<TableSegment> includeSegments = null;
     private TableSegment lastIncludeSegment = null;
@@ -36,6 +39,13 @@ class QueryVisitor : SqlVisitor
     }
     public string BuildSql(out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields)
     {
+        if (this.isUnion)
+        {
+            dbParameters = this.dbParameters;
+            readerFields = this.readerFields;
+            return this.unionSql;
+        }
+
         if (this.readerFields == null || this.readerFields.Count == 0)
             this.Select("*");
 
@@ -126,6 +136,13 @@ class QueryVisitor : SqlVisitor
     }
     public string BuildSql(Expression defaultExpr, Type entityType, Expression toTargetExpr, out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields)
     {
+        if (this.isUnion)
+        {
+            dbParameters = this.dbParameters;
+            readerFields = this.readerFields;
+            return this.unionSql;
+        }
+
         if (this.readerFields == null || this.readerFields.Count == 0)
             this.Select(null, defaultExpr);
 
@@ -448,11 +465,29 @@ class QueryVisitor : SqlVisitor
         return this;
     }
     public void Union(Type entityType, string body, List<IDbDataParameter> dbParameters = null)
-    {
+    {      
         var sql = this.BuildSql(out _, out _);
         sql += body;
         this.Clear();
-        this.WithTable(entityType, sql, dbParameters);
+        var tableSegment = new TableSegment
+        {
+            EntityType = entityType,
+            AliasName = "a",
+            Body = sql,
+            Path = "a",
+            TableType = TableType.Master,
+            IsMaster = true
+        };
+        this.tables.Add(tableSegment);
+        var entityMapper = this.mapProvider.GetEntityMap(entityType);
+        foreach (var readerField in this.readerFields)
+        {
+            readerField.TableSegment = tableSegment;
+            var memberInfo = readerField.FromMember ?? readerField.TargetMember;
+            readerField.FromMember = entityMapper.GetMemberMap(memberInfo.Name).Member;
+        }
+        this.unionSql = sql;
+        this.isUnion = true;
     }
     public void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null)
     {

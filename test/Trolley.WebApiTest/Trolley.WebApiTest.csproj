@@ -6,9 +6,6 @@
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\Trolley.AspNetCore\Trolley.AspNetCore.csproj" />
-	</ItemGroup>
-	<ItemGroup>
-	  <Folder Include="Controllers\" />
+	  <ProjectReference Include="..\..\src\Trolley.AspNetCore\Trolley.AspNetCore.csproj" />
 	</ItemGroup>
 </Project>

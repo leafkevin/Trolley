@@ -730,6 +730,29 @@ public class MySqlUnitTest2
             .ToSql(out _);
         Assert.True(sql == "SELECT (`OrderNo` IS NULL) AS NoOrderNo,(`ProductCount` IS NOT NULL) AS HasProduct FROM `sys_order` WHERE `ProductCount` IS NULL AND `ProductCount` IS NOT NULL");
     }
+    [Fact]
+    public void Query_Union()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .Where(x => x.Id == 1)
+            .Select(x => new
+            {
+                x.OrderNo,
+                x.SellerId,
+                x.BuyerId
+            })
+            .UnionAll(f => f.From<Order>()
+                .Where(x => x.Id > 1)
+                .Select(x => new
+                {
+                    x.OrderNo,
+                    x.SellerId,
+                    x.BuyerId
+                }))
+            .ToSql(out _);
+        Assert.True(sql == "SELECT (`OrderNo` IS NULL) AS NoOrderNo,(`ProductCount` IS NOT NULL) AS HasProduct FROM `sys_order` WHERE `ProductCount` IS NULL AND `ProductCount` IS NOT NULL");
+    }
     private void Initialize()
     {
         using var repository = this.dbFactory.Create();
