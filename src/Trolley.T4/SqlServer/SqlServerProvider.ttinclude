@@ -8,7 +8,7 @@ class SqlServerProvider : DbHelper
         => this.connectionString = connectionString;
     public List<TableInfo> GetTableList(string tableNamefilter)
     {
-        var sql = "SELECT A.NAME,B.VALUE FROM SYS.SYSOBJECTS A LEFT JOIN SYS.EXTENDED_PROPERTIES B ON A.ID=B.MAJOR_ID AND B.MAJOR_ID=0 AND B.NAME='MS_Description' WHERE A.xtype='U' AND A.NAME LIKE '%{0}%'";
+        var sql = "SELECT A.NAME,B.VALUE FROM SYS.SYSOBJECTS A LEFT JOIN SYS.EXTENDED_PROPERTIES B ON A.ID=B.MAJOR_ID AND B.MINOR_ID=0 AND B.NAME='MS_Description' WHERE A.xtype='U' AND A.NAME LIKE '%{0}%'";
         sql = string.Format(sql, tableNamefilter);
         var result = new List<TableInfo>();
         using var connection = new SqlConnection(this.connectionString);
@@ -69,7 +69,7 @@ class SqlServerProvider : DbHelper
     }
     public TableInfo GetTableInfo(string tableName)
     {
-        var sql = "SELECT A.NAME,B.VALUE FROM SYS.SYSOBJECTS A LEFT JOIN SYS.EXTENDED_PROPERTIES B ON A.ID=B.MAJOR_ID AND B.MAJOR_ID=0 AND B.NAME='MS_Description' WHERE A.xtype='U' AND A.NAME='{0}'";
+        var sql = "SELECT A.NAME,B.VALUE FROM SYS.SYSOBJECTS A LEFT JOIN SYS.EXTENDED_PROPERTIES B ON A.ID=B.MAJOR_ID AND B.MINOR_ID=0 AND B.NAME='MS_Description' WHERE A.xtype='U' AND A.NAME='{0}'";
         sql = string.Format(sql, tableName);
         TableInfo result = null;
         using var connection = new SqlConnection(this.connectionString);
