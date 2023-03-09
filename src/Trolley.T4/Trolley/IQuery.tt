@@ -61,6 +61,7 @@ public interface IQuery<T>
 
     #region Where
     IQuery<T> Where(Expression<Func<T, bool>> predicate = null);
+    IQuery<T> Where(bool condition, Expression<Func<T, bool>> predicate = null);
     IQuery<T> And(bool condition, Expression<Func<T, bool>> predicate = null);
     #endregion
 
@@ -150,6 +151,7 @@ public interface IQuery<<#=tables#>>
     #endregion
 
     IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
+    IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null);
     IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate);
     
     IGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr);
@@ -198,6 +200,7 @@ public interface IQuery<<#=tables#>>
     #endregion
 
     IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
+    IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null);
     IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate);
 
     IGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr);

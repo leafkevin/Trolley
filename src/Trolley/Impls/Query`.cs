@@ -175,6 +175,12 @@ class Query<T1, T2> : IQuery<T1, T2>
             this.visitor.Where(predicate);
         return this;
     }
+    public IQuery<T1, T2> Where(bool condition, Expression<Func<T1, T2, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
     public IQuery<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> predicate = null)
     {
         if (condition && predicate != null)
@@ -586,6 +592,12 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
     public IQuery<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate = null)
     {
         if (predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3> Where(bool condition, Expression<Func<T1, T2, T3, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
             this.visitor.Where(predicate);
         return this;
     }
@@ -1003,6 +1015,12 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
             this.visitor.Where(predicate);
         return this;
     }
+    public IQuery<T1, T2, T3, T4> Where(bool condition, Expression<Func<T1, T2, T3, T4, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
     public IQuery<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> predicate = null)
     {
         if (condition && predicate != null)
@@ -1414,6 +1432,12 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
     public IQuery<T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate = null)
     {
         if (predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
             this.visitor.Where(predicate);
         return this;
     }
@@ -1831,6 +1855,12 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
             this.visitor.Where(predicate);
         return this;
     }
+    public IQuery<T1, T2, T3, T4, T5, T6> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
     public IQuery<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate = null)
     {
         if (condition && predicate != null)
@@ -2242,6 +2272,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
     public IQuery<T1, T2, T3, T4, T5, T6, T7> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate = null)
     {
         if (predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
             this.visitor.Where(predicate);
         return this;
     }
@@ -2659,6 +2695,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
             this.visitor.Where(predicate);
         return this;
     }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate = null)
     {
         if (condition && predicate != null)
@@ -3070,6 +3112,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate = null)
     {
         if (predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
             this.visitor.Where(predicate);
         return this;
     }
@@ -3487,6 +3535,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
             this.visitor.Where(predicate);
         return this;
     }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate = null)
     {
         if (condition && predicate != null)
@@ -3898,6 +3952,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate = null)
     {
         if (predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
             this.visitor.Where(predicate);
         return this;
     }
@@ -4315,6 +4375,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
             this.visitor.Where(predicate);
         return this;
     }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate = null)
     {
         if (condition && predicate != null)
@@ -4726,6 +4792,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate = null)
     {
         if (predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
             this.visitor.Where(predicate);
         return this;
     }
@@ -5143,6 +5215,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
             this.visitor.Where(predicate);
         return this;
     }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate = null)
     {
         if (condition && predicate != null)
@@ -5449,6 +5527,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate = null)
     {
         if (predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
             this.visitor.Where(predicate);
         return this;
     }

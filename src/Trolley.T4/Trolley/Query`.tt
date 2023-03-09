@@ -189,6 +189,12 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
             this.visitor.Where(predicate);
         return this;
     }
+    public IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
     public IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null)
     {
         if (condition && predicate != null)
@@ -606,6 +612,12 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
             this.visitor.Where(predicate);
         return this;
     }
+    public IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
     public IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null)
     {
         if (condition && predicate != null)
@@ -915,6 +927,12 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     public IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate = null)
     {
         if (predicate != null) 
+            this.visitor.Where(predicate);
+        return this;
+    }
+    public IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
             this.visitor.Where(predicate);
         return this;
     }

@@ -639,7 +639,10 @@ class QueryVisitor : SqlVisitor
         this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
-        this.whereSql += " AND " + this.VisitConditionExpr(lambdaExpr.Body);
+        if (string.IsNullOrEmpty(this.whereSql))
+            this.whereSql = " WHERE ";
+        else this.whereSql += " AND ";
+        this.whereSql += this.VisitConditionExpr(lambdaExpr.Body);
         this.isWhere = false;
         return this;
     }

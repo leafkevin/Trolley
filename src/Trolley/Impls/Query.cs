@@ -188,6 +188,12 @@ class Query<T> : IQuery<T>
             this.visitor.Where(predicate);
         return this;
     }
+    public IQuery<T> Where(bool condition, Expression<Func<T, bool>> predicate = null)
+    {
+        if (condition && predicate != null)
+            this.visitor.Where(predicate);
+        return this;
+    }
     public IQuery<T> And(bool condition, Expression<Func<T, bool>> predicate = null)
     {
         if (condition && predicate != null)
