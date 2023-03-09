@@ -22,7 +22,7 @@
 <#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
 <#@ output encoding="utf-8" #>
 <#
-    var tableName = "sys_brand";
+    var tableName = "sys_page";
     var removePrefix = "sys_";
     var separator = '_';
     var connectionString = "Host=localhost;Username=postgres;Password=123456;Database=fengling;Maximum Pool Size=20";

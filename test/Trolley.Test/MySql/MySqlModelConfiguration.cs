@@ -110,5 +110,29 @@ class MySqlModelConfiguration : IModelConfiguration
             f.HasMany(t => t.Products).HasForeignKey(t => t.BrandId);
             f.HasOne(t => t.Company).HasForeignKey(t => t.CompanyId).MapTo<Company>();
         });
+        builder.Entity<Menu>(f =>
+        {
+            f.ToTable("sys_menu").Key(t => t.Id);
+            f.Member(t => t.Id).Field(nameof(Menu.Id)).NativeDbType(3);
+            f.Member(t => t.Name).Field(nameof(Menu.Name)).NativeDbType(253);
+            f.Member(t => t.ParentId).Field(nameof(Menu.ParentId)).NativeDbType(3);
+            f.Member(t => t.PageId).Field(nameof(Menu.PageId)).NativeDbType(3);
+            f.Member(t => t.IsEnabled).Field(nameof(Menu.IsEnabled)).NativeDbType(1);
+            f.Member(t => t.CreatedBy).Field(nameof(Menu.CreatedBy)).NativeDbType(3);
+            f.Member(t => t.CreatedAt).Field(nameof(Menu.CreatedAt)).NativeDbType(12);
+            f.Member(t => t.UpdatedBy).Field(nameof(Menu.UpdatedBy)).NativeDbType(3);
+            f.Member(t => t.UpdatedAt).Field(nameof(Menu.UpdatedAt)).NativeDbType(12);
+        });
+        builder.Entity<Page>(f =>
+        {
+            f.ToTable("sys_page").Key(t => t.Id);
+            f.Member(t => t.Id).Field(nameof(Page.Id)).NativeDbType(3);
+            f.Member(t => t.Url).Field(nameof(Page.Url)).NativeDbType(253);
+            f.Member(t => t.IsEnabled).Field(nameof(Page.IsEnabled)).NativeDbType(1);
+            f.Member(t => t.CreatedBy).Field(nameof(Page.CreatedBy)).NativeDbType(3);
+            f.Member(t => t.CreatedAt).Field(nameof(Page.CreatedAt)).NativeDbType(12);
+            f.Member(t => t.UpdatedBy).Field(nameof(Page.UpdatedBy)).NativeDbType(3);
+            f.Member(t => t.UpdatedAt).Field(nameof(Page.UpdatedAt)).NativeDbType(12);
+        });
     }
 }

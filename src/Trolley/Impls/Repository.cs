@@ -72,16 +72,18 @@ public class Repository : IRepository
         var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart, "p1w");
         cteSubQuery.Invoke(new FromQuery(visitor));
         var rawSql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
-        visitor.WithCteTable(typeof(T), cteTableName, false, rawSql, dbDataParameters, readerFields);
-        return new Query<T>(this.connection, this.Transaction, visitor);
+        var newVisitor = visitor.Clone(tableAsStart, "p1w");
+        newVisitor.WithCteTable(typeof(T), cteTableName, false, rawSql, dbDataParameters, readerFields);
+        return new Query<T>(this.connection, this.Transaction, newVisitor);
     }
-    public IQuery<T> FromWithRecursive<T>(Func<IFromQuery, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
+    public IQuery<T> FromWithRecursive<T>(Func<IFromQuery, string, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
     {
         var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart, "p1w");
-        cteSubQuery.Invoke(new FromQuery(visitor));
+        cteSubQuery.Invoke(new FromQuery(visitor), cteTableName);
         var rawSql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
-        visitor.WithCteTable(typeof(T), cteTableName, true, rawSql, dbDataParameters, readerFields);
-        return new Query<T>(this.connection, this.Transaction, visitor);
+        var newVisitor = visitor.Clone(tableAsStart, "p1w");
+        newVisitor.WithCteTable(typeof(T), cteTableName, true, rawSql, dbDataParameters, readerFields);
+        return new Query<T>(this.connection, this.Transaction, newVisitor);
     }
     public IQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {

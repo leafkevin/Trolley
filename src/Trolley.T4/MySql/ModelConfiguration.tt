@@ -26,7 +26,7 @@
 	var dbProvider = new MySqlProvider(connectionString);
 
     var databaseName = "fengling";
-	var tableName = "sys_brand";
+	var tableName = "sys_page";
     var removePrefix = "sys_";
     var separator = '_';
     var className = dbProvider.ToClassName(tableName, removePrefix, separator);

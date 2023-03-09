@@ -241,6 +241,7 @@ class SqlVisitor
                 var operators = this.ormProvider.GetBinaryOperator(binaryExpr.NodeType);
                 if (binaryExpr.NodeType == ExpressionType.Coalesce)
                     return leftSegment.Change($"{operators}({leftSegment},{rightSegment})", false);
+
                 return leftSegment.Change($"{this.GetSqlValue(leftSegment)}{operators}{this.GetSqlValue(rightSegment)}", false);
         }
         return sqlSegment;
@@ -301,7 +302,7 @@ class SqlVisitor
     {
         var parameterExpr = sqlSegment.Expression as ParameterExpression;
         var fromSegment = this.tableAlias[parameterExpr.Name];
-        var readerFields = this.AddTableReaderFields(sqlSegment.ReaderIndex, fromSegment);
+        var readerFields = this.AddTableRecursiveReaderFields(sqlSegment.ReaderIndex, fromSegment);
         return sqlSegment.Change(readerFields, false);
     }
     public virtual SqlSegment VisitNew(SqlSegment sqlSegment)
@@ -676,7 +677,7 @@ class SqlVisitor
                 var sourceType = methodCallExpr.Arguments[0].Type;
                 if (lambdaExpr.Body.GetParameters(out visitedParameters))
                     flattenExpr = Expression.Lambda(lambdaExpr.Body, visitedParameters);
-                var readerFields = this.FlattenReaderFields(returnType, flattenExpr);
+                var readerFields = this.FlattenFieldsTo(returnType, flattenExpr);
                 sqlSegment.Change(readerFields);
                 break;
             case "In":
@@ -818,6 +819,7 @@ class SqlVisitor
             int lastDeep = 0;
             var builder = new StringBuilder();
             var sqlSegments = this.VisitLogicBinaryExpr(conditionExpr);
+
             for (int i = 0; i < sqlSegments.Count; i++)
             {
                 var sqlSegment = this.VisitAndDeferred(sqlSegments[i]);
@@ -879,7 +881,7 @@ class SqlVisitor
         }
         else return this.tableAlias[parameterName];
     }
-    public virtual List<ReaderField> AddTableReaderFields(int readerIndex, TableSegment fromSegment)
+    public virtual List<ReaderField> AddTableRecursiveReaderFields(int readerIndex, TableSegment fromSegment)
     {
         var readerFields = new List<ReaderField>();
         fromSegment.Mapper ??= this.mapProvider.GetEntityMap(fromSegment.EntityType);
@@ -1068,30 +1070,23 @@ class SqlVisitor
         isNeedAlias = queryVisitor.isNeedAlias;
         return result;
     }
-    public virtual SqlSegment VisitBinaryByOperator(ExpressionType nodeType, string operators, SqlSegment leftSegment, SqlSegment rightSegment, bool isConstantValue)
-    {
-        if (nodeType == ExpressionType.Coalesce)
-            return leftSegment.Change($"{operators}({leftSegment},{rightSegment})", false);
-
-        return leftSegment.Change($"{this.GetSqlValue(leftSegment)}{operators}{this.GetSqlValue(rightSegment)}", isConstantValue);
-    }
-    public List<ReaderField> FlattenReaderFields(Type entityType, Expression toTargetExpr = null)
+    public List<ReaderField> FlattenFieldsTo(Type entityType, Expression toTargetExpr)
     {
         var targetType = entityType;
         List<ReaderField> initReaderFields = null;
-        if (toTargetExpr != null)
+        if (toTargetExpr == null)
+            throw new ArgumentNullException(nameof(toTargetExpr));
+        var lambdaExpr = toTargetExpr as LambdaExpression;
+        //临时添加虚拟表
+        this.tableAlias.Clear();
+        this.tableAlias.Add(lambdaExpr.Parameters[0].Name, new TableSegment
         {
-            var lambdaExpr = toTargetExpr as LambdaExpression;
-            //临时添加虚拟表
-            this.tableAlias.Clear();
-            this.tableAlias.Add(lambdaExpr.Parameters[0].Name, new TableSegment
-            {
-                TableType = TableType.MapTable,
-                ReaderFields = this.readerFields
-            });
-            initReaderFields = this.ToTargetReaderFields(lambdaExpr);
-            targetType = lambdaExpr.ReturnType;
-        }
+            TableType = TableType.MapTable,
+            ReaderFields = this.readerFields
+        });
+        initReaderFields = this.ConstructorFieldsTo(lambdaExpr);
+        targetType = lambdaExpr.ReturnType;
+
 
         var targetMembers = targetType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
             .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
@@ -1101,7 +1096,9 @@ class SqlVisitor
         foreach (var memberInfo in targetMembers)
         {
             //相同名称属性只取第一个名称相等的对应字段
-            var readerField = initReaderFields.Find(f => f.FromMember.Name == memberInfo.Name);
+            ReaderField readerField = null;
+            if (initReaderFields != null)
+                readerField = initReaderFields.Find(f => f.FromMember.Name == memberInfo.Name);
             readerField ??= this.readerFields.Find(f => f.FromMember.Name == memberInfo.Name);
             //没有赋值的成员，默认值
             if (readerField == null)
@@ -1113,7 +1110,7 @@ class SqlVisitor
         }
         return targetFields;
     }
-    public List<ReaderField> ToTargetReaderFields(LambdaExpression toTargetExpr)
+    public List<ReaderField> ConstructorFieldsTo(LambdaExpression toTargetExpr)
     {
         var result = new List<ReaderField>();
         if (toTargetExpr != null)
@@ -1188,24 +1185,35 @@ class SqlVisitor
     public List<ReaderField> FlattenTableFields(TableSegment tableSegment)
     {
         var targetFields = new List<ReaderField>();
-        tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
-
-        foreach (var memberMapper in tableSegment.Mapper.MemberMaps)
+        if (tableSegment.TableType == TableType.MapTable)
         {
-            if (memberMapper.IsIgnore || memberMapper.IsNavigation
-                || (memberMapper.MemberType.IsEntityType() && memberMapper.TypeHandler == null))
-                continue;
-            var aliasName = tableSegment.AliasName;
-            var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
-            if (this.isNeedAlias)
-                fieldName = $"{aliasName}.{fieldName}";
-
-            targetFields.Add(new ReaderField
+            var memberInfos = tableSegment.EntityType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+               .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+            foreach (var memberInfo in memberInfos)
             {
-                FromMember = memberMapper.Member,
-                FieldType = ReaderFieldType.Field,
-                Body = fieldName
-            });
+                targetFields.Add(new ReaderField
+                {
+                    FromMember = memberInfo,
+                    FieldType = ReaderFieldType.Field,
+                    Body = this.GetFieldName(tableSegment, memberInfo.Name)
+                });
+            }
+        }
+        else
+        {
+            tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
+            foreach (var memberMapper in tableSegment.Mapper.MemberMaps)
+            {
+                if (memberMapper.IsIgnore || memberMapper.IsNavigation
+                    || (memberMapper.MemberType.IsEntityType() && memberMapper.TypeHandler == null))
+                    continue;
+                targetFields.Add(new ReaderField
+                {
+                    FromMember = memberMapper.Member,
+                    FieldType = ReaderFieldType.Field,
+                    Body = this.GetFieldName(tableSegment, memberMapper.FieldName)
+                });
+            }
         }
         return targetFields;
     }
@@ -1229,6 +1237,19 @@ class SqlVisitor
                 currentFields = readerField.ReaderFields;
         }
         return readerField;
+    }
+    public string GetFieldName(TableSegment tableSegment, string fieldName)
+    {
+        fieldName = this.ormProvider.GetFieldName(fieldName);
+        if (this.isNeedAlias && !string.IsNullOrEmpty(tableSegment.AliasName))
+            return tableSegment.AliasName + "." + fieldName;
+        return fieldName;
+    }
+    public string GetFieldAliasName(string fieldName)
+    {
+        if (this.ormProvider.DatabaseType == DatabaseType.Postgresql)
+            return this.ormProvider.GetFieldName(fieldName);
+        return fieldName;
     }
     public void Swap<T>(ref T left, ref T right)
     {

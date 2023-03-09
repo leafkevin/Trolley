@@ -19,6 +19,7 @@ public interface IQueryAnonymousObject
 public interface IFromQuery
 {
     IFromQuery<T> From<T>(char tableAsStart = 'a');
+    IFromQuery<T> From<T>(string rawSql, object parameters = null, char tableAsStart = 'a');
     IFromQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a');
     IFromQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a');
     IFromQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a');
@@ -39,9 +40,16 @@ public interface IFromQuery<T>
 {
     IFromQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery);
     IFromQuery<T> UnionAll(Func<IFromQuery, IFromQuery<T>> subQuery);
+    IFromQuery<T> UnionRecursive(Func<IFromQuery, IFromQuery<T>, IFromQuery<T>> subQuery);
+    IFromQuery<T> UnionAllRecursive(Func<IFromQuery, IFromQuery<T>, IFromQuery<T>> subQuery);
+
     IFromQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     IFromQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
-    IFromQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);    
+    IFromQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    IFromQuery<T, TTarget> InnerJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<T, TTarget, bool>> joinOn);
+    IFromQuery<T, TTarget> LeftJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<T, TTarget, bool>> joinOn);
+    IFromQuery<T, TTarget> RightJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<T, TTarget, bool>> joinOn);
+
     IFromQuery<T> Where(Expression<Func<T, bool>> predicate = null);
     IFromQuery<T> And(bool condition, Expression<Func<T, bool>> predicate = null);
     IFromGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr);
@@ -63,9 +71,16 @@ public interface IFromQuery<T>
 #>
 public interface IFromQuery<<#=tables#>>
 {
+    IFromQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    IFromQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    IFromQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn);
     IFromQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     IFromQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
-    IFromQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);    
+    IFromQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    IFromQuery<<#=tables#>, TTarget> InnerJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<<#=tables#>, TTarget, bool>> joinOn);
+    IFromQuery<<#=tables#>, TTarget> LeftJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<<#=tables#>, TTarget, bool>> joinOn);
+    IFromQuery<<#=tables#>, TTarget> RightJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<<#=tables#>, TTarget, bool>> joinOn);
+
     IFromQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate = null);
     IFromQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null);
     IFromGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr);
@@ -82,6 +97,9 @@ public interface IFromQuery<<#=tables#>>
 #>
 public interface IFromQuery<<#=tables#>>
 {
+    IFromQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    IFromQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    IFromQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn);
     IFromQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate = null);
     IFromQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null);
     IFromQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);

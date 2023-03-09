@@ -34,15 +34,15 @@ public class SqlServerMethodCallUnitTest
         var sql = repository.From<User>()
             .Where(f => new int[] { 1, 2, 3 }.Contains(f.Id))
             .ToSql(out _);
-        Assert.True(sql == "SELECT [Id],[Name],[Gender],[Age],[CompanyId],[IsEnabled],[CreatedBy],[CreatedAt],[UpdatedBy],[UpdatedAt] FROM [sys_user] WHERE [Id] IN (1,2,3)");
+        Assert.True(sql == "SELECT [Id],[Name],[Gender],[Age],[CompanyId],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy] FROM [sys_user] WHERE [Id] IN (1,2,3)");
         sql = repository.From<User>()
             .Where(f => f.Name.Contains("kevin"))
             .ToSql(out _);
-        Assert.True(sql == "SELECT [Id],[Name],[Gender],[Age],[CompanyId],[IsEnabled],[CreatedBy],[CreatedAt],[UpdatedBy],[UpdatedAt] FROM [sys_user] WHERE [Name] LIKE '%kevin%'");
+        Assert.True(sql == "SELECT [Id],[Name],[Gender],[Age],[CompanyId],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy] FROM [sys_user] WHERE [Name] LIKE '%kevin%'");
         sql = repository.From<User>()
             .Where(f => new List<string> { "keivn", "cindy" }.Contains(f.Name))
             .ToSql(out _);
-        Assert.True(sql == "SELECT [Id],[Name],[Gender],[Age],[CompanyId],[IsEnabled],[CreatedBy],[CreatedAt],[UpdatedBy],[UpdatedAt] FROM [sys_user] WHERE [Name] IN ('keivn','cindy')");
+        Assert.True(sql == "SELECT [Id],[Name],[Gender],[Age],[CompanyId],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy] FROM [sys_user] WHERE [Name] IN ('keivn','cindy')");
     }
     [Fact]
     public void Concat()

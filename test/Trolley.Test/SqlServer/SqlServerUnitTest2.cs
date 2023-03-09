@@ -475,7 +475,7 @@ public class SqlServerUnitTest2
                 .Where((a, b) => a.Id == b.OrderId && b.ProductId == 1)
                 .Select((x, y) => x.BuyerId)))
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.[Id],a.[Name],a.[Gender],a.[Age],a.[CompanyId],a.[IsEnabled],a.[CreatedBy],a.[CreatedAt],a.[UpdatedBy],a.[UpdatedAt] FROM [sys_user] a WHERE a.[Id] IN (SELECT b.[BuyerId] FROM [sys_order] b,[sys_order_detail] c WHERE b.[Id]=c.[OrderId] AND c.[ProductId]=1)");
+        Assert.True(sql == "SELECT a.[Id],a.[Name],a.[Gender],a.[Age],a.[CompanyId],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_user] a WHERE a.[Id] IN (SELECT b.[BuyerId] FROM [sys_order] b,[sys_order_detail] c WHERE b.[Id]=c.[OrderId] AND c.[ProductId]=1)");
     }
     [Fact]
     public void FromQuery_In_Exists1()
@@ -488,7 +488,7 @@ public class SqlServerUnitTest2
                 .Select((x, y) => x.BuyerId)))
             .And(isMale.HasValue, f => Sql.Exists<Order, Company>((x, y) => f.Id == x.SellerId && f.CompanyId == y.Id))
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.[Id],a.[Name],a.[Gender],a.[Age],a.[CompanyId],a.[IsEnabled],a.[CreatedBy],a.[CreatedAt],a.[UpdatedBy],a.[UpdatedAt] FROM [sys_user] a WHERE a.[Id] IN (SELECT b.[BuyerId] FROM [sys_order] b,[sys_order_detail] c WHERE b.[Id]=c.[OrderId] AND c.[ProductId]=1) AND EXISTS(SELECT * FROM [sys_order] x,[sys_company] y WHERE a.[Id]=x.[SellerId] AND a.[CompanyId]=y.[Id])");
+        Assert.True(sql == "SELECT a.[Id],a.[Name],a.[Gender],a.[Age],a.[CompanyId],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_user] a WHERE a.[Id] IN (SELECT b.[BuyerId] FROM [sys_order] b,[sys_order_detail] c WHERE b.[Id]=c.[OrderId] AND c.[ProductId]=1) AND EXISTS(SELECT * FROM [sys_order] x,[sys_company] y WHERE a.[Id]=x.[SellerId] AND a.[CompanyId]=y.[Id])");
     }
     [Fact]
     public void FromQuery_In_Exists_Group_CountDistinct_Count()
@@ -603,6 +603,21 @@ public class SqlServerUnitTest2
         Assert.NotNull(result.Products);
     }
     [Fact]
+    public void Query_SelectNull_WhereNull()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .Where(x => x.ProductCount == null)
+            .And(true, f => !f.ProductCount.HasValue)
+            .Select(x => new
+            {
+                NoOrderNo = x.OrderNo == null,
+                HasProduct = x.ProductCount.HasValue
+            })
+            .ToSql(out _);
+        Assert.True(sql == "SELECT ([OrderNo] IS NULL) AS NoOrderNo,([ProductCount] IS NOT NULL) AS HasProduct FROM [sys_order] WHERE [ProductCount] IS NULL AND [ProductCount] IS NOT NULL");
+    }
+    [Fact]
     public async void Query_Union()
     {
         using var repository = this.dbFactory.Create();
@@ -650,19 +665,57 @@ public class SqlServerUnitTest2
         Assert.True(result.Count > 0);
     }
     [Fact]
-    public void Query_SelectNull_WhereNull()
+    public async void Query_WithCte()
     {
         using var repository = this.dbFactory.Create();
-        var sql = repository.From<Order>()
-            .Where(x => x.ProductCount == null)
-            .And(true, f => !f.ProductCount.HasValue)
-            .Select(x => new
-            {
-                NoOrderNo = x.OrderNo == null,
-                HasProduct = x.ProductCount.HasValue
-            })
+        var sql = repository
+            .FromWithRecursive((f, cte) => f.From<Menu>()
+                    .Where(x => x.Id == 1)
+                    .Select(x => new { x.Id, x.Name, x.ParentId })
+                .UnionAllRecursive((x, y) => x.From<Menu>()
+                    .InnerJoinRecursive(y, cte, (a, b) => a.ParentId == b.Id)
+                    .Select((a, b) => new { a.Id, a.Name, a.ParentId })), "MenuList")
+            .NextWithRecursive((f, cte) => f.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id == 1)
+                    .Select((x, y) => new { y.Id, x.Url })
+                .UnionAll(x => x.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id > 1)
+                    .Select((x, y) => new { y.Id, x.Url })), "MenuPageList")
+            .InnerJoin((a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
             .ToSql(out _);
-        Assert.True(sql == "SELECT ([OrderNo] IS NULL) AS NoOrderNo,([ProductCount] IS NOT NULL) AS HasProduct FROM [sys_order] WHERE [ProductCount] IS NULL AND [ProductCount] IS NOT NULL");
+
+        Assert.True(sql == @"WITH MenuList(Id,Name,ParentId) AS 
+(
+SELECT [Id],[Name],[ParentId] FROM [sys_menu] WHERE [Id]=1 UNION ALL SELECT a.[Id],a.[Name],a.[ParentId] FROM [sys_menu] a INNER JOIN MenuList b ON a.[ParentId]=b.[Id]
+),
+MenuPageList(Id,Url) AS 
+(
+SELECT b.[Id],a.[Url] FROM [sys_page] a INNER JOIN [sys_menu] b ON a.[Id]=b.[PageId] WHERE a.[Id]=1 UNION ALL SELECT b.[Id],a.[Url] FROM [sys_page] a INNER JOIN [sys_menu] b ON a.[Id]=b.[PageId] WHERE a.[Id]>1
+)
+SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM MenuList a INNER JOIN MenuPageList b ON a.[Id]=b.[Id]");
+
+        var result = await repository.FromWithRecursive((f, cte) => f.From<Menu>()
+                    .Where(x => x.Id == 1)
+                    .Select(x => new { x.Id, x.Name, x.ParentId })
+                .UnionAllRecursive((x, y) => x.From<Menu>()
+                    .InnerJoinRecursive(y, cte, (a, b) => a.ParentId == b.Id)
+                    .Select((a, b) => new { a.Id, a.Name, a.ParentId })), "MenuList")
+            .NextWithRecursive((f, cte) => f.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id == 1)
+                    .Select((x, y) => new { y.Id, x.Url })
+                .UnionAll(x => x.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id > 1)
+                    .Select((x, y) => new { y.Id, x.Url })), "MenuPageList")
+            .InnerJoin((a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+           .ToListAsync();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
     }
     private void Initialize()
     {

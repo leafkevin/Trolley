@@ -3,10 +3,8 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Reflection.Metadata.Ecma335;
 using System.Text;
 
 namespace Trolley;
@@ -16,7 +14,7 @@ class QueryVisitor : SqlVisitor
     private static ConcurrentDictionary<int, string> sqlCache = new();
     private static ConcurrentDictionary<int, object> getterCache = new();
     private static ConcurrentDictionary<int, object> setterCache = new();
-    private string unionSql = string.Empty;
+    private string sql = string.Empty;
     private string whereSql = string.Empty;
     private string groupBySql = string.Empty;
     private string havingSql = string.Empty;
@@ -24,7 +22,6 @@ class QueryVisitor : SqlVisitor
     private int? skip = null;
     private int? limit = null;
     private bool isDistinct = false;
-    private bool isUnion = false;
     private string cteTableSql = null;
     private List<TableSegment> includeSegments = null;
     private TableSegment lastIncludeSegment = null;
@@ -39,19 +36,17 @@ class QueryVisitor : SqlVisitor
     }
     public string BuildSql(out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields)
     {
-        if (this.isUnion)
+        if (!string.IsNullOrEmpty(sql))
         {
             dbParameters = this.dbParameters;
             readerFields = this.readerFields;
-            return this.unionSql;
+            return this.sql;
         }
 
         if (this.readerFields == null || this.readerFields.Count == 0)
             this.Select("*");
 
         var builder = new StringBuilder();
-        if (!string.IsNullOrEmpty(this.cteTableSql))
-            builder.AppendLine(this.cteTableSql);
         this.AddReaderFields(this.readerFields, builder);
 
         string selectSql = null;
@@ -123,6 +118,10 @@ class QueryVisitor : SqlVisitor
         dbParameters = this.dbParameters;
         readerFields = this.readerFields;
 
+        builder.Clear();
+        if (!string.IsNullOrEmpty(this.cteTableSql))
+            builder.AppendLine(this.cteTableSql);
+
         if (this.skip.HasValue || this.limit.HasValue)
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
@@ -130,17 +129,18 @@ class QueryVisitor : SqlVisitor
             pageSql = pageSql.Replace("/**fields**/", selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
             pageSql = pageSql.Replace(" /**others**/", others);
-            return $"SELECT COUNT(*) FROM {tableSql}{this.whereSql};{pageSql}";
+            builder.Append($"SELECT COUNT(*) FROM {tableSql}{this.whereSql};{pageSql}");
         }
-        else return $"SELECT {selectSql} FROM {tableSql}{others}";
+        else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
+        return builder.ToString();
     }
     public string BuildSql(Expression defaultExpr, Type entityType, Expression toTargetExpr, out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields)
     {
-        if (this.isUnion)
+        if (!string.IsNullOrEmpty(sql))
         {
             dbParameters = this.dbParameters;
             readerFields = this.readerFields;
-            return this.unionSql;
+            return this.sql;
         }
 
         if (this.readerFields == null || this.readerFields.Count == 0)
@@ -148,12 +148,10 @@ class QueryVisitor : SqlVisitor
 
         List<ReaderField> targetFields = null;
         if (toTargetExpr != null)
-            targetFields = this.FlattenReaderFields(entityType, toTargetExpr);
+            targetFields = this.FlattenFieldsTo(entityType, toTargetExpr);
         else targetFields = this.readerFields;
 
         var builder = new StringBuilder();
-        if (!string.IsNullOrEmpty(this.cteTableSql))
-            builder.AppendLine(this.cteTableSql);
         this.AddReaderFields(targetFields, builder);
 
         string selectSql = null;
@@ -226,6 +224,10 @@ class QueryVisitor : SqlVisitor
         dbParameters = this.dbParameters;
         readerFields = targetFields;
 
+        builder.Clear();
+        if (!string.IsNullOrEmpty(this.cteTableSql))
+            builder.AppendLine(this.cteTableSql);
+
         if (this.skip.HasValue || this.limit.HasValue)
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
@@ -233,9 +235,10 @@ class QueryVisitor : SqlVisitor
             pageSql = pageSql.Replace("/**fields**/", selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
             pageSql = pageSql.Replace(" /**others**/", others);
-            return $"SELECT COUNT(*) FROM {tableSql}{this.whereSql};{pageSql}";
+            builder.Append($"SELECT COUNT(*) FROM {tableSql}{this.whereSql};{pageSql}");
         }
-        else return $"SELECT {selectSql} FROM {tableSql}{others}";
+        else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
+        return builder.ToString();
     }
     public QueryVisitor Clone(char tableAsStart = 'a', string parameterPrefix = "p")
     {
@@ -353,32 +356,11 @@ class QueryVisitor : SqlVisitor
         });
         return this;
     }
-    public QueryVisitor AddTable(TableSegment tableSegment)
+    public TableSegment WithTable(Type entityType, string rawSql, object parameters = null, string joinType = "")
     {
-        this.tables.Add(tableSegment);
-        if (this.tables.Count > 1)
-            this.isNeedAlias = true;
-        return this;
-    }
-    public QueryVisitor WithTable(Type entityType, string rawSql, object parameters = null, List<ReaderField> readerFields = null, string joinType = "")
-    {
-        int tableIndex = this.tableAsStart + this.tables.Count;
         if (string.IsNullOrEmpty(joinType) && this.tables.Count > 0)
             joinType = "INNER JOIN";
-        var tableSegment = new TableSegment
-        {
-            JoinType = joinType,
-            EntityType = entityType,
-            AliasName = $"{(char)tableIndex}",
-            Body = rawSql,
-            Path = $"{(char)tableIndex}",
-            ReaderFields = readerFields,
-            TableType = TableType.MapTable,
-            IsMaster = true
-        };
-        this.tables.Add(tableSegment);
-        this.InitMapTableReaderFields(tableSegment, (char)tableIndex, readerFields);
-
+        var tableSegment = this.AddTable(entityType, joinType, TableType.MapTable, $"({rawSql})");
         if (parameters != null)
         {
             var dbParameters = RepositoryHelper.CreateDbParameters(this.ormProvider, rawSql, parameters);
@@ -386,49 +368,38 @@ class QueryVisitor : SqlVisitor
                 this.dbParameters = dbParameters;
             else this.dbParameters.AddRange(dbParameters);
         }
-        return this;
+        return tableSegment;
     }
-    public QueryVisitor WithTable(Type entityType, string body, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null, string joinType = "")
+    public TableSegment WithTable(Type entityType, string body, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null, string joinType = "")
     {
-        int tableIndex = this.tableAsStart + this.tables.Count;
         if (string.IsNullOrEmpty(joinType) && this.tables.Count > 0)
             joinType = "INNER JOIN";
-        var tableSegment = new TableSegment
-        {
-            JoinType = joinType,
-            EntityType = entityType,
-            AliasName = $"{(char)tableIndex}",
-            Body = $"({body})",
-            Path = $"{(char)tableIndex}",
-            ReaderFields = readerFields,
-            TableType = TableType.MapTable,
-            IsMaster = true
-        };
-        this.tables.Add(tableSegment);
-        this.InitMapTableReaderFields(tableSegment, (char)tableIndex, readerFields);
-
+        var tableSegment = this.AddTable(entityType, joinType, TableType.MapTable, $"({body})", readerFields);
+        this.InitMapTableReaderFields(tableSegment, readerFields);
         if (dbParameters != null)
         {
             if (this.dbParameters == null)
                 this.dbParameters = dbParameters;
             else this.dbParameters.AddRange(dbParameters);
         }
-        return this;
+        return tableSegment;
     }
-    public QueryVisitor WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null, string joinType = "")
+    public QueryVisitor WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null)
     {
-        int tableIndex = this.tableAsStart + this.tables.Count;
-        if (string.IsNullOrEmpty(joinType) && this.tables.Count > 0)
-            joinType = "INNER JOIN";
-
+        string withTable = cteTableName;
         if (isRecursive && (this.ormProvider.DatabaseType == DatabaseType.MySql
             || this.ormProvider.DatabaseType == DatabaseType.Postgresql))
-            cteTableName = "RECURSIVE " + cteTableName;
+            withTable = "RECURSIVE " + cteTableName;
 
         var builder = new StringBuilder();
         if (string.IsNullOrEmpty(this.cteTableSql))
-            builder.Append($"WITH {cteTableName}(");
-        else builder.Append($",{cteTableName}(");
+            builder.Append($"WITH {withTable}(");
+        else
+        {
+            builder.Append(this.cteTableSql);
+            builder.AppendLine(",");
+            builder.Append($"{withTable}(");
+        }
 
         int index = 0;
         foreach (var readerField in readerFields)
@@ -436,39 +407,31 @@ class QueryVisitor : SqlVisitor
             var memberInfo = readerField.FromMember;
             if (index > 0) builder.Append(',');
             builder.Append(memberInfo.Name);
+            index++;
         }
         builder.AppendLine(") AS ");
         builder.AppendLine("(");
-        builder.Append(rawSql);
+        builder.AppendLine(rawSql);
         builder.Append(')');
         this.cteTableSql = builder.ToString();
 
-        var tableSegment = new TableSegment
-        {
-            JoinType = joinType,
-            EntityType = entityType,
-            AliasName = $"{(char)tableIndex}",
-            Body = cteTableName,
-            Path = $"{(char)tableIndex}",
-            ReaderFields = readerFields,
-            TableType = TableType.CteTable,
-            IsMaster = true
-        };
-        this.tables.Add(tableSegment);
-
+        var tableSegment = this.AddTable(entityType, string.Empty, TableType.MapTable, cteTableName, readerFields);
+        this.InitMapTableReaderFields(tableSegment, readerFields);
         if (dbParameters != null)
         {
             if (this.dbParameters == null)
                 this.dbParameters = dbParameters;
             else this.dbParameters.AddRange(dbParameters);
         }
+        //清掉构建CTE表时Union产生的sql
+        this.sql = null;
         return this;
     }
     public void Union(Type entityType, string body, List<IDbDataParameter> dbParameters = null)
-    {      
+    {
         var sql = this.BuildSql(out _, out _);
         sql += body;
-        this.Clear();
+        this.cteTableSql = null;
         var tableSegment = new TableSegment
         {
             EntityType = entityType,
@@ -478,7 +441,6 @@ class QueryVisitor : SqlVisitor
             TableType = TableType.Master,
             IsMaster = true
         };
-        this.tables.Add(tableSegment);
         var entityMapper = this.mapProvider.GetEntityMap(entityType);
         foreach (var readerField in this.readerFields)
         {
@@ -486,8 +448,13 @@ class QueryVisitor : SqlVisitor
             var memberInfo = readerField.FromMember ?? readerField.TargetMember;
             readerField.FromMember = entityMapper.GetMemberMap(memberInfo.Name).Member;
         }
-        this.unionSql = sql;
-        this.isUnion = true;
+        if (dbParameters != null)
+        {
+            if (this.dbParameters == null)
+                this.dbParameters = dbParameters;
+            else this.dbParameters.AddRange(dbParameters);
+        }
+        this.sql = sql;
     }
     public void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null)
     {
@@ -524,19 +491,48 @@ class QueryVisitor : SqlVisitor
         }
         this.lastIncludeSegment = includeSegment;
     }
-    public void Join(string joinType, Type newEntityType, Expression joinOn, bool isClearTableAlias = true)
+    public void Join(string joinType, Expression joinOn)
     {
         this.isWhere = true;
         this.isNeedAlias = true;
         var lambdaExpr = joinOn as LambdaExpression;
-        TableSegment joinTableSegment = null;
-        if (newEntityType != null)
-            joinTableSegment = this.AddTable(joinType, newEntityType);
-        else joinTableSegment = this.tables.Last();
-        if (isClearTableAlias)
-            this.InitTableAlias(lambdaExpr);
+        var joinTableSegment = this.InitTableAlias(lambdaExpr);
+        joinTableSegment.JoinType = joinType;
+        joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body);
+        this.isWhere = false;
+    }
+    public void Join(string joinType, Type newEntityType, Expression joinOn)
+    {
+        this.isWhere = true;
+        this.isNeedAlias = true;
+        var lambdaExpr = joinOn as LambdaExpression;
+        var joinTableSegment = this.AddTable(newEntityType, joinType);
+        this.InitTableAlias(lambdaExpr);
         var joinOnExpr = this.VisitConditionExpr(lambdaExpr.Body);
         joinTableSegment.OnExpr = joinOnExpr;
+        this.isWhere = false;
+    }
+    public void Join(string joinType, TableSegment joinTableSegment, Expression joinOn)
+    {
+        this.isWhere = true;
+        this.isNeedAlias = true;
+        var lambdaExpr = joinOn as LambdaExpression;
+        this.InitTableAlias(lambdaExpr);
+        joinTableSegment.JoinType = joinType;
+        var joinOnExpr = this.VisitConditionExpr(lambdaExpr.Body);
+        joinTableSegment.OnExpr = joinOnExpr;
+        this.isWhere = false;
+    }
+    public void Join(string joinType, Type newEntityType, string cteTableName, Expression joinOn)
+    {
+        this.isWhere = true;
+        this.isNeedAlias = true;
+        var lambdaExpr = joinOn as LambdaExpression;
+        var joinTableSegment = this.AddTable(newEntityType, joinType, TableType.MapTable, cteTableName);
+        var readerFields = this.FlattenTableFields(joinTableSegment);
+        joinTableSegment.ReaderFields = readerFields;
+        this.InitTableAlias(lambdaExpr);
+        joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body);
         this.isWhere = false;
     }
     public void Select(string sqlFormat, Expression selectExpr = null)
@@ -546,7 +542,7 @@ class QueryVisitor : SqlVisitor
         {
             var lambdaExpr = selectExpr as LambdaExpression;
             this.InitTableAlias(lambdaExpr);
-            this.readerFields = this.ToTargetReaderFields(lambdaExpr);
+            this.readerFields = this.ConstructorFieldsTo(lambdaExpr);
         }
         if (!string.IsNullOrEmpty(sqlFormat))
         {
@@ -652,7 +648,7 @@ class QueryVisitor : SqlVisitor
     {
         var parameterExpr = sqlSegment.Expression as ParameterExpression;
         var fromSegment = this.tableAlias[parameterExpr.Name];
-        var readerFields = this.AddTableReaderFields(sqlSegment.ReaderIndex, fromSegment);
+        var readerFields = this.AddTableRecursiveReaderFields(sqlSegment.ReaderIndex, fromSegment);
         readerFields.ForEach(f => f.TableSegment.IsUsed = true);
 
         //只有Parameter访问，IncludeMany才会生效
@@ -814,7 +810,7 @@ class QueryVisitor : SqlVisitor
 
                             if (vavigationMapper.IsToOne)
                             {
-                                var readerFields = this.AddTableReaderFields(sqlSegment.ReaderIndex, tableSegment);
+                                var readerFields = this.AddTableRecursiveReaderFields(sqlSegment.ReaderIndex, tableSegment);
                                 return new SqlSegment
                                 {
                                     HasField = true,
@@ -875,6 +871,7 @@ class QueryVisitor : SqlVisitor
                     string fieldName = null;
                     MemberInfo memberInfo = null;
                     var rootTableSegment = this.tableAlias[parameterName];
+
                     if (rootTableSegment.TableType == TableType.MapTable)
                     {
                         tableSegment = rootTableSegment;
@@ -894,11 +891,9 @@ class QueryVisitor : SqlVisitor
 
                         if (memberMapper.IsIgnore)
                             throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
-                        fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
 
                         //有联表时采用别名，如果当前类是IncludeMany的导航类时，没有别名
-                        if (this.isNeedAlias && !string.IsNullOrEmpty(tableSegment.AliasName))
-                            fieldName = tableSegment.AliasName + "." + fieldName;
+                        fieldName = this.GetFieldName(tableSegment, memberMapper.FieldName);
                         memberInfo = memberMapper.Member;
                     }
                     if (this.isSelect || this.isWhere)
@@ -944,7 +939,7 @@ class QueryVisitor : SqlVisitor
         }
         return null;
     }
-    internal TableSegment InitTableAlias(LambdaExpression lambdaExpr)
+    public TableSegment InitTableAlias(LambdaExpression lambdaExpr)
     {
         TableSegment tableSegment = null;
         this.tableAlias.Clear();
@@ -969,6 +964,32 @@ class QueryVisitor : SqlVisitor
             index++;
         }
         return tableSegment;
+    }
+    public TableSegment AddTable(TableSegment tableSegment)
+    {
+        this.tables.Add(tableSegment);
+        if (this.tables.Count > 1)
+        {
+            this.isNeedAlias = true;
+            if (this.tables.Count == 2 && this.tables[0].TableType == TableType.MapTable && this.tables[0].ReaderFields != null)
+                this.InitMapTableReaderFields(this.tables[0], this.tables[0].ReaderFields);
+        }
+        return tableSegment;
+    }
+    public TableSegment AddTable(Type entityType, string joinType = "", TableType tableType = TableType.Master, string tableName = null, List<ReaderField> readerFields = null)
+    {
+        int tableIndex = this.tableAsStart + this.tables.Count;
+        return this.AddTable(new TableSegment
+        {
+            JoinType = joinType,
+            EntityType = entityType,
+            AliasName = $"{(char)tableIndex}",
+            Path = $"{(char)tableIndex}",
+            TableType = tableType,
+            Body = tableName,
+            ReaderFields = readerFields,
+            IsMaster = true
+        });
     }
 
     private void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, List<ReaderField> readerFields)
@@ -1045,7 +1066,9 @@ class QueryVisitor : SqlVisitor
                         {
                             readerField.TableSegment.IsUsed = true;
                             if (readerField.FromMember.Name != readerField.TargetMember.Name)
-                                readerField.Body += " AS " + readerField.TargetMember.Name;
+                            {
+                                readerField.Body += " AS " + this.GetFieldAliasName(readerField.TargetMember.Name);
+                            }
                         }
                         readerFields.Add(new ReaderField
                         {
@@ -1068,12 +1091,8 @@ class QueryVisitor : SqlVisitor
                     if (sqlSegment.IsExpression && sqlSegment.IsNeedParentheses)
                         fieldName = $"({fieldName})";
                     if (sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.FromMember?.Name != memberInfo.Name)
-                    {
-                        fieldName += " AS ";
-                        if (this.isFromQuery && this.ormProvider.DatabaseType == DatabaseType.Postgresql)
-                            fieldName += this.ormProvider.GetFieldName(memberInfo.Name);
-                        else fieldName += memberInfo.Name;
-                    }
+                        fieldName += " AS " + this.GetFieldAliasName(memberInfo.Name);
+
                     readerFields.Add(new ReaderField
                     {
                         Index = readerFields.Count,
@@ -1091,12 +1110,7 @@ class QueryVisitor : SqlVisitor
                 if (sqlSegment.IsExpression && sqlSegment.IsNeedParentheses)
                     fieldName = $"({fieldName})";
                 if (sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.FromMember?.Name != memberInfo.Name)
-                {
-                    fieldName += " AS ";
-                    if (this.isFromQuery && this.ormProvider.DatabaseType == DatabaseType.Postgresql)
-                        fieldName += this.ormProvider.GetFieldName(memberInfo.Name);
-                    else fieldName += memberInfo.Name;
-                }
+                    fieldName += " AS " + this.GetFieldAliasName(memberInfo.Name);
                 readerFields.Add(new ReaderField
                 {
                     Index = readerFields.Count,
@@ -1201,22 +1215,7 @@ class QueryVisitor : SqlVisitor
             return fieldName;
         }
     }
-    private TableSegment AddTable(string joinType, Type entityType)
-    {
-        int tableIndex = this.tableAsStart + this.tables.Count;
-        var tableSegment = new TableSegment
-        {
-            EntityType = entityType,
-            AliasName = $"{(char)tableIndex}",
-            Path = $"{(char)tableIndex}",
-            JoinType = joinType,
-            TableType = TableType.Master,
-            IsMaster = true
-        };
-        this.tables.Add(tableSegment);
-        return tableSegment;
-    }
-    private void InitMapTableReaderFields(TableSegment tableSegment, char tableAlias, List<ReaderField> readerFields)
+    private void InitMapTableReaderFields(TableSegment tableSegment, List<ReaderField> readerFields)
     {
         if (readerFields == null || readerFields.Count == 0)
             return;
@@ -1227,14 +1226,14 @@ class QueryVisitor : SqlVisitor
                 || readerField.FieldType == ReaderFieldType.AnonymousObject)
             {
                 readerField.TableSegment = tableSegment;
-                this.InitMapTableReaderFields(tableSegment, tableAlias, readerField.ReaderFields);
+                this.InitMapTableReaderFields(tableSegment, readerField.ReaderFields);
             }
             else
             {
                 readerField.TableSegment = tableSegment;
+                //中间临时表的字段，可能会有更改，优先取TargetMember，没有则取FromMember
                 var memberInfo = readerField.TargetMember ?? readerField.FromMember;
-                var fieldName = this.ormProvider.GetFieldName(memberInfo.Name);
-                readerField.Body = $"{tableAlias}.{fieldName}";
+                readerField.Body = this.GetFieldName(tableSegment, memberInfo.Name);
             }
         }
     }
@@ -1676,7 +1675,6 @@ class QueryVisitor : SqlVisitor
         this.skip = null;
         this.limit = null;
         this.isDistinct = false;
-        this.cteTableSql = null;
         this.includeSegments = null;
         this.lastIncludeSegment = null;
         this.groupFields = null;

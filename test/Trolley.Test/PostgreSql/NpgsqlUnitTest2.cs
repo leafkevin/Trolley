@@ -368,7 +368,7 @@ public class NpgsqlUnitTest2
                     TotalAmount = x.Sum(b.TotalAmount)
                 })
                 .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) HAVING SUM(b.`TotalAmount`)>300 AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND COUNT(DISTINCT f.`ProductId`)>2) ORDER BY a.`Id`");
+        Assert.True(sql == "SELECT a.\"Id\",a.\"Name\",(b.\"CreatedAt\")::DATE AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" INNER JOIN (SELECT a.\"OrderId\",COUNT(DISTINCT a.\"ProductId\") AS \"ProductCount\" FROM \"sys_order_detail\" a GROUP BY a.\"OrderId\") c ON b.\"Id\"=c.\"OrderId\" WHERE c.\"ProductCount\">2 GROUP BY a.\"Id\",a.\"Name\",(b.\"CreatedAt\")::DATE HAVING SUM(b.\"TotalAmount\")>300 ORDER BY a.\"Id\"");
     }
     [Fact]
     public void FromQuery_Groupby_Having_OrderBy()
@@ -393,7 +393,7 @@ public class NpgsqlUnitTest2
                     TotalAmount = x.Sum(b.TotalAmount)
                 })
                 .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) HAVING SUM(b.`TotalAmount`)>300 AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND COUNT(DISTINCT f.`ProductId`)>2) ORDER BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME)");
+        Assert.True(sql == "SELECT a.\"Id\",a.\"Name\",(b.\"CreatedAt\")::DATE AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" INNER JOIN (SELECT a.\"OrderId\",COUNT(DISTINCT a.\"ProductId\") AS \"ProductCount\" FROM \"sys_order_detail\" a GROUP BY a.\"OrderId\") c ON b.\"Id\"=c.\"OrderId\" WHERE c.\"ProductCount\">2 GROUP BY a.\"Id\",a.\"Name\",(b.\"CreatedAt\")::DATE HAVING SUM(b.\"TotalAmount\")>300 ORDER BY a.\"Id\",a.\"Name\",(b.\"CreatedAt\")::DATE");
     }
     [Fact]
     public void FromQuery_Groupby_Having_OrderBy_Fields()
@@ -415,7 +415,7 @@ public class NpgsqlUnitTest2
                     TotalAmount = x.Sum(b.TotalAmount)
                 })
                 .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) HAVING SUM(b.`TotalAmount`)>300 AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND COUNT(DISTINCT f.`ProductId`)>2) ORDER BY a.`Id`,a.`Name` DESC,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME)");
+        Assert.True(sql == "SELECT a.\"Id\",a.\"Name\",(b.\"CreatedAt\")::DATE AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" GROUP BY a.\"Id\",a.\"Name\",(b.\"CreatedAt\")::DATE HAVING SUM(b.\"TotalAmount\")>300 AND EXISTS(SELECT * FROM \"sys_order_detail\" f WHERE b.\"Id\"=f.\"OrderId\" AND COUNT(DISTINCT f.\"ProductId\")>2) ORDER BY a.\"Id\",a.\"Name\" DESC,(b.\"CreatedAt\")::DATE");
     }
     [Fact]
     public void FromQuery_In_Exists()
@@ -628,6 +628,58 @@ public class NpgsqlUnitTest2
                    x.SellerId,
                    x.BuyerId
                }))
+           .ToListAsync();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
+    }
+    [Fact]
+    public async void Query_WithCte()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository.FromWithRecursive((f, cte) => f.From<Menu>()
+                    .Where(x => x.Id == 1)
+                    .Select(x => new { x.Id, x.Name, x.ParentId })
+                .UnionAllRecursive((x, y) => x.From<Menu>()
+                    .InnerJoinRecursive(y, cte, (a, b) => a.ParentId == b.Id)
+                    .Select((a, b) => new { a.Id, a.Name, a.ParentId })), "MenuList")
+            .NextWithRecursive((f, cte) => f.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id == 1)
+                    .Select((x, y) => new { y.Id, x.Url })
+                .UnionAll(x => x.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id > 1)
+                    .Select((x, y) => new { y.Id, x.Url })), "MenuPageList")
+            .InnerJoin((a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+            .ToSql(out _);
+
+        Assert.True(sql == @"WITH RECURSIVE MenuList(Id,Name,ParentId) AS 
+(
+SELECT ""Id"",""Name"",""ParentId"" FROM ""sys_menu"" WHERE ""Id""=1 UNION ALL SELECT a.""Id"",a.""Name"",a.""ParentId"" FROM ""sys_menu"" a INNER JOIN MenuList b ON a.""ParentId""=b.""Id""
+),
+MenuPageList(Id,Url) AS 
+(
+SELECT b.""Id"",a.""Url"" FROM ""sys_page"" a INNER JOIN ""sys_menu"" b ON a.""Id""=b.""PageId"" WHERE a.""Id""=1 UNION ALL SELECT b.""Id"",a.""Url"" FROM ""sys_page"" a INNER JOIN ""sys_menu"" b ON a.""Id""=b.""PageId"" WHERE a.""Id"">1
+)
+SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM MenuList a INNER JOIN MenuPageList b ON a.""Id""=b.""Id""");
+
+        var result = await repository.FromWithRecursive((f, cte) => f.From<Menu>()
+                    .Where(x => x.Id == 1)
+                    .Select(x => new { x.Id, x.Name, x.ParentId })
+                .UnionAllRecursive((x, y) => x.From<Menu>()
+                    .InnerJoinRecursive(y, cte, (a, b) => a.ParentId == b.Id)
+                    .Select((a, b) => new { a.Id, a.Name, a.ParentId })), "MenuList")
+            .NextWithRecursive((f, cte) => f.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id == 1)
+                    .Select((x, y) => new { y.Id, x.Url })
+                .UnionAll(x => x.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id > 1)
+                    .Select((x, y) => new { y.Id, x.Url })), "MenuPageList")
+            .InnerJoin((a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
            .ToListAsync();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);

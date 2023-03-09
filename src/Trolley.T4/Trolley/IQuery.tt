@@ -19,7 +19,16 @@ public interface IQuery<T>
     #region Union
     IQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery);
     IQuery<T> UnionAll(Func<IFromQuery, IFromQuery<T>> subQuery);
-    #endregion    
+    #endregion
+
+    #region WithCte
+    IQuery<T, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    IQuery<T, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    #endregion
+
+    #region WithTable
+    IQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery);
+    #endregion
 
     #region Join
     IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
@@ -94,6 +103,8 @@ public interface IQuery<T>
     
     T First();
     Task<T> FirstAsync(CancellationToken cancellationToken = default);
+    TTarget First<TTarget>(Expression<Func<T, TTarget>> toTargetExpr);
+    Task<TTarget> FirstAsync<TTarget>(Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default);
     List<T> ToList();
     Task<List<T>> ToListAsync(CancellationToken cancellationToken = default);
     IPagedList<T> ToPageList(int pageIndex, int pageSize);
@@ -112,15 +123,31 @@ public interface IQuery<T>
 #>
 public interface IQuery<<#=tables#>>
 {
+    #region WithCte
+    IQuery<<#=tables#>, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    IQuery<<#=tables#>, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    #endregion
+
+    #region WithTable
+    IQuery<<#=tables#>, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery);
+    #endregion
+
+    #region Include
     IIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector);
     IIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 
+    #region Join
+    IQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    IQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    IQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn);
     IQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     IQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     IQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     IQuery<<#=tables#>, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     IQuery<<#=tables#>, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     IQuery<<#=tables#>, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    #endregion
 
     IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
     IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate);
@@ -165,8 +192,10 @@ public interface IQuery<<#=tables#>>
 #>
 public interface IQuery<<#=tables#>>
 {
+    #region Include
     IIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector);
     IIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 
     IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
     IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate);

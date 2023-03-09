@@ -11,8 +11,7 @@ public enum TableType : byte
     /// <summary>
     /// 临时映射表
     /// </summary>
-    MapTable = 4,
-    CteTable = 5
+    MapTable = 4
 }
 public class TableSegment
 {

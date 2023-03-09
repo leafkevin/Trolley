@@ -24,6 +24,12 @@ class FromQuery : IFromQuery
         this.visitor.From(typeof(T));
         return new FromQuery<T>(this.visitor);
     }
+    public IFromQuery<T> From<T>(string rawSql, object parameters = null, char tableAsStart = 'a')
+    {
+        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.WithTable(typeof(T), rawSql, parameters);
+        return new FromQuery<T>(this.visitor);
+    }
     public IFromQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
         this.visitor.tableAsStart = tableAsStart;
@@ -123,16 +129,9 @@ class FromQuery<T> : IFromQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var dbParameters = new List<IDbDataParameter>();
-        var sql = this.ToSql(out var parameters);
-        if (parameters != null && parameters.Count > 0)
-            dbParameters.AddRange(parameters);
         var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
         var query = subQuery.Invoke(fromQuery);
-        sql += " UNION " + query.ToSql(out parameters);
-        if (parameters != null && parameters.Count > 0)
-            dbParameters.AddRange(parameters);
-
+        var sql = " UNION " + query.ToSql(out var dbParameters);
         this.visitor.Union(typeof(T), sql, dbParameters);
         return this;
     }
@@ -141,17 +140,31 @@ class FromQuery<T> : IFromQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var dbParameters = new List<IDbDataParameter>();
-        var sql = this.ToSql(out var parameters);
-        if (parameters != null && parameters.Count > 0)
-            dbParameters.AddRange(parameters);
-
         var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
         var query = subQuery.Invoke(fromQuery);
-        sql += " UNION ALL " + query.ToSql(out parameters);
-        if (parameters != null && parameters.Count > 0)
-            dbParameters.AddRange(parameters);
+        var sql = " UNION ALL " + query.ToSql(out var dbParameters);
+        this.visitor.Union(typeof(T), sql, dbParameters);
+        return this;
+    }
+    public IFromQuery<T> UnionRecursive(Func<IFromQuery, IFromQuery<T>, IFromQuery<T>> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
 
+        var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
+        var query = subQuery.Invoke(fromQuery, null);
+        var sql = " UNION " + query.ToSql(out var dbParameters);
+        this.visitor.Union(typeof(T), sql, dbParameters);
+        return this;
+    }
+    public IFromQuery<T> UnionAllRecursive(Func<IFromQuery, IFromQuery<T>, IFromQuery<T>> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
+        var query = subQuery.Invoke(fromQuery, null);
+        var sql = " UNION ALL " + query.ToSql(out var dbParameters);
         this.visitor.Union(typeof(T), sql, dbParameters);
         return this;
     }
@@ -178,6 +191,30 @@ class FromQuery<T> : IFromQuery<T>
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new FromQuery<T, TOther>(this.visitor);
+    }
+    public IFromQuery<T, TTarget> InnerJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<T, TTarget, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("INNER JOIN", typeof(TTarget), cteTableName, joinOn);
+        return new FromQuery<T, TTarget>(this.visitor);
+    }
+    public IFromQuery<T, TTarget> LeftJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<T, TTarget, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("LEFT JOIN", typeof(TTarget), cteTableName, joinOn);
+        return new FromQuery<T, TTarget>(this.visitor);
+    }
+    public IFromQuery<T, TTarget> RightJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<T, TTarget, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("RIGHT JOIN", typeof(TTarget), cteTableName, joinOn);
+        return new FromQuery<T, TTarget>(this.visitor);
     }
     public IFromQuery<T> Where(Expression<Func<T, bool>> predicate = null)
     {
@@ -271,6 +308,30 @@ class FromQuery<<#=tables#>> : IFromQuery<<#=tables#>>
 
     public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
 
+    public IFromQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("INNER JOIN", joinOn);
+        return this;
+    }
+    public IFromQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("LEFT JOIN", joinOn);
+        return this;
+    }
+    public IFromQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("RIGHT JOIN", joinOn);
+        return this;
+    }
     public IFromQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         if (joinOn == null)
@@ -294,6 +355,30 @@ class FromQuery<<#=tables#>> : IFromQuery<<#=tables#>>
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return new FromQuery<<#=tables#>, TOther>(this.visitor);
+    }
+    public IFromQuery<<#=tables#>, TTarget> InnerJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<<#=tables#>, TTarget, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("INNER JOIN", typeof(TTarget), cteTableName, joinOn);
+        return new FromQuery<<#=tables#>, TTarget>(this.visitor);
+    }
+    public IFromQuery<<#=tables#>, TTarget> LeftJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<<#=tables#>, TTarget, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("LEFT JOIN", typeof(TTarget), cteTableName, joinOn);
+        return new FromQuery<<#=tables#>, TTarget>(this.visitor);
+    }
+    public IFromQuery<<#=tables#>, TTarget> RightJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<<#=tables#>, TTarget, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("RIGHT JOIN", typeof(TTarget), cteTableName, joinOn);
+        return new FromQuery<<#=tables#>, TTarget>(this.visitor);
     }
     public IFromQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate = null)
     {
@@ -377,6 +462,30 @@ class FromQuery<<#=tables#>> : IFromQuery<<#=tables#>>
 
     public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
 
+    public IFromQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("INNER JOIN", joinOn);
+        return this;
+    }
+    public IFromQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("LEFT JOIN", joinOn);
+        return this;
+    }
+    public IFromQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("RIGHT JOIN", joinOn);
+        return this;
+    }
     public IFromQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate = null)
     {
         if (predicate == null)
