@@ -9,10 +9,25 @@ public interface IQueryAnonymousObject
 {
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
+/// <summary>
+/// 子查询，所有的子查询都是从From开始的
+/// </summary>
 public interface IFromQuery
 {
+    /// <summary>
+    /// 创建子查询
+    /// </summary>
+    /// <typeparam name="T">实体类型</typeparam>
+    /// <param name="tableAsStart">子查询中使用的表别名开始字母，默认从字母a开始</param>
+    /// <returns></returns>
     IFromQuery<T> From<T>(char tableAsStart = 'a');
-    IFromQuery<T> From<T>(string rawSql, object parameters = null, char tableAsStart = 'a');
+    /// <summary>
+    /// 创建子查询
+    /// </summary>
+    /// <typeparam name="T1"></typeparam>
+    /// <typeparam name="T2"></typeparam>
+    /// <param name="tableAsStart"></param>
+    /// <returns></returns>
     IFromQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a');
     IFromQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a');
     IFromQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a');
@@ -31,7 +46,92 @@ public interface IFromQuery
 }
 public interface IFromQuery<T>
 {
+    /// <summary>
+    /// 子查询中的Union操作，用法：
+    /// <code>
+    /// await repository.From&lt;Order&gt;()
+    ///     .Where(x => x.Id == 1)
+    ///     .Select(x => new
+    ///     {
+    ///         x.Id,
+    ///         x.OrderNo,
+    ///         x.SellerId,
+    ///         x.BuyerId
+    ///      })
+    ///     .Union(f => f.From&lt;Order&gt;()
+    ///         .Where(x => x.Id > 1)
+    ///         .Select(x => new
+    ///         {
+    ///             x.Id,
+    ///             x.OrderNo,
+    ///             x.SellerId,
+    ///             x.BuyerId
+    ///         }))
+    ///     .ToListAsync();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`=1 UNION
+    /// SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`&gt;1
+    /// </code>
+    /// </summary>
+    /// <param name="subQuery">子查询，需要有Select语句，如：
+    /// <code>
+    /// f.From&lt;Order&gt;()
+    ///     .Where(x => x.Id > 1)
+    ///     .Select(x => new
+    ///     {
+    ///         x.Id,
+    ///         x.OrderNo,
+    ///         x.SellerId,
+    ///         x.BuyerId
+    ///     }
+    /// </code>
+    /// </param>
+    /// <returns>返回查询对象</returns>
     IFromQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery);
+    /// <summary>
+    /// 子查询中的Union All操作，用法：
+    /// <code>
+    /// repository.From&lt;Order&gt;()
+    ///     .Where(x =&gt; x.Id == 1)
+    ///     .Select(x =&gt; new
+    ///     {
+    ///         x.Id,
+    ///         x.OrderNo,
+    ///         x.SellerId,
+    ///         x.BuyerId
+    ///     })
+    ///     .UnionAll(f =&gt; f
+    ///         .From&lt;Order&gt;()
+    ///         .Where(x =&gt; x.Id &gt; 1)
+    ///         .Select(x =&gt; new
+    ///         {
+    ///             x.Id,
+    ///             x.OrderNo,
+    ///             x.SellerId,
+    ///             x.BuyerId
+    ///         }))
+    ///     .ToListAsync();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`=1 UNION ALL
+    /// SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`&gt;1
+    /// </code>
+    /// </summary>
+    /// <param name="subQuery">子查询，需要有Select语句，如：
+    ///  f.From&lt;Order&gt;()
+    ///     .Where(x =&gt; x.Id &gt; 1)
+    ///     .Select(x =&gt; new
+    ///     {
+    ///         x.Id,
+    ///         x.OrderNo,
+    ///         x.SellerId,
+    ///         x.BuyerId
+    ///     }
+    /// </param>
+    /// <returns>返回查询对象</returns>
     IFromQuery<T> UnionAll(Func<IFromQuery, IFromQuery<T>> subQuery);
     IFromQuery<T> UnionRecursive(Func<IFromQuery, IFromQuery<T>, IFromQuery<T>> subQuery);
     IFromQuery<T> UnionAllRecursive(Func<IFromQuery, IFromQuery<T>, IFromQuery<T>> subQuery);

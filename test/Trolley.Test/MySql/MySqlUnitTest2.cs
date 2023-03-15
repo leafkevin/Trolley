@@ -75,7 +75,8 @@ public class MySqlUnitTest2
         var result = repository.From<OrderDetail>()
             .Where(f => f.ProductId == 1)
             .OrderByDescending(f => f.CreatedAt)
-            .ToPageList(2, 1);
+            .Page(2, 1)
+            .ToPageList();
         var count = await repository.From<OrderDetail>().Where(f => f.ProductId == 1).CountAsync();
         Assert.NotNull(result);
         Assert.NotEmpty(result.Items);
@@ -99,7 +100,31 @@ public class MySqlUnitTest2
         public int ProductTotal { get; set; }
     }
     [Fact]
-    public void FromQuery_SubQuery()
+    public void FromQuery_SubQuery1()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository.From(f => f.From<Page, Menu>('o')
+                 .Where((a, b) => a.Id == b.PageId)
+                 .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
+             .InnerJoin<Menu>((a, b) => a.Id == b.Id)
+             .Where((a, b) => a.Id == b.Id)
+             .Select((a, b) => new { a.Id, b.Name, a.ParentId, a.Url })
+             .ToSql(out _);
+        Assert.True(sql == "SELECT a.`Id`,b.`Name`,a.`ParentId`,a.`Url` FROM (SELECT p.`Id`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) a INNER JOIN `sys_menu` b ON a.`Id`=b.`Id` WHERE a.`Id`=b.`Id`");
+
+        var result = repository.From(f => f.From<Page, Menu>('o')
+                .Where((a, b) => a.Id == b.PageId)
+                .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
+            .InnerJoin<Menu>((a, b) => a.Id == b.Id)
+            .Where((a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, b.Name, a.ParentId, a.Url })
+            .ToList();
+
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
+    }
+    [Fact]
+    public void FromQuery_SubQuery2()
     {
         using var repository = this.dbFactory.Create();
         var result = repository.From(f =>
@@ -119,7 +144,7 @@ public class MySqlUnitTest2
         }
     }
     [Fact]
-    public void FromQuery_SubQuery1()
+    public void FromQuery_SubQuery3()
     {
         using var repository = this.dbFactory.Create();
         var result = repository.From(f =>
@@ -137,6 +162,20 @@ public class MySqlUnitTest2
             Assert.NotNull(result.Grouping);
             Assert.NotNull(result.BuyerName);
         }
+    }
+    [Fact]
+    public void FromQuery_RawSql()
+    {
+        using var repository = this.dbFactory.Create();
+        var rawSql = "SELECT a.Id,a.Name FROM sys_user a WHERE a.CompanyId=@CompanyId";
+        var result = repository.FromRaw<(int Id, string Name)>(rawSql, new { CompanyId = 1 })
+            .First();
+        int dfsf = 0;
+        //if (result != null)
+        //{
+        //    Assert.NotNull(result);
+        //    Assert.NotNull(result.Name);
+        //}
     }
     //[Fact]
     //public void FromQuery_SubQuery2()
@@ -160,15 +199,27 @@ public class MySqlUnitTest2
     {
         this.Initialize();
         using var repository = this.dbFactory.Create();
+        var sql = repository.From<User>()
+           .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+           .Where((a, b) => b.ProductCount > 1)
+           .Select((x, y) => new
+           {
+               User = x,
+               Order = y
+           })
+           .ToSql(out _);
+        Assert.True(sql == "SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`OrderNo`,b.`ProductCount`,b.`TotalAmount`,b.`BuyerId`,b.`SellerId`,b.`Products`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE b.`ProductCount`>1");
+
         var result = repository.From<User>()
-                .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
-                .Where((a, b) => b.ProductCount > 1)
-                .Select((x, y) => new
-                {
-                    User = x,
-                    Order = y
-                })
-                .ToList();
+            .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+            .Where((a, b) => b.ProductCount > 1)
+            .Select((x, y) => new
+            {
+                User = x,
+                Order = y
+            })
+            .ToList();
+
         if (result.Count > 0)
         {
             Assert.NotNull(result[0]);
@@ -181,23 +232,42 @@ public class MySqlUnitTest2
     public async void FromQuery_InnerJoin1()
     {
         using var repository = this.dbFactory.Create();
+        var sql = repository.From<User>()
+          .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+          .InnerJoin(f => f.From<OrderDetail>()
+              .GroupBy(x => x.OrderId)
+              .Select((x, y) => new
+              {
+                  y.OrderId,
+                  ProductCount = x.CountDistinct(y.ProductId)
+              }), (a, b, c) => b.Id == c.OrderId)
+          .Where((a, b, c) => c.ProductCount > 2)
+          .Select((a, b, c) => new
+          {
+              User = a,
+              Order = b,
+              c.ProductCount
+          })
+          .ToSql(out _);
+        Assert.True(sql == "SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`OrderNo`,b.`ProductCount`,b.`TotalAmount`,b.`BuyerId`,b.`SellerId`,b.`Products`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt`,c.`ProductCount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` INNER JOIN (SELECT a.`OrderId`,COUNT(DISTINCT a.`ProductId`) AS ProductCount FROM `sys_order_detail` a GROUP BY a.`OrderId`) c ON b.`Id`=c.`OrderId` WHERE c.`ProductCount`>2");
+
         var result = await repository.From<User>()
-                .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
-                .InnerJoin(f => f.From<OrderDetail>()
-                    .GroupBy(x => x.OrderId)
-                    .Select((x, y) => new
-                    {
-                        y.OrderId,
-                        ProductCount = x.CountDistinct(y.ProductId)
-                    }), (a, b, c) => b.Id == c.OrderId)
-                .Where((a, b, c) => c.ProductCount > 2)
-                .Select((a, b, c) => new
+            .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+            .InnerJoin(f => f.From<OrderDetail>()
+                .GroupBy(x => x.OrderId)
+                .Select((x, y) => new
                 {
-                    User = a,
-                    Order = b,
-                    c.ProductCount
-                })
-                .ToListAsync();
+                    y.OrderId,
+                    ProductCount = x.CountDistinct(y.ProductId)
+                }), (a, b, c) => b.Id == c.OrderId)
+            .Where((a, b, c) => c.ProductCount > 2)
+            .Select((a, b, c) => new
+            {
+                User = a,
+                Order = b,
+                c.ProductCount
+            })
+            .ToListAsync();
         if (result.Count > 0)
         {
             Assert.NotNull(result[0]);
@@ -211,10 +281,17 @@ public class MySqlUnitTest2
     {
         this.Initialize();
         using var repository = this.dbFactory.Create();
+        var sql = repository.From<Product>()
+          .Include(f => f.Brand)
+          .Where(f => f.ProductNo.Contains("PN-00"))
+          .ToSql(out _);
+        Assert.True(sql == "");
+
         var result = await repository.From<Product>()
             .Include(f => f.Brand)
             .Where(f => f.ProductNo.Contains("PN-00"))
             .ToListAsync();
+
         Assert.True(result.Count >= 3);
         Assert.NotNull(result[0].Brand);
         Assert.True(result[0].Brand.BrandNo == "BN-001");
@@ -301,7 +378,8 @@ public class MySqlUnitTest2
         var result = repository.From<OrderDetail>()
             .Include(f => f.Product)
             .Where(f => f.ProductId == 1)
-            .ToPageList(2, 1);
+            .Page(2, 1)
+            .ToPageList();
         var count = repository.From<OrderDetail>()
             .Where(f => f.ProductId == 1)
             .Count();
@@ -753,7 +831,8 @@ public class MySqlUnitTest2
     public async void Query_Union()
     {
         using var repository = this.dbFactory.Create();
-        var sql = repository.From<Order>()
+        var sql =
+            repository.From<Order>()
             .Where(x => x.Id == 1)
             .Select(x => new
             {
@@ -762,7 +841,8 @@ public class MySqlUnitTest2
                 x.SellerId,
                 x.BuyerId
             })
-            .UnionAll(f => f.From<Order>()
+            .UnionAll(f => f
+                .From<Order>()
                 .Where(x => x.Id > 1)
                 .Select(x => new
                 {
@@ -772,9 +852,11 @@ public class MySqlUnitTest2
                     x.BuyerId
                 }))
             .ToSql(out _);
-        Assert.True(sql == "SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`=1 UNION ALL SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`>1");
+        Assert.True(sql == @"SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`=1 UNION ALL
+SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`>1");
 
-        var result = await repository.From<Order>()
+        var result =
+        await repository.From<Order>()
            .Where(x => x.Id == 1)
            .Select(x => new
            {
@@ -800,31 +882,57 @@ public class MySqlUnitTest2
     public async void Query_WithCte()
     {
         using var repository = this.dbFactory.Create();
-        var sql = repository.FromWithRecursive((f, cte) => f.From<Menu>()
+        var sql = repository.FromWith(f => f.From<Menu>()
+                .Select(x => new { x.Id, x.Name, x.ParentId, x.PageId }), "MenuList")
+            .InnerJoin<Page>((a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+            .ToSql(out _);
+
+        Assert.True(sql == @"WITH MenuList(Id,Name,ParentId,PageId) AS 
+(
+SELECT `Id`,`Name`,`ParentId`,`PageId` FROM `sys_menu`
+)
+SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN `sys_page` b ON a.`Id`=b.`Id`");
+
+        var result = await repository.FromWith(f => f.From<Menu>()
+                .Select(x => new { x.Id, x.Name, x.ParentId, x.PageId }), "MenuList")
+            .InnerJoin<Page>((a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+            .ToListAsync();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
+    }
+    [Fact]
+    public async void Query_WithNextCte()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository
+            .FromWithRecursive((f, cte) => f.From<Menu>()
                     .Where(x => x.Id == 1)
                     .Select(x => new { x.Id, x.Name, x.ParentId })
                 .UnionAllRecursive((x, y) => x.From<Menu>()
                     .InnerJoinRecursive(y, cte, (a, b) => a.ParentId == b.Id)
                     .Select((a, b) => new { a.Id, a.Name, a.ParentId })), "MenuList")
-            .NextWithRecursive((f, cte) => f.From<Page>()
-                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
-                    .Where((a, b) => a.Id == 1)
-                    .Select((x, y) => new { y.Id, x.Url })
-                .UnionAll(x => x.From<Page>()
-                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+            .NextWithRecursive((f, cte) => f.From<Page, Menu>()
+                    .Where((a, b) => a.Id == b.PageId)
+                    .Select((x, y) => new { y.Id, y.ParentId, x.Url })
+                .UnionAll(x => x.From<Menu>()
+                    .LeftJoin<Page>((a, b) => a.PageId == b.Id)
                     .Where((a, b) => a.Id > 1)
-                    .Select((x, y) => new { y.Id, x.Url })), "MenuPageList")
+                    .Select((x, y) => new { x.Id, x.ParentId, y.Url })), "MenuPageList")
             .InnerJoin((a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
             .ToSql(out _);
 
         Assert.True(sql == @"WITH RECURSIVE MenuList(Id,Name,ParentId) AS 
 (
-SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id`
+SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
+SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id`
 ),
-MenuPageList(Id,Url) AS 
+MenuPageList(Id,ParentId,Url) AS 
 (
-SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=1 UNION ALL SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`>1
+SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b.`PageId` UNION ALL
+SELECT a.`Id`,a.`ParentId`,b.`Url` FROM `sys_menu` a LEFT JOIN `sys_page` b ON a.`PageId`=b.`Id` WHERE a.`Id`>1
 )
 SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageList b ON a.`Id`=b.`Id`");
 
@@ -848,6 +956,42 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageL
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
     }
+    [Fact]
+    public async void Query_WithTable()
+    {
+        using var repository = this.dbFactory.Create();
+        var sql = repository.From<Menu>()
+             .WithTable(f => f.From<Page, Menu>('c')
+                 .Where((a, b) => a.Id == b.PageId)
+                 .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
+             .Where((a, b) => a.Id == b.Id)
+             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+             .ToSql(out _);
+
+        Assert.True(sql == @"SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `sys_menu` a,(SELECT d.`Id`,d.`ParentId`,c.`Url` FROM `sys_page` c,`sys_menu` d WHERE c.`Id`=d.`PageId`) b WHERE a.`Id`=b.`Id`");
+
+        var result = await repository.FromWithRecursive((f, cte) => f.From<Menu>()
+                    .Where(x => x.Id == 1)
+                    .Select(x => new { x.Id, x.Name, x.ParentId })
+                .UnionAllRecursive((x, y) => x.From<Menu>()
+                    .InnerJoinRecursive(y, cte, (a, b) => a.ParentId == b.Id)
+                    .Select((a, b) => new { a.Id, a.Name, a.ParentId })), "MenuList")
+            .NextWithRecursive((f, cte) => f.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id == 1)
+                    .Select((x, y) => new { y.Id, x.Url })
+                .UnionAll(x => x.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id > 1)
+                    .Select((x, y) => new { y.Id, x.Url })), "MenuPageList")
+            .InnerJoin((a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+           .ToListAsync();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
+    }
+
+
     private void Initialize()
     {
         using var repository = this.dbFactory.Create();

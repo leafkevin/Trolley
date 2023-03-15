@@ -111,11 +111,16 @@ public class EntityMap
             this.KeyMembers ??= new List<MemberMap>();
             foreach (var memberMapper in this.memberMappers)
             {
+                if (!memberMapper.IsKey) continue;
+
                 var fieldName = $"{this.FieldPrefix}{memberMapper.FieldName}";
-                if (memberMapper.IsKey && !this.KeyMembers.Contains(memberMapper))
+                if (!this.KeyMembers.Contains(memberMapper))
                     this.KeyMembers.Add(memberMapper);
                 if (memberMapper.IsAutoIncrement)
+                {
                     this.AutoIncrementField = fieldName;
+                    this.IsAutoIncrement = true;
+                }
             }
         }
     }

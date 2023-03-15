@@ -21,6 +21,11 @@ public class MemberBuilder<TMember>
         this.mapper.nativeDbType = nativeDbType;
         return this;
     }
+    public virtual MemberBuilder<TMember> AutoIncrement()
+    {
+        this.mapper.IsAutoIncrement = true;
+        return this;
+    }
     public virtual MemberBuilder<TMember> SetTypeHandler<TTypeHandler>() where TTypeHandler : class, ITypeHandler, new()
     {
         this.mapper.typeHandlerType = typeof(TTypeHandler);

@@ -153,9 +153,7 @@ public class SqlServerUnitTest1
     public void Insert_WithBy_AnonymousObject()
     {
         using var repository = this.dbFactory.Create();
-        repository.BeginTransaction();
-        var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
-        var sql = repository.Create<User>()
+        repository.Create<User>()
             .WithBy(new
             {
                 Id = 1,
@@ -168,29 +166,49 @@ public class SqlServerUnitTest1
                 CreatedBy = 1,
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
-            }).ToSql(out _);
+            })
+            .Execute();
+
+        repository.BeginTransaction();
+        var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
+        var sql = 
+        repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .ToSql(out _);
         repository.Commit();
         Assert.Equal("INSERT INTO [sys_user] ([Id],[Name],[Age],[CompanyId],[Gender],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
     }
-    //[Fact]
-    //public async void Insert_WithBy_Dictionary_AutoIncrement()
-    //{
-    //    using var repository = this.dbFactory.Create();
-    //    await repository.Delete<Company>().Where(f => f.Id == 1).ExecuteAsync();
-    //    var id = repository.Create<Company>()
-    //        .WithBy(new Dictionary<string, object>()
-    //        {
-    //                //{ "Id", 1},
-    //                { "Name","微软11"},
-    //                { "IsEnabled", true},
-    //                { "CreatedAt", DateTime.Now},
-    //                { "CreatedBy", 1},
-    //                { "UpdatedAt", DateTime.Now},
-    //                { "UpdatedBy", 1}
-    //        }).Execute();
-    //    var maxId = repository.From<Company>().Max(f => f.Id);
-    //    Assert.Equal(maxId, id);
-    //}
+    [Fact]
+    public async void Insert_WithBy_Dictionary_AutoIncrement()
+    {
+        using var repository = this.dbFactory.Create();
+        await repository.Delete<Company>().Where(f => f.Id == 1).ExecuteAsync();
+        var id = repository.Create<Company>()
+            .WithBy(new Dictionary<string, object>()
+            {
+                    //{ "Id", 1},
+                    { "Name","微软11"},
+                    { "IsEnabled", true},
+                    { "CreatedAt", DateTime.Now},
+                    { "CreatedBy", 1},
+                    { "UpdatedAt", DateTime.Now},
+                    { "UpdatedBy", 1}
+            }).Execute();
+        var maxId = repository.From<Company>().Max(f => f.Id);
+        Assert.Equal(maxId, id);
+    }
     [Fact]
     public async void Insert_WithBy_Batch_AnonymousObjects()
     {

@@ -75,7 +75,8 @@ public class NpgsqlUnitTest2
         var result = repository.From<OrderDetail>()
             .Where(f => f.ProductId == 1)
             .OrderByDescending(f => f.CreatedAt)
-            .ToPageList(2, 1);
+            .Page(2, 1)
+            .ToPageList();
         var count = await repository.From<OrderDetail>().Where(f => f.ProductId == 1).CountAsync();
         Assert.NotNull(result);
         Assert.NotEmpty(result.Items);
@@ -233,7 +234,8 @@ public class NpgsqlUnitTest2
         var result = repository.From<OrderDetail>()
             .Include(f => f.Product)
             .Where(f => f.ProductId == 1)
-            .ToPageList(2, 1);
+            .Page(2, 1)
+            .ToPageList();
         var count = repository.From<OrderDetail>()
             .Where(f => f.ProductId == 1)
             .Count();

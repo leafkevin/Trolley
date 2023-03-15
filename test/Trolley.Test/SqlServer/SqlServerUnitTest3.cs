@@ -278,11 +278,19 @@ public class SqlServerUnitTest3
             {
                 OrderNo = f.OrderNo + "111",
                 Products = new List<int> { 1, 2, 3 },
-                BuyerId = DBNull.Value
+                BuyerId = DBNull.Value,
+                UpdatedAt = DateTime.UtcNow
             })
             .Where(x => x.Id == 1)
             .Execute();
-        var order = repository.Get<Order>(1);
+        repository.Update<Order>()
+            .Set(f => new
+            {              
+                UpdatedAt = DateTime.Now
+            })
+            .Where(x => x.Id == 2)
+            .Execute();
+        var order = repository.Get<Order>(1);      
         repository.Commit();
         if (result > 0)
         {

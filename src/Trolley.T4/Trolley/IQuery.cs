@@ -7,10 +7,6 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-/// <summary>
-/// 查询数据
-/// </summary>
-/// <typeparam name="T">实体类型，需要有对应的模型映射找到要查询的表</typeparam>
 public interface IQuery<T>
 {
     #region Union
@@ -59,7 +55,7 @@ public interface IQuery<T>
     /// <returns>返回查询对象</returns>
     IQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery);
     /// <summary>
-    /// Union All操作，用法：
+    /// Union操作，用法：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .Where(x =&gt; x.Id == 1)
@@ -105,7 +101,7 @@ public interface IQuery<T>
 
     #region WithCte
     /// <summary>
-    /// CTE With子句，在Select之前，With子句要连续使用，用法：
+    /// CTE With子句，在Select之前，With子句要连续定义，用法：
     /// <code>
     /// repository
     ///     .FromWith((f =&gt; ...), "MenuList")
@@ -140,11 +136,11 @@ public interface IQuery<T>
     /// </code>
     /// </param>
     /// <param name="cteTableName">CTE表名</param>
-    /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
+    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
     IQuery<T, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     /// <summary>
-    /// 递归CTE With子句，在Select之前，With子句要连续使用，用法：
+    /// 递归CTE With子句，在Select之前，With子句要连续定义，用法：
     /// <code>
     /// repository
     ///     .FromWithRecursive((f, cte) =&gt; f.From&lt;Menu&gt;()
@@ -188,7 +184,7 @@ public interface IQuery<T>
     /// </code>
     /// </param>
     /// <param name="cteTableName">CTE表名</param>
-    /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
+    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
     IQuery<T, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     #endregion
@@ -378,36 +374,9 @@ public interface IQuery<T>
 
     #region Include
     /// <summary>
-    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
-    /// 可以通过使用InnerJoin(Expression&lt;Func&lt;T, bool&gt;&gt; joinOn)、RightJoin(Expression&lt;Func&lt;T, bool&gt;&gt; joinOn)方法改变默认关联方式。
-    /// 1:1关联关系，随主表一起查询，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// 单表查询，包含1:1关联方式的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系。
+    /// 可以通过使用InnerJoin(Expression&lt;Func&lt;T, bool&gt;&gt; joinOn)、RightJoin(Expression&lt;Func&lt;T, bool&gt;&gt; joinOn)方法改变默认关联方式
     /// </summary>
-    /// <example>
-    /// 1:1关联关系导航属性
-    /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand)
-    ///   .Where(f =&gt; f.ProductNo.Contains("PN-00"))
-    ///   .ToSql(out _);
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`Price`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
-    /// </code>
-    /// </example>
-    /// <example>
-    /// 1:1关联关系导航属性
-    /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand)
-    ///   .Where(f =&gt; f.ProductNo.Contains("PN-00"))
-    ///   .ToSql(out _);
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`Price`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
-    /// </code>
-    /// </example>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
     /// <returns>返回实体对象，带有导航属性</returns>
@@ -467,30 +436,62 @@ public interface IQuery<T>
     Task<TField> MaxAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     TField Min<TField>(Expression<Func<T, TField>> fieldExpr);
     Task<TField> MinAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
+    
     T First();
     Task<T> FirstAsync(CancellationToken cancellationToken = default);
     TTarget First<TTarget>(Expression<Func<T, TTarget>> toTargetExpr);
     Task<TTarget> FirstAsync<TTarget>(Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default);
-
     List<T> ToList();
     Task<List<T>> ToListAsync(CancellationToken cancellationToken = default);
-    List<TTarget> ToList<TTarget>(Expression<Func<T, TTarget>> toTargetExpr);
-    Task<List<TTarget>> ToListAsync<TTarget>(Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default(CancellationToken));
-
-    IPagedList<T> ToPageList();
-    Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default);
-    IPagedList<TTarget> ToPageList<TTarget>(Expression<Func<T, TTarget>> toTargetExpr);
-    Task<IPagedList<TTarget>> ToPageListAsync<TTarget>(Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default(CancellationToken));
-
+    IPagedList<T> ToPageList(int pageIndex, int pageSize);
+    Task<IPagedList<T>> ToPageListAsync(int pageIndex, int pageSize, CancellationToken cancellationToken = default);
     Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull;
     Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull;
-
+    
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2>
 {
     #region WithCte
+    /// <summary>
+    /// CTE With子句，在Select之前，With子句要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ..., "Cte1")
+    ///     ... ...
+    ///     .NextWith(f =&gt; ..., "CteN")
+    ///     .InnerJoin((T1, T2) =&gt; a.Id == b.Id)
+    ///     .InnerJoin((T1, T2) =&gt; a.Id == c.Id)
+    ///     ... ...
+    ///     .Select((T1, T2) =&gt; new { ... ... })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH Cte1(...) AS 
+    /// (
+    ///     SELECT ... FROM ... WHERE ...
+    /// ),
+    /// ... ...
+    /// CteN(...) AS
+    /// (
+    ///     SELECT ... FROM ... WHERE ... UNION ALL ...
+    /// )
+    /// SELECT ... FROM Cte1 a INNER JOIN Cte2 b ON xxx ... LEFT JOIN CteN ON ... ... WHERE ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
     IQuery<T1, T2, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     IQuery<T1, T2, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     #endregion
@@ -519,7 +520,7 @@ public interface IQuery<T1, T2>
     IQuery<T1, T2> Where(Expression<Func<T1, T2, bool>> predicate);
     IQuery<T1, T2> Where(bool condition, Expression<Func<T1, T2, bool>> predicate = null);
     IQuery<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> predicate);
-
+    
     IGroupingQuery<T1, T2, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, TGrouping>> groupingExpr);
     IQuery<T1, T2> OrderBy<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr);
     IQuery<T1, T2> OrderByDescending<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr);
@@ -552,12 +553,51 @@ public interface IQuery<T1, T2>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
     TField Min<TField>(Expression<Func<T1, T2, TField>> fieldExpr);
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
+    
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3>
 {
     #region WithCte
+    /// <summary>
+    /// CTE With子句，在Select之前，With子句要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ..., "Cte1")
+    ///     ... ...
+    ///     .NextWith(f =&gt; ..., "CteN")
+    ///     .InnerJoin((T1, T2, T3) =&gt; a.Id == b.Id)
+    ///     .InnerJoin((T1, T2, T3) =&gt; a.Id == c.Id)
+    ///     ... ...
+    ///     .Select((T1, T2, T3) =&gt; new { ... ... })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH Cte1(...) AS 
+    /// (
+    ///     SELECT ... FROM ... WHERE ...
+    /// ),
+    /// ... ...
+    /// CteN(...) AS
+    /// (
+    ///     SELECT ... FROM ... WHERE ... UNION ALL ...
+    /// )
+    /// SELECT ... FROM Cte1 a INNER JOIN Cte2 b ON xxx ... LEFT JOIN CteN ON ... ... WHERE ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     IQuery<T1, T2, T3, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     #endregion
@@ -586,7 +626,7 @@ public interface IQuery<T1, T2, T3>
     IQuery<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate);
     IQuery<T1, T2, T3> Where(bool condition, Expression<Func<T1, T2, T3, bool>> predicate = null);
     IQuery<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> predicate);
-
+    
     IGroupingQuery<T1, T2, T3, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3> OrderBy<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr);
     IQuery<T1, T2, T3> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr);
@@ -619,12 +659,51 @@ public interface IQuery<T1, T2, T3>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default);
     TField Min<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr);
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
+    
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4>
 {
     #region WithCte
+    /// <summary>
+    /// CTE With子句，在Select之前，With子句要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ..., "Cte1")
+    ///     ... ...
+    ///     .NextWith(f =&gt; ..., "CteN")
+    ///     .InnerJoin((T1, T2, T3, T4) =&gt; a.Id == b.Id)
+    ///     .InnerJoin((T1, T2, T3, T4) =&gt; a.Id == c.Id)
+    ///     ... ...
+    ///     .Select((T1, T2, T3, T4) =&gt; new { ... ... })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH Cte1(...) AS 
+    /// (
+    ///     SELECT ... FROM ... WHERE ...
+    /// ),
+    /// ... ...
+    /// CteN(...) AS
+    /// (
+    ///     SELECT ... FROM ... WHERE ... UNION ALL ...
+    /// )
+    /// SELECT ... FROM Cte1 a INNER JOIN Cte2 b ON xxx ... LEFT JOIN CteN ON ... ... WHERE ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     IQuery<T1, T2, T3, T4, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     #endregion
@@ -653,7 +732,7 @@ public interface IQuery<T1, T2, T3, T4>
     IQuery<T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate);
     IQuery<T1, T2, T3, T4> Where(bool condition, Expression<Func<T1, T2, T3, T4, bool>> predicate = null);
     IQuery<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> predicate);
-
+    
     IGroupingQuery<T1, T2, T3, T4, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr);
     IQuery<T1, T2, T3, T4> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr);
@@ -686,12 +765,51 @@ public interface IQuery<T1, T2, T3, T4>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default);
     TField Min<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr);
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
+    
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5>
 {
     #region WithCte
+    /// <summary>
+    /// CTE With子句，在Select之前，With子句要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ..., "Cte1")
+    ///     ... ...
+    ///     .NextWith(f =&gt; ..., "CteN")
+    ///     .InnerJoin((T1, T2, T3, T4, T5) =&gt; a.Id == b.Id)
+    ///     .InnerJoin((T1, T2, T3, T4, T5) =&gt; a.Id == c.Id)
+    ///     ... ...
+    ///     .Select((T1, T2, T3, T4, T5) =&gt; new { ... ... })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH Cte1(...) AS 
+    /// (
+    ///     SELECT ... FROM ... WHERE ...
+    /// ),
+    /// ... ...
+    /// CteN(...) AS
+    /// (
+    ///     SELECT ... FROM ... WHERE ... UNION ALL ...
+    /// )
+    /// SELECT ... FROM Cte1 a INNER JOIN Cte2 b ON xxx ... LEFT JOIN CteN ON ... ... WHERE ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     IQuery<T1, T2, T3, T4, T5, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     #endregion
@@ -720,7 +838,7 @@ public interface IQuery<T1, T2, T3, T4, T5>
     IQuery<T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> predicate = null);
     IQuery<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
-
+    
     IGroupingQuery<T1, T2, T3, T4, T5, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     IQuery<T1, T2, T3, T4, T5> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr);
@@ -753,12 +871,51 @@ public interface IQuery<T1, T2, T3, T4, T5>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default);
     TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr);
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
+    
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6>
 {
     #region WithCte
+    /// <summary>
+    /// CTE With子句，在Select之前，With子句要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ..., "Cte1")
+    ///     ... ...
+    ///     .NextWith(f =&gt; ..., "CteN")
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6) =&gt; a.Id == b.Id)
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6) =&gt; a.Id == c.Id)
+    ///     ... ...
+    ///     .Select((T1, T2, T3, T4, T5, T6) =&gt; new { ... ... })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH Cte1(...) AS 
+    /// (
+    ///     SELECT ... FROM ... WHERE ...
+    /// ),
+    /// ... ...
+    /// CteN(...) AS
+    /// (
+    ///     SELECT ... FROM ... WHERE ... UNION ALL ...
+    /// )
+    /// SELECT ... FROM Cte1 a INNER JOIN Cte2 b ON xxx ... LEFT JOIN CteN ON ... ... WHERE ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     IQuery<T1, T2, T3, T4, T5, T6, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     #endregion
@@ -787,7 +944,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6>
     IQuery<T1, T2, T3, T4, T5, T6> Where(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate = null);
     IQuery<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
-
+    
     IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     IQuery<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
@@ -820,12 +977,51 @@ public interface IQuery<T1, T2, T3, T4, T5, T6>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default);
     TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr);
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
+    
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7>
 {
     #region WithCte
+    /// <summary>
+    /// CTE With子句，在Select之前，With子句要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ..., "Cte1")
+    ///     ... ...
+    ///     .NextWith(f =&gt; ..., "CteN")
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6, T7) =&gt; a.Id == b.Id)
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6, T7) =&gt; a.Id == c.Id)
+    ///     ... ...
+    ///     .Select((T1, T2, T3, T4, T5, T6, T7) =&gt; new { ... ... })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH Cte1(...) AS 
+    /// (
+    ///     SELECT ... FROM ... WHERE ...
+    /// ),
+    /// ... ...
+    /// CteN(...) AS
+    /// (
+    ///     SELECT ... FROM ... WHERE ... UNION ALL ...
+    /// )
+    /// SELECT ... FROM Cte1 a INNER JOIN Cte2 b ON xxx ... LEFT JOIN CteN ON ... ... WHERE ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     IQuery<T1, T2, T3, T4, T5, T6, T7, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     #endregion
@@ -854,7 +1050,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7>
     IQuery<T1, T2, T3, T4, T5, T6, T7> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate = null);
     IQuery<T1, T2, T3, T4, T5, T6, T7> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate);
-
+    
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
@@ -887,12 +1083,51 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default);
     TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr);
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
+    
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
 {
     #region WithCte
+    /// <summary>
+    /// CTE With子句，在Select之前，With子句要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ..., "Cte1")
+    ///     ... ...
+    ///     .NextWith(f =&gt; ..., "CteN")
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6, T7, T8) =&gt; a.Id == b.Id)
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6, T7, T8) =&gt; a.Id == c.Id)
+    ///     ... ...
+    ///     .Select((T1, T2, T3, T4, T5, T6, T7, T8) =&gt; new { ... ... })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH Cte1(...) AS 
+    /// (
+    ///     SELECT ... FROM ... WHERE ...
+    /// ),
+    /// ... ...
+    /// CteN(...) AS
+    /// (
+    ///     SELECT ... FROM ... WHERE ... UNION ALL ...
+    /// )
+    /// SELECT ... FROM Cte1 a INNER JOIN Cte2 b ON xxx ... LEFT JOIN CteN ON ... ... WHERE ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     #endregion
@@ -921,7 +1156,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate = null);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate);
-
+    
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
@@ -954,12 +1189,51 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default);
     TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr);
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
+    
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
 {
     #region WithCte
+    /// <summary>
+    /// CTE With子句，在Select之前，With子句要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ..., "Cte1")
+    ///     ... ...
+    ///     .NextWith(f =&gt; ..., "CteN")
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6, T7, T8, T9) =&gt; a.Id == b.Id)
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6, T7, T8, T9) =&gt; a.Id == c.Id)
+    ///     ... ...
+    ///     .Select((T1, T2, T3, T4, T5, T6, T7, T8, T9) =&gt; new { ... ... })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH Cte1(...) AS 
+    /// (
+    ///     SELECT ... FROM ... WHERE ...
+    /// ),
+    /// ... ...
+    /// CteN(...) AS
+    /// (
+    ///     SELECT ... FROM ... WHERE ... UNION ALL ...
+    /// )
+    /// SELECT ... FROM Cte1 a INNER JOIN Cte2 b ON xxx ... LEFT JOIN CteN ON ... ... WHERE ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     #endregion
@@ -988,7 +1262,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate = null);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate);
-
+    
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
@@ -1021,12 +1295,51 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default);
     TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr);
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
+    
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
 {
     #region WithCte
+    /// <summary>
+    /// CTE With子句，在Select之前，With子句要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ..., "Cte1")
+    ///     ... ...
+    ///     .NextWith(f =&gt; ..., "CteN")
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) =&gt; a.Id == b.Id)
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) =&gt; a.Id == c.Id)
+    ///     ... ...
+    ///     .Select((T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) =&gt; new { ... ... })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH Cte1(...) AS 
+    /// (
+    ///     SELECT ... FROM ... WHERE ...
+    /// ),
+    /// ... ...
+    /// CteN(...) AS
+    /// (
+    ///     SELECT ... FROM ... WHERE ... UNION ALL ...
+    /// )
+    /// SELECT ... FROM Cte1 a INNER JOIN Cte2 b ON xxx ... LEFT JOIN CteN ON ... ... WHERE ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     #endregion
@@ -1055,7 +1368,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate = null);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate);
-
+    
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
@@ -1088,12 +1401,51 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default);
     TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr);
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
+    
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
 {
     #region WithCte
+    /// <summary>
+    /// CTE With子句，在Select之前，With子句要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ..., "Cte1")
+    ///     ... ...
+    ///     .NextWith(f =&gt; ..., "CteN")
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) =&gt; a.Id == b.Id)
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) =&gt; a.Id == c.Id)
+    ///     ... ...
+    ///     .Select((T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) =&gt; new { ... ... })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH Cte1(...) AS 
+    /// (
+    ///     SELECT ... FROM ... WHERE ...
+    /// ),
+    /// ... ...
+    /// CteN(...) AS
+    /// (
+    ///     SELECT ... FROM ... WHERE ... UNION ALL ...
+    /// )
+    /// SELECT ... FROM Cte1 a INNER JOIN Cte2 b ON xxx ... LEFT JOIN CteN ON ... ... WHERE ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     #endregion
@@ -1122,7 +1474,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate = null);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate);
-
+    
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
@@ -1155,12 +1507,51 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default);
     TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr);
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
+    
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
 {
     #region WithCte
+    /// <summary>
+    /// CTE With子句，在Select之前，With子句要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ..., "Cte1")
+    ///     ... ...
+    ///     .NextWith(f =&gt; ..., "CteN")
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) =&gt; a.Id == b.Id)
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) =&gt; a.Id == c.Id)
+    ///     ... ...
+    ///     .Select((T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) =&gt; new { ... ... })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH Cte1(...) AS 
+    /// (
+    ///     SELECT ... FROM ... WHERE ...
+    /// ),
+    /// ... ...
+    /// CteN(...) AS
+    /// (
+    ///     SELECT ... FROM ... WHERE ... UNION ALL ...
+    /// )
+    /// SELECT ... FROM Cte1 a INNER JOIN Cte2 b ON xxx ... LEFT JOIN CteN ON ... ... WHERE ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     #endregion
@@ -1189,7 +1580,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate = null);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate);
-
+    
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
@@ -1222,12 +1613,51 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default);
     TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr);
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
+    
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
 {
     #region WithCte
+    /// <summary>
+    /// CTE With子句，在Select之前，With子句要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ..., "Cte1")
+    ///     ... ...
+    ///     .NextWith(f =&gt; ..., "CteN")
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) =&gt; a.Id == b.Id)
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) =&gt; a.Id == c.Id)
+    ///     ... ...
+    ///     .Select((T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) =&gt; new { ... ... })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH Cte1(...) AS 
+    /// (
+    ///     SELECT ... FROM ... WHERE ...
+    /// ),
+    /// ... ...
+    /// CteN(...) AS
+    /// (
+    ///     SELECT ... FROM ... WHERE ... UNION ALL ...
+    /// )
+    /// SELECT ... FROM Cte1 a INNER JOIN Cte2 b ON xxx ... LEFT JOIN CteN ON ... ... WHERE ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     #endregion
@@ -1256,7 +1686,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate = null);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate);
-
+    
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
@@ -1289,12 +1719,51 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default);
     TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr);
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
+    
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
 {
     #region WithCte
+    /// <summary>
+    /// CTE With子句，在Select之前，With子句要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ..., "Cte1")
+    ///     ... ...
+    ///     .NextWith(f =&gt; ..., "CteN")
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) =&gt; a.Id == b.Id)
+    ///     .InnerJoin((T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) =&gt; a.Id == c.Id)
+    ///     ... ...
+    ///     .Select((T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) =&gt; new { ... ... })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH Cte1(...) AS 
+    /// (
+    ///     SELECT ... FROM ... WHERE ...
+    /// ),
+    /// ... ...
+    /// CteN(...) AS
+    /// (
+    ///     SELECT ... FROM ... WHERE ... UNION ALL ...
+    /// )
+    /// SELECT ... FROM Cte1 a INNER JOIN Cte2 b ON xxx ... LEFT JOIN CteN ON ... ... WHERE ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     #endregion
@@ -1323,7 +1792,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate = null);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate);
-
+    
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>> groupingExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
@@ -1356,7 +1825,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default);
     TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr);
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default);
-
+    
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
 public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>

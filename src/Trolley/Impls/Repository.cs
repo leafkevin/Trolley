@@ -61,7 +61,7 @@ public class Repository : IRepository
         newVisitor.WithTable(typeof(T), sql, dbDataParameters, readerFields);
         return new Query<T>(this.connection, this.Transaction, newVisitor);
     }
-    public IQuery<T> From<T>(string rawSql, object parameters = null, char tableAsStart = 'a')
+    public IQuery<T> FromRaw<T>(string rawSql, object parameters = null, char tableAsStart = 'a')
     {
         var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart);
         visitor.WithTable(typeof(T), rawSql, parameters);
@@ -72,7 +72,7 @@ public class Repository : IRepository
         var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart, "p1w");
         cteSubQuery.Invoke(new FromQuery(visitor));
         var rawSql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
-        var newVisitor = visitor.Clone(tableAsStart, "p1w");
+        var newVisitor = visitor.Clone();
         newVisitor.WithCteTable(typeof(T), cteTableName, false, rawSql, dbDataParameters, readerFields);
         return new Query<T>(this.connection, this.Transaction, newVisitor);
     }
@@ -81,62 +81,62 @@ public class Repository : IRepository
         var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart, "p1w");
         cteSubQuery.Invoke(new FromQuery(visitor), cteTableName);
         var rawSql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
-        var newVisitor = visitor.Clone(tableAsStart, "p1w");
+        var newVisitor = visitor.Clone();
         newVisitor.WithCteTable(typeof(T), cteTableName, true, rawSql, dbDataParameters, readerFields);
         return new Query<T>(this.connection, this.Transaction, newVisitor);
     }
     public IQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
         var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart);
-        visitor.From(typeof(T1), typeof(T2));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2));
         return new Query<T1, T2>(this.connection, this.Transaction, visitor);
     }
     public IQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a')
     {
         var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart);
-        visitor.From(typeof(T1), typeof(T2), typeof(T3));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3));
         return new Query<T1, T2, T3>(this.connection, this.Transaction, visitor);
     }
     public IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a')
     {
         var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart);
-        visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         return new Query<T1, T2, T3, T4>(this.connection, this.Transaction, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a')
     {
         var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart);
-        visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
         return new Query<T1, T2, T3, T4, T5>(this.connection, this.Transaction, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a')
     {
         var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart);
-        visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
         return new Query<T1, T2, T3, T4, T5, T6>(this.connection, this.Transaction, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a')
     {
         var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart);
-        visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
         return new Query<T1, T2, T3, T4, T5, T6, T7>(this.connection, this.Transaction, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a')
     {
         var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart);
-        visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8>(this.connection, this.Transaction, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a')
     {
         var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart);
-        visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.connection, this.Transaction, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')
     {
         var visitor = new QueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, tableAsStart);
-        visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.connection, this.Transaction, visitor);
     }
 

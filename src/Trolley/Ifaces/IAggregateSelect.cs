@@ -1,7 +1,14 @@
 ﻿namespace Trolley;
 
+/// <summary>
+/// 聚合查询，如：Count,Sum,Avg,Max,Min等
+/// </summary>
 public interface IAggregateSelect
 {
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <returns></returns>
     int Count();
     long LongCount();
     int Count<TField>(TField field);

@@ -12,12 +12,6 @@ public class JsonTypeHandler : ITypeHandler
             parameter.Value = DBNull.Value;
         else parameter.Value = JsonSerializer.Serialize(value);
     }
-    public virtual void SetValue(IOrmProvider ormProvider, object value, out string sqlValue)
-    {
-        if (value == null)
-            sqlValue = "NULL";
-        else sqlValue = JsonSerializer.Serialize(value);
-    }
     public virtual object Parse(IOrmProvider ormProvider, Type TargetType, object value)
     {
         if (value is DBNull) return null;

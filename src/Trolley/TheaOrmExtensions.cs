@@ -92,8 +92,18 @@ public static class TheaOrmExtensions
         => await repository.Create<TEntity>().WithBy(parameter).ExecuteAsync(cancellationToken);
     public static int Create<TEntity>(this IRepository repository, string rawSql, object parameter)
         => repository.Create<TEntity>().RawSql(rawSql, parameter).Execute();
-    public static async Task<int> CreateAsync<TEntity>(this IRepository repository, string sql, object parameter, CancellationToken cancellationToken = default)
-        => await repository.Create<TEntity>().RawSql(sql, parameter).ExecuteAsync(cancellationToken);
+    /// <summary>
+    /// 使用原始SQL插入数据，如：repository.Insert&lt;Order&gt;().RawSql("INSERT INTO Table(Field1,Field2) VALUES(@Value1,@Value2)", new { Value1 = 1, Value2 = "xxx" });
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型，需要有对应的模型映射找到要插入的表</typeparam>
+    /// <param name="repository">仓储对象</param>
+    /// <param name="rawSql">原始SQL</param>
+    /// <param name="parameter">SQL中使用的参数，匿名对象或是实体对象，不支持某个变量值
+    /// 如：new { Value1 = 1, Value2 = "xxx" } 或 new Order{ ... }</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<int> CreateAsync<TEntity>(this IRepository repository, string rawSql, object parameter, CancellationToken cancellationToken = default)
+        => await repository.Create<TEntity>().RawSql(rawSql, parameter).ExecuteAsync(cancellationToken);
     public static int Create<TEntity>(this IRepository repository, IEnumerable entities, int bulkCount = 500)
         => repository.Create<TEntity>().WithBy(entities, bulkCount).Execute();
     public static async Task<int> CreateAsync<TEntity>(this IRepository repository, IEnumerable entities, int bulkCount = 500, CancellationToken cancellationToken = default)

@@ -24,7 +24,7 @@ class SqlServerModelConfiguration : IModelConfiguration
         builder.Entity<Company>(f =>
         {
             f.ToTable("sys_company").Key(t => t.Id);
-            f.Member(t => t.Id).Field(nameof(Company.Id)).NativeDbType(8);
+            f.Member(t => t.Id).Field(nameof(Company.Id)).NativeDbType(8).AutoIncrement();
             f.Member(t => t.Name).Field(nameof(Company.Name)).NativeDbType(12);
             f.Member(t => t.IsEnabled).Field(nameof(Company.IsEnabled)).NativeDbType(2);
             f.Member(t => t.CreatedAt).Field(nameof(Company.CreatedAt)).NativeDbType(4);

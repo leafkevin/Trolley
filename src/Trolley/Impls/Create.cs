@@ -414,7 +414,7 @@ class Created<TEntity> : ICreated<TEntity>
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
                 if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper)
-                    || propMapper.IsIgnore || propMapper.IsNavigation
+                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.IsAutoIncrement
                     || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
                     continue;
 
@@ -439,7 +439,7 @@ class Created<TEntity> : ICreated<TEntity>
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
                 if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper)
-                    || propMapper.IsIgnore || propMapper.IsNavigation
+                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.IsAutoIncrement
                     || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
                     continue;
 
@@ -486,7 +486,7 @@ class Created<TEntity> : ICreated<TEntity>
             foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
             {
                 if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper)
-                    || propMapper.IsIgnore || propMapper.IsNavigation
+                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.IsAutoIncrement
                     || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
                     continue;
 
@@ -568,7 +568,7 @@ class Created<TEntity> : ICreated<TEntity>
                 foreach (var item in dict)
                 {
                     if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper)
-                        || propMapper.IsIgnore || propMapper.IsNavigation
+                        || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.IsAutoIncrement
                         || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
                         continue;
                     if (columnIndex > 0)
@@ -584,7 +584,7 @@ class Created<TEntity> : ICreated<TEntity>
             foreach (var item in dict)
             {
                 if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper)
-                    || propMapper.IsIgnore || propMapper.IsNavigation
+                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.IsAutoIncrement
                     || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
                     continue;
 
@@ -613,7 +613,7 @@ class Created<TEntity> : ICreated<TEntity>
             foreach (var item in dict)
             {
                 if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper)
-                    || propMapper.IsIgnore || propMapper.IsNavigation
+                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.IsAutoIncrement
                     || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
                     continue;
 

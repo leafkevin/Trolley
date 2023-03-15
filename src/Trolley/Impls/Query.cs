@@ -43,7 +43,7 @@ class Query<T> : IQuery<T>
 
         var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
         var query = subQuery.Invoke(fromQuery);
-        var sql = " UNION " + query.ToSql(out var dbParameters);
+        var sql = " UNION" + Environment.NewLine + query.ToSql(out var dbParameters);
         this.visitor.Union(typeof(T), sql, dbParameters);
         return this;
     }
@@ -54,7 +54,7 @@ class Query<T> : IQuery<T>
 
         var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
         var query = subQuery.Invoke(fromQuery);
-        var sql = " UNION ALL " + query.ToSql(out var dbParameters);
+        var sql = " UNION ALL" + Environment.NewLine + query.ToSql(out var dbParameters);
         this.visitor.Union(typeof(T), sql, dbParameters);
         return this;
     }
@@ -211,6 +211,14 @@ class Query<T> : IQuery<T>
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T, TGrouping>(this.connection, this.transaction, this.visitor);
     }
+    public IQuery<T> OrderBy(string rawSql)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        this.visitor.OrderBy(rawSql);
+        return this;
+    }
     public IQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -264,6 +272,11 @@ class Query<T> : IQuery<T>
     public IQuery<T> Take(int limit)
     {
         this.visitor.Take(limit);
+        return this;
+    }
+    public IQuery<T> Page(int pageIndex, int pageSize)
+    {
+        this.visitor.Page(pageIndex, pageSize);
         return this;
     }
     public IQuery<T> ToChunk(int size)
@@ -543,6 +556,7 @@ class Query<T> : IQuery<T>
         await command.DisposeAsync();
         return result;
     }
+
     public List<T> ToList()
     {
         Expression<Func<T, T>> defaultExpr = f => f;
@@ -731,10 +745,10 @@ class Query<T> : IQuery<T>
         await command.DisposeAsync();
         return result;
     }
-    public IPagedList<T> ToPageList(int pageIndex, int pageSize)
+
+    public IPagedList<T> ToPageList()
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        this.visitor.Page(pageIndex, pageSize);
         var sql = this.visitor.BuildSql(defaultExpr, null, null, out var dbParameters, out var readerFields);
 
         using var command = this.connection.CreateCommand();
@@ -774,10 +788,9 @@ class Query<T> : IQuery<T>
         command.Dispose();
         return result;
     }
-    public async Task<IPagedList<T>> ToPageListAsync(int pageIndex, int pageSize, CancellationToken cancellationToken = default)
+    public async Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default)
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        this.visitor.Page(pageIndex, pageSize);
         var sql = this.visitor.BuildSql(defaultExpr, null, null, out var dbParameters, out var readerFields);
 
         using var cmd = this.connection.CreateCommand();
@@ -819,11 +832,10 @@ class Query<T> : IQuery<T>
         await command.DisposeAsync();
         return result;
     }
-    public IPagedList<TTarget> ToPageList<TTarget>(int pageIndex, int pageSize, Expression<Func<T, TTarget>> toTargetExpr)
+    public IPagedList<TTarget> ToPageList<TTarget>(Expression<Func<T, TTarget>> toTargetExpr)
     {
         var entityType = typeof(TTarget);
         Expression<Func<T, T>> defaultExpr = f => f;
-        this.visitor.Page(pageIndex, pageSize);
         var sql = this.visitor.BuildSql(defaultExpr, entityType, toTargetExpr, out var dbParameters, out var readerFields);
 
         using var command = this.connection.CreateCommand();
@@ -863,11 +875,10 @@ class Query<T> : IQuery<T>
         command.Dispose();
         return result;
     }
-    public async Task<IPagedList<TTarget>> ToPageListAsync<TTarget>(int pageIndex, int pageSize, Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default)
+    public async Task<IPagedList<TTarget>> ToPageListAsync<TTarget>(Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TTarget);
         Expression<Func<T, T>> defaultExpr = f => f;
-        this.visitor.Page(pageIndex, pageSize);
         var sql = this.visitor.BuildSql(defaultExpr, entityType, toTargetExpr, out var dbParameters, out var readerFields);
 
         using var cmd = this.connection.CreateCommand();
@@ -909,6 +920,7 @@ class Query<T> : IQuery<T>
         await command.DisposeAsync();
         return result;
     }
+
     public Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull
     {
         if (keySelector == null)

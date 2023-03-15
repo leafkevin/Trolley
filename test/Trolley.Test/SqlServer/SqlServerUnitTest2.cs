@@ -9,10 +9,8 @@ namespace Trolley.Test;
 public class SqlServerUnitTest2
 {
     private readonly IOrmDbFactory dbFactory;
-    private readonly ITestOutputHelper outputHelper;
     public SqlServerUnitTest2(ITestOutputHelper outputHelper)
     {
-        this.outputHelper = outputHelper;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
@@ -78,7 +76,8 @@ public class SqlServerUnitTest2
         var result = repository.From<OrderDetail>()
             .Where(f => f.ProductId == 1)
             .OrderByDescending(f => f.CreatedAt)
-            .ToPageList(2, 1);
+            .Page(2, 1)
+            .ToPageList();
         var count = await repository.From<OrderDetail>().Where(f => f.ProductId == 1).CountAsync();
         Assert.NotNull(result);
         Assert.NotEmpty(result.Items);
@@ -277,7 +276,8 @@ public class SqlServerUnitTest2
             .Include(f => f.Product)
             .Where(f => f.ProductId == 1)
             .OrderBy(f => f.OrderId)
-            .ToPageList(2, 1);
+            .Page(2, 1)
+            .ToPageList();
         var count = repository.From<OrderDetail>()
             .Where(f => f.ProductId == 1)
             .Count();
@@ -297,7 +297,8 @@ public class SqlServerUnitTest2
             repository.From<OrderDetail>()
                 .Include(f => f.Product)
                 .Where(f => f.ProductId == 1)
-                .ToPageList(2, 10);
+                .Page(2, 10)
+                .ToPageList();
         });
     }
     [Fact]
@@ -640,7 +641,8 @@ public class SqlServerUnitTest2
                     x.BuyerId
                 }))
             .ToSql(out _);
-        Assert.True(sql == "SELECT [Id],[OrderNo],[SellerId],[BuyerId] FROM [sys_order] WHERE [Id]=1 UNION ALL SELECT [Id],[OrderNo],[SellerId],[BuyerId] FROM [sys_order] WHERE [Id]>1");
+        Assert.True(sql == @"SELECT [Id],[OrderNo],[SellerId],[BuyerId] FROM [sys_order] WHERE [Id]=1 UNION ALL
+SELECT [Id],[OrderNo],[SellerId],[BuyerId] FROM [sys_order] WHERE [Id]>1");
 
         var result = await repository.From<Order>()
            .Where(x => x.Id == 1)
@@ -689,11 +691,13 @@ public class SqlServerUnitTest2
 
         Assert.True(sql == @"WITH MenuList(Id,Name,ParentId) AS 
 (
-SELECT [Id],[Name],[ParentId] FROM [sys_menu] WHERE [Id]=1 UNION ALL SELECT a.[Id],a.[Name],a.[ParentId] FROM [sys_menu] a INNER JOIN MenuList b ON a.[ParentId]=b.[Id]
+SELECT [Id],[Name],[ParentId] FROM [sys_menu] WHERE [Id]=1 UNION ALL
+SELECT a.[Id],a.[Name],a.[ParentId] FROM [sys_menu] a INNER JOIN MenuList b ON a.[ParentId]=b.[Id]
 ),
 MenuPageList(Id,Url) AS 
 (
-SELECT b.[Id],a.[Url] FROM [sys_page] a INNER JOIN [sys_menu] b ON a.[Id]=b.[PageId] WHERE a.[Id]=1 UNION ALL SELECT b.[Id],a.[Url] FROM [sys_page] a INNER JOIN [sys_menu] b ON a.[Id]=b.[PageId] WHERE a.[Id]>1
+SELECT b.[Id],a.[Url] FROM [sys_page] a INNER JOIN [sys_menu] b ON a.[Id]=b.[PageId] WHERE a.[Id]=1 UNION ALL
+SELECT b.[Id],a.[Url] FROM [sys_page] a INNER JOIN [sys_menu] b ON a.[Id]=b.[PageId] WHERE a.[Id]>1
 )
 SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM MenuList a INNER JOIN MenuPageList b ON a.[Id]=b.[Id]");
 
