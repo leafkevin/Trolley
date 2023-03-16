@@ -158,6 +158,23 @@ class DeleteVisitor : SqlVisitor
         }
         return sqlSegment.Change(builder.ToString());
     }
+    public override SqlSegment EvaluateAndParameter(SqlSegment sqlSegment)
+    {
+        var member = Expression.Convert(sqlSegment.Expression, typeof(object));
+        var lambda = Expression.Lambda<Func<object>>(member);
+        var getter = lambda.Compile();
+        var objValue = getter();
+        if (objValue == null)
+            return SqlSegment.Null;
+
+        this.dbParameters ??= new();
+        var parameterName = sqlSegment.ParameterName;
+        if (string.IsNullOrEmpty(parameterName))
+            parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
+
+        this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, objValue));
+        return sqlSegment.Change(parameterName, false);
+    }
     private void AddMemberElement(SqlSegment sqlSegment, MemberInfo memberInfo, StringBuilder builder)
     {
         var parameterName = this.ormProvider.ParameterPrefix + memberInfo.Name;

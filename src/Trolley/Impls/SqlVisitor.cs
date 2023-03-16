@@ -577,7 +577,10 @@ class SqlVisitor
             if (lastOperationType == OperationType.None)
                 lastOperationType = operationType;
             if (operationType != lastOperationType)
+            {
+                lastOperationType = operationType;
                 deep++;
+            }
 
             var isLeftLeaf = isLogicBinary(binaryExpr.Left);
             var isRightLeaf = isLogicBinary(binaryExpr.Right);
@@ -860,6 +863,15 @@ class SqlVisitor
                 builder.Append(sqlSegment.ToString());
                 lastDeep = sqlSegment.Deep;
             }
+
+            if (lastDeep > 0)
+            {
+                while (lastDeep > 0)
+                {
+                    builder.Append(')');
+                    lastDeep--;
+                }
+            }
             return builder.ToString();
         }
         return this.VisitAndDeferred(new SqlSegment { Expression = conditionExpr }).ToString();
@@ -901,6 +913,7 @@ class SqlVisitor
     {
         if (sqlSegment == SqlSegment.Null)
             return SqlSegment.Null;
+
         sqlSegment.IsParameter = true;
         this.dbParameters ??= new();
         if (sqlSegment.Value is IEnumerable objValues && sqlSegment.Value.GetType() != typeof(string))
@@ -914,7 +927,7 @@ class SqlVisitor
             foreach (var objValue in objValues)
             {
                 if (index > 0) builder.Append(',');
-                var parameterName = paramPrefix + index.ToString();
+                var parameterName = paramPrefix + this.dbParameters.Count.ToString();
                 builder.Append(parameterName);
                 this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, objValue));
                 index++;

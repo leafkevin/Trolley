@@ -153,25 +153,9 @@ public class SqlServerUnitTest1
     public void Insert_WithBy_AnonymousObject()
     {
         using var repository = this.dbFactory.Create();
-        repository.Create<User>()
-            .WithBy(new
-            {
-                Id = 1,
-                Name = "leafkevin",
-                Age = 25,
-                CompanyId = 1,
-                Gender = Gender.Male,
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            })
-            .Execute();
-
         repository.BeginTransaction();
         var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
-        var sql = 
+        var sql =
         repository.Create<User>()
             .WithBy(new
             {
@@ -213,6 +197,52 @@ public class SqlServerUnitTest1
     public async void Insert_WithBy_Batch_AnonymousObjects()
     {
         using var repository = this.dbFactory.Create();
+        var sql = repository.Create<Product>()
+            .WithBy(new[]
+            {
+                new
+                {
+                    Id = 1,
+                    ProductNo="PN-001",
+                    Name = "波司登羽绒服",
+                    BrandId = 1,
+                    CategoryId = 1,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                },
+                new
+                {
+                    Id = 2,
+                    ProductNo="PN-002",
+                    Name = "雪中飞羽绒裤",
+                    BrandId = 2,
+                    CategoryId = 2,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                },
+                new
+                {
+                    Id = 3,
+                    ProductNo="PN-003",
+                    Name = "优衣库保暖内衣",
+                    BrandId = 3,
+                    CategoryId = 3,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                }
+            })
+            .ToSql(out _);
+        Assert.True(sql == "INSERT INTO [sys_product] ([Id],[ProductNo],[Name],[BrandId],[CategoryId],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)");
+
         repository.BeginTransaction();
         await repository.Delete<Product>().Where(new int[] { 1, 2, 3 }).ExecuteAsync();
         var count = repository.Create<Product>()

@@ -45,18 +45,48 @@ public interface ICreate<TEntity>
     ///     })
     ///     .Execute();
     /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// INSERT INTO `sys_user` (`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)
+    /// </code>
+    /// 批量插入,采用多表值方式，生成的SQL:
+    /// <code>
+    /// INSERT INTO [sys_product] ([ProductNo],[Name],[BrandId],[CategoryId],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) VALUES (@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)
+    /// </code>
     /// </summary>
     /// <typeparam name="TInsertObject">插入对象类型</typeparam>
     /// <param name="insertObjs">插入对象，包含想要插入的必需栏位值</param>
     /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值</param>
-    /// <returns>创建对象</returns>
+    /// <returns>返回插入对象</returns>
     ICreated<TEntity> WithBy<TInsertObject>(TInsertObject insertObjs, int bulkCount = 500);
     /// <summary>
-    /// 从<paramref>TSource</paramref>表查询数据，插入当前表中，
+    /// 从<paramref>TSource</paramref>表查询数据，并插入当前表中,用法：
+    /// <code>
+    /// repository.Create&lt;Product&gt;()
+    ///     .From&lt;Brand&gt;(f =&gt; new
+    ///     {
+    ///         ProductNo = "PN_" + f.BrandNo,
+    ///         Name = "PName_" + f.Name,
+    ///         BrandId = f.Id,
+    ///         CategoryId = 1,
+    ///         f.CompanyId,
+    ///         f.IsEnabled,
+    ///         f.CreatedBy,
+    ///         f.CreatedAt,
+    ///         f.UpdatedBy,
+    ///         f.UpdatedAt
+    ///     })
+    ///     .Where(f =&gt; f.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// INSERT INTO `sys_product` (`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT CONCAT('PN_',a.`BrandNo`),CONCAT('PName_',a.`Name`),a.`Id`,@CategoryId,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1
+    /// </code>
     /// </summary>
-    /// <typeparam name="TSource"></typeparam>
-    /// <param name="fieldSelector"></param>
-    /// <returns></returns>
+    /// <typeparam name="TSource">实体类型，数据来源表</typeparam>
+    /// <param name="fieldSelector">插入的字段赋值表达式</param>
+    /// <returns>返回插入对象</returns>
     ICreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector);
     ICreate<TEntity, T1, T2> From<T1, T2>(Expression<Func<T1, T2, object>> fieldSelector);
     ICreate<TEntity, T1, T2, T3> From<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> fieldSelector);

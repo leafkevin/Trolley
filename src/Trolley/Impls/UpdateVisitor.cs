@@ -267,7 +267,7 @@ class UpdateVisitor : SqlVisitor
 
                 if (valueExpr.GetParameters(out argumentParameters)
                    && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
-                {                  
+                {
                     var lambdaValuesExpr = valueExpr as LambdaExpression;
                     this.InitTableAlias(lambdaValuesExpr);
                     var newLambdaExpr = Expression.Lambda(lambdaValuesExpr.Body, lambdaValuesExpr.Parameters.ToList());
@@ -524,12 +524,13 @@ class UpdateVisitor : SqlVisitor
         if (objValue == null)
             return SqlSegment.Null;
 
+        this.dbParameters ??= new();
         var parameterName = sqlSegment.ParameterName;
         if (string.IsNullOrEmpty(parameterName))
             parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
-        this.dbParameters ??= new();
-        this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, sqlSegment.Value));
-        return sqlSegment.Change(sqlSegment.ParameterName, false);
+
+        this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, objValue));
+        return sqlSegment.Change(parameterName, false);
     }
     private void InitTableAlias(LambdaExpression lambdaExpr)
     {

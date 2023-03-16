@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using Xunit;
 
 namespace Trolley.Test;
@@ -153,6 +154,24 @@ public class MySqlUnitTest1
     public async void Insert_WithBy_AnonymousObject()
     {
         using var repository = this.dbFactory.Create();
+        var sql = repository.Create<User>()
+             .WithBy(new
+             {
+                 Id = 1,
+                 Name = "leafkevin",
+                 Age = 25,
+                 CompanyId = 1,
+                 Gender = Gender.Male,
+                 IsEnabled = true,
+                 CreatedAt = DateTime.Now,
+                 CreatedBy = 1,
+                 UpdatedAt = DateTime.Now,
+                 UpdatedBy = 1
+             })
+             .ToSql(out _);
+
+        Assert.True(sql == "INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+
         repository.BeginTransaction();
         var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
         count = await repository.Create<User>()
@@ -399,5 +418,4 @@ public class MySqlUnitTest1
             Assert.True(order.Products[0] == 1);
             Assert.True(order.Products[1] == 2);
         }
-    }
-}
+    }    
