@@ -712,7 +712,7 @@ public class Repository : IRepository
 
         var result = new List<TEntity>();
         await this.connection.OpenAsync(cancellationToken);
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        var behavior = CommandBehavior.SequentialAccess;
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         var entityType = typeof(TEntity);
         if (entityType.IsEntityType())

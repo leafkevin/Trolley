@@ -418,4 +418,5 @@ public class MySqlUnitTest1
             Assert.True(order.Products[0] == 1);
             Assert.True(order.Products[1] == 2);
         }
-    }    
+    }
+}

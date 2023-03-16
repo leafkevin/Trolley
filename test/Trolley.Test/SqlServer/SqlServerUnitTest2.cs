@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using Xunit;
@@ -9,7 +10,7 @@ namespace Trolley.Test;
 public class SqlServerUnitTest2
 {
     private readonly IOrmDbFactory dbFactory;
-    public SqlServerUnitTest2(ITestOutputHelper outputHelper)
+    public SqlServerUnitTest2()
     {
         var services = new ServiceCollection();
         services.AddSingleton(f =>
@@ -91,6 +92,14 @@ public class SqlServerUnitTest2
         using var repository = this.dbFactory.Create();
         var result = await repository.QueryDictionaryAsync<Product, int, string>(f => f.ProductNo.Contains("PN-00"), f => f.Id, f => f.Name);
         Assert.True(result.Count >= 3);
+    }
+    [Fact]
+    public async void QueryRawSql()
+    {
+        using var repository = this.dbFactory.Create();
+        var result = await repository.QueryAsync<Product>("SELECT * FROM sys_product where ProductId=@ProductId", new { ProductId = 1 });
+        Assert.NotNull(result);
+        Assert.True(result.Count == 1);
     }
     [Fact]
     public void FromQuery_SubQuery()
