@@ -1274,6 +1274,16 @@ class QueryVisitor : SqlVisitor
             if (!memberMapper.IsNavigation)
                 throw new Exception($"实体{fromType.FullName}的属性{currentExpr.Member.Name}未配置为导航属性");
 
+            //TODO:目前只支持1:1关系导航属性做过滤条件，如：
+            //f=>f.Order.Buyer.Name.Contains("leafkevin") 或 (a,b)=>a.ProvinceId=b.Order.Buyer.ProvinceId
+            //不支持：f=>f.Order.Details.Count > 5
+            //场景：Include的filter, Where中的条件,Join关联右侧的条件
+            //场景: (a,b)=>a.BuyerId=b.Order.BuyerId
+
+            //最后一个成员访问之前，都必须是1:1关系才可以
+            //if (!memberMapper.IsToOne && memberExprs.Count > 0)
+            //    throw new Exception($"暂时不支持的Include表达式:{memberExpr}");
+
             //实体类型是成员的声明类型，映射类型不一定是成员的声明类型，一定是成员的Map类型
             //如：成员是UserInfo类型，对应的模型是User类型，UserInfo类型只是User类型的一个子集，成员名称和映射关系完全一致
             var entityType = memberMapper.NavigationType;
@@ -1305,7 +1315,6 @@ class QueryVisitor : SqlVisitor
             {
                 if (fromMapper.KeyMembers.Count > 1)
                     throw new Exception($"导航属性表，暂时不支持多个主键字段，实体：{fromMapper.EntityType.FullName}");
-
                 this.includeSegments ??= new();
                 this.includeSegments.Add(tableSegment = new TableSegment
                 {

@@ -46,9 +46,6 @@ class SqlVisitor
         => this.VisitBooleanDeferred(this.Visit(sqlSegment));
     public virtual SqlSegment Visit(SqlSegment sqlSegment)
     {
-        if (sqlSegment == SqlSegment.None)
-            return SqlSegment.None;
-
         SqlSegment result = null;
         while (sqlSegment.Expression != null)
         {
@@ -216,6 +213,7 @@ class SqlVisitor
                     //处理!(a.IsEnabled==true)情况,bool类型，最外层再做defer处理
                     if (binaryExpr.Left.Type == typeof(bool) && leftSegment.HasField && !rightSegment.HasField)
                     {
+                        leftSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.True });
                         if (!(bool)rightSegment.Value)
                             leftSegment.Push(new DeferredExpr { OperationType = OperationType.Not });
                         if (binaryExpr.NodeType == ExpressionType.NotEqual)
@@ -400,20 +398,22 @@ class SqlVisitor
 
         //处理HasValue !逻辑取反操作，这种情况下是一元操作
         int notIndex = 0;
-        var sqlSegment = SqlSegment.None;
+        SqlSegment sqlSegment = null;
         var operationTypes = new OperationType[] { OperationType.Equal, OperationType.Not };
 
         while (fieldSegment.TryPop(operationTypes, out var deferredExpr))
         {
-            if (deferredExpr.OperationType == OperationType.Equal)
+            switch (deferredExpr.OperationType)
             {
-                sqlSegment = deferredExpr.Value as SqlSegment;
-                break;
+                case OperationType.Equal:
+                    sqlSegment = deferredExpr.Value as SqlSegment;
+                    break;
+                case OperationType.Not:
+                    notIndex++;
+                    break;
             }
-            if (deferredExpr.OperationType == OperationType.Not)
-                notIndex++;
         }
-        if (sqlSegment == SqlSegment.None)
+        if (sqlSegment == null)
             sqlSegment = SqlSegment.True;
 
         string strOperator = null;
@@ -586,32 +586,16 @@ class SqlVisitor
             var isRightLeaf = isLogicBinary(binaryExpr.Right);
             if (isLeftLeaf)
             {
-                var leftSegment = new SqlSegment
-                {
-                    OperationType = operationType,
-                    Expression = binaryExpr.Left,
-                    Deep = deep
-                };
-                if (binaryExpr.Left.NodeType == ExpressionType.MemberAccess)
-                {
-                    leftSegment.DeferredExprs ??= new();
-                    leftSegment.DeferredExprs.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.True });
-                }
+                var leftSegment = this.EnsureConditionSegment(binaryExpr.Left);
+                leftSegment.OperationType = operationType;
+                leftSegment.Deep = deep;
                 completedSegements.Add(leftSegment);
             }
             if (isRightLeaf)
             {
-                var rightSegment = new SqlSegment
-                {
-                    OperationType = operationType,
-                    Expression = binaryExpr.Right,
-                    Deep = deep
-                };
-                if (binaryExpr.Right.NodeType == ExpressionType.MemberAccess)
-                {
-                    rightSegment.DeferredExprs ??= new();
-                    rightSegment.DeferredExprs.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.True });
-                }
+                var rightSegment = this.EnsureConditionSegment(binaryExpr.Right);
+                rightSegment.OperationType = operationType;
+                rightSegment.Deep = deep;
                 deferredExprs.Push(rightSegment);
             }
             Expression nextExpr = null;
@@ -863,7 +847,6 @@ class SqlVisitor
                 builder.Append(sqlSegment.ToString());
                 lastDeep = sqlSegment.Deep;
             }
-
             if (lastDeep > 0)
             {
                 while (lastDeep > 0)
@@ -874,7 +857,7 @@ class SqlVisitor
             }
             return builder.ToString();
         }
-        return this.VisitAndDeferred(new SqlSegment { Expression = conditionExpr }).ToString();
+        return this.VisitAndDeferred(this.EnsureConditionSegment(conditionExpr)).ToString();
     }
     public virtual string GetSqlValue(SqlSegment sqlSegment)
     {
@@ -1263,6 +1246,16 @@ class SqlVisitor
         if (this.ormProvider.DatabaseType == DatabaseType.Postgresql)
             return this.ormProvider.GetFieldName(fieldName);
         return fieldName;
+    }
+    private SqlSegment EnsureConditionSegment(Expression conditionExpr)
+    {
+        var result = new SqlSegment { Expression = conditionExpr };
+        if (conditionExpr.NodeType == ExpressionType.MemberAccess && conditionExpr.Type == typeof(bool))
+        {
+            result.DeferredExprs ??= new();
+            result.DeferredExprs.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = true });
+        }
+        return result;
     }
     public void Swap<T>(ref T left, ref T right)
     {

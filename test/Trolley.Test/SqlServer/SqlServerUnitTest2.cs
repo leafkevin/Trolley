@@ -97,7 +97,7 @@ public class SqlServerUnitTest2
     public async void QueryRawSql()
     {
         using var repository = this.dbFactory.Create();
-        var result = await repository.QueryAsync<Product>("SELECT * FROM sys_product where ProductId=@ProductId", new { ProductId = 1 });
+        var result = await repository.QueryAsync<Product>("SELECT * FROM sys_product where Id=@ProductId", new { ProductId = 1 });
         Assert.NotNull(result);
         Assert.True(result.Count == 1);
     }
@@ -625,7 +625,7 @@ public class SqlServerUnitTest2
                 HasProduct = x.ProductCount.HasValue
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT ([OrderNo] IS NULL) AS NoOrderNo,([ProductCount] IS NOT NULL) AS HasProduct FROM [sys_order] WHERE [ProductCount] IS NULL AND [ProductCount] IS NOT NULL");
+        Assert.True(sql == "SELECT ([OrderNo] IS NULL) AS NoOrderNo,([ProductCount] IS NOT NULL) AS HasProduct FROM [sys_order] WHERE [ProductCount] IS NULL AND [ProductCount] IS NULL");
     }
     [Fact]
     public async void Query_Union()

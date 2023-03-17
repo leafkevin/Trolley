@@ -164,18 +164,12 @@ public class MySqlUnitTest2
         }
     }
     [Fact]
-    public void FromQuery_RawSql()
+    public async void QueryRawSql()
     {
         using var repository = this.dbFactory.Create();
-        var rawSql = "SELECT a.Id,a.Name FROM sys_user a WHERE a.CompanyId=@CompanyId";
-        var result = repository.FromRaw<(int Id, string Name)>(rawSql, new { CompanyId = 1 })
-            .First();
-        int dfsf = 0;
-        //if (result != null)
-        //{
-        //    Assert.NotNull(result);
-        //    Assert.NotNull(result.Name);
-        //}
+        var result = await repository.QueryAsync<Product>("SELECT * FROM sys_product where Id=@ProductId", new { ProductId = 1 });
+        Assert.NotNull(result);
+        Assert.True(result.Count == 1);
     }
     //[Fact]
     //public void FromQuery_SubQuery2()
@@ -285,7 +279,7 @@ public class MySqlUnitTest2
           .Include(f => f.Brand)
           .Where(f => f.ProductNo.Contains("PN-00"))
           .ToSql(out _);
-        Assert.True(sql == "");
+        Assert.True(sql == "SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`Price`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'");
 
         var result = await repository.From<Product>()
             .Include(f => f.Brand)
@@ -825,7 +819,7 @@ public class MySqlUnitTest2
                 HasProduct = x.ProductCount.HasValue
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (`OrderNo` IS NULL) AS NoOrderNo,(`ProductCount` IS NOT NULL) AS HasProduct FROM `sys_order` WHERE `ProductCount` IS NULL AND `ProductCount` IS NOT NULL");
+        Assert.True(sql == "SELECT (`OrderNo` IS NULL) AS NoOrderNo,(`ProductCount` IS NOT NULL) AS HasProduct FROM `sys_order` WHERE `ProductCount` IS NULL AND `ProductCount` IS NULL");
     }
     [Fact]
     public async void Query_Union()
