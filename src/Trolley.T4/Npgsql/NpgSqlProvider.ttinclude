@@ -54,10 +54,10 @@ class NpgSqlProvider : DbHelper
                 ColumnName = this.ToValue<string>(reader[0]),
                 DataType = this.ToValue<string>(reader[1]),
                 ArrayDimens = this.ToValue<int>(reader[2]),
-                Length = this.ToValue<ulong>(reader[3]),                
+                Length = this.ToValue<ulong>(reader[3]),
                 Description = this.ToValue<string>(reader[4]),
                 DefaultValue = this.ToValue<string>(reader[5]),
-                IsPrimaryKey = this.ToValue<bool>(reader[6]) ,
+                IsPrimaryKey = this.ToValue<bool>(reader[6]),
                 IsNullable = !this.ToValue<bool>(reader[7]),
                 IsIdentity = this.ToValue<bool>(reader[8])
             });
@@ -89,7 +89,7 @@ class NpgSqlProvider : DbHelper
         return result;
     }
     public string MapMemberType(ColumnInfo columnInfo)
-    {        
+    {
         string dataType = columnInfo.DataType;
         bool isArray = dataType.Contains('_');
         if (isArray) dataType = dataType.Substring(1);
@@ -106,13 +106,13 @@ class NpgSqlProvider : DbHelper
             case "money": result = "decimal"; break;
 
             case "bpchar": result = "char"; break;
-            case "varchar": 
+            case "varchar":
             case "text": result = "string"; break;
 
-            case "date": 
+            case "date":
             case "timestamp": result = "DateTime"; break;
             case "timestamptz": result = "DateTimeOffset"; break;
-            
+
             case "time":
             case "timetz":
             case "interval": result = "TimeSpan"; break;
@@ -171,62 +171,63 @@ class NpgSqlProvider : DbHelper
         int result = default;
         switch (dataType)
         {
-            case "int2": result = 18; break;
-            case "int4": result = 9; break;
-            case "int8": result = 1; break;
-            case "numeric": result = 13; break;
-            case "float4": result = 17; break;
-            case "float8": result = 8; break;
-            case "money": result = 12; break;
+            case "int2": result = (int)NpgsqlDbType.Smallint; break;
+            case "int4": result = (int)NpgsqlDbType.Integer; break;
+            case "int8": result = (int)NpgsqlDbType.Bigint; break;
+            case "numeric": result = (int)NpgsqlDbType.Numeric; break;
+            case "float4": result = (int)NpgsqlDbType.Real; break;
+            case "float8": result = (int)NpgsqlDbType.Double; break;
+            case "money": result = (int)NpgsqlDbType.Money; break;
 
-            case "bpchar": result = 6; break;
-            case "varchar": result = 22; break;
-            case "text": result = 19; break;
+            case "bpchar": result = (int)NpgsqlDbType.Char; break;
+            case "varchar": result = (int)NpgsqlDbType.Varchar; break;
+            case "text": result = (int)NpgsqlDbType.Text; break;
 
-            case "timestamp": result = 21; break;
-            case "timestamptz": result = 26; break;
-            case "date": result = 7; break;
-            case "time": result = 20; break;
-            case "timetz": result = 31; break;
-            case "interval": result = 30; break;
+            case "timestamp": result = (int)NpgsqlDbType.Timestamp; break;
+            case "timestamptz": result = (int)NpgsqlDbType.TimestampTz; break;
+            case "date": result = (int)NpgsqlDbType.Date; break;
+            case "time": result = (int)NpgsqlDbType.Time; break;
+            case "timetz": result = (int)NpgsqlDbType.TimeTz; break;
+            case "interval": result = (int)NpgsqlDbType.Interval; break;
 
-            case "bool": result = 2; break;
-            case "bytea": result = 4; break;
-            case "bit": result = 25; break;
-            case "varbit": result = 39; break;
+            case "bool": result = (int)NpgsqlDbType.Boolean; break;
+            case "bit": result = (int)NpgsqlDbType.Bit; break;
+            case "varbit": result = (int)NpgsqlDbType.Varbit; break;
 
-            case "point": result = 15; break;
-            case "line": result = 10; break;
-            case "lseg": result = 11; break;
-            case "box": result = 3; break;
-            case "path": result = 14; break;
-            case "polygon": result = 16; break;
-            case "circle": result = 5; break;
+            case "bytea": result = (int)NpgsqlDbType.Bytea; break;
 
-            case "cidr": result = 44; break;
-            case "inet": result = 24; break;
-            case "macaddr": result = 34; break;
-            case "macaddr8": result = 54; break;
+            case "point": result = (int)NpgsqlDbType.Point; break;
+            case "line": result = (int)NpgsqlDbType.Line; break;
+            case "lseg": result = (int)NpgsqlDbType.LSeg; break;
+            case "box": result = (int)NpgsqlDbType.Box; break;
+            case "path": result = (int)NpgsqlDbType.Path; break;
+            case "polygon": result = (int)NpgsqlDbType.Polygon; break;
+            case "circle": result = (int)NpgsqlDbType.Circle; break;
 
-            case "json": result = 35; break;
-            case "jsonb": result = 36; break;
-            case "jsonpath": result = 57; break;
+            case "cidr": result = (int)NpgsqlDbType.Cidr; break;
+            case "inet": result = (int)NpgsqlDbType.Inet; break;
+            case "macaddr": result = (int)NpgsqlDbType.MacAddr; break;
+            case "macaddr8": result = (int)NpgsqlDbType.MacAddr8; break;
 
-            case "uuid": result = 27; break;
+            case "json": result = (int)NpgsqlDbType.Json; break;
+            case "jsonb": result = (int)NpgsqlDbType.Jsonb; break;
+            case "jsonpath": result = (int)NpgsqlDbType.JsonPath; break;
 
-            case "xml": result = 28; break;
+            case "uuid": result = (int)NpgsqlDbType.Uuid; break;
 
-            case "int4range": result = 0x40000000 | 9; break;
-            case "int8range": result = 0x40000000 | 1; break;
-            case "numrange": result = 0x40000000 | 13; break;
-            case "tsrange": result = 0x40000000 | 21; break;
-            case "tstzrange": result = 0x40000000 | 26; break;
-            case "daterange": result = 0x40000000 | 7; break;
+            case "xml": result = (int)NpgsqlDbType.Xml; break;
 
-            case "hstore": result = 37; break;
+            case "int4range": result = 0x40000000 | (int)NpgsqlDbType.Integer; break;
+            case "int8range": result = 0x40000000 | (int)NpgsqlDbType.Bigint; break;
+            case "numrange": result = 0x40000000 | (int)NpgsqlDbType.Numeric; break;
+            case "tsrange": result = 0x40000000 | (int)NpgsqlDbType.Timestamp; break;
+            case "tstzrange": result = 0x40000000 | (int)NpgsqlDbType.TimestampTz; break;
+            case "daterange": result = 0x40000000 | (int)NpgsqlDbType.Date; break;
 
-            case "geometry": result = 50; break;
-            case "Geography": result = 55; break;
+            case "hstore": result = (int)NpgsqlDbType.Hstore; break;
+
+            case "geometry": result = (int)NpgsqlDbType.Geometry; break;
+            case "Geography": result = (int)NpgsqlDbType.Geography; break;
         }
         if (isArray)
             result = result | int.MinValue;

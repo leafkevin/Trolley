@@ -442,7 +442,7 @@ class Query<T> : IQuery<T>
     public async Task<T> FirstAsync(CancellationToken cancellationToken = default)
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, null, null, out var dbParameters, out var readerFields); ;
+        var sql = this.visitor.BuildSql(defaultExpr, null, null, out var dbParameters, out var readerFields);
 
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;

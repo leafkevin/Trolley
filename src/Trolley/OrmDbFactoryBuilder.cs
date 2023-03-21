@@ -22,6 +22,17 @@ public class OrmDbFactoryBuilder
         this.dbFactory.Configure(ormProviderType, configuration);
         return this;
     }
+    public OrmDbFactoryBuilder With(Action<OrmDbFactoryOptions> optionsInitializer)
+    {
+        if (optionsInitializer == null)
+            throw new ArgumentNullException(nameof(optionsInitializer));
+        var options = new OrmDbFactoryOptions();
+        optionsInitializer.Invoke(options);
+        if (this.dbFactory is OrmDbFactory defaultDbFactory)
+            defaultDbFactory.With(options);
+        return this;
+    }
+
     public IOrmDbFactory Build()
     {
         var ormProviderTypes = new List<Type>();
@@ -45,7 +56,7 @@ public class OrmDbFactoryBuilder
             if (!this.dbFactory.TryGetEntityMapProvider(ormProviderType, out var mapProvider))
             {
                 mapProvider = new EntityMapProvider();
-                this.dbFactory.AddEntityMapProvider(ormProviderType, mapProvider);               
+                this.dbFactory.AddEntityMapProvider(ormProviderType, mapProvider);
             }
             foreach (var entityMapper in mapProvider.EntityMaps)
             {

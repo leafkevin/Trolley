@@ -90,7 +90,7 @@ class MySqlProvider : DbHelper
         reader.Close();
         connection.Close();
         return result;
-    }
+    }    
     public string MapMemberType(ColumnInfo columnInfo)
     {
         bool isUnsigned = columnInfo.ColumnType.Contains("unsigned");
@@ -103,11 +103,11 @@ class MySqlProvider : DbHelper
             case "smallint": return isUnsigned ? "ushort" : "short";
             case "mediumint": return isUnsigned ? "uint" : "int";
             case "int": return isUnsigned ? "uint" : "int";
-            case "bigint": return isUnsigned ? "ulong" : "long"; 
+            case "bigint": return isUnsigned ? "ulong" : "long";
 
             case "float": return "float";
             case "real":
-            case "double": return "double";            
+            case "double": return "double";
 
             case "numeric":
             case "smallmoney":
@@ -121,7 +121,7 @@ class MySqlProvider : DbHelper
             case "date":
             case "datetime":
             case "timestamp": return "DateTime";
-            
+
             case "tinyblob":
             case "blob":
             case "mediumblob":
@@ -143,7 +143,7 @@ class MySqlProvider : DbHelper
             case "set":
             case "enum": return "int";
 
-            case "point": 
+            case "point":
             case "linestring":
             case "polygon":
             case "geometry":
@@ -151,8 +151,6 @@ class MySqlProvider : DbHelper
             case "multilinestring":
             case "multipolygon":
             case "geometrycollection": return "object";
-
-            default: return "string";
         }
         return "string";
     }
@@ -161,49 +159,49 @@ class MySqlProvider : DbHelper
         bool isUnsigned = columnInfo.ColumnType.Contains("unsigned");
         switch (columnInfo.DataType)
         {
-            case "bit": return 16;
+            case "bit": return (int)MySqlDbType.Bit;
 
-            case "bool": return -1;
+            case "bool": return (int)MySqlDbType.Bool;
 
-            case "tinyint": return isUnsigned ? 501 : 1;
-            case "smallint": return isUnsigned ? 502 : 2;
-            case "mediumint": return isUnsigned ? 509 : 9;
-            case "int": return isUnsigned ? 503 : 3;
-            case "bigint": return isUnsigned ? 508 : 8;
+            case "tinyint": return isUnsigned ? (int)MySqlDbType.UByte : (int)MySqlDbType.Byte;
+            case "smallint": return isUnsigned ? (int)MySqlDbType.UInt16 : (int)MySqlDbType.Int16;
+            case "mediumint": return isUnsigned ? (int)MySqlDbType.UInt24 : (int)MySqlDbType.Int24;
+            case "int": return isUnsigned ? (int)MySqlDbType.UInt32 : (int)MySqlDbType.Int32;
+            case "bigint": return isUnsigned ? (int)MySqlDbType.UInt64 : (int)MySqlDbType.Int64;
 
-            case "float": return 4;
+            case "float": return (int)MySqlDbType.Float;
             case "real":
-            case "double": return 5;
-           
+            case "double": return (int)MySqlDbType.Double;
+
             case "smallmoney":
             case "money":
             case "numeric":
-            case "decimal": return 0;
+            case "decimal": return (int)MySqlDbType.Decimal;
 
-            case "year": return 13;
-            case "time": return 11;
-            case "date": return 10;
-            case "timestamp": return 7;
-            case "datetime": return 12;
+            case "year": return (int)MySqlDbType.Year;
+            case "time": return (int)MySqlDbType.Time;
+            case "date": return (int)MySqlDbType.Date;
+            case "timestamp": return (int)MySqlDbType.Timestamp;
+            case "datetime": return (int)MySqlDbType.DateTime;
 
-            case "tinyblob": return 249;
-            case "blob": return 252;
-            case "mediumblob": return 250;
-            case "longblob": return 251;
+            case "tinyblob": return (int)MySqlDbType.TinyBlob;
+            case "blob": return (int)MySqlDbType.Blob;
+            case "mediumblob": return (int)MySqlDbType.MediumBlob;
+            case "longblob": return (int)MySqlDbType.LongBlob;
 
-            case "binary": return 600;
-            case "varbinary": return 601;
+            case "binary": return (int)MySqlDbType.Binary;
+            case "varbinary": return (int)MySqlDbType.VarBinary;
 
-            case "tinytext": return 749;
-            case "text": return 752;
-            case "mediumtext": return 750;
-            case "longtext": return 751;
+            case "tinytext": return (int)MySqlDbType.TinyText;
+            case "text": return (int)MySqlDbType.Text;
+            case "mediumtext": return (int)MySqlDbType.MediumText;
+            case "longtext": return (int)MySqlDbType.LongText;
 
-            case "char": return columnInfo.Length == 36 ? 800 : 254;
-            case "varchar": return 253;
+            case "char": return columnInfo.Length == 36 ? (int)MySqlDbType.Guid : (int)MySqlDbType.String;
+            case "varchar": return (int)MySqlDbType.VarChar;
 
-            case "set": return 248;
-            case "enum": return 247;
+            case "set": return (int)MySqlDbType.Set;
+            case "enum": return (int)MySqlDbType.Enum;
 
             case "point":
             case "linestring":
@@ -212,10 +210,36 @@ class MySqlProvider : DbHelper
             case "multipoint":
             case "multilinestring":
             case "multipolygon":
-            case "geometrycollection": return 255;
-
-            default: return 254;
+            case "geometrycollection": return (int)MySqlDbType.Geometry;
         }
+        return (int)MySqlDbType.String;
+    }
+    public string MapDefaultDbType(Type memberType)
+    {
+        switch (Type.GetTypeCode(memberType))
+        {
+            case TypeCode.Boolean: return "tinyint(1)";
+            case TypeCode.SByte: return "tinyint";
+            case TypeCode.Byte: return "unsigned tinyint";
+            case TypeCode.Int16: return "smallint";
+            case TypeCode.UInt16: return "unsigned smallint";
+            case TypeCode.Int32: return "int";
+            case TypeCode.UInt32: return "unsigned int";
+            case TypeCode.Int64: return "bigint";
+            case TypeCode.UInt64: return "unsigned bigint";
+            case TypeCode.Single: return "float";
+            case TypeCode.Double: return "double";
+            case TypeCode.Decimal: return "decimal";
+            case TypeCode.DateTime: return "datetime";
+
+            case TypeCode.Char: return "char(1)";
+            case TypeCode.String: return "varchar(100)";
+        }
+        if (memberType == typeof(Guid))
+            return "char(36)";
+        if (memberType == typeof(byte[]))
+            return "varbinary(1000)";
+        return "varchar(100)";
     }
 }
 #>

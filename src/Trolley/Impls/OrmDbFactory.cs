@@ -12,6 +12,7 @@ class OrmDbFactory : IOrmDbFactory
     private readonly ConcurrentDictionary<string, TheaDatabaseProvider> databaseProviders = new();
     private readonly ConcurrentDictionary<Type, IEntityMapProvider> entityMapProviders = new();
     private readonly ITypeHandlerProvider typeHandlerProvider = new TypeHandlerProvider();
+    private OrmDbFactoryOptions options;
 
     public ITypeHandlerProvider TypeHandlerProvider => this.typeHandlerProvider;
     public ICollection<TheaDatabaseProvider> DatabaseProviders => this.databaseProviders.Values;
@@ -101,12 +102,11 @@ class OrmDbFactory : IOrmDbFactory
         if (!this.TryGetEntityMapProvider(database.OrmProviderType, out var entityMapProvider))
             throw new Exception($"未注册Key为{database.OrmProviderType.FullName}的EntityMapProvider");
 
-        var connection = new TheaConnection()
-        {
-            DbKey = dbKey,
-            ConnectionString = database.ConnectionString,
-            BaseConnection = baseConnection
-        };
-        return new Repository(connection, ormProvider, entityMapProvider);
+        var connection = new TheaConnection(dbKey, database.ConnectionString, baseConnection);
+        var repository = new Repository(connection, ormProvider, entityMapProvider);
+        if (this.options != null)
+            repository.Timeout(this.options.Timeout).NeedParameter(this.options.IsNeedParameter);
+        return repository;
     }
+    internal void With(OrmDbFactoryOptions options) => this.options = options;
 }
