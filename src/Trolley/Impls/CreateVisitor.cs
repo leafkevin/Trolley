@@ -13,8 +13,8 @@ class CreateVisitor : SqlVisitor
     private string selectSql = null;
     private string whereSql = null;
 
-    public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, char tableAsStart = 'a')
-        : base(dbKey, ormProvider, mapProvider, tableAsStart)
+    public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, char tableAsStart = 'a', string parameterPrefix = "p")
+        : base(dbKey, ormProvider, mapProvider, tableAsStart, parameterPrefix, true)
     {
         this.tables = new();
         this.tableAlias = new();
@@ -111,7 +111,7 @@ class CreateVisitor : SqlVisitor
             }
 
             //各种类型值的属性访问，如：DateTime,TimeSpan,String.Length,List.Count,
-            if (this.ormProvider.TryGetMemberAccessSqlFormatter(sqlSegment, memberExpr.Member, out formatter))
+            if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
             {
                 //Where(f=>... && f.OrderNo.Length==10 && ...)
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
@@ -157,7 +157,7 @@ class CreateVisitor : SqlVisitor
             return SqlSegment.Null;
 
         //各种类型的常量或是静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
-        if (this.ormProvider.TryGetMemberAccessSqlFormatter(sqlSegment, memberExpr.Member, out formatter))
+        if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
             return sqlSegment.Change(formatter(null), false);
 
         //访问局部变量或是成员变量，当作常量处理,直接计算，如果是字符串变成参数@p
@@ -219,8 +219,6 @@ class CreateVisitor : SqlVisitor
     }
     private void AddMemberElement(int index, SqlSegment sqlSegment, MemberInfo memberInfo, StringBuilder insertBuilder, StringBuilder fromBuilder)
     {
-        var parameterName = this.ormProvider.ParameterPrefix + memberInfo.Name;
-        sqlSegment.ParameterName = parameterName;
         sqlSegment = this.VisitAndDeferred(sqlSegment);
         var entityMapper = this.tables[0].Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberInfo.Name);
@@ -236,11 +234,11 @@ class CreateVisitor : SqlVisitor
         {
             if (sqlSegment.IsConstantValue)
             {
-                fromBuilder.Append(parameterName);
                 if (!sqlSegment.IsParameter)
                 {
                     this.dbParameters ??= new();
                     IDbDataParameter dbParameter = null;
+                    var parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
                     if (memberMapper.NativeDbType != null)
                         dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
                     else dbParameter = this.ormProvider.CreateParameter(parameterName, sqlSegment.Value);
@@ -255,9 +253,11 @@ class CreateVisitor : SqlVisitor
                         memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, sqlSegment.Value);
                     }
                     this.dbParameters.Add(dbParameter);
+                    sqlSegment.Value = parameterName;
                     sqlSegment.IsParameter = true;
                     sqlSegment.IsConstantValue = false;
                 }
+                fromBuilder.Append(sqlSegment.Value.ToString());
             }
             else fromBuilder.Append(sqlSegment.ToString());
         }

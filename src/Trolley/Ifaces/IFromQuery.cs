@@ -149,6 +149,7 @@ public interface IFromQuery<T>
     IFromQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr);
     IFromQuery<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr);
     IFromQuery<T> Distinct();
+    IFromQuery<T> Take(int limit);
     IFromQuery<T> Select();
     IQueryAnonymousObject Select(string fields = "*");
     IFromQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);

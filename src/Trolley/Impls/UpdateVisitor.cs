@@ -14,8 +14,8 @@ class UpdateVisitor : SqlVisitor
     private string whereSql = string.Empty;
     private string setSql = string.Empty;
 
-    public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, char tableAsStart = 'a')
-        : base(dbKey, ormProvider, mapProvider, tableAsStart)
+    public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, char tableAsStart = 'a', string parameterPrefix = "p")
+        : base(dbKey, ormProvider, mapProvider, tableAsStart, parameterPrefix, true)
     {
         this.tables = new();
         this.tableAlias = new();
@@ -351,16 +351,20 @@ class UpdateVisitor : SqlVisitor
     }
     public UpdateVisitor Where(Expression whereExpr)
     {
+        this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
         this.whereSql = " WHERE " + this.VisitConditionExpr(lambdaExpr.Body);
+        this.isWhere = false;
         return this;
     }
     public UpdateVisitor And(Expression whereExpr)
     {
+        this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
         this.whereSql += " AND " + this.VisitConditionExpr(lambdaExpr.Body);
+        this.isWhere = false;
         return this;
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
@@ -387,7 +391,7 @@ class UpdateVisitor : SqlVisitor
             }
 
             //各种类型值的属性访问，如：DateTime,TimeSpan,String.Length,List.Count,
-            if (this.ormProvider.TryGetMemberAccessSqlFormatter(sqlSegment, memberExpr.Member, out formatter))
+            if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
             {
                 //Where(f=>... && f.CreatedAt.Month<5 && ...)
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
@@ -433,7 +437,7 @@ class UpdateVisitor : SqlVisitor
             return SqlSegment.Null;
 
         //各种类型的常量或是静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
-        if (this.ormProvider.TryGetMemberAccessSqlFormatter(sqlSegment, memberExpr.Member, out formatter))
+        if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
             return sqlSegment.Change(formatter(null), false);
 
         //访问局部变量或是成员变量，当作常量处理,直接计算，如果是字符串变成参数@p
@@ -517,10 +521,8 @@ class UpdateVisitor : SqlVisitor
     }
     public override SqlSegment EvaluateAndParameter(SqlSegment sqlSegment)
     {
-        var member = Expression.Convert(sqlSegment.Expression, typeof(object));
-        var lambda = Expression.Lambda<Func<object>>(member);
-        var getter = lambda.Compile();
-        var objValue = getter();
+        var lambdaExpr = Expression.Lambda(sqlSegment.Expression);
+        var objValue = lambdaExpr.Compile().DynamicInvoke();
         if (objValue == null)
             return SqlSegment.Null;
 
@@ -530,6 +532,7 @@ class UpdateVisitor : SqlVisitor
             parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
 
         this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, objValue));
+        sqlSegment.IsParameter = true;
         return sqlSegment.Change(parameterName, false);
     }
     private void InitTableAlias(LambdaExpression lambdaExpr)
@@ -560,9 +563,9 @@ class UpdateVisitor : SqlVisitor
             return new SetField { MemberMapper = memberMapper, Value = "NULL" };
         else
         {
-            var parameterName = ormProvider.ParameterPrefix + memberMapper.MemberName;
             this.dbParameters ??= new();
             IDbDataParameter dbParameter = null;
+            var parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
             if (memberMapper.NativeDbType != null)
                 dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
             else dbParameter = this.ormProvider.CreateParameter(parameterName, fieldValue);
@@ -575,8 +578,6 @@ class UpdateVisitor : SqlVisitor
     }
     private SetField AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)
     {
-        var parameterName = this.ormProvider.ParameterPrefix + memberMapper.MemberName;
-        sqlSegment.ParameterName = parameterName;
         sqlSegment = this.VisitAndDeferred(sqlSegment);
 
         if (sqlSegment == SqlSegment.Null)
@@ -589,6 +590,7 @@ class UpdateVisitor : SqlVisitor
                 {
                     this.dbParameters ??= new();
                     IDbDataParameter dbParameter = null;
+                    var parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
                     if (memberMapper.NativeDbType != null)
                         dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
                     else dbParameter = this.ormProvider.CreateParameter(parameterName, sqlSegment.Value);
@@ -603,8 +605,11 @@ class UpdateVisitor : SqlVisitor
                         memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, sqlSegment.Value);
                     }
                     this.dbParameters.Add(dbParameter);
+                    sqlSegment.Value = parameterName;
+                    sqlSegment.IsParameter = true;
+                    sqlSegment.IsConstantValue = false;
                 }
-                return new SetField { MemberMapper = memberMapper, Value = parameterName };
+                return new SetField { MemberMapper = memberMapper, Value = sqlSegment.Value.ToString() };
             }
             return new SetField { MemberMapper = memberMapper, Value = sqlSegment.ToString() };
         }

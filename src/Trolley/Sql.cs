@@ -10,6 +10,10 @@ public static class Sql
     {
         throw new NotImplementedException();
     }
+    public static string GroupConcat<T, TField>(this T table, string separator, Expression<Func<T, TField>> fieldSelector)
+    {
+        throw new NotImplementedException();
+    }
     public static bool In<TElement>(TElement value, params TElement[] list)
     {
         throw new NotImplementedException();

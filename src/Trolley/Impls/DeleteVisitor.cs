@@ -13,8 +13,8 @@ class DeleteVisitor : SqlVisitor
     private readonly TableSegment tableSegment;
     private string whereSql = string.Empty;
 
-    public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, char tableAsStart = 'a')
-        : base(dbKey, ormProvider, mapProvider, tableAsStart)
+    public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, char tableAsStart = 'a', string parameterPrefix = "p")
+        : base(dbKey, ormProvider, mapProvider, tableAsStart, parameterPrefix, true)
     {
         this.tableSegment = new TableSegment
         {
@@ -73,7 +73,7 @@ class DeleteVisitor : SqlVisitor
             }
 
             //各种类型值的属性访问，如：DateTime,TimeSpan,String.Length,List.Count,
-            if (this.ormProvider.TryGetMemberAccessSqlFormatter(sqlSegment, memberExpr.Member, out formatter))
+            if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
             {
                 //Where(f=>... && f.OrderNo.Length==10 && ...)
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
@@ -114,7 +114,7 @@ class DeleteVisitor : SqlVisitor
             return SqlSegment.Null;
 
         //各种类型的常量或是静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
-        if (this.ormProvider.TryGetMemberAccessSqlFormatter(sqlSegment, memberExpr.Member, out formatter))
+        if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
             return sqlSegment.Change(formatter(null), false);
 
         //访问局部变量或是成员变量，当作常量处理,直接计算，如果是字符串变成参数@p
@@ -160,25 +160,18 @@ class DeleteVisitor : SqlVisitor
     }
     public override SqlSegment EvaluateAndParameter(SqlSegment sqlSegment)
     {
-        var member = Expression.Convert(sqlSegment.Expression, typeof(object));
-        var lambda = Expression.Lambda<Func<object>>(member);
-        var getter = lambda.Compile();
-        var objValue = getter();
+        var lambdaExpr = Expression.Lambda(sqlSegment.Expression);
+        var objValue = lambdaExpr.Compile().DynamicInvoke();
         if (objValue == null)
             return SqlSegment.Null;
 
         this.dbParameters ??= new();
-        var parameterName = sqlSegment.ParameterName;
-        if (string.IsNullOrEmpty(parameterName))
-            parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
-
+        var parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
         this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, objValue));
         return sqlSegment.Change(parameterName, false);
     }
     private void AddMemberElement(SqlSegment sqlSegment, MemberInfo memberInfo, StringBuilder builder)
     {
-        var parameterName = this.ormProvider.ParameterPrefix + memberInfo.Name;
-        sqlSegment.ParameterName = parameterName;
         sqlSegment = this.VisitAndDeferred(sqlSegment);
         var entityMapper = this.tableSegment.Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberInfo.Name);
@@ -191,9 +184,10 @@ class DeleteVisitor : SqlVisitor
         {
             if (sqlSegment.IsConstantValue)
             {
-                builder.Append(parameterName);
                 if (!sqlSegment.IsParameter)
                 {
+                    sqlSegment.IsParameter = true;
+                    var parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
                     this.dbParameters ??= new();
                     IDbDataParameter dbParameter = null;
                     if (memberMapper.NativeDbType != null)
@@ -210,9 +204,11 @@ class DeleteVisitor : SqlVisitor
                         memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, sqlSegment.Value);
                     }
                     this.dbParameters.Add(dbParameter);
+                    sqlSegment.Value = parameterName;
                     sqlSegment.IsParameter = true;
                     sqlSegment.IsConstantValue = false;
                 }
+                builder.Append(sqlSegment.Value.ToString());
             }
             else builder.Append(sqlSegment.ToString());
         }

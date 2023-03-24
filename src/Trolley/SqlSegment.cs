@@ -45,10 +45,16 @@ public class SqlSegment
     public Expression Expression { get; set; }
     public bool HasDeferred => this.DeferredExprs != null && this.DeferredExprs.Count > 0;
 
-    public SqlSegment Change(object value, bool isConstantValue = true)
+    public SqlSegment Change(object value, bool isConstantValue = true, bool isExpression = false)
     {
         this.isFixValue = false;
         this.IsConstantValue = isConstantValue;
+        this.IsExpression = isExpression;
+        this.Value = value;
+        return this;
+    }
+    public SqlSegment ChangeValue(object value)
+    {
         this.Value = value;
         return this;
     }

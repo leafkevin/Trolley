@@ -18,14 +18,21 @@ public abstract class BaseOrmProvider : IOrmProvider
     public abstract IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
     public virtual string GetTableName(string entityName) => entityName;
     public virtual string GetFieldName(string propertyName) => propertyName;
-    public virtual string GetPagingTemplate(int skip, int? limit, string orderBy = null)
+    public virtual string GetPagingTemplate(int? skip, int? limit, string orderBy = null)
     {
         var builder = new StringBuilder("SELECT /**fields**/ FROM /**tables**/ /**others**/");
         if (!String.IsNullOrEmpty(orderBy)) builder.Append($" {orderBy}");
         if (limit.HasValue) builder.Append($" LIMIT {limit}");
-        builder.Append($" OFFSET {skip}");
+        if (skip.HasValue) builder.Append($" OFFSET {skip}");
         return builder.ToString();
     }
+    //public virtual string Take(int limit, string orderBy = null)
+    //{
+    //    string result = "";
+    //    if (!String.IsNullOrEmpty(orderBy)) result = orderBy;
+    //    result += $" LIMIT {limit}";
+    //    return result;
+    //}
     public abstract object GetNativeDbType(Type type);
     public abstract object GetNativeDbType(int nativeDbType);
     public abstract bool IsStringDbType(int nativeDbType);
@@ -33,15 +40,17 @@ public abstract class BaseOrmProvider : IOrmProvider
     public virtual string GetQuotedValue(Type expectType, object value)
     {
         if (expectType == typeof(bool))
-            return (bool)value ? "1" : "0";
+            return Convert.ToBoolean(value) ? "1" : "0";
         if (expectType == typeof(string))
             return "'" + value.ToString().Replace("\\", "\\\\").Replace("'", @"\'") + "'";
         if (expectType == typeof(DateTime))
-            return $"'{value:yyyy-MM-dd HH:mm:ss}'";
+            return $"'{Convert.ToDateTime(value):yyyy-MM-dd HH:mm:ss}'";
+        if (expectType == typeof(TimeSpan))
+            return $"'{TimeSpan.Parse(value.ToString()):yyyy-MM-dd HH:mm:ss}'";
         if (value is SqlSegment sqlSegment)
         {
             if (sqlSegment == SqlSegment.Null || !sqlSegment.IsConstantValue)
-                return sqlSegment.Value.ToString();
+                return sqlSegment.ToString();
             return this.GetQuotedValue(sqlSegment.Value);
         }
         return value.ToString();
@@ -70,8 +79,8 @@ public abstract class BaseOrmProvider : IOrmProvider
            ExpressionType.RightShift => ">>",
            _ => nodeType.ToString()
        };
-    public abstract bool TryGetMemberAccessSqlFormatter(SqlSegment originalSegment, MemberInfo memberInfo, out MemberAccessSqlFormatter formatter);
-    public abstract bool TryGetMethodCallSqlFormatter(SqlSegment originalSegment, MethodInfo methodInfo, out MethodCallSqlFormatter formatter);
+    public abstract bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
+    public abstract bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
     public override int GetHashCode() => HashCode.Combine(this.DatabaseType);
 
     public static Func<string, IDbConnection> CreateConnectionDelegate(Type connectionType)

@@ -5,10 +5,6 @@
 /// </summary>
 public interface IAggregateSelect
 {
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <returns></returns>
     int Count();
     long LongCount();
     int Count<TField>(TField field);
@@ -19,4 +15,5 @@ public interface IAggregateSelect
     TField Avg<TField>(TField field);
     TField Max<TField>(TField field);
     TField Min<TField>(TField field);
+    string GroupConcat<TField>(TField field, string separator = ",");
 }

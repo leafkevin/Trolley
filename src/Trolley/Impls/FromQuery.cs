@@ -116,10 +116,10 @@ class FromQuery<T> : IFromQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
-        var query = subQuery.Invoke(fromQuery);
-        var sql = " UNION" + Environment.NewLine + query.ToSql(out var dbParameters);
-        this.visitor.Union(typeof(T), sql, dbParameters);
+        var newVisitor = this.visitor.Clone('a', $"p{this.unionIndex++}u");
+        subQuery.Invoke(new FromQuery(newVisitor));
+        var sql = " UNION" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true);
+        this.visitor.Union(sql, readerFields, dbParameters);
         return this;
     }
     public IFromQuery<T> UnionAll(Func<IFromQuery, IFromQuery<T>> subQuery)
@@ -127,10 +127,10 @@ class FromQuery<T> : IFromQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
-        var query = subQuery.Invoke(fromQuery);
-        var sql = " UNION ALL" + Environment.NewLine + query.ToSql(out var dbParameters);
-        this.visitor.Union(typeof(T), sql, dbParameters);
+        var newVisitor = this.visitor.Clone('a', $"p{this.unionIndex++}u");
+        subQuery.Invoke(new FromQuery(newVisitor));
+        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true);
+        this.visitor.Union(sql, readerFields, dbParameters);
         return this;
     }
     public IFromQuery<T> UnionRecursive(Func<IFromQuery, IFromQuery<T>, IFromQuery<T>> subQuery)
@@ -138,10 +138,10 @@ class FromQuery<T> : IFromQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
-        var query = subQuery.Invoke(fromQuery, null);
-        var sql = " UNION" + Environment.NewLine + query.ToSql(out var dbParameters);
-        this.visitor.Union(typeof(T), sql, dbParameters);
+        var newVisitor = this.visitor.Clone('a', $"p{this.unionIndex++}u");
+        subQuery.Invoke(new FromQuery(newVisitor), null);
+        var sql = " UNION" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true);
+        this.visitor.Union(sql, readerFields, dbParameters);
         return this;
     }
     public IFromQuery<T> UnionAllRecursive(Func<IFromQuery, IFromQuery<T>, IFromQuery<T>> subQuery)
@@ -149,10 +149,10 @@ class FromQuery<T> : IFromQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
-        var query = subQuery.Invoke(fromQuery, null);
-        var sql = " UNION ALL" + Environment.NewLine + query.ToSql(out var dbParameters);
-        this.visitor.Union(typeof(T), sql, dbParameters);
+        var newVisitor = this.visitor.Clone('a', $"p{this.unionIndex++}u");
+        subQuery.Invoke(new FromQuery(newVisitor), null);
+        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true);
+        this.visitor.Union(sql, readerFields, dbParameters);
         return this;
     }
     public IFromQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
@@ -247,6 +247,11 @@ class FromQuery<T> : IFromQuery<T>
     public IFromQuery<T> Distinct()
     {
         this.visitor.Distinct();
+        return this;
+    }
+    public IFromQuery<T> Take(int limit)
+    {
+        this.visitor.Take(limit);
         return this;
     }
     public IFromQuery<T> Select()

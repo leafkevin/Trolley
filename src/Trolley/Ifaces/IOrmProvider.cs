@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using System.Reflection;
 
 namespace Trolley;
 
-public delegate string MemberAccessSqlFormatter(object target);
-public delegate string MethodCallSqlFormatter(object target, Stack<DeferredExpr> deferredExprs, params object[] arguments);
+public delegate SqlSegment MemberAccessSqlFormatter(SqlSegment target);
+public delegate SqlSegment MethodCallSqlFormatter(ISqlVisitor visitor, SqlSegment target, Stack<DeferredExpr> DeferredExprs, params SqlSegment[] arguments);
 public enum DatabaseType
 {
     MySql = 1,
@@ -25,13 +24,13 @@ public interface IOrmProvider
     IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
     string GetTableName(string entityName);
     string GetFieldName(string propertyName);
-    string GetPagingTemplate(int skip, int? limit, string orderBy = null);
+    string GetPagingTemplate(int? skip, int? limit, string orderBy = null);
     object GetNativeDbType(Type type);
     object GetNativeDbType(int nativeDbType);
     bool IsStringDbType(int nativeDbType);
     string CastTo(Type type);
     string GetQuotedValue(Type fieldType, object value);
     string GetBinaryOperator(ExpressionType nodeType);
-    bool TryGetMemberAccessSqlFormatter(SqlSegment originalSegment, MemberInfo memberInfo, out MemberAccessSqlFormatter formatter);
-    bool TryGetMethodCallSqlFormatter(SqlSegment originalSegment, MethodInfo methodInfo, out MethodCallSqlFormatter formatter);
+    bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
+    bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
 }

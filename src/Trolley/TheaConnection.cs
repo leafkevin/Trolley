@@ -16,21 +16,6 @@ public sealed class TheaConnection : IDbConnection
     public string Database => this.BaseConnection.Database;
     public ConnectionState State => this.BaseConnection.State;
 
-    public TheaConnection(string dbKey, IDbConnection baseConnection, int commandTimeout = 30)
-    {
-        this.DbKey = dbKey;
-        this.ConnectionString = baseConnection.ConnectionString;
-        this.BaseConnection = baseConnection;
-        this.CommandTimeout = commandTimeout;
-    }
-    public TheaConnection(string dbKey, string connectionString, IDbConnection baseConnection, int commandTimeout = 30)
-    {
-        this.DbKey = dbKey;
-        this.ConnectionString = connectionString;
-        this.BaseConnection = baseConnection;
-        this.CommandTimeout = commandTimeout;
-    }
-
     public IDbTransaction BeginTransaction() => this.BaseConnection.BeginTransaction();
     public IDbTransaction BeginTransaction(IsolationLevel il) => this.BaseConnection.BeginTransaction(il);
     public async ValueTask<IDbTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)

@@ -34,7 +34,7 @@ public class ReaderField
     /// </summary>
     public MemberInfo TargetMember { get; set; }
     /// <summary>
-    /// 单个字段
+    /// 单个字段或是*
     /// </summary>
     public string Body { get; set; }
     /// <summary>

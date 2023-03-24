@@ -44,6 +44,7 @@ public class TableSegment
     public string Filter { get; set; }
     public string OnExpr { get; set; }
     public List<ReaderField> ReaderFields { get; set; }
+    public bool IsNeedAlais { get; set; }
     public bool IsUsed { get; set; }
 
     public override bool Equals(object obj)

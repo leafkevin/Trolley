@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 
@@ -117,43 +118,43 @@ public class NpgSqlProvider : BaseOrmProvider
     }
     public NpgSqlProvider()
     {
-        memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetMember(nameof(string.Empty))[0], target => "''");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetProperty(nameof(string.Length)), target => $"LENGTH({this.GetQuotedValue(target)})");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetMember(nameof(string.Empty))[0], target => new SqlSegment { Value = "''", IsConstantValue = true });
+        memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetProperty(nameof(string.Length)), target => target.Change($"LENGTH({this.GetQuotedValue(target)})", false, true));
 
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.Now))[0], target => "NOW()");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.UtcNow))[0], target => "NOW() at time zone 'utc'");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.Today))[0], target => "CURRENT_DATE");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.MinValue))[0], target => "'0001-01-01 00:00:00'");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.MaxValue))[0], target => "'9999-12-31 23:59:59'");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.Now))[0], target => new SqlSegment { Value = "NOW()", IsExpression = true });
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.UtcNow))[0], target => new SqlSegment { Value = "NOW() AT TIME ZONE 'UTC'", IsExpression = true });
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.Today))[0], target => new SqlSegment { Value = "CURRENT_DATE", IsExpression = true });
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.MinValue))[0], target => new SqlSegment { Value = $"'{DateTime.MinValue:yyyy-MM-dd HH:mm:ss}'" });
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.MaxValue))[0], target => new SqlSegment { Value = $"'{DateTime.MinValue:yyyy-MM-dd HH:mm:ss}'" });
 
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Date)), target => $"({this.GetQuotedValue(target)})::DATE");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.TimeOfDay)), target => $"(EXTRACT(EPOCH FROM({this.GetQuotedValue(target)})::TIME)*1000000)");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.DayOfWeek)), target => $"EXTRACT(DOW FROM({this.GetQuotedValue(target)})::TIMESTAMP)");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Day)), target => $"EXTRACT(DAY FROM({this.GetQuotedValue(target)})::TIMESTAMP)");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.DayOfYear)), target => $"EXTRACT(DOY FROM({this.GetQuotedValue(target)})::TIMESTAMP)");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Month)), target => $"EXTRACT(MONTH FROM({this.GetQuotedValue(target)})::TIMESTAMP)");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Year)), target => $"EXTRACT(YEAR FROM({this.GetQuotedValue(target)})::TIMESTAMP)");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Hour)), target => $"EXTRACT(HOUR FROM({this.GetQuotedValue(target)})::TIMESTAMP)");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Minute)), target => $"EXTRACT(MINUTE FROM({this.GetQuotedValue(target)})::TIMESTAMP)");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Second)), target => $"EXTRACT(SECOND FROM({this.GetQuotedValue(target)})::TIMESTAMP)");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Millisecond)), target => $"(EXTRACT(MILLISECONDS FROM({this.GetQuotedValue(target)})::TIMESTAMP)-EXTRACT(SECOND FROM({this.GetQuotedValue(target)})::TIMESTAMP)*1000)");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Ticks)), target => $"(EXTRACT(EPOCH FROM({this.GetQuotedValue(target)})::TIMESTAMP)*10000000+621355968000000000)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Date)), target => target.Change($"({this.GetQuotedValue(target)})::DATE", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.TimeOfDay)), target => target.Change($"(EXTRACT(EPOCH FROM({this.GetQuotedValue(target)})::TIME)*1000000)", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.DayOfWeek)), target => target.Change($"EXTRACT(DOW FROM({this.GetQuotedValue(target)})::TIMESTAMP)", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Day)), target => target.Change($"EXTRACT(DAY FROM({this.GetQuotedValue(target)})::TIMESTAMP)", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.DayOfYear)), target => target.Change($"EXTRACT(DOY FROM({this.GetQuotedValue(target)})::TIMESTAMP)", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Month)), target => target.Change($"EXTRACT(MONTH FROM({this.GetQuotedValue(target)})::TIMESTAMP)", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Year)), target => target.Change($"EXTRACT(YEAR FROM({this.GetQuotedValue(target)})::TIMESTAMP)", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Hour)), target => target.Change($"EXTRACT(HOUR FROM({this.GetQuotedValue(target)})::TIMESTAMP)", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Minute)), target => target.Change($"EXTRACT(MINUTE FROM({this.GetQuotedValue(target)})::TIMESTAMP)", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Second)), target => target.Change($"EXTRACT(SECOND FROM({this.GetQuotedValue(target)})::TIMESTAMP)", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Millisecond)), target => target.Change($"(EXTRACT(MILLISECONDS FROM({this.GetQuotedValue(target)})::TIMESTAMP)-EXTRACT(SECOND FROM({this.GetQuotedValue(target)})::TIMESTAMP)*1000)", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Ticks)), target => target.Change($"(EXTRACT(EPOCH FROM({this.GetQuotedValue(target)})::TIMESTAMP)*10000000+621355968000000000)", false, true));
 
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetMember(nameof(TimeSpan.Zero))[0], target => "0");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetMember(nameof(TimeSpan.MinValue))[0], target => "-922337203685477580");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetMember(nameof(TimeSpan.MaxValue))[0], target => "922337203685477580");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetMember(nameof(TimeSpan.Zero))[0], target => new SqlSegment { Value = "0", IsConstantValue = true });
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetMember(nameof(TimeSpan.MinValue))[0], target => new SqlSegment { Value = $"{long.MinValue}", IsConstantValue = true });
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetMember(nameof(TimeSpan.MaxValue))[0], target => new SqlSegment { Value = $"{long.MaxValue}", IsConstantValue = true });
 
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Days)), target => $"floor(({this.GetQuotedValue(target)})/{(long)1000000 * 60 * 60 * 24})");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Hours)), target => $"floor(({this.GetQuotedValue(target)})/{(long)1000000 * 60 * 60}%24)");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Milliseconds)), target => $"(floor(({this.GetQuotedValue(target)})/1000)::int8%1000)");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Minutes)), target => $"(floor(({this.GetQuotedValue(target)})/{(long)1000000 * 60})::int8%60)");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Seconds)), target => $"(floor(({this.GetQuotedValue(target)})/1000000)::int8%60)");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Ticks)), target => $"(({this.GetQuotedValue(target)})*10)");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalDays)), target => $"(({this.GetQuotedValue(target)})/{(long)1000000 * 60 * 60 * 24})");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalHours)), target => $"(({this.GetQuotedValue(target)})/{(long)1000000 * 60 * 60})");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalMilliseconds)), target => $"(({this.GetQuotedValue(target)})/1000)");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalMinutes)), target => $"(({this.GetQuotedValue(target)})/{(long)1000000 * 60})");
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalSeconds)), target => $"(({this.GetQuotedValue(target)})/1000000)");
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Days)), target => target.Change($"FLOOR(({this.GetQuotedValue(target)})/{(long)1000000 * 60 * 60 * 24})", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Hours)), target => target.Change($"FLOOR(({this.GetQuotedValue(target)})/{(long)1000000 * 60 * 60}%24)", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Milliseconds)), target => target.Change($"(FLOOR(({this.GetQuotedValue(target)})/1000)::INT8%1000)", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Minutes)), target => target.Change($"(FLOOR(({this.GetQuotedValue(target)})/{(long)1000000 * 60})::INT8%60)", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Seconds)), target => target.Change($"(FLOOR(({this.GetQuotedValue(target)})/1000000)::INT8%60)", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Ticks)), target => target.Change($"(({this.GetQuotedValue(target)})*10)", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalDays)), target => target.Change($"(({this.GetQuotedValue(target)})/{(long)1000000 * 60 * 60 * 24})", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalHours)), target => target.Change($"(({this.GetQuotedValue(target)})/{(long)1000000 * 60 * 60})", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalMilliseconds)), target => target.Change($"(({this.GetQuotedValue(target)})/1000)", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalMinutes)), target => target.Change($"(({this.GetQuotedValue(target)})/{(long)1000000 * 60})", false, true));
+        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalSeconds)), target => target.Change($"(({this.GetQuotedValue(target)})/1000000)", false, true));
     }
     public override IDbConnection CreateConnection(string connectionString)
         => createNativeConnectonDelegate.Invoke(connectionString);
@@ -213,14 +214,15 @@ public class NpgSqlProvider : BaseOrmProvider
             return dbType;
         return type.ToString().ToLower();
     }
-    public override bool TryGetMemberAccessSqlFormatter(SqlSegment originalSegment, MemberInfo memberInfo, out MemberAccessSqlFormatter formatter)
-       => memberAccessSqlFormatterCahe.TryGetValue(memberInfo, out formatter);
-    public override bool TryGetMethodCallSqlFormatter(SqlSegment originalSegment, MethodInfo methodInfo, out MethodCallSqlFormatter formatter)
+    public override bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, ISqlVisitor sqlVisitor, out MemberAccessSqlFormatter formatter)
+       => memberAccessSqlFormatterCahe.TryGetValue(memberExpr.Member, out formatter);
+    public override bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, ISqlVisitor sqlVisitor, out MethodCallSqlFormatter formatter)
     {
+        var methodInfo = methodCallExpr.Method;
+        var parameterInfos = methodInfo.GetParameters();
         if (!methodCallSqlFormatterCahe.TryGetValue(methodInfo, out formatter))
         {
             bool result = false;
-            var parameterInfos = methodInfo.GetParameters();
             switch (methodInfo.Name)
             {
                 case "Contains":
@@ -326,9 +328,9 @@ public class NpgSqlProvider : BaseOrmProvider
                             if (args[0] is SqlSegment rightSegment && rightSegment.IsParameter)
                             {
                                 var concatMethodInfo = typeof(string).GetMethod("Concat", BindingFlags.Public | BindingFlags.Static, new Type[] { typeof(string), typeof(string), typeof(string) });
-                                if (this.TryGetMethodCallSqlFormatter(originalSegment, concatMethodInfo, out var concatFormatter))
-                                    //自己调用字符串连接，参数直接是字符串
-                                    rightValue = concatFormatter.Invoke(null, deferExprs, "'%'", rightSegment.Value.ToString(), "'%'");
+                                //if (this.TryGetMethodCallSqlFormatter(originalSegment, concatMethodInfo, out var concatFormatter))
+                                //    //自己调用字符串连接，参数直接是字符串
+                                //    rightValue = concatFormatter.Invoke(null, deferExprs, "'%'", rightSegment.Value.ToString(), "'%'");
                             }
                             else rightValue = $"'%{args[0]}%'";
 
@@ -360,32 +362,32 @@ public class NpgSqlProvider : BaseOrmProvider
                     methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
                     {
                         var builder = new StringBuilder();
-                        foreach (var arg in args)
-                        {
-                            if (arg is IEnumerable enumerable && arg is not string)
-                            {
-                                foreach (var element in enumerable)
-                                {
-                                    if (builder.Length > 0)
-                                        builder.Append(" || ");
+                        //foreach (var arg in args)
+                        //{
+                        //    if (arg is IEnumerable enumerable && arg is not string)
+                        //    {
+                        //        foreach (var element in enumerable)
+                        //        {
+                        //            if (builder.Length > 0)
+                        //                builder.Append(" || ");
 
-                                    //连接符是||，不是字符串类型，无法连接，需要转换
-                                    if (element is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
-                                    {
-                                        if (sqlSegment.Expression.Type != typeof(string))
-                                            builder.Append($"{sqlSegment.Value}::text");
-                                        else builder.Append(sqlSegment.Value.ToString());
-                                    }
-                                    else builder.Append(this.GetQuotedValue(typeof(string), element));
-                                }
-                            }
-                            else
-                            {
-                                if (builder.Length > 0)
-                                    builder.Append(" || ");
-                                builder.Append(this.GetQuotedValue(arg));
-                            }
-                        }
+                        //            //连接符是||，不是字符串类型，无法连接，需要转换
+                        //            if (element is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
+                        //            {
+                        //                if (sqlSegment.Expression.Type != typeof(string))
+                        //                    builder.Append($"{sqlSegment.Value}::text");
+                        //                else builder.Append(sqlSegment.Value.ToString());
+                        //            }
+                        //            else builder.Append(this.GetQuotedValue(typeof(string), element));
+                        //        }
+                        //    }
+                        //    else
+                        //    {
+                        //        if (builder.Length > 0)
+                        //            builder.Append(" || ");
+                        //        builder.Append(this.GetQuotedValue(arg));
+                        //    }
+                        //}
                         return builder.ToString();
                     });
                     result = true;
@@ -455,9 +457,9 @@ public class NpgSqlProvider : BaseOrmProvider
                             if (formatSpan.Length > 0)
                                 concatParameters.Add(formatSpan.ToString());
 
-                            var methodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string).MakeArrayType() });
-                            this.TryGetMethodCallSqlFormatter(originalSegment, methodInfo, out var concatFormater);
-                            result = concatFormater.Invoke(null, null, concatParameters);
+                            //var methodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string).MakeArrayType() });
+                            //this.TryGetMethodCallSqlFormatter(originalSegment, methodInfo, out var concatFormater);
+                            //result = concatFormater.Invoke(null, null, concatParameters);
                         }
                         return result;
                     });

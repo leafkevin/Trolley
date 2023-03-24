@@ -72,7 +72,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// </param>
     /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> FromRaw<T>(string rawSql, object parameters = null, char tableAsStart = 'a');
+    //IQuery<T> FromRaw<T>(string rawSql, object parameters = null, char tableAsStart = 'a');
     /// <summary>
     /// 使用CTE子句创建查询对象，不能自我引用不能递归查询，用法：
     /// <code>

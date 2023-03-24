@@ -41,10 +41,10 @@ class Query<T> : IQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
-        var query = subQuery.Invoke(fromQuery);
-        var sql = " UNION" + Environment.NewLine + query.ToSql(out var dbParameters);
-        this.visitor.Union(typeof(T), sql, dbParameters);
+        var newVisitor = this.visitor.Clone('a', $"p{this.unionIndex++}u");
+        subQuery.Invoke(new FromQuery(newVisitor));
+        var sql = " UNION" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true);
+        this.visitor.Union(sql, readerFields, dbParameters);
         return this;
     }
     public IQuery<T> UnionAll(Func<IFromQuery, IFromQuery<T>> subQuery)
@@ -52,10 +52,10 @@ class Query<T> : IQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
-        var query = subQuery.Invoke(fromQuery);
-        var sql = " UNION ALL" + Environment.NewLine + query.ToSql(out var dbParameters);
-        this.visitor.Union(typeof(T), sql, dbParameters);
+        var newVisitor = this.visitor.Clone('a', $"p{this.unionIndex++}u");
+        subQuery.Invoke(new FromQuery(newVisitor));
+        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true);
+        this.visitor.Union(sql, readerFields, dbParameters);
         return this;
     }
     #endregion

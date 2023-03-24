@@ -26,15 +26,20 @@ class QueryVisitor : SqlVisitor
     private List<TableSegment> includeSegments = null;
     private TableSegment lastIncludeSegment = null;
     private List<ReaderField> groupFields = null;
-    protected internal bool isFromQuery = false;
 
-    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, char tableAsStart = 'a', string parameterPrefix = "p")
-        : base(dbKey, ormProvider, mapProvider, tableAsStart, parameterPrefix)
+    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, char tableAsStart = 'a', string parameterPrefix = "p", bool isNeedParameter = false)
+        : base(dbKey, ormProvider, mapProvider, tableAsStart, parameterPrefix, isNeedParameter)
     {
         this.tables = new();
         this.tableAlias = new();
     }
-    public string BuildSql(out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields)
+    /// <summary>
+    /// Union,ToSql,Join,Cte，各种子查询,各种单值查询，但都有SELECT操作
+    /// </summary>
+    /// <param name="dbParameters"></param>
+    /// <param name="readerFields"></param>
+    /// <returns></returns>
+    public string BuildSql(out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields, bool isUnion = false)
     {
         if (!string.IsNullOrEmpty(sql))
         {
@@ -42,12 +47,16 @@ class QueryVisitor : SqlVisitor
             readerFields = this.readerFields;
             return this.sql;
         }
-
-        if (this.readerFields == null || this.readerFields.Count == 0)
-            this.Select("*");
-
         var builder = new StringBuilder();
-        this.AddReaderFields(this.readerFields, builder);
+        //各种单值查询，如：SELECT COUNT(*)/MAX(*)..等，都有SELECT操作
+        //FROM临时表没有SELECT操作，直接查询表中所有字段,或许会跟Join/Union等带有子查询的SQL操作
+        //如：From(f=>...).InnerJoin/UnionAll(f=>...)
+        if (this.readerFields == null || this.readerFields.Count == 0)
+        {
+            builder.Append("*");
+            this.tables[0].IsUsed = true;
+        }
+        else this.AddReaderFields(this.readerFields, builder);
 
         string selectSql = null;
         if (this.isDistinct)
@@ -81,7 +90,7 @@ class QueryVisitor : SqlVisitor
                 }
                 builder.Append(tableName);
 
-                if (this.isNeedAlias)
+                if (this.isNeedAlias || tableSegment.IsNeedAlais)
                     builder.Append(" " + tableSegment.AliasName);
                 if (!string.IsNullOrEmpty(tableSegment.SuffixRawSql))
                     builder.Append(" " + tableSegment.SuffixRawSql);
@@ -125,15 +134,34 @@ class QueryVisitor : SqlVisitor
         if (this.skip.HasValue || this.limit.HasValue)
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
-            var pageSql = this.ormProvider.GetPagingTemplate(this.skip ?? 0, this.limit, orderBy);
+            var pageSql = this.ormProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
             pageSql = pageSql.Replace("/**fields**/", selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
             pageSql = pageSql.Replace(" /**others**/", others);
-            builder.Append($"SELECT COUNT(*) FROM {tableSql}{this.whereSql};{pageSql}");
+
+            if (this.skip.HasValue && this.limit.HasValue)
+                builder.Append($"SELECT COUNT(*) FROM {tableSql}{this.whereSql};");
+            builder.Append($"{pageSql}");
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
+
+        //UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
+        if (isUnion && (!string.IsNullOrEmpty(this.orderBySql) || this.limit.HasValue))
+        {
+            builder.Insert(0, "SELECT * FROM (");
+            builder.Append($") {(char)('a' + this.tables.Count)}");
+        }
         return builder.ToString();
     }
+    /// <summary>
+    /// First,ToList,ToPageList接口使用,First,ToList有转换其他类型时，entityType，toTargetExpr两个栏位有值
+    /// </summary>
+    /// <param name="defaultExpr"></param>
+    /// <param name="entityType"></param>
+    /// <param name="toTargetExpr"></param>
+    /// <param name="dbParameters"></param>
+    /// <param name="readerFields"></param>
+    /// <returns></returns>
     public string BuildSql(Expression defaultExpr, Type entityType, Expression toTargetExpr, out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields)
     {
         if (!string.IsNullOrEmpty(sql))
@@ -147,7 +175,7 @@ class QueryVisitor : SqlVisitor
             this.Select(null, defaultExpr);
 
         List<ReaderField> targetFields = null;
-        if (toTargetExpr != null)
+        if (toTargetExpr != null)//有其他类型转换，entityType, toTargetExpr必须有值
             targetFields = this.FlattenFieldsTo(entityType, toTargetExpr);
         else targetFields = this.readerFields;
 
@@ -186,7 +214,7 @@ class QueryVisitor : SqlVisitor
                 }
                 builder.Append(tableName);
 
-                if (this.isNeedAlias)
+                if (this.isNeedAlias || tableSegment.IsNeedAlais)
                     builder.Append(" " + tableSegment.AliasName);
                 if (!string.IsNullOrEmpty(tableSegment.SuffixRawSql))
                     builder.Append(" " + tableSegment.SuffixRawSql);
@@ -231,24 +259,27 @@ class QueryVisitor : SqlVisitor
         if (this.skip.HasValue || this.limit.HasValue)
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
-            var pageSql = this.ormProvider.GetPagingTemplate(this.skip ?? 0, this.limit, orderBy);
+            var pageSql = this.ormProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
             pageSql = pageSql.Replace("/**fields**/", selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
             pageSql = pageSql.Replace(" /**others**/", others);
-            builder.Append($"SELECT COUNT(*) FROM {tableSql}{this.whereSql};{pageSql}");
+
+            if (this.skip.HasValue && this.limit.HasValue)
+                builder.Append($"SELECT COUNT(*) FROM {tableSql}{this.whereSql};");
+            builder.Append($"{pageSql}");
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
         return builder.ToString();
     }
     public QueryVisitor Clone(char tableAsStart = 'a', string parameterPrefix = "p")
     {
-        var visitor = new QueryVisitor(this.dbKey, this.ormProvider, this.mapProvider, tableAsStart, parameterPrefix);
+        var visitor = new QueryVisitor(this.dbKey, this.ormProvider, this.mapProvider, tableAsStart, parameterPrefix, this.isNeedParameter);
         visitor.isNeedAlias = this.isNeedAlias;
         return visitor;
     }
     public bool BuildIncludeSql(object parameter, out string sql)
     {
-        if (this.includeSegments == null || this.includeSegments.Count <= 0)
+        if (parameter == null || this.includeSegments == null || this.includeSegments.Count <= 0)
         {
             sql = null;
             return false;
@@ -356,20 +387,20 @@ class QueryVisitor : SqlVisitor
         });
         return this;
     }
-    public TableSegment WithTable(Type entityType, string rawSql, object parameters = null, string joinType = "")
-    {
-        if (string.IsNullOrEmpty(joinType) && this.tables.Count > 0)
-            joinType = "INNER JOIN";
-        var tableSegment = this.AddTable(entityType, joinType, TableType.MapTable, $"({rawSql})");
-        if (parameters != null)
-        {
-            var dbParameters = RepositoryHelper.CreateDbParameters(this.ormProvider, rawSql, parameters);
-            if (this.dbParameters == null)
-                this.dbParameters = dbParameters;
-            else this.dbParameters.AddRange(dbParameters);
-        }
-        return tableSegment;
-    }
+    //public TableSegment WithTable(Type entityType, string rawSql, object parameters = null, string joinType = "")
+    //{
+    //    if (string.IsNullOrEmpty(joinType) && this.tables.Count > 0)
+    //        joinType = "INNER JOIN";
+    //    var tableSegment = this.AddTable(entityType, joinType, TableType.MapTable, $"({rawSql})");
+    //    if (parameters != null)
+    //    {
+    //        var dbParameters = RepositoryHelper.CreateDbParameters(this.ormProvider, rawSql, parameters);
+    //        if (this.dbParameters == null)
+    //            this.dbParameters = dbParameters;
+    //        else this.dbParameters.AddRange(dbParameters);
+    //    }
+    //    return tableSegment;
+    //}
     public TableSegment WithTable(Type entityType, string body, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null, string joinType = "")
     {
         var tableSegment = this.AddTable(entityType, joinType, TableType.MapTable, $"({body})", readerFields);
@@ -380,6 +411,8 @@ class QueryVisitor : SqlVisitor
                 this.dbParameters = dbParameters;
             else this.dbParameters.AddRange(dbParameters);
         }
+        //临时表需要有别名(SELECT ..) b
+        tableSegment.IsNeedAlais = true;
         return tableSegment;
     }
     public QueryVisitor WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null)
@@ -425,27 +458,13 @@ class QueryVisitor : SqlVisitor
         this.sql = null;
         return this;
     }
-    public void Union(Type entityType, string body, List<IDbDataParameter> dbParameters = null)
+    public void Union(string body, List<ReaderField> readerFields, List<IDbDataParameter> dbParameters = null)
     {
-        var sql = this.BuildSql(out _, out _);
+        var sql = this.BuildSql(out _, out _, true);
         sql += body;
+        this.readerFields = readerFields;
+        readerFields.ForEach(f => f.TableSegment = this.tables[0]);
         this.cteTableSql = null;
-        var tableSegment = new TableSegment
-        {
-            EntityType = entityType,
-            AliasName = "a",
-            Body = sql,
-            Path = "a",
-            TableType = TableType.Master,
-            IsMaster = true
-        };
-        var entityMapper = this.mapProvider.GetEntityMap(entityType);
-        foreach (var readerField in this.readerFields)
-        {
-            readerField.TableSegment = tableSegment;
-            var memberInfo = readerField.FromMember ?? readerField.TargetMember;
-            readerField.FromMember = entityMapper.GetMemberMap(memberInfo.Name).Member;
-        }
         if (dbParameters != null)
         {
             if (this.dbParameters == null)
@@ -544,6 +563,7 @@ class QueryVisitor : SqlVisitor
         }
         if (!string.IsNullOrEmpty(sqlFormat))
         {
+            //单值操作，SELECT COUNT(DISTINCT b.Id),MAX(b.Amount)等
             this.tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
             if (this.readerFields != null && this.readerFields.Count == 1)
             {
@@ -552,6 +572,7 @@ class QueryVisitor : SqlVisitor
             }
             else
             {
+                //单值操作，SELECT COUNT(1)等,或是From临时表，后续Union/Join操作
                 this.readerFields ??= new();
                 this.readerFields.Add(new ReaderField
                 {
@@ -620,6 +641,9 @@ class QueryVisitor : SqlVisitor
     public QueryVisitor Take(int limit)
     {
         this.limit = limit;
+        //如果Union后再Take，直接加载Union语句后面
+        if (!string.IsNullOrEmpty(this.sql))
+            this.sql += " ";
         return this;
     }
     public QueryVisitor Where(Expression whereExpr, bool isClearTableAlias = true)
@@ -707,7 +731,11 @@ class QueryVisitor : SqlVisitor
         {
             if (this.IsGroupingAggregateMember(memberExpr))
             {
-                var tableSegment = new TableSegment { EntityType = memberExpr.Type };
+                var tableSegment = new TableSegment
+                {
+                    EntityType = memberExpr.Type,
+                    TableType = TableType.MapTable
+                };
                 foreach (var readerField in this.groupFields)
                 {
                     if (this.isSelect || this.isWhere)
@@ -743,7 +771,7 @@ class QueryVisitor : SqlVisitor
             }
 
             //各种类型值的属性访问，如：DateTime,TimeSpan,String.Length,List.Count
-            if (this.ormProvider.TryGetMemberAccessSqlFormatter(sqlSegment, memberExpr.Member, out formatter))
+            if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
             {
                 //Where(f=>... && f.CreatedAt.Month<5 && ...)
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
@@ -913,7 +941,7 @@ class QueryVisitor : SqlVisitor
         }
 
         //各种类型的常量或是静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
-        if (this.ormProvider.TryGetMemberAccessSqlFormatter(sqlSegment, memberExpr.Member, out formatter))
+        if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
             return sqlSegment.Change(formatter(null), false);
 
         //访问局部变量或是成员变量，当作常量处理,直接计算，如果是字符串变成参数@p
@@ -978,7 +1006,7 @@ class QueryVisitor : SqlVisitor
         }
         return tableSegment;
     }
-    public TableSegment AddTable(Type entityType, string joinType = "", TableType tableType = TableType.Master, string tableName = null, List<ReaderField> readerFields = null)
+    public TableSegment AddTable(Type entityType, string joinType = "", TableType tableType = TableType.Master, string body = null, List<ReaderField> readerFields = null)
     {
         int tableIndex = this.tableAsStart + this.tables.Count;
         return this.AddTable(new TableSegment
@@ -988,7 +1016,7 @@ class QueryVisitor : SqlVisitor
             AliasName = $"{(char)tableIndex}",
             Path = $"{(char)tableIndex}",
             TableType = tableType,
-            Body = tableName,
+            Body = body,
             ReaderFields = readerFields,
             IsMaster = true
         });
@@ -1679,7 +1707,6 @@ class QueryVisitor : SqlVisitor
         this.includeSegments = null;
         this.lastIncludeSegment = null;
         this.groupFields = null;
-        this.isFromQuery = false;
         this.isNeedAlias = false;
         this.isSelect = false;
         this.isWhere = false;
