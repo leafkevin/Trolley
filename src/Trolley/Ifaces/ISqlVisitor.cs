@@ -10,7 +10,6 @@ public interface ISqlVisitor
 
     T Evaluate<T>(Expression expr);
     SqlSegment Evaluate(SqlSegment sqlSegment);
-    SqlSegment EvaluateAndParameter(SqlSegment sqlSegment);
 
     List<SqlSegment> ConvertFormatToConcatList(SqlSegment[] argsSegments);
     List<SqlSegment> SplitConcatList(SqlSegment[] argsSegments);

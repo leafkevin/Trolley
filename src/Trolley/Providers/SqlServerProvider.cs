@@ -1,21 +1,20 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 
 namespace Trolley;
 
-public class SqlServerProvider : BaseOrmProvider
+public partial class SqlServerProvider : BaseOrmProvider
 {
     private static Func<string, IDbConnection> createNativeConnectonDelegate = null;
     private static Func<string, object, IDbDataParameter> createDefaultNativeParameterDelegate = null;
     private static Func<string, object, object, IDbDataParameter> createNativeParameterDelegate = null;
-    private static ConcurrentDictionary<MemberInfo, MemberAccessSqlFormatter> memberAccessSqlFormatterCahe = new();
-    private static ConcurrentDictionary<MethodInfo, MethodCallSqlFormatter> methodCallSqlFormatterCahe = new();
+    private static ConcurrentDictionary<int, MemberAccessSqlFormatter> memberAccessSqlFormatterCahe = new();
+    private static ConcurrentDictionary<int, MethodCallSqlFormatter> methodCallSqlFormatterCahe = new();
     private static Dictionary<Type, object> defaultDbTypes = new();
     private static Dictionary<int, object> nativeDbTypes = new();
     private static Dictionary<Type, string> castTos = new();
@@ -116,47 +115,7 @@ public class SqlServerProvider : BaseOrmProvider
         castTos[typeof(DateTime?)] = "DATETIME";
         castTos[typeof(TimeSpan?)] = "TIME";
         castTos[typeof(Guid?)] = "UNIQUEIDENTIFIER";
-    }
-    public SqlServerProvider()
-    {
-        memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetMember(nameof(string.Empty))[0], target => new SqlSegment { Value = "''", IsConstantValue = true });
-        memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetProperty(nameof(string.Length)), target => target.Change($"LEN({this.GetQuotedValue(target)})", false, true));
-
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.Now))[0], target => new SqlSegment { Value = "GETDATE()", IsConstantValue = false, IsExpression = true });
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.UtcNow))[0], target => new SqlSegment { Value = "GETUTCDATE()", IsConstantValue = false, IsExpression = true });
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.Today))[0], target => new SqlSegment { Value = "CONVERT(CHAR(10),GETDATE(),120)", IsConstantValue = false, IsExpression = true });
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.MinValue))[0], target => new SqlSegment { Value = $"'{DateTime.MinValue:yyyy-MM-dd HH:mm:ss}'", IsConstantValue = false });
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.MaxValue))[0], target => new SqlSegment { Value = $"'{DateTime.MinValue:yyyy-MM-dd HH:mm:ss}'", IsConstantValue = false });
-
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Date)), target => target.Change($"CONVERT(CHAR(10),{this.GetQuotedValue(target)},120)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Day)), target => target.Change($"DATEPART(DAY,{this.GetQuotedValue(target)})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.DayOfWeek)), target => target.Change($"(DATEPART(WEEKDAY,{this.GetQuotedValue(target)})-1)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.DayOfYear)), target => target.Change($"DATEPART(DAYOFYEAR,{this.GetQuotedValue(target)})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Hour)), target => target.Change($"DATEPART(HOUR,{this.GetQuotedValue(target)})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Millisecond)), target => target.Change($"(DATEPART(MILLISECOND,{this.GetQuotedValue(target)})/1000)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Minute)), target => target.Change($"DATEPART(MINUTE,{this.GetQuotedValue(target)})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Month)), target => target.Change($"DATEPART(MONTH,{this.GetQuotedValue(target)})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Second)), target => target.Change($"DATEPART(SECOND,{this.GetQuotedValue(target)})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Ticks)), target => target.Change($"(CAST(DATEDIFF(SECOND,'1970-01-01',{this.GetQuotedValue(target)}) AS BIGINT)*10000000+621355968000000000)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.TimeOfDay)), target => target.Change($"DATEDIFF(SECOND,CONVERT(CHAR(10),{this.GetQuotedValue(target)},120),{this.GetQuotedValue(target)})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Year)), target => target.Change($"DATEPART(YEAR,{this.GetQuotedValue(target)})", false, true));
-
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetMember(nameof(TimeSpan.Zero))[0], target => new SqlSegment { Value = "0", IsConstantValue = true });
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetMember(nameof(TimeSpan.MinValue))[0], target => new SqlSegment { Value = $"{long.MinValue}", IsConstantValue = true });
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetMember(nameof(TimeSpan.MaxValue))[0], target => new SqlSegment { Value = $"{long.MaxValue}", IsConstantValue = true });
-
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Days)), target => target.Change($"FLOOR(({this.GetQuotedValue(target)})/{60 * 60 * 24})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Hours)), target => target.Change($"FLOOR(({this.GetQuotedValue(target)})/{60 * 60}%24)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Milliseconds)), target => target.Change($"(CAST({this.GetQuotedValue(target)} AS BIGINT)*1000)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Minutes)), target => target.Change($"FLOOR(({this.GetQuotedValue(target)})/60%60)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Seconds)), target => target.Change($"(({this.GetQuotedValue(target)})%60)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Ticks)), target => target.Change($"(CAST({this.GetQuotedValue(target)} AS BIGINT)*10000000)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalDays)), target => target.Change($"(({this.GetQuotedValue(target)})/{60 * 60 * 24})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalHours)), target => target.Change($"(({this.GetQuotedValue(target)})/{60 * 60})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalMilliseconds)), target => target.Change($"(CAST({this.GetQuotedValue(target)} AS BIGINT)*1000)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalMinutes)), target => target.Change($"(({this.GetQuotedValue(target)})/60)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalSeconds)), target => target.Change($"({this.GetQuotedValue(target)})", false, true));
-    }
+    } 
     public override IDbConnection CreateConnection(string connectionString)
         => createNativeConnectonDelegate.Invoke(connectionString);
     public override IDbDataParameter CreateParameter(string parameterName, object value)
@@ -166,7 +125,7 @@ public class SqlServerProvider : BaseOrmProvider
     public override string GetFieldName(string propertyName) => "[" + propertyName + "]";
     public override string GetTableName(string entityName) => "[" + entityName + "]";
     public override string GetPagingTemplate(int? skip, int? limit, string orderBy = null)
-    {       
+    {
         var builder = new StringBuilder("SELECT ");
         if (skip.HasValue && limit.HasValue)
         {
@@ -221,605 +180,130 @@ public class SqlServerProvider : BaseOrmProvider
             return dbType;
         return type.ToString().ToLower();
     }
-    public override bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, ISqlVisitor visitor, out MemberAccessSqlFormatter formatter)
-        => memberAccessSqlFormatterCahe.TryGetValue(memberExpr.Member, out formatter);
-    public override bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, ISqlVisitor visitor, out MethodCallSqlFormatter formatter)
+    public override bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
+    {
+        var memberInfo = memberExpr.Member;
+        var cacheKey = HashCode.Combine(memberInfo.DeclaringType, memberInfo);
+        if (!memberAccessSqlFormatterCahe.TryGetValue(cacheKey, out formatter))
+        {
+            bool result = false;
+            if (memberInfo.DeclaringType == typeof(DateTime) && this.TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out formatter))
+                return true;
+            if (memberInfo.DeclaringType == typeof(TimeSpan) && this.TryGetTimeSpanMemberAccessSqlFormatter(memberExpr, out formatter))
+                return true;
+            return result;
+        }
+        return true;
+    }
+    public override bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
-        if (!methodCallSqlFormatterCahe.TryGetValue(methodInfo, out formatter))
+        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
+        if (!methodCallSqlFormatterCahe.TryGetValue(cacheKey, out formatter))
         {
             bool result = false;
+            if (methodInfo.DeclaringType == typeof(string) && this.TryGetStringMethodCallSqlFormatter(methodCallExpr, out formatter))
+                return true;
+            if (methodInfo.DeclaringType == typeof(DateTime) && this.TryGetDateTimeMethodCallSqlFormatter(methodCallExpr, out formatter))
+                return true;
+            if (methodInfo.DeclaringType == typeof(TimeSpan) && this.TryGetTimeSpanMethodCallSqlFormatter(methodCallExpr, out formatter))
+                return true;
+            if (this.TryGetIEnumerableMethodCallSqlFormatter(methodCallExpr, out formatter))
+                return true;
+            if (methodInfo.DeclaringType == typeof(Math) && this.TryGetMathMethodCallSqlFormatter(methodCallExpr, out formatter))
+                return true;
             switch (methodInfo.Name)
             {
-                case "Contains":
-                    //public static bool Contains<TSource>(this IEnumerable<TSource> source, TSource value);
-                    //public static bool Contains<TSource>(this IEnumerable<TSource> source, TSource value, IEqualityComparer<TSource>? comparer);
-                    if (methodInfo.IsStatic && parameterInfos.Length >= 2 && parameterInfos[0].ParameterType.GenericTypeArguments.Length > 0
-                       && typeof(IEnumerable<>).MakeGenericType(parameterInfos[0].ParameterType.GenericTypeArguments[0]).IsAssignableFrom(parameterInfos[0].ParameterType))
+                case "Equals":
+                    if (!methodInfo.IsStatic && parameterInfos.Length == 1)
                     {
-                        //数组调用
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
+                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
-                            var builder = new StringBuilder();
-                            IEnumerable enumerable = null;
-                            if (args[0] is SqlSegment argsSegment)
-                                enumerable = argsSegment.Value as IEnumerable;
-                            else enumerable = args[0] as IEnumerable;
-
-                            foreach (var element in enumerable)
-                            {
-                                if (builder.Length > 0)
-                                    builder.Append(',');
-                                //目前数组元素有SqlSegment包装
-                                builder.Append(this.GetQuotedValue(element));
-                            }
-
-                            var fieldName = this.GetQuotedValue(args[1]);
-                            int notIndex = 0;
-                            if (deferExprs != null && deferExprs.Count > 0)
-                            {
-                                while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
-                                {
-                                    notIndex++;
-                                }
-                            }
-                            string notString = notIndex % 2 > 0 ? " NOT" : "";
-
-                            if (builder.Length > 0)
-                            {
-                                builder.Insert(0, fieldName + $"{notString} IN (");
-                                builder.Append(')');
-                            }
-                            //TODO:如果数组没有数据，空数据
-                            else builder.Append(fieldName + " IN (NULL)");
-                            return builder.ToString();
+                            var targetSegment = visitor.VisitAndDeferred(target);
+                            var rightSegment = visitor.VisitAndDeferred(target);
+                            targetSegment.Merge(rightSegment);
+                            return targetSegment.Change($"{this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)}", false, true);
                         });
                         result = true;
                     }
-                    //IEnumerable<T>,List<T>
-                    //public bool Contains(T item);
-                    if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
-                        && typeof(IEnumerable<>).MakeGenericType(methodInfo.DeclaringType.GenericTypeArguments[0]).IsAssignableFrom(methodInfo.DeclaringType))
-                    {
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
-                        {
-                            var builder = new StringBuilder();
-                            IEnumerable enumerable = null;
-                            if (target is SqlSegment argsSegment)
-                                enumerable = argsSegment.Value as IEnumerable;
-                            else enumerable = target as IEnumerable;
-
-                            foreach (var element in enumerable)
-                            {
-                                if (builder.Length > 0)
-                                    builder.Append(',');
-                                //目前数组元素是原来的值，没有SqlSegment包装
-                                builder.Append(this.GetQuotedValue(element));
-                            }
-                            var fieldName = this.GetQuotedValue(args[0]);
-                            int notIndex = 0;
-                            if (deferExprs != null && deferExprs.Count > 0)
-                            {
-                                while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
-                                {
-                                    notIndex++;
-                                }
-                            }
-                            string notString = notIndex % 2 > 0 ? " NOT" : "";
-
-                            if (builder.Length > 0)
-                            {
-                                builder.Insert(0, fieldName + $"{notString} IN (");
-                                builder.Append(')');
-                            }
-                            //TODO:如果数组没有数据，空数据
-                            else builder.Append(fieldName + " IN (NULL)");
-                            return builder.ToString();
-                        });
-                        return true;
-                    }
-                    //String
-                    //public bool Contains(char value);
-                    //public bool Contains(char value, StringComparison comparisonType);
-                    //public bool Contains(String value);
-                    //public bool Contains(String value, StringComparison comparisonType);
-                    if (!methodInfo.IsStatic && parameterInfos.Length >= 1 && methodInfo.DeclaringType.IsAssignableFrom(typeof(string)))
-                    {
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
-                        {
-                            var leftField = this.GetQuotedValue(target);
-                            string rightValue = null;
-                            if (args[0] is SqlSegment rightSegment && rightSegment.IsParameter)
-                            {
-                                var concatMethodInfo = typeof(string).GetMethod("Concat", BindingFlags.Public | BindingFlags.Static, new Type[] { typeof(string), typeof(string), typeof(string) });
-                                //if (this.TryGetMethodCallSqlFormatter(originalSegment, concatMethodInfo, out var concatFormatter))
-                                //    //自己调用字符串连接，参数直接是字符串
-                                //    rightValue = concatFormatter.Invoke(null, deferExprs, "'%'", rightSegment.Value.ToString(), "'%'");
-                            }
-                            else rightValue = $"'%{args[0]}%'";
-
-                            int notIndex = 0;
-                            if (deferExprs != null && deferExprs.Count > 0)
-                            {
-                                while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
-                                {
-                                    notIndex++;
-                                }
-                            }
-                            string notString = notIndex % 2 > 0 ? " NOT" : "";
-                            return $"{leftField}{notString} LIKE {rightValue}";
-                        });
-                        result = true;
-                    }
-                    break;
-                case "Concat":
-                    //public static String Concat(IEnumerable<String?> values);
-                    //public static String Concat(params String?[] values);
-                    //public static String Concat<T>(IEnumerable<T> values);
-                    //public static String Concat(params object?[] args);
-                    //public static String Concat(object? arg0);
-                    //public static String Concat(object? arg0, object? arg1, object? arg2);
-                    //public static String Concat(String? str0, String? str1, String? str2, String? str3);
-                    //public static String Concat(ReadOnlySpan<char> str0, ReadOnlySpan<char> str1, ReadOnlySpan<char> str2, ReadOnlySpan<char> str3);
-                    //public static IEnumerable<TSource> Concat<TSource>(this IEnumerable<TSource> first, IEnumerable<TSource> second);
-                    //TODO:测试一下IEnumerable<TSource> Concat<TSource>(this IEnumerable<TSource> first, IEnumerable<TSource> second)
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
-                    {
-                        var builder = new StringBuilder();
-                        foreach (var arg in args)
-                        {
-                            //if (arg is IEnumerable enumerable && arg is not string)
-                            //{
-                            //    foreach (var element in enumerable)
-                            //    {
-                            //        if (builder.Length > 0)
-                            //            builder.Append('+');
-
-                            //        //连接符是+，不是字符串类型，无法连接，需要转换
-                            //        if (element is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
-                            //        {
-                            //            if (sqlSegment.Expression.Type != typeof(string))
-                            //                builder.Append($"CAST({sqlSegment.Value} AS {this.CastTo(typeof(string))})");
-                            //            else builder.Append(sqlSegment.Value.ToString());
-                            //        }
-                            //        else builder.Append(this.GetQuotedValue(typeof(string), element));
-                            //    }
-                            //}
-                            //else
-                            //{
-                            //    if (builder.Length > 0)
-                            //        builder.Append('+');
-                            //    builder.Append(this.GetQuotedValue(arg));
-                            //}
-                        }
-                        return builder.ToString();
-                    });
-                    result = true;
-                    break;
-                case "Format":
-                    //public static String Format(String format, object? arg0);
-                    //public static String Format(String format, object? arg0, object? arg1); 
-                    //public static String Format(String format, object? arg0, object? arg1, object? arg2); 
-                    //public static String Format(String format, params object?[] args);
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
-                    {
-                        var parameters = new List<object>(args);
-                        parameters.RemoveAt(0);
-                        var result = args[0].ToString();
-                        var concatIndices = new List<int>();
-                        var count = parameters.Count;
-                        for (int i = 0; i < count; i++)
-                        {
-                            if (parameters[i] is SqlSegment sqlSegment && sqlSegment.IsConstantValue)
-                            {
-                                string strValue = null;
-                                if (sqlSegment != SqlSegment.Null)
-                                {
-                                    if (sqlSegment.Value is IEnumerable enumerable && sqlSegment.Value is not string)
-                                    {
-                                        parameters.RemoveAt(i);
-                                        int eleIndex = 0;
-                                        foreach (var element in enumerable)
-                                        {
-                                            if (element is SqlSegment eleSegment && eleSegment.IsConstantValue)
-                                            {
-                                                strValue = eleSegment.ToString();
-                                                result = result.Replace("{" + eleIndex + "}", strValue);
-                                            }
-                                            else concatIndices.Add(eleIndex);
-                                            parameters.Add(element);
-                                            eleIndex++;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        strValue = this.GetQuotedValue(sqlSegment);
-                                        result = result.Replace("{" + i + "}", strValue);
-                                    }
-                                }
-                            }
-                            else concatIndices.Add(i);
-                        }
-                        if (concatIndices.Count > 0)
-                        {
-                            int index = 0;
-                            int lastIndex = 0;
-                            var concatParameters = new List<object>();
-                            var formatSpan = result.AsSpan();
-                            foreach (var concatIndex in concatIndices)
-                            {
-                                index = formatSpan.IndexOf('{');
-                                if (index > 0)
-                                {
-                                    var concatParameter = formatSpan.Slice(0, index);
-                                    concatParameters.Add(concatParameter.ToString());
-                                }
-                                concatParameters.Add(parameters[concatIndex]);
-                                lastIndex = formatSpan.IndexOf('}') + 1;
-                                formatSpan = formatSpan.Slice(lastIndex);
-                            }
-                            if (formatSpan.Length > 0)
-                                concatParameters.Add(formatSpan.ToString());
-
-                            //var methodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string).MakeArrayType() });
-                            //this.TryGetMethodCallSqlFormatter(  methodInfo, out var concatFormater);
-                            //result = concatFormater.Invoke(null, null, concatParameters);
-                        }
-                        return result;
-                    });
-                    result = true;
                     break;
                 case "Compare":
-                case "CompareOrdinal":
-                    //String.Compare  不区分大小写
-                    //public static int Compare(String? strA, String? strB);
-                    //public static int Compare(String? strA, String? strB, bool ignoreCase);
-                    //public static int Compare(String? strA, String? strB, bool ignoreCase, CultureInfo? culture);
-                    if (parameterInfos.Length >= 2)
+                    if (methodInfo.IsStatic && parameterInfos.Length == 2)
                     {
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
+                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
-                            var leftArgument = this.GetQuotedValue(args[0]);
-                            var rightArgument = this.GetQuotedValue(args[1]);
-                            return $"(CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END)";
+                            var leftSegment = visitor.VisitAndDeferred(args[0]);
+                            var rightSegment = visitor.VisitAndDeferred(args[1]);
+
+                            leftSegment.Merge(rightSegment);
+                            return leftSegment.Change($"(CASE WHEN {this.GetQuotedValue(leftSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(leftSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END)", false, true);
                         });
                         result = true;
                     }
                     break;
                 case "CompareTo":
-                    //各种类型都有CompareTo方法
-                    //public int CompareTo(Boolean value);
-                    //public int CompareTo(Int32 value);
-                    //public int CompareTo(Double value);
-                    //public int CompareTo(DateTime value);
-                    //public int CompareTo(object? value);                       
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
+                    if (!methodInfo.IsStatic && parameterInfos.Length == 1)
                     {
-                        var leftArgument = this.GetQuotedValue(target);
-                        var rightArgument = this.GetQuotedValue(args[0]);
-                        return $"(CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END)";
-                    });
-                    result = true;
-                    break;
-                case "Trim":
-                    if (parameterInfos.Length == 0)
-                    {
-                        formatter = (target, deferExprs, args) =>
+                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
-                            if (target is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
-                                return $"LTRIM(RTRIM({target}))";
-                            else return $"LTRIM(RTRIM('{target}'))";
-                        };
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
+                            var targetSegment = visitor.VisitAndDeferred(target);
+                            var rightSegment = visitor.VisitAndDeferred(target);
+
+                            targetSegment.Merge(rightSegment);
+                            return targetSegment.Change($"(CASE WHEN {this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(targetSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END)", false, true);
+                        });
                         result = true;
                     }
-                    else result = false;
-                    break;
-                case "TrimStart":
-                    if (parameterInfos.Length == 0)
-                    {
-                        formatter = (target, deferExprs, args) =>
-                        {
-                            if (target is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
-                                return $"LTRIM({target})";
-                            else return $"LTRIM('{target}')";
-                        };
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                        result = true;
-                    }
-                    else result = false;
-                    break;
-                case "TrimEnd":
-                    if (parameterInfos.Length == 0)
-                    {
-                        formatter = (target, deferExprs, args) =>
-                        {
-                            if (target is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
-                                return $"RTRIM({target})";
-                            else return $"RTRIM('{target}')";
-                        };
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                        result = true;
-                    }
-                    else result = false;
-                    break;
-                case "ToUpper":
-                    formatter = (target, deferExprs, args) =>
-                    {
-                        if (target is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
-                            return $"UPPER({target})";
-                        else return $"UPPER('{target}')";
-                    };
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "ToLower":
-                    formatter = (target, deferExprs, args) =>
-                    {
-                        if (target is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
-                            return $"LOWER({target})";
-                        else return $"LOWER('{target}')";
-                    };
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Equals":
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
-                    {
-                        var leftTarget = this.GetQuotedValue(target);
-                        var rightValue = this.GetQuotedValue(args[0]);
-                        int notIndex = 0;
-
-                        if (deferExprs != null && deferExprs.Count > 0)
-                        {
-                            while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
-                            {
-                                notIndex++;
-                            }
-                        }
-                        string equalsString = notIndex % 2 > 0 ? "<>" : "=";
-                        return $"{leftTarget}{equalsString}{rightValue}";
-                    });
-                    result = true;
-                    break;
-                case "StartsWith":
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
-                    {
-                        var leftField = this.GetQuotedValue(target);
-                        var rightValue = $"'{args[0]}%'";
-                        int notIndex = 0;
-
-                        if (deferExprs != null && deferExprs.Count > 0)
-                        {
-                            while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
-                            {
-                                notIndex++;
-                            }
-                        }
-                        string notString = notIndex % 2 > 0 ? " NOT" : "";
-                        return $"{leftField}{notString} LIKE {rightValue}";
-                    });
-                    result = true;
-                    break;
-                case "EndsWith":
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (target, deferExprs, args) =>
-                    {
-                        var leftField = this.GetQuotedValue(target);
-                        var rightValue = $"'%{args[0]}'";
-                        int notIndex = 0;
-
-                        if (deferExprs != null && deferExprs.Count > 0)
-                        {
-                            while (deferExprs.TryPop(f => f.OperationType == OperationType.Not, out var deferrdExpr))
-                            {
-                                notIndex++;
-                            }
-                        }
-                        string notString = notIndex % 2 > 0 ? " NOT" : "";
-                        return $"{leftField}{notString} LIKE {rightValue}";
-                    });
-                    result = true;
-                    break;
-                case "Substring":
-                    if (parameterInfos.Length > 1)
-                        formatter = (target, deferExprs, args) => $"SUBSTRING({target},{args[0]},{args[1]})";
-                    else formatter = (target, deferExprs, args) => $"SUBSTRING({target},{args[0]},LEN({target})-{args[0]}+1)";
-                    result = true;
                     break;
                 case "ToString":
-                    if (methodInfo.IsStatic)
+                    if (!methodInfo.IsStatic && parameterInfos.Length == 0)
                     {
-                        formatter = (target, deferExprs, args) =>
+                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
-                            if (args[0] is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
-                                return $"CAST({sqlSegment} AS {this.CastTo(typeof(string))})";
-                            return args[0].ToString();
-                        };
+                            var targetSegment = visitor.VisitAndDeferred(target);
+                            if (targetSegment.IsConstantValue)
+                                return targetSegment.Change(this.GetQuotedValue(targetSegment.ToString()));
+                            return targetSegment.Change($"CAST({this.GetQuotedValue(targetSegment)} AS {this.CastTo(typeof(string))})", false, true);
+                        });
+                        result = true;
                     }
-                    else
-                    {
-                        formatter = (target, deferExprs, args) =>
-                        {
-                            if (target is SqlSegment sqlSegment && !sqlSegment.IsConstantValue)
-                                return $"CAST({sqlSegment} AS {this.CastTo(typeof(string))})";
-                            return target.ToString();
-                        };
-                    }
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
                     break;
                 case "Parse":
                 case "TryParse":
-                    formatter = (target, deferExprs, args) => $"CAST('{args[0]}' AS {this.CastTo(methodInfo.DeclaringType)})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
+                    if (!methodInfo.IsStatic && parameterInfos.Length == 1)
+                    {
+                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        {
+                            args[0] = visitor.VisitAndDeferred(args[0]);
+                            if (args[0].IsConstantValue)
+                                return args[0].Change(this.GetQuotedValue(methodInfo.DeclaringType, args[0]));
+                            return args[0].Change($"CAST({this.GetQuotedValue(args[0])} AS {this.CastTo(methodInfo.DeclaringType)})", false, true);
+                        });
+                        result = true;
+                    }
                     break;
-                case "ToBoolean":
-                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(typeof(bool))})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "ToByte":
-                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(typeof(byte))})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "ToChar":
-                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(typeof(char))})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "ToDateTime":
-                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(typeof(DateTime))})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "ToDouble":
-                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(typeof(double))})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "ToInt16":
-                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(typeof(short))})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "ToInt32":
-                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(typeof(int))})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "ToInt64":
-                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(typeof(long))})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "ToSByte":
-                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(typeof(sbyte))})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "ToSingle":
-                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(typeof(float))})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "ToUInt16":
-                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(typeof(ushort))})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "ToUInt32":
-                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(typeof(uint))})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "ToUInt64":
-                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(typeof(ulong))})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "ToDecimal":
-                    formatter = (target, deferExprs, args) => $"CAST({args[0]} AS {this.CastTo(typeof(decimal))})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
+                case "get_Item":
+                    if (!methodInfo.IsStatic && parameterInfos.Length > 0)
+                    {
+                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        {
+                            var targetSegment = visitor.VisitAndDeferred(target);
+                            var isConstantValue = targetSegment.IsConstantValue;
+                            for (int i = 0; i < args.Length; i++)
+                            {
+                                args[i] = visitor.VisitAndDeferred(args[i]);
+                                isConstantValue = isConstantValue && args[i].IsConstantValue;
+                                targetSegment.Merge(args[i]);
+                            }
+                            if (isConstantValue)
+                                return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, args.Select(f => f.Value).ToArray()));
 
-                case "Abs":
-                    formatter = (target, deferExprs, args) => $"ABS({args[0]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
+                            throw new NotSupportedException($"不支持的方法调用,{methodInfo.DeclaringType.FullName}.{methodInfo.Name}");
+                        });
+                        result = true;
+                    }
                     break;
-                case "Sign":
-                    formatter = (target, deferExprs, args) => $"SIGN({args[0]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Floor":
-                    formatter = (target, deferExprs, args) => $"FLOOR({args[0]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Ceiling":
-                    formatter = (target, deferExprs, args) => $"CEILING({args[0]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Round":
-                    if (parameterInfos.Length > 1 && parameterInfos[1].ParameterType == typeof(int))
-                        formatter = (target, deferExprs, args) => $"ROUND({args[0]},{args[1]})";
-                    formatter = (target, deferExprs, args) => $"ROUND({args[0]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Exp":
-                    formatter = (target, deferExprs, args) => $"EXP({args[0]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Log":
-                    formatter = (target, deferExprs, args) => $"LOG({args[0]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Log10":
-                    formatter = (target, deferExprs, args) => $"LOG10({args[0]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Pow":
-                    formatter = (target, deferExprs, args) => $"POW({args[0]},{args[1]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Sqrt":
-                    formatter = (target, deferExprs, args) => $"SQRT({args[0]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Cos":
-                    formatter = (target, deferExprs, args) => $"COS({args[0]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Sin":
-                    formatter = (target, deferExprs, args) => $"SIN({args[0]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Tan":
-                    formatter = (target, deferExprs, args) => $"TAN({args[0]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Acos":
-                    formatter = (target, deferExprs, args) => $"ACOS({args[0]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Asin":
-                    formatter = (target, deferExprs, args) => $"ASIN({args[0]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Atan":
-                    formatter = (target, deferExprs, args) => $"ATAN({args[0]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Atan2":
-                    formatter = (target, deferExprs, args) => $"ATAN2({args[0]},{args[1]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-                case "Truncate":
-                    formatter = (target, deferExprs, args) => $"FLOOR({args[0]})";
-                    methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter);
-                    result = true;
-                    break;
-
-                default: formatter = null; result = false; break;
             }
             return result;
         }

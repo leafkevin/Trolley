@@ -2,8 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 
 namespace Trolley;
 
@@ -12,8 +12,8 @@ public partial class MySqlProvider : BaseOrmProvider
     private static Func<string, IDbConnection> createNativeConnectonDelegate = null;
     private static Func<string, object, IDbDataParameter> createDefaultNativeParameterDelegate = null;
     private static Func<string, object, object, IDbDataParameter> createNativeParameterDelegate = null;
-    private static ConcurrentDictionary<MemberInfo, MemberAccessSqlFormatter> memberAccessSqlFormatterCahe = new();
-    private static ConcurrentDictionary<MethodInfo, MethodCallSqlFormatter> methodCallSqlFormatterCahe = new();
+    private static ConcurrentDictionary<int, MemberAccessSqlFormatter> memberAccessSqlFormatterCahe = new();
+    private static ConcurrentDictionary<int, MethodCallSqlFormatter> methodCallSqlFormatterCahe = new();
     private static Dictionary<Type, object> defaultDbTypes = new();
     private static Dictionary<int, object> nativeDbTypes = new();
     private static Dictionary<Type, string> castTos = new();
@@ -107,46 +107,6 @@ public partial class MySqlProvider : BaseOrmProvider
         castTos[typeof(decimal?)] = "DECIMAL(36,18)";
         castTos[typeof(DateTime?)] = "DATETIME";
     }
-    public MySqlProvider()
-    {
-        memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetMember(nameof(string.Empty))[0], target => new SqlSegment { Value = "''", IsConstantValue = true });
-        memberAccessSqlFormatterCahe.TryAdd(typeof(string).GetProperty(nameof(string.Length)), target => target.Change($"CHAR_LENGTH({this.GetQuotedValue(target)})", false, true));
-
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.Now))[0], target => new SqlSegment { Value = "NOW()", IsConstantValue = false, IsExpression = true });
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.UtcNow))[0], target => new SqlSegment { Value = "UTC_TIMESTAMP()", IsConstantValue = false, IsExpression = true });
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.Today))[0], target => new SqlSegment { Value = "CURDATE()", IsConstantValue = false, IsExpression = true });
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.MinValue))[0], target => new SqlSegment { Value = $"'{DateTime.MinValue:yyyy-MM-dd HH:mm:ss}'", IsConstantValue = false });
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetMember(nameof(DateTime.MaxValue))[0], target => new SqlSegment { Value = $"'{DateTime.MinValue:yyyy-MM-dd HH:mm:ss}'", IsConstantValue = false });
-
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Date)), target => target.Change($"CAST(DATE_FORMAT({this.GetQuotedValue(target)},'%Y-%m-%d') AS DATETIME)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Day)), target => target.Change($"DAYOFMONTH({this.GetQuotedValue(target)})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.DayOfWeek)), target => target.Change($"(DAYOFWEEK({this.GetQuotedValue(target)})-1)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.DayOfYear)), target => target.Change($"DAYOFYEAR({this.GetQuotedValue(target)})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Hour)), target => target.Change($"HOUR({this.GetQuotedValue(target)})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Millisecond)), target => target.Change($"FLOOR(MICROSECOND({this.GetQuotedValue(target)})/1000)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Minute)), target => target.Change($"MINUTE({this.GetQuotedValue(target)})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Month)), target => target.Change($"MONTH({this.GetQuotedValue(target)})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Second)), target => target.Change($"SECOND({this.GetQuotedValue(target)})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Ticks)), target => target.Change($"(TIMESTAMPDIFF(MICROSECOND, '0001-1-1', {this.GetQuotedValue(target)})*10", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.TimeOfDay)), target => target.Change($"TIMESTAMPDIFF(MICROSECOND, DATE_FORMAT({this.GetQuotedValue(target)},'%Y-%m-%d'), {this.GetQuotedValue(target)})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(DateTime).GetProperty(nameof(DateTime.Year)), target => target.Change($"YEAR({this.GetQuotedValue(target)})", false, true));
-
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetMember(nameof(TimeSpan.Zero))[0], target => new SqlSegment { Value = "0", IsConstantValue = true });
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetMember(nameof(TimeSpan.MinValue))[0], target => new SqlSegment { Value = $"{long.MinValue}", IsConstantValue = true });
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetMember(nameof(TimeSpan.MaxValue))[0], target => new SqlSegment { Value = $"{long.MaxValue}", IsConstantValue = true });
-
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Days)), target => target.Change($"(({this.GetQuotedValue(target)}) DIV {(long)1000000 * 60 * 60 * 24})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Hours)), target => target.Change($"(({this.GetQuotedValue(target)}) DIV {(long)1000000 * 60 * 60} MOD 24)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Milliseconds)), target => target.Change($"(({this.GetQuotedValue(target)}) DIV 1000 MOD 1000)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Minutes)), target => target.Change($"(({this.GetQuotedValue(target)}) DIV {(long)1000000 * 60} MOD 60)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Seconds)), target => target.Change($"(({this.GetQuotedValue(target)}) DIV 1000000 MOD 60)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.Ticks)), target => target.Change($"(({this.GetQuotedValue(target)}) * 10)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalDays)), target => target.Change($"(({this.GetQuotedValue(target)}) / {(long)1000000 * 60 * 60 * 24})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalHours)), target => target.Change($"(({this.GetQuotedValue(target)}) / {(long)1000000 * 60 * 60})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalMilliseconds)), target => target.Change($"(({this.GetQuotedValue(target)}) / 1000)", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalMinutes)), target => target.Change($"(({this.GetQuotedValue(target)}) / {(long)1000000 * 60})", false, true));
-        memberAccessSqlFormatterCahe.TryAdd(typeof(TimeSpan).GetProperty(nameof(TimeSpan.TotalSeconds)), target => target.Change($"(({this.GetQuotedValue(target)}) / 1000000)", false, true));
-    }
     public override IDbConnection CreateConnection(string connectionString)
         => createNativeConnectonDelegate.Invoke(connectionString);
     public override IDbDataParameter CreateParameter(string parameterName, object value)
@@ -195,31 +155,63 @@ public partial class MySqlProvider : BaseOrmProvider
         return type.ToString().ToLower();
     }
     public override bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
-        => memberAccessSqlFormatterCahe.TryGetValue(memberExpr.Member, out formatter);
+    {
+        var memberInfo = memberExpr.Member;
+        var cacheKey = HashCode.Combine(memberInfo.DeclaringType, memberInfo);
+        if (!memberAccessSqlFormatterCahe.TryGetValue(cacheKey, out formatter))
+        {
+            bool result = false;
+            if (memberInfo.DeclaringType == typeof(DateTime) && this.TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out formatter))
+                return true;
+            if (memberInfo.DeclaringType == typeof(TimeSpan) && this.TryGetTimeSpanMemberAccessSqlFormatter(memberExpr, out formatter))
+                return true;
+            return result;
+        }
+        return true;
+    }
     public override bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
-        if (!methodCallSqlFormatterCahe.TryGetValue(methodInfo, out formatter))
+        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
+        if (!methodCallSqlFormatterCahe.TryGetValue(cacheKey, out formatter))
         {
             bool result = false;
             if (methodInfo.DeclaringType == typeof(string) && this.TryGetStringMethodCallSqlFormatter(methodCallExpr, out formatter))
                 return true;
             if (methodInfo.DeclaringType == typeof(DateTime) && this.TryGetDateTimeMethodCallSqlFormatter(methodCallExpr, out formatter))
                 return true;
+            if (methodInfo.DeclaringType == typeof(TimeSpan) && this.TryGetTimeSpanMethodCallSqlFormatter(methodCallExpr, out formatter))
+                return true;
             if (this.TryGetIEnumerableMethodCallSqlFormatter(methodCallExpr, out formatter))
                 return true;
-
+            if (methodInfo.DeclaringType == typeof(Math) && this.TryGetMathMethodCallSqlFormatter(methodCallExpr, out formatter))
+                return true;
             switch (methodInfo.Name)
             {
                 case "Equals":
                     if (!methodInfo.IsStatic && parameterInfos.Length == 1)
                     {
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (visitor, target, deferExprs, args) =>
+                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
                             var targetSegment = visitor.VisitAndDeferred(target);
                             var rightSegment = visitor.VisitAndDeferred(target);
-                            return targetSegment.Change($"{targetSegment}={rightSegment}", false, true);
+                            targetSegment.Merge(rightSegment);
+                            return targetSegment.Change($"{this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)}", false, true);
+                        });
+                        result = true;
+                    }
+                    break;
+                case "Compare":
+                    if (methodInfo.IsStatic && parameterInfos.Length == 2)
+                    {
+                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        {
+                            var leftSegment = visitor.VisitAndDeferred(args[0]);
+                            var rightSegment = visitor.VisitAndDeferred(args[1]);
+
+                            leftSegment.Merge(rightSegment);
+                            return leftSegment.Change($"(CASE WHEN {this.GetQuotedValue(leftSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(leftSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END)", false, true);
                         });
                         result = true;
                     }
@@ -227,11 +219,13 @@ public partial class MySqlProvider : BaseOrmProvider
                 case "CompareTo":
                     if (!methodInfo.IsStatic && parameterInfos.Length == 1)
                     {
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (visitor, target, deferExprs, args) =>
+                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
                             var targetSegment = visitor.VisitAndDeferred(target);
                             var rightSegment = visitor.VisitAndDeferred(target);
-                            return targetSegment.Change($"(CASE WHEN {targetSegment}={rightSegment} THEN 0 WHEN {targetSegment}>{rightSegment} THEN 1 ELSE -1 END)", false, true);
+
+                            targetSegment.Merge(rightSegment);
+                            return targetSegment.Change($"(CASE WHEN {this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(targetSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END)", false, true);
                         });
                         result = true;
                     }
@@ -239,12 +233,12 @@ public partial class MySqlProvider : BaseOrmProvider
                 case "ToString":
                     if (!methodInfo.IsStatic && parameterInfos.Length == 0)
                     {
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (visitor, target, deferExprs, args) =>
+                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
                             var targetSegment = visitor.VisitAndDeferred(target);
                             if (targetSegment.IsConstantValue)
-                                return targetSegment.ChangeValue(targetSegment.ToString());
-                            return targetSegment.Change($"CAST({targetSegment} AS {this.CastTo(methodInfo.DeclaringType)})", false, true);
+                                return targetSegment.Change(this.GetQuotedValue(targetSegment.ToString()));
+                            return targetSegment.Change($"CAST({this.GetQuotedValue(targetSegment)} AS {this.CastTo(typeof(string))})", false, true);
                         });
                         result = true;
                     }
@@ -253,12 +247,33 @@ public partial class MySqlProvider : BaseOrmProvider
                 case "TryParse":
                     if (!methodInfo.IsStatic && parameterInfos.Length == 1)
                     {
-                        methodCallSqlFormatterCahe.TryAdd(methodInfo, formatter = (visitor, target, deferExprs, args) =>
+                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
                             args[0] = visitor.VisitAndDeferred(args[0]);
                             if (args[0].IsConstantValue)
                                 return args[0].Change(this.GetQuotedValue(methodInfo.DeclaringType, args[0]));
-                            return args[0].Change($"CAST({args[0]} AS {this.CastTo(methodInfo.DeclaringType)})", false, true);
+                            return args[0].Change($"CAST({this.GetQuotedValue(args[0])} AS {this.CastTo(methodInfo.DeclaringType)})", false, true);
+                        });
+                        result = true;
+                    }
+                    break;
+                case "get_Item":
+                    if (!methodInfo.IsStatic && parameterInfos.Length > 0)
+                    {
+                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        {
+                            var targetSegment = visitor.VisitAndDeferred(target);
+                            var isConstantValue = targetSegment.IsConstantValue;
+                            for (int i = 0; i < args.Length; i++)
+                            {
+                                args[i] = visitor.VisitAndDeferred(args[i]);
+                                isConstantValue = isConstantValue && args[i].IsConstantValue;
+                                targetSegment.Merge(args[i]);
+                            }
+                            if (isConstantValue)
+                                return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, args.Select(f => f.Value).ToArray()));
+
+                            throw new NotSupportedException($"不支持的方法调用,{methodInfo.DeclaringType.FullName}.{methodInfo.Name}");
                         });
                         result = true;
                     }

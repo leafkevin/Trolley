@@ -39,64 +39,343 @@ class Create<TEntity> : ICreate<TEntity>
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        return new Created<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider, rawSql, parameters);
+        return new Created<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider).RawSql(rawSql, parameters);
     }
-    public ICreated<TEntity> WithBy<TInsertObject>(TInsertObject insertObjs, int bulkCount = 500)
+    public IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
+    {
+        if (insertObj == null)
+            throw new ArgumentNullException(nameof(insertObj));
+        if (insertObj is IEnumerable && insertObj is not string)
+            throw new NotSupportedException("只能插入单个实体，批量插入请使用WithByBulk方法");
+
+        return new ContinuedCreate<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider).WithBy(insertObj);
+    }
+    public ICreated<TEntity> WithByBulk(IEnumerable insertObjs, int bulkCount = 500)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
 
-        return new Created<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider, null, insertObjs, bulkCount);
+        return new Created<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider).WithByBulk(insertObjs, bulkCount);
     }
-    public ICreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector)
+    public IContinuedCreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
 
         var entityType = typeof(TEntity);
         var visitor = new CreateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType).From(fieldSelector);
-        return new Create<TEntity, TSource>(this.connection, this.transaction, visitor);
+        return new ContinuedCreate<TEntity, TSource>(this.connection, this.transaction, visitor);
     }
-    public ICreate<TEntity, T1, T2> From<T1, T2>(Expression<Func<T1, T2, object>> fieldSelector)
+    public IContinuedCreate<TEntity, T1, T2> From<T1, T2>(Expression<Func<T1, T2, object>> fieldSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
 
         var entityType = typeof(TEntity);
         var visitor = new CreateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType).From(fieldSelector);
-        return new Create<TEntity, T1, T2>(this.connection, this.transaction, visitor);
+        return new ContinuedCreate<TEntity, T1, T2>(this.connection, this.transaction, visitor);
     }
-    public ICreate<TEntity, T1, T2, T3> From<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> fieldSelector)
+    public IContinuedCreate<TEntity, T1, T2, T3> From<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> fieldSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
 
         var entityType = typeof(TEntity);
         var visitor = new CreateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType).From(fieldSelector);
-        return new Create<TEntity, T1, T2, T3>(this.connection, this.transaction, visitor);
+        return new ContinuedCreate<TEntity, T1, T2, T3>(this.connection, this.transaction, visitor);
     }
-    public ICreate<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, object>> fieldSelector)
+    public IContinuedCreate<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, object>> fieldSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
 
         var entityType = typeof(TEntity);
         var visitor = new CreateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType).From(fieldSelector);
-        return new Create<TEntity, T1, T2, T3, T4>(this.connection, this.transaction, visitor);
+        return new ContinuedCreate<TEntity, T1, T2, T3, T4>(this.connection, this.transaction, visitor);
     }
-    public ICreate<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, object>> fieldSelector)
+    public IContinuedCreate<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, object>> fieldSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
 
         var entityType = typeof(TEntity);
         var visitor = new CreateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType).From(fieldSelector);
-        return new Create<TEntity, T1, T2, T3, T4, T5>(this.connection, this.transaction, visitor);
+        return new ContinuedCreate<TEntity, T1, T2, T3, T4, T5>(this.connection, this.transaction, visitor);
+    }
+}
+class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
+{
+    private static ConcurrentDictionary<int, object> builderCache = new();
+    private readonly List<BuilderCache> builders = new();
+    private readonly TheaConnection connection;
+    private readonly IOrmProvider ormProvider;
+    private readonly IEntityMapProvider mapProvider;
+    private readonly IDbTransaction transaction;
+
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
+    {
+        this.connection = connection;
+        this.transaction = transaction;
+        this.ormProvider = ormProvider;
+        this.mapProvider = mapProvider;
+    }
+    public IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
+    {
+        if (insertObj == null)
+            throw new ArgumentNullException(nameof(insertObj));
+        var parameterType = insertObj.GetType();
+        if (insertObj is IEnumerable && insertObj is not string)
+            throw new NotSupportedException("只能插入单个实体，批量插入请使用WithByBulk方法");
+        if (parameterType == typeof(Dictionary<string, object>))
+        {
+            this.builders.Add(new BuilderCache
+            {
+                CommandInitializer = this.BuildCommandInitializer(),
+                Parameters = insertObj
+            });
+        }
+        else
+        {
+            this.builders.Add(new BuilderCache
+            {
+                CommandInitializer = this.BuildCommandInitializer(this.builders.Count, parameterType),
+                Parameters = insertObj
+            });
+        }
+        return this;
+    }
+    public IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
+    {
+        if (condition)
+        {
+            if (insertObj == null)
+                throw new ArgumentNullException(nameof(insertObj));
+
+            return this.WithBy<TInsertObject>(insertObj);
+        }
+        return this;
+    }
+    public int Execute()
+    {
+        int result = 0;
+        var entityType = typeof(TEntity);
+        var entityMapper = this.mapProvider.GetEntityMap(entityType);
+        using var command = this.connection.CreateCommand();
+        var insertBuilder = new StringBuilder($"INSERT INTO {this.ormProvider.GetTableName(entityMapper.TableName)} (");
+        var valuesBuilder = new StringBuilder(" VALUES(");
+        int index = 0;
+        foreach (var builder in this.builders)
+        {
+            if (index > 0)
+            {
+                insertBuilder.Append(',');
+                valuesBuilder.Append(',');
+            }
+            builder.CommandInitializer.Invoke(command, this.ormProvider, builder.Parameters, insertBuilder, valuesBuilder);
+            index++;
+        }
+        insertBuilder.Append(')');
+        valuesBuilder.Append(')');
+
+        if (entityMapper.IsAutoIncrement)
+            valuesBuilder.AppendFormat(this.ormProvider.SelectIdentitySql, entityMapper.AutoIncrementField);
+        var sql = insertBuilder.ToString() + valuesBuilder.ToString();
+
+        command.CommandText = sql;
+        command.CommandType = CommandType.Text;
+        command.Transaction = this.transaction;
+        this.connection.Open();
+
+        if (entityMapper.IsAutoIncrement)
+        {
+            using var reader = command.ExecuteReader();
+            if (reader.Read()) result = reader.To<int>();
+            reader.Close();
+            reader.Dispose();
+            command.Dispose();
+            return result;
+        }
+        result = command.ExecuteNonQuery();
+        command.Dispose();
+        this.builders.Clear();
+        return result;
+    }
+    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
+    {
+        int result = 0;
+        var entityType = typeof(TEntity);
+        var entityMapper = this.mapProvider.GetEntityMap(entityType);
+        using var cmd = this.connection.CreateCommand();
+        var insertBuilder = new StringBuilder($"INSERT INTO {this.ormProvider.GetTableName(entityMapper.TableName)} (");
+        var valuesBuilder = new StringBuilder(" VALUES(");
+        int index = 0;
+        foreach (var builder in this.builders)
+        {
+            if (index > 0)
+            {
+                insertBuilder.Append(',');
+                valuesBuilder.Append(',');
+            }
+            builder.CommandInitializer.Invoke(cmd, this.ormProvider, builder.Parameters, insertBuilder, valuesBuilder);
+            index++;
+        }
+        insertBuilder.Append(')');
+        valuesBuilder.Append(')');
+
+        if (entityMapper.IsAutoIncrement)
+            valuesBuilder.AppendFormat(this.ormProvider.SelectIdentitySql, entityMapper.AutoIncrementField);
+        var sql = insertBuilder.ToString() + valuesBuilder.ToString();
+
+        cmd.CommandText = sql;
+        cmd.CommandType = CommandType.Text;
+        cmd.Transaction = this.transaction;
+        if (cmd is not DbCommand command)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+
+        await this.connection.OpenAsync(cancellationToken);
+        if (entityMapper.IsAutoIncrement)
+        {
+            using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync())
+                result = reader.To<int>();
+            await reader.CloseAsync();
+            await reader.DisposeAsync();
+            await command.DisposeAsync();
+            return result;
+        }
+        result = await command.ExecuteNonQueryAsync(cancellationToken);
+        await command.DisposeAsync();
+        this.builders.Clear();
+        return result;
+    }
+    public string ToSql(out List<IDbDataParameter> dbParameters)
+    {
+        var entityType = typeof(TEntity);
+        var entityMapper = this.mapProvider.GetEntityMap(entityType);
+        using var command = this.connection.CreateCommand();
+        var insertBuilder = new StringBuilder($"INSERT INTO {this.ormProvider.GetTableName(entityMapper.TableName)} (");
+        var valuesBuilder = new StringBuilder(" VALUES(");
+        int index = 0;
+        foreach (var builder in this.builders)
+        {
+            if (index > 0)
+            {
+                insertBuilder.Append(',');
+                valuesBuilder.Append(',');
+            }
+            builder.CommandInitializer.Invoke(command, this.ormProvider, builder.Parameters, insertBuilder, valuesBuilder);
+            index++;
+        }
+        insertBuilder.Append(')');
+        valuesBuilder.Append(')');
+
+        if (entityMapper.IsAutoIncrement)
+            valuesBuilder.AppendFormat(this.ormProvider.SelectIdentitySql, entityMapper.AutoIncrementField);
+        var sql = insertBuilder.ToString() + valuesBuilder.ToString();
+
+        dbParameters = null;
+        if (command.Parameters != null && command.Parameters.Count > 0)
+            dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+        command.Cancel();
+        command.Dispose();
+        this.builders.Clear();
+        return sql;
+    }
+    private Action<IDbCommand, IOrmProvider, object, StringBuilder, StringBuilder> BuildCommandInitializer(int index, Type parameterType)
+    {
+        var cacheKey = HashCode.Combine(this.connection, this.ormProvider, index, parameterType);
+        if (!builderCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
+        {
+            int columnIndex = 0;
+            var entityType = typeof(TEntity);
+            var entityMapper = this.mapProvider.GetEntityMap(entityType);
+            var parameterMapper = this.mapProvider.GetEntityMap(parameterType);
+            var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
+            var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
+            var parameterExpr = Expression.Parameter(typeof(object), "parameter");
+            var insertBuilderExpr = Expression.Parameter(typeof(StringBuilder), "insertBuilder");
+            var valueBuilderExpr = Expression.Parameter(typeof(StringBuilder), "valueBuilder");
+
+            var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
+            var blockParameters = new List<ParameterExpression>();
+            var blockBodies = new List<Expression>();
+            var localParameters = new Dictionary<string, int>();
+            blockParameters.Add(typedParameterExpr);
+            blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
+
+            var insertBuilder = new StringBuilder();
+            var valuesBuilder = new StringBuilder();
+            var methodInfo1 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(char) });
+            var methodInfo2 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
+            foreach (var parameterMemberMapper in parameterMapper.MemberMaps)
+            {
+                if (!entityMapper.TryGetMemberMap(parameterMemberMapper.MemberName, out var propMapper)
+                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.IsAutoIncrement
+                    || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
+                    continue;
+
+                if (columnIndex > 0)
+                {
+                    blockBodies.Add(Expression.Call(insertBuilderExpr, methodInfo1, Expression.Constant(',')));
+                    blockBodies.Add(Expression.Call(valueBuilderExpr, methodInfo1, Expression.Constant(',')));
+                }
+                var fieldName = this.ormProvider.GetFieldName(propMapper.FieldName);
+                var parameterName = this.ormProvider.ParameterPrefix + propMapper.MemberName;
+                var parameterNameExpr = Expression.Constant(parameterName);
+                blockBodies.Add(Expression.Call(insertBuilderExpr, methodInfo2, Expression.Constant(fieldName)));
+                blockBodies.Add(Expression.Call(valueBuilderExpr, methodInfo2, parameterNameExpr));
+
+                var isNullable = parameterMemberMapper.MemberType.IsNullableType(out _);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, isNullable, propMapper.NativeDbType, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
+                columnIndex++;
+            }
+
+            commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object, StringBuilder, StringBuilder>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr, insertBuilderExpr, valueBuilderExpr).Compile();
+            builderCache.TryAdd(cacheKey, commandInitializerDelegate);
+        }
+        return (Action<IDbCommand, IOrmProvider, object, StringBuilder, StringBuilder>)commandInitializerDelegate;
+    }
+    private Action<IDbCommand, IOrmProvider, object, StringBuilder, StringBuilder> BuildCommandInitializer()
+    {
+        return (command, ormProvider, parameter, insertBuilder, valuesBuilder) =>
+        {
+            int index = 0;
+            var dict = parameter as Dictionary<string, object>;
+            var entityType = typeof(TEntity);
+            var entityMapper = this.mapProvider.GetEntityMap(entityType);
+            foreach (var item in dict)
+            {
+                if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper)
+                    || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.IsAutoIncrement
+                    || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
+                    continue;
+
+                if (index > 0)
+                {
+                    insertBuilder.Append(',');
+                    valuesBuilder.Append(',');
+                }
+                var parameterName = ormProvider.ParameterPrefix + item.Key;
+                insertBuilder.Append(ormProvider.GetFieldName(propMapper.FieldName));
+                valuesBuilder.Append(parameterName);
+
+                if (propMapper.NativeDbType != null)
+                    command.Parameters.Add(ormProvider.CreateParameter(parameterName, propMapper.NativeDbType, item.Value));
+                else command.Parameters.Add(ormProvider.CreateParameter(parameterName, item.Value));
+                index++;
+            }
+        };
+    }
+    struct BuilderCache
+    {
+        public Action<IDbCommand, IOrmProvider, object, StringBuilder, StringBuilder> CommandInitializer { get; set; }
+        public object Parameters { get; set; }
     }
 }
 class Created<TEntity> : ICreated<TEntity>
 {
     private static ConcurrentDictionary<int, object> commandInitializerCache = new();
+    private readonly List<IDbDataParameter> dbParameters = new();
     private readonly TheaConnection connection;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
@@ -105,29 +384,69 @@ class Created<TEntity> : ICreated<TEntity>
     private object parameters = null;
     private int? bulkCount;
 
-    public Created(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, string rawSql, object parameters, int? bulkCount = null)
+    public Created(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
     {
         this.connection = connection;
         this.transaction = transaction;
         this.ormProvider = ormProvider;
         this.mapProvider = mapProvider;
+    }
+    public ICreated<TEntity> RawSql(string rawSql, object parameters)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
         this.rawSql = rawSql;
         this.parameters = parameters;
+        return this;
+    }
+    public ICreated<TEntity> WithByBulk(IEnumerable insertObjs, int bulkCount = 500)
+    {
+        if (insertObjs == null)
+            throw new ArgumentNullException(nameof(insertObjs));
+        this.parameters = insertObjs;
         this.bulkCount = bulkCount;
+        return this;
     }
     public int Execute()
     {
-        bool isMulti = false;
-        bool isDictionary = false;
         var entityType = typeof(TEntity);
         Type parameterType = null;
-        IEnumerable entities = null;
-        if (this.parameters is Dictionary<string, object> dict)
-            isDictionary = true;
-        else if (this.parameters is IEnumerable && parameterType != typeof(string))
+        if (!string.IsNullOrEmpty(this.rawSql))
         {
-            isMulti = true;
-            entities = this.parameters as IEnumerable;
+            if (this.parameters != null)
+                parameterType = parameters.GetType();
+
+            Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
+            if (this.parameters is Dictionary<string, object>)
+                commandInitializer = this.BuildCommandInitializer(entityType);
+            else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
+
+            int result = 0;
+            using var command = this.connection.CreateCommand();
+            var sql = commandInitializer.Invoke(command, this.ormProvider, this.parameters);
+
+            command.CommandText = sql;
+            command.CommandType = CommandType.Text;
+            command.Transaction = this.transaction;
+            this.connection.Open();
+            var entityMapper = this.mapProvider.GetEntityMap(entityType);
+            if (entityMapper.IsAutoIncrement)
+            {
+                using var reader = command.ExecuteReader();
+                if (reader.Read()) result = reader.To<int>();
+                reader.Close();
+                reader.Dispose();
+                command.Dispose();
+                return result;
+            }
+            result = command.ExecuteNonQuery();
+            command.Dispose();
+            return result;
+        }
+        else
+        {
+            bool isDictionary = false;
+            var entities = this.parameters as IEnumerable;
             foreach (var entity in entities)
             {
                 if (entity is Dictionary<string, object>)
@@ -135,11 +454,6 @@ class Created<TEntity> : ICreated<TEntity>
                 else parameterType = entity.GetType();
                 break;
             }
-        }
-        else parameterType = this.parameters.GetType();
-
-        if (isMulti)
-        {
             Action<IDbCommand, IOrmProvider, StringBuilder, int, object> commandInitializer = null;
             if (isDictionary)
                 commandInitializer = this.BuildBatchCommandInitializer(entityType);
@@ -175,60 +489,51 @@ class Created<TEntity> : ICreated<TEntity>
             command.Dispose();
             return result;
         }
-        else
-        {
-            string sql = null;
-            int result = 0;
-            using var command = this.connection.CreateCommand();
-            if (string.IsNullOrEmpty(this.rawSql))
-            {
-                Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
-                if (isDictionary)
-                    commandInitializer = this.BuildCommandInitializer(entityType);
-                else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
-                sql = commandInitializer.Invoke(command, this.ormProvider, this.parameters);
-            }
-            else
-            {
-                sql = this.rawSql;
-                Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
-                if (isDictionary)
-                    commandInitializer = this.BuildCommandInitializer(sql);
-                else commandInitializer = this.BuildCommandInitializer(sql, entityType, parameterType);
-                commandInitializer.Invoke(command, this.ormProvider, this.parameters);
-            }
-            command.CommandText = sql;
-            command.CommandType = CommandType.Text;
-            command.Transaction = this.transaction;
-            this.connection.Open();
-            var entityMapper = this.mapProvider.GetEntityMap(entityType);
-            if (entityMapper.IsAutoIncrement)
-            {
-                using var reader = command.ExecuteReader();
-                if (reader.Read()) result = reader.To<int>();
-                reader.Close();
-                reader.Dispose();
-                command.Dispose();
-                return result;
-            }
-            result = command.ExecuteNonQuery();
-            command.Dispose();
-            return result;
-        }
     }
     public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        bool isMulti = false;
-        bool isDictionary = false;
         var entityType = typeof(TEntity);
         Type parameterType = null;
-        IEnumerable entities = null;
-        if (this.parameters is Dictionary<string, object> dict)
-            isDictionary = true;
-        else if (this.parameters is IEnumerable && parameterType != typeof(string))
+        if (!string.IsNullOrEmpty(this.rawSql))
         {
-            isMulti = true;
-            entities = this.parameters as IEnumerable;
+            if (this.parameters != null)
+                parameterType = parameters.GetType();
+
+            Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
+            if (this.parameters is Dictionary<string, object>)
+                commandInitializer = this.BuildCommandInitializer(entityType);
+            else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
+
+            int result = 0;
+            using var cmd = this.connection.CreateCommand();
+            var sql = commandInitializer.Invoke(cmd, this.ormProvider, this.parameters);
+
+            cmd.CommandText = sql;
+            cmd.CommandType = CommandType.Text;
+            cmd.Transaction = this.transaction;
+            if (cmd is not DbCommand command)
+                throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+
+            await this.connection.OpenAsync(cancellationToken);
+            var entityMapper = this.mapProvider.GetEntityMap(entityType);
+            if (entityMapper.IsAutoIncrement)
+            {
+                using var reader = await command.ExecuteReaderAsync(cancellationToken);
+                if (await reader.ReadAsync())
+                    result = reader.To<int>();
+                await reader.CloseAsync();
+                await reader.DisposeAsync();
+                await command.DisposeAsync();
+                return result;
+            }
+            result = await command.ExecuteNonQueryAsync(cancellationToken);
+            await command.DisposeAsync();
+            return result;
+        }
+        else
+        {
+            bool isDictionary = false;
+            var entities = this.parameters as IEnumerable;
             foreach (var entity in entities)
             {
                 if (entity is Dictionary<string, object>)
@@ -236,20 +541,14 @@ class Created<TEntity> : ICreated<TEntity>
                 else parameterType = entity.GetType();
                 break;
             }
-        }
-        else parameterType = this.parameters.GetType();
-
-        int result = 0, index = 0;
-        if (isMulti)
-        {
             Action<IDbCommand, IOrmProvider, StringBuilder, int, object> commandInitializer = null;
             if (isDictionary)
                 commandInitializer = this.BuildBatchCommandInitializer(entityType);
             else commandInitializer = this.BuildBatchCommandInitializer(entityType, parameterType);
 
             this.bulkCount ??= 500;
+            int result = 0, index = 0;
             var sqlBuilder = new StringBuilder();
-
             using var cmd = this.connection.CreateCommand();
             cmd.Transaction = this.transaction;
             if (cmd is not DbCommand command)
@@ -277,49 +576,6 @@ class Created<TEntity> : ICreated<TEntity>
                 await this.connection.OpenAsync(cancellationToken);
                 result += await command.ExecuteNonQueryAsync(cancellationToken);
             }
-            await command.DisposeAsync();
-            return result;
-        }
-        else
-        {
-            string sql = null;
-            using var cmd = this.connection.CreateCommand();
-            if (string.IsNullOrEmpty(this.rawSql))
-            {
-                Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
-                if (isDictionary)
-                    commandInitializer = this.BuildCommandInitializer(entityType);
-                else commandInitializer = this.BuildCommandInitializer(entityType, parameterType);
-                sql = commandInitializer.Invoke(cmd, this.ormProvider, this.parameters);
-            }
-            else
-            {
-                sql = this.rawSql;
-                Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
-                if (isDictionary)
-                    commandInitializer = this.BuildCommandInitializer(sql);
-                else commandInitializer = this.BuildCommandInitializer(sql, entityType, parameterType);
-                commandInitializer.Invoke(cmd, this.ormProvider, this.parameters);
-            }
-            cmd.CommandText = sql;
-            cmd.CommandType = CommandType.Text;
-            cmd.Transaction = this.transaction;
-            if (cmd is not DbCommand command)
-                throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-            await this.connection.OpenAsync(cancellationToken);
-            var entityMapper = this.mapProvider.GetEntityMap(entityType);
-            if (entityMapper.IsAutoIncrement)
-            {
-                using var reader = await command.ExecuteReaderAsync(cancellationToken);
-                if (await reader.ReadAsync())
-                    result = reader.To<int>();
-                await reader.CloseAsync();
-                await reader.DisposeAsync();
-                await command.DisposeAsync();
-                return result;
-            }
-            result = await command.ExecuteNonQueryAsync(cancellationToken);
             await command.DisposeAsync();
             return result;
         }
@@ -654,13 +910,13 @@ class Created<TEntity> : ICreated<TEntity>
         };
     }
 }
-class CreateBase
+class ContinuedCreateBase
 {
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
     protected readonly CreateVisitor visitor;
 
-    public CreateBase(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+    public ContinuedCreateBase(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -704,11 +960,11 @@ class CreateBase
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(out dbParameters);
 }
-class Create<TEntity, T1> : CreateBase, ICreate<TEntity, T1>
+class ContinuedCreate<TEntity, T1> : ContinuedCreateBase, IContinuedCreate<TEntity, T1>
 {
-    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
         : base(connection, transaction, visitor) { }
-    public ICreate<TEntity, T1> Where(Expression<Func<T1, bool>> predicate)
+    public IContinuedCreate<TEntity, T1> Where(Expression<Func<T1, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -716,7 +972,7 @@ class Create<TEntity, T1> : CreateBase, ICreate<TEntity, T1>
         this.visitor.Where(predicate);
         return this;
     }
-    public ICreate<TEntity, T1> And(bool condition, Expression<Func<T1, bool>> predicate)
+    public IContinuedCreate<TEntity, T1> And(bool condition, Expression<Func<T1, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -726,11 +982,11 @@ class Create<TEntity, T1> : CreateBase, ICreate<TEntity, T1>
         return this;
     }
 }
-class Create<TEntity, T1, T2> : CreateBase, ICreate<TEntity, T1, T2>
+class ContinuedCreate<TEntity, T1, T2> : ContinuedCreateBase, IContinuedCreate<TEntity, T1, T2>
 {
-    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
         : base(connection, transaction, visitor) { }
-    public ICreate<TEntity, T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
+    public IContinuedCreate<TEntity, T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -738,7 +994,7 @@ class Create<TEntity, T1, T2> : CreateBase, ICreate<TEntity, T1, T2>
         this.visitor.Where(predicate);
         return this;
     }
-    public ICreate<TEntity, T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> predicate)
+    public IContinuedCreate<TEntity, T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -748,11 +1004,11 @@ class Create<TEntity, T1, T2> : CreateBase, ICreate<TEntity, T1, T2>
         return this;
     }
 }
-class Create<TEntity, T1, T2, T3> : CreateBase, ICreate<TEntity, T1, T2, T3>
+class ContinuedCreate<TEntity, T1, T2, T3> : ContinuedCreateBase, IContinuedCreate<TEntity, T1, T2, T3>
 {
-    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
         : base(connection, transaction, visitor) { }
-    public ICreate<TEntity, T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
+    public IContinuedCreate<TEntity, T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -760,7 +1016,7 @@ class Create<TEntity, T1, T2, T3> : CreateBase, ICreate<TEntity, T1, T2, T3>
         this.visitor.Where(predicate);
         return this;
     }
-    public ICreate<TEntity, T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> predicate)
+    public IContinuedCreate<TEntity, T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -770,11 +1026,11 @@ class Create<TEntity, T1, T2, T3> : CreateBase, ICreate<TEntity, T1, T2, T3>
         return this;
     }
 }
-class Create<TEntity, T1, T2, T3, T4> : CreateBase, ICreate<TEntity, T1, T2, T3, T4>
+class ContinuedCreate<TEntity, T1, T2, T3, T4> : ContinuedCreateBase, IContinuedCreate<TEntity, T1, T2, T3, T4>
 {
-    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
         : base(connection, transaction, visitor) { }
-    public ICreate<TEntity, T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
+    public IContinuedCreate<TEntity, T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -782,7 +1038,7 @@ class Create<TEntity, T1, T2, T3, T4> : CreateBase, ICreate<TEntity, T1, T2, T3,
         this.visitor.Where(predicate);
         return this;
     }
-    public ICreate<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> predicate)
+    public IContinuedCreate<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -792,11 +1048,11 @@ class Create<TEntity, T1, T2, T3, T4> : CreateBase, ICreate<TEntity, T1, T2, T3,
         return this;
     }
 }
-class Create<TEntity, T1, T2, T3, T4, T5> : CreateBase, ICreate<TEntity, T1, T2, T3, T4, T5>
+class ContinuedCreate<TEntity, T1, T2, T3, T4, T5> : ContinuedCreateBase, IContinuedCreate<TEntity, T1, T2, T3, T4, T5>
 {
-    public Create(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
         : base(connection, transaction, visitor) { }
-    public ICreate<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
+    public IContinuedCreate<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -804,7 +1060,7 @@ class Create<TEntity, T1, T2, T3, T4, T5> : CreateBase, ICreate<TEntity, T1, T2,
         this.visitor.Where(predicate);
         return this;
     }
-    public ICreate<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
+    public IContinuedCreate<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));

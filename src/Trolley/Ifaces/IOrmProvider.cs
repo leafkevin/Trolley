@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-public delegate SqlSegment MemberAccessSqlFormatter(SqlSegment target);
+public delegate SqlSegment MemberAccessSqlFormatter(ISqlVisitor visitor, SqlSegment target);
 public delegate SqlSegment MethodCallSqlFormatter(ISqlVisitor visitor, SqlSegment target, Stack<DeferredExpr> DeferredExprs, params SqlSegment[] arguments);
 public enum DatabaseType
 {

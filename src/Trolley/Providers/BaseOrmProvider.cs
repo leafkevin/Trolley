@@ -39,6 +39,7 @@ public abstract class BaseOrmProvider : IOrmProvider
     public abstract string CastTo(Type type);
     public virtual string GetQuotedValue(Type expectType, object value)
     {
+        if (value == null) return "NULL";
         if (expectType == typeof(bool))
             return Convert.ToBoolean(value) ? "1" : "0";
         if (expectType == typeof(string))
@@ -46,7 +47,7 @@ public abstract class BaseOrmProvider : IOrmProvider
         if (expectType == typeof(DateTime))
             return $"'{Convert.ToDateTime(value):yyyy-MM-dd HH:mm:ss}'";
         if (expectType == typeof(TimeSpan))
-            return $"'{TimeSpan.Parse(value.ToString()):yyyy-MM-dd HH:mm:ss}'";
+            return ((TimeSpan)value).Ticks.ToString();
         if (value is SqlSegment sqlSegment)
         {
             if (sqlSegment == SqlSegment.Null || !sqlSegment.IsConstantValue)

@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
 namespace Trolley;
 
+[DebuggerDisplay("Value: {Value,nq}     Expression: {Expression,nq}")]
 public class SqlSegment
 {
     public static SqlSegment True = new SqlSegment { isFixValue = true, OperationType = OperationType.None, IsConstantValue = true, Value = true };
@@ -31,13 +33,20 @@ public class SqlSegment
     /// 是否是常量值
     /// </summary>
     public bool IsConstantValue { get; set; }
+    /// <summary>
+    /// 是否是表达式，通常方法调用，二元表达式都为true
+    /// </summary>
     public bool IsExpression { get; set; }
     /// <summary>
-    /// 是否需要外面加括弧()
+    /// 是否需要在最外层添加括弧()，主要是在SELECT语句中，某个字段是表达式，用()包一下SQL看起来更优雅
+    /// 通常是在解析Defer语句或是解析表达式后设置此值
     /// </summary>
     public bool IsNeedParentheses { get; set; }
+    /// <summary>
+    /// 是否参数化当前值，本次解析有效
+    /// </summary>
+    public bool IsParameterized { get; set; }
     public bool IsArray { get; set; }
-    public string ParameterName { get; set; }
     public TableSegment TableSegment { get; set; }
     public ReaderFieldType MemberType { get; set; }
     public MemberInfo FromMember { get; set; }
@@ -45,6 +54,18 @@ public class SqlSegment
     public Expression Expression { get; set; }
     public bool HasDeferred => this.DeferredExprs != null && this.DeferredExprs.Count > 0;
 
+    /// <summary>
+    /// 表达式的所有下属子表达式都解析完毕，把每个子表达式HasField，IsParameter栏位值合并一下，以便外层判断
+    /// 通常是在二元操作后或是带有多个参数的方法调用后，进行此操作，并把Merge结果赋值到当前sqlSegment中
+    /// </summary>
+    /// <param name="rightSegment">右侧sqlSegment</param>
+    /// <returns>返回合并后的结果，并赋值到当前sqlSegment中</returns>
+    public SqlSegment Merge(SqlSegment rightSegment)
+    {
+        this.HasField = this.HasField || rightSegment.HasField;
+        this.IsParameter = this.IsParameter || rightSegment.IsParameter;
+        return this;
+    }
     public SqlSegment Change(object value, bool isConstantValue = true, bool isExpression = false)
     {
         this.isFixValue = false;
@@ -104,4 +125,7 @@ public class SqlSegment
         return Equals((SqlSegment)obj);
     }
     public override int GetHashCode() => HashCode.Combine(this.isFixValue, this.OperationType, this.IsConstantValue, this.Value);
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private string DebugDisplayText => $"Value: {this.Value} \r\nExpression: {this.Expression}";
 }

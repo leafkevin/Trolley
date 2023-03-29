@@ -56,12 +56,12 @@ class FromGroupingQuery<T, TGrouping> : IFromGroupingQuery<T, TGrouping>
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, isFromQuery: true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
     {
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
 }

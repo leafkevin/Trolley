@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Trolley;
 
-partial class MySqlProvider
+partial class SqlServerProvider
 {
     public virtual bool TryGetIEnumerableMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {

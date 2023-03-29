@@ -13,8 +13,8 @@ class CreateVisitor : SqlVisitor
     private string selectSql = null;
     private string whereSql = null;
 
-    public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, char tableAsStart = 'a', string parameterPrefix = "p")
-        : base(dbKey, ormProvider, mapProvider, tableAsStart, parameterPrefix, true)
+    public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix)
     {
         this.tables = new();
         this.tableAlias = new();
@@ -110,15 +110,14 @@ class CreateVisitor : SqlVisitor
                 else throw new ArgumentException($"不支持的MemberAccess操作，表达式'{memberExpr}'返回值不是boolean类型");
             }
 
-            //各种类型值的属性访问，如：DateTime,TimeSpan,String.Length,List.Count,
+            //各种类型实例成员访问，如：DateTime,TimeSpan,String.Length,List.Count
             if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
             {
                 //Where(f=>... && f.OrderNo.Length==10 && ...)
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
-                var targetSegment = this.Visit(sqlSegment.Next(memberExpr.Expression));
-                return sqlSegment.Change(formatter.Invoke(targetSegment));
+                var targetSegment = sqlSegment.Next(memberExpr.Expression);
+                return formatter.Invoke(this, targetSegment);
             }
-
             if (memberExpr.IsParameter(out var parameterName))
             {
                 //Where(f=>... && f.Amount>5 && ...)
@@ -156,16 +155,16 @@ class CreateVisitor : SqlVisitor
         if (memberExpr.Member.DeclaringType == typeof(DBNull))
             return SqlSegment.Null;
 
-        //各种类型的常量或是静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
+        //各种静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
         if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
-            return sqlSegment.Change(formatter(null), false);
+            return formatter.Invoke(this, sqlSegment);
 
         //访问局部变量或是成员变量，当作常量处理,直接计算，如果是字符串变成参数@p
         //var orderIds=new List<int>{1,2,3}; Where(f=>orderIds.Contains(f.OrderId)); orderIds
         //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
         //var orderId=10; Select(f=>new {OrderId=orderId,...}
         //Select(f=>new {OrderId=this.Order.Id, ...}
-        return this.EvaluateAndParameter(sqlSegment);
+        return this.Evaluate(sqlSegment);
     }
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
     {
@@ -185,7 +184,7 @@ class CreateVisitor : SqlVisitor
             insertBuilder.Append(fromBuilder);
             return sqlSegment.Change(insertBuilder.ToString());
         }
-        return this.EvaluateAndParameter(sqlSegment);
+        return this.Evaluate(sqlSegment);
     }
     public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
     {

@@ -33,7 +33,11 @@ public class SqlServerUnitTest3
     {
         this.Initialize();
         using var repository = this.dbFactory.Create();
-        var result = repository.Update<User>(f => new { Name = f.Name + "_1", Gender = Gender.Female }, t => t.Id == 1);
+        var result = repository.Update<User>(f => new
+        {
+            Name = f.Name + "_1",
+            Gender = Gender.Female
+        }, t => t.Id == 1);
         var result1 = repository.Get<User>(1);
         Assert.True(result > 0);
         Assert.NotNull(result1);
@@ -95,7 +99,11 @@ public class SqlServerUnitTest3
         this.Initialize();
         using var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        var result = repository.Update<Order>().WithBy(new { ProductCount = 10, Id = 1 }).Execute();
+        var result = repository.Update<Order>().WithBy(new
+        {
+            ProductCount = 10,
+            Id = 1
+        }).Execute();
         var result1 = repository.Get<Order>(new { Id = 1 });
         repository.Commit();
         if (result > 0)
@@ -122,10 +130,23 @@ public class SqlServerUnitTest3
         using var repository = this.dbFactory.Create();
         var parameters = await repository.From<OrderDetail>()
             .Where(f => new int[] { 1, 2, 3, 4, 5, 6 }.Contains(f.Id))
-            .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
+            .Select(f => new
+            {
+                f.Id,
+                Price = f.Price + 80,
+                Quantity = f.Quantity + 2,
+                Amount = f.Amount + 100
+            })
             .ToListAsync();
         var sql = repository.Update<OrderDetail>()
-            .WithBy(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters)
+            .WithBy(f => new
+            {
+                Price = 200,
+                f.Quantity,
+                UpdatedBy = 2,
+                f.Amount,
+                ProductId = DBNull.Value
+            }, parameters)
             .ToSql(out _);
         Assert.True(sql == "UPDATE [sys_order_detail] SET [Price]=200,[UpdatedBy]=2,[ProductId]=NULL,[Quantity]=@Quantity0,[Amount]=@Amount0 WHERE [Id]=@kId0;UPDATE [sys_order_detail] SET [Price]=200,[UpdatedBy]=2,[ProductId]=NULL,[Quantity]=@Quantity1,[Amount]=@Amount1 WHERE [Id]=@kId1;UPDATE [sys_order_detail] SET [Price]=200,[UpdatedBy]=2,[ProductId]=NULL,[Quantity]=@Quantity2,[Amount]=@Amount2 WHERE [Id]=@kId2;UPDATE [sys_order_detail] SET [Price]=200,[UpdatedBy]=2,[ProductId]=NULL,[Quantity]=@Quantity3,[Amount]=@Amount3 WHERE [Id]=@kId3;UPDATE [sys_order_detail] SET [Price]=200,[UpdatedBy]=2,[ProductId]=NULL,[Quantity]=@Quantity4,[Amount]=@Amount4 WHERE [Id]=@kId4;UPDATE [sys_order_detail] SET [Price]=200,[UpdatedBy]=2,[ProductId]=NULL,[Quantity]=@Quantity5,[Amount]=@Amount5 WHERE [Id]=@kId5");
     }
@@ -285,12 +306,12 @@ public class SqlServerUnitTest3
             .Execute();
         repository.Update<Order>()
             .Set(f => new
-            {              
+            {
                 UpdatedAt = DateTime.Now
             })
             .Where(x => x.Id == 2)
             .Execute();
-        var order = repository.Get<Order>(1);      
+        var order = repository.Get<Order>(1);
         repository.Commit();
         if (result > 0)
         {

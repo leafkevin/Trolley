@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 
 namespace Trolley;
 
-partial class MySqlProvider
+partial class SqlServerProvider
 {
     public virtual bool TryGetStringMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
     {
@@ -35,7 +36,7 @@ partial class MySqlProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((string)targetSegment.Value).Length);
 
-                    return targetSegment.Change($"CHAR_LENGTH({this.GetQuotedValue(targetSegment)})", false, true);
+                    return targetSegment.Change($"LEN({this.GetQuotedValue(targetSegment)})", false, true);
                 });
                 result = true;
                 break;
@@ -86,13 +87,13 @@ partial class MySqlProvider
                                     if (constBuilder.Length > 0)
                                     {
                                         if (builder.Length > 0)
-                                            builder.Append(',');
+                                            builder.Append('+');
                                         var constValue = this.GetQuotedValue(constBuilder.ToString());
                                         builder.Append(constValue);
                                         constBuilder.Clear();
                                     }
                                     if (builder.Length > 0)
-                                        builder.Append(',');
+                                        builder.Append('+');
                                     builder.Append(strValue);
                                 }
                             }
@@ -100,13 +101,11 @@ partial class MySqlProvider
                             {
                                 if (constBuilder.Length > 0)
                                 {
-                                    builder.Append(',');
+                                    builder.Append('+');
                                     var constValue = this.GetQuotedValue(constBuilder.ToString());
                                     builder.Append(constValue);
                                     constBuilder.Clear();
                                 }
-                                builder.Insert(0, "CONCAT(");
-                                builder.Append(')');
                                 return resultSegment.Change(builder.ToString(), false, true);
                             }
                             return resultSegment.Change(constBuilder.ToString());
@@ -145,13 +144,13 @@ partial class MySqlProvider
                                 if (constBuilder.Length > 0)
                                 {
                                     if (builder.Length > 0)
-                                        builder.Append(',');
+                                        builder.Append('+');
                                     var constValue = this.GetQuotedValue(constBuilder.ToString());
                                     builder.Append(constValue);
                                     constBuilder.Clear();
                                 }
                                 if (builder.Length > 0)
-                                    builder.Append(',');
+                                    builder.Append('+');
                                 builder.Append(sqlSegment.ToString());
                             }
 
@@ -159,13 +158,11 @@ partial class MySqlProvider
                             {
                                 if (constBuilder.Length > 0)
                                 {
-                                    builder.Append(',');
+                                    builder.Append('+');
                                     var constValue = this.GetQuotedValue(constBuilder.ToString());
                                     builder.Append(constValue);
                                     constBuilder.Clear();
                                 }
-                                builder.Insert(0, "CONCAT(");
-                                builder.Append(')');
                                 return resultSegment.Change(builder.ToString(), false, true);
                             }
                             return resultSegment.Change(constBuilder.ToString());
@@ -198,12 +195,12 @@ partial class MySqlProvider
                     {
                         methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
-                            var targetSegment = visitor.VisitAndDeferred(args[0]);
+                            var valueSegment = visitor.VisitAndDeferred(args[0]);
                             string targetAugment = null;
-                            if (targetSegment.IsConstantValue)
-                                targetAugment = this.GetQuotedValue(targetSegment.ToString());
-                            else targetAugment = targetSegment.ToString();
-                            return targetSegment.Change($"({targetAugment} IS NULL OR {targetAugment}='')", false, true);
+                            if (valueSegment.IsConstantValue)
+                                targetAugment = this.GetQuotedValue(valueSegment.ToString());
+                            else targetAugment = valueSegment.ToString();
+                            return valueSegment.Change($"({targetAugment} IS NULL OR {targetAugment}='')", false, true);
                         });
                         result = true;
                     }
@@ -260,14 +257,14 @@ partial class MySqlProvider
                                 else
                                 {
                                     if (builder.Length > 0)
-                                        builder.Append(',');
+                                        builder.Append('+');
                                     if (constBuilder.Length > 0)
                                     {
                                         var constValue = this.GetQuotedValue(constBuilder.ToString());
                                         builder.Append(constValue);
                                         constBuilder.Clear();
                                     }
-                                    builder.Append(',');
+                                    builder.Append('+');
                                     builder.Append(strValue);
                                 }
                             }
@@ -275,13 +272,11 @@ partial class MySqlProvider
                             {
                                 if (constBuilder.Length > 0)
                                 {
-                                    builder.Append(',');
+                                    builder.Append('+');
                                     var constValue = this.GetQuotedValue(constBuilder.ToString());
                                     builder.Append(constValue);
                                     constBuilder.Clear();
                                 }
-                                builder.Insert(0, "CONCAT(");
-                                builder.Append(')');
                                 return valuesSegment.Change(builder.ToString(), false, true);
                             }
                             else return valuesSegment.Change(constBuilder.ToString());
@@ -327,14 +322,14 @@ partial class MySqlProvider
                                 else
                                 {
                                     if (builder.Length > 0)
-                                        builder.Append(',');
+                                        builder.Append('+');
                                     if (constBuilder.Length > 0)
                                     {
                                         var constValue = this.GetQuotedValue(constBuilder.ToString());
                                         builder.Append(constValue);
                                         constBuilder.Clear();
                                     }
-                                    builder.Append(',');
+                                    builder.Append('+');
                                     builder.Append(strValue);
                                 }
                             }
@@ -342,13 +337,11 @@ partial class MySqlProvider
                             {
                                 if (constBuilder.Length > 0)
                                 {
-                                    builder.Append(',');
+                                    builder.Append('+');
                                     var constValue = this.GetQuotedValue(constBuilder.ToString());
                                     builder.Append(constValue);
                                     constBuilder.Clear();
                                 }
-                                builder.Insert(0, "CONCAT(");
-                                builder.Append(')');
                                 return valuesSegment.Change(builder.ToString(), false, true);
                             }
                             else return valuesSegment.Change(constBuilder.ToString());
@@ -407,8 +400,8 @@ partial class MySqlProvider
 
                             string rightArgument = null;
                             if (rightSegment.IsConstantValue)
-                                rightArgument = $"'%{rightSegment}%'";
-                            else rightArgument = $"CONCAT('%',REPLACE({rightSegment},'%','\\%'),'%')";
+                                rightArgument = $"'%{rightSegment.ToString().Replace("%", "[%]")}%'";
+                            else rightArgument = $"'%'+REPLACE({rightSegment},'%','[%]')+'%'";
 
                             int notIndex = 0;
                             if (deferExprs != null && deferExprs.Count > 0)
@@ -454,11 +447,12 @@ partial class MySqlProvider
                 case "Trim":
                     if (parameterInfos.Length == 0)
                     {
-                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        formatter = (visitor, target, deferExprs, args) =>
                         {
                             var targetSegment = visitor.VisitAndDeferred(target);
                             return targetSegment.Change($"TRIM({this.GetQuotedValue(targetSegment)})", false, true);
-                        });
+                        };
+                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter);
                         result = true;
                     }
                     if (parameterInfos.Length == 1 && parameterInfos[0].ParameterType == typeof(char))
@@ -469,7 +463,7 @@ partial class MySqlProvider
                             var rightSegment = visitor.VisitAndDeferred(args[0]);
 
                             targetSegment.Merge(rightSegment);
-                            return targetSegment.Change($"TRIM(BOTH {this.GetQuotedValue(rightSegment)} FROM {this.GetQuotedValue(targetSegment)})", false, true);
+                            return targetSegment.Change($"TRIM({this.GetQuotedValue(rightSegment)} FROM {this.GetQuotedValue(targetSegment)})", false, true);
                         });
                         result = true;
                     }
@@ -484,18 +478,6 @@ partial class MySqlProvider
                         });
                         result = true;
                     }
-                    if (parameterInfos.Length == 1 && parameterInfos[0].ParameterType == typeof(char))
-                    {
-                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
-                        {
-                            var targetSegment = visitor.VisitAndDeferred(target);
-                            var rightSegment = visitor.VisitAndDeferred(args[0]);
-
-                            targetSegment.Merge(rightSegment);
-                            return targetSegment.Change($"TRIM(LEADING {this.GetQuotedValue(rightSegment)} FROM {this.GetQuotedValue(targetSegment)})", false, true);
-                        });
-                        result = true;
-                    }
                     break;
                 case "TrimEnd":
                     if (parameterInfos.Length == 0)
@@ -507,21 +489,9 @@ partial class MySqlProvider
                         });
                         result = true;
                     }
-                    if (parameterInfos.Length == 1 && parameterInfos[0].ParameterType == typeof(char))
-                    {
-                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
-                        {
-                            var targetSegment = visitor.VisitAndDeferred(target);
-                            var rightSegment = visitor.VisitAndDeferred(args[0]);
-
-                            targetSegment.Merge(rightSegment);
-                            return targetSegment.Change($"TRIM(TRAILING {this.GetQuotedValue(rightSegment)} FROM {this.GetQuotedValue(targetSegment)})", false, true);
-                        });
-                        result = true;
-                    }
                     break;
                 case "ToUpper":
-                    if (!methodInfo.IsStatic && parameterInfos.Length >= 0 && typeof(string).IsAssignableFrom(methodInfo.DeclaringType))
+                    if (parameterInfos.Length >= 0)
                     {
                         methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
@@ -532,7 +502,7 @@ partial class MySqlProvider
                     }
                     break;
                 case "ToLower":
-                    if (!methodInfo.IsStatic && parameterInfos.Length >= 0 && typeof(string).IsAssignableFrom(methodInfo.DeclaringType))
+                    if (parameterInfos.Length >= 0)
                     {
                         methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
@@ -585,8 +555,8 @@ partial class MySqlProvider
 
                             string rightArgument = null;
                             if (rightSegment.IsConstantValue)
-                                rightArgument = $"'{rightSegment.ToString().Replace("%", "\\%")}%'";
-                            else rightArgument = $"CONCAT(REPLACE({rightSegment},'%','\\%'),'%')";
+                                rightArgument = $"'{rightSegment.ToString().Replace("%", "[%]")}%'";
+                            else rightArgument = $"REPLACE({rightSegment},'%','[%]')+'%'";
                             int notIndex = 0;
 
                             if (deferExprs != null && deferExprs.Count > 0)
@@ -620,8 +590,8 @@ partial class MySqlProvider
 
                             string rightArgument = null;
                             if (rightSegment.IsConstantValue)
-                                rightArgument = this.GetQuotedValue($"%{rightSegment.ToString().Replace("%", "\\%")}");
-                            else rightArgument = $"CONCAT('%',REPLACE({rightSegment},'%','\\%'))";
+                                rightArgument = $"'%{rightSegment.ToString().Replace("%", "[%]")}'";
+                            else rightArgument = $"'%'+REPLACE({rightSegment},'%','[%]')";
                             int notIndex = 0;
 
                             if (deferExprs != null && deferExprs.Count > 0)
@@ -646,55 +616,65 @@ partial class MySqlProvider
                     }
                     break;
                 case "Substring":
-                    if (parameterInfos.Length > 1)
+                    if (parameterInfos.Length >= 1)
                     {
-                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        if (parameterInfos.Length > 1)
                         {
-                            var targetSegment = visitor.VisitAndDeferred(target);
-                            var indexSegment = visitor.VisitAndDeferred(args[0]);
-                            var lengthSegment = visitor.VisitAndDeferred(args[1]);
+                            methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                            {
+                                var targetSegment = visitor.VisitAndDeferred(target);
+                                var indexSegment = visitor.VisitAndDeferred(args[0]);
+                                var lengthSegment = visitor.VisitAndDeferred(args[1]);
 
-                            if (targetSegment.IsConstantValue && indexSegment.IsConstantValue && lengthSegment.IsConstantValue)
-                                return targetSegment.Change(targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value), Convert.ToInt32(lengthSegment.Value)));
+                                if (targetSegment.IsConstantValue && indexSegment.IsConstantValue && lengthSegment.IsConstantValue)
+                                    return targetSegment.Change(targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value), Convert.ToInt32(lengthSegment.Value)));
 
-                            targetSegment.Merge(indexSegment);
-                            targetSegment.Merge(lengthSegment);
-                            return targetSegment.Change($"SUBSTR({this.GetQuotedValue(targetSegment)},{indexSegment}+1,{lengthSegment})", false, true);
-                        });
-                        result = true;
-                    }
-                    else
-                    {
-                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                                targetSegment.Merge(indexSegment);
+                                targetSegment.Merge(lengthSegment);
+                                return targetSegment.Change($"SUBSTRING({this.GetQuotedValue(targetSegment)},{indexSegment}+1,{lengthSegment})", false, true);
+                            });
+                            result = true;
+                        }
+                        else
                         {
-                            var targetSegment = visitor.VisitAndDeferred(target);
-                            var indexSegment = visitor.VisitAndDeferred(args[0]);
+                            methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                            {
+                                var targetSegment = visitor.VisitAndDeferred(target);
+                                var indexSegment = visitor.VisitAndDeferred(args[0]);
 
-                            if (targetSegment.IsConstantValue && indexSegment.IsConstantValue)
-                                return targetSegment.Change(targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value)));
+                                if (targetSegment.IsConstantValue && indexSegment.IsConstantValue)
+                                    return targetSegment.Change(targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value)));
 
-                            targetSegment.Merge(indexSegment);
-                            return targetSegment.Change($"SUBSTR({this.GetQuotedValue(targetSegment)},{indexSegment}+1)");
-                        });
-                        result = true;
+                                targetSegment.Merge(indexSegment);
+                                return targetSegment.Change($"SUBSTRING({this.GetQuotedValue(targetSegment)},{indexSegment}+1)");
+                            });
+                            result = true;
+                        }
                     }
                     break;
                 case "ToString":
-                    //int.ToString();
-                    //int.ToString(IFormatProvider);
-                    //double.ToString();
-                    //double.ToString(IFormatProvider);
-                    //DateTime.ToString();
-                    if (parameterInfos.Length == 0 || (parameterInfos.Length == 1 && typeof(IFormatProvider).IsAssignableFrom(parameterInfos[0].ParameterType)))
+                    if (parameterInfos.Length >= 0)
                     {
-                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        //int.ToString();
+                        //int.ToString(IFormatProvider);
+                        //double.ToString();
+                        //double.ToString(IFormatProvider);
+                        //DateTime.ToString();
+                        if (parameterInfos.Length == 0 || (parameterInfos.Length == 1 && typeof(IFormatProvider).IsAssignableFrom(parameterInfos[0].ParameterType)))
                         {
-                            var targetSegment = visitor.VisitAndDeferred(target);
-                            if (targetSegment.IsConstantValue)
-                                return targetSegment.Change(targetSegment.ToString());
-                            return targetSegment.Change($"CAST({targetSegment} AS {this.CastTo(typeof(string))})", false, true);
-                        });
-                        result = true;
+                            methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                            {
+                                var targetSegment = visitor.VisitAndDeferred(target);
+                                if (targetSegment.IsConstantValue)
+                                    return targetSegment.Change(targetSegment.ToString());
+                                return targetSegment.Change($"CAST({targetSegment} AS {this.CastTo(typeof(string))})", false, true);
+                            });
+                            result = true;
+                        }
+                        //放到其他类型的方法中实现
+                        //int.ToString(string format);
+                        //double.ToString(string format);
+                        //DateTime.ToString(string format);
                     }
                     break;
                 case "IndexOf":
@@ -705,7 +685,7 @@ partial class MySqlProvider
                             var targetSegment = visitor.VisitAndDeferred(target);
                             var valueSegment = visitor.VisitAndDeferred(args[0]);
                             targetSegment.Merge(valueSegment);
-                            return targetSegment.Change($"(LOCATE({this.GetQuotedValue(valueSegment)},{this.GetQuotedValue(targetSegment)})-1)", false, true);
+                            return targetSegment.Change($"(CHARINDEX({this.GetQuotedValue(valueSegment)},{this.GetQuotedValue(targetSegment)})-1)", false, true);
                         });
                         result = true;
                     }
@@ -722,7 +702,7 @@ partial class MySqlProvider
                             else startIndex = $"{startIndexSegment}+1";
                             targetSegment.Merge(valueSegment);
                             targetSegment.Merge(startIndexSegment);
-                            return targetSegment.Change($"(LOCATE({this.GetQuotedValue(valueSegment)},{this.GetQuotedValue(targetSegment)},{startIndex})-1)", false, true);
+                            return targetSegment.Change($"(CHARINDEXX({this.GetQuotedValue(valueSegment)},{this.GetQuotedValue(targetSegment)},{startIndex})-1)", false, true);
                         });
                         result = true;
                     }
@@ -799,12 +779,13 @@ partial class MySqlProvider
                         var valueSegment = visitor.VisitAndDeferred(args[1]);
                         targetSegment.Merge(indexSegment);
                         targetSegment.Merge(valueSegment);
-                        return targetSegment.Change($"INSERT({this.GetQuotedValue(targetSegment)},{this.GetQuotedValue(indexSegment)},0,{this.GetQuotedValue(valueSegment)})", false, true);
+                        return targetSegment.Change($"(LEFT({this.GetQuotedValue(targetSegment)},{this.GetQuotedValue(indexSegment)})+{this.GetQuotedValue(valueSegment)}+SUBSTRING({this.GetQuotedValue(targetSegment)},{indexSegment}+1))", false, true);
                     });
                     result = true;
                     break;
             }
         }
+
         return result;
     }
 }

@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-partial class MySqlProvider
+partial class SqlServerProvider
 {
     public virtual bool TryGetDateTimeMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
     {
@@ -48,7 +48,7 @@ partial class MySqlProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((DateTime)targetSegment.Value).Date);
 
-                    return targetSegment.Change($"CONVERT({this.GetQuotedValue(targetSegment)},DATE)", false, true);
+                    return targetSegment.Change($"CONVERT(CHAR(10),{this.GetQuotedValue(targetSegment)},120)", false, true);
                 });
                 result = true;
                 break;
@@ -59,7 +59,7 @@ partial class MySqlProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((DateTime)targetSegment.Value).Day);
 
-                    return targetSegment.Change($"DAYOFMONTH({this.GetQuotedValue(targetSegment)})", false, true);
+                    return targetSegment.Change($"DATEPART(DAY,{this.GetQuotedValue(targetSegment)})", false, true);
                 });
                 result = true;
                 break;
@@ -70,7 +70,7 @@ partial class MySqlProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((DateTime)targetSegment.Value).DayOfWeek);
 
-                    return targetSegment.Change($"(DAYOFWEEK({this.GetQuotedValue(targetSegment)})-1)", false, true);
+                    return targetSegment.Change($"(DATEPART(WEEKDAY,{this.GetQuotedValue(targetSegment)})-1)", false, true);
                 });
                 result = true;
                 break;
@@ -81,7 +81,7 @@ partial class MySqlProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((DateTime)targetSegment.Value).DayOfYear);
 
-                    return targetSegment.Change($"DAYOFYEAR({this.GetQuotedValue(targetSegment)})", false, true);
+                    return targetSegment.Change($"DATEPART(DAYOFYEAR,{this.GetQuotedValue(targetSegment)})", false, true);
                 });
                 result = true;
                 break;
@@ -92,7 +92,7 @@ partial class MySqlProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((DateTime)targetSegment.Value).Hour);
 
-                    return targetSegment.Change($"HOUR({this.GetQuotedValue(targetSegment)})", false, true);
+                    return targetSegment.Change($"DATEPART(HOUR,{this.GetQuotedValue(targetSegment)})", false, true);
                 });
                 result = true;
                 break;
@@ -113,7 +113,7 @@ partial class MySqlProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((DateTime)targetSegment.Value).Millisecond);
 
-                    return targetSegment.Change($"FLOOR(MICROSECOND({this.GetQuotedValue(targetSegment)})/1000)", false, true);
+                    return targetSegment.Change($"(DATEPART(MILLISECOND,{this.GetQuotedValue(targetSegment)})/1000)", false, true);
                 });
                 result = true;
                 break;
@@ -124,7 +124,7 @@ partial class MySqlProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((DateTime)targetSegment.Value).Minute);
 
-                    return targetSegment.Change($"MINUTE({this.GetQuotedValue(targetSegment)})", false, true);
+                    return targetSegment.Change($"DATEPART(MINUTE,{this.GetQuotedValue(targetSegment)})", false, true);
                 });
                 result = true;
                 break;
@@ -135,7 +135,7 @@ partial class MySqlProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((DateTime)targetSegment.Value).Month);
 
-                    return targetSegment.Change($"MONTH({this.GetQuotedValue(targetSegment)})", false, true);
+                    return targetSegment.Change($"DATEPART(MONTH,{this.GetQuotedValue(targetSegment)})", false, true);
                 });
                 result = true;
                 break;
@@ -146,7 +146,7 @@ partial class MySqlProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((DateTime)targetSegment.Value).Second);
 
-                    return targetSegment.Change($"SECOND({this.GetQuotedValue(targetSegment)})", false, true);
+                    return targetSegment.Change($"DATEPART(SECOND,{this.GetQuotedValue(targetSegment)})", false, true);
                 });
                 result = true;
                 break;
@@ -157,7 +157,7 @@ partial class MySqlProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((DateTime)targetSegment.Value).Ticks);
 
-                    return targetSegment.Change($"TIMESTAMPDIFF(MICROSECOND,'0001-01-01',{this.GetQuotedValue(targetSegment)})*10", false, true);
+                    return targetSegment.Change($"(CAST(DATEDIFF(SECOND,'1970-01-01',{this.GetQuotedValue(targetSegment)}) AS BIGINT)*10000000+621355968000000000)", false, true);
                 });
                 result = true;
                 break;
@@ -168,7 +168,7 @@ partial class MySqlProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((DateTime)targetSegment.Value).TimeOfDay);
 
-                    return targetSegment.Change($"TIMESTAMPDIFF(MICROSECOND,CONVERT({this.GetQuotedValue(targetSegment)},DATE),{this.GetQuotedValue(targetSegment)})", false, true);
+                    return targetSegment.Change($"DATEDIFF(SECOND,CONVERT(CHAR(10),{this.GetQuotedValue(targetSegment)},120),{this.GetQuotedValue(targetSegment)})", false, true);
                 });
                 result = true;
                 break;
@@ -179,7 +179,7 @@ partial class MySqlProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((DateTime)targetSegment.Value).Year);
 
-                    return targetSegment.Change($"YEAR({this.GetQuotedValue(targetSegment)})", false, true);
+                    return targetSegment.Change($"DATEPART(YEAR,{this.GetQuotedValue(targetSegment)})", false, true);
                 });
                 result = true;
                 break;
@@ -207,7 +207,7 @@ partial class MySqlProvider
                             return leftSegment.Change(DateTime.DaysInMonth(Convert.ToInt32(leftSegment.Value), Convert.ToInt32(rightSegment.Value)));
 
                         leftSegment.Merge(rightSegment);
-                        return leftSegment.Change($"DAYOFMONTH(LAST_DAY('{leftSegment}-{rightSegment}-01'))", false, true);
+                        return leftSegment.Change($"DATEPART(DAY,DATEADD(DAY,-1,DATEADD(MONTH,1,CAST({this.GetQuotedValue(leftSegment)} AS VARCHAR(100))+'-'+CAST({this.GetQuotedValue(rightSegment)} AS VARCHAR(100))+'-1')))", false, true);
                     });
                     result = true;
                     break;
@@ -247,63 +247,8 @@ partial class MySqlProvider
                         if (valueSegment.IsConstantValue && formatSegment.IsConstantValue && providerSegment.IsConstantValue)
                             return valueSegment.Change(DateTime.ParseExact(valueSegment.ToString(), formatSegment.ToString(), (IFormatProvider)providerSegment.Value));
 
-                        string formatArgument = null;
-                        if (formatSegment.IsConstantValue)
-                        {
-                            formatArgument = $"'{formatSegment}'";
-
-                            //分钟
-                            if (formatArgument.Contains("mm"))
-                                formatArgument = formatArgument.NextReplace("mm", "%i");
-                            else formatArgument = formatArgument.NextReplace("m", "%i");
-
-                            if (formatArgument.Contains("yyyy"))
-                                formatArgument = formatArgument.NextReplace("yyyy", "%Y");
-                            else if (formatArgument.Contains("yyy"))
-                                formatArgument = formatArgument.NextReplace("yyy", "%Y");
-                            else if (formatArgument.Contains("yy"))
-                                formatArgument = formatArgument.NextReplace("yy", "%y");
-
-                            if (formatArgument.Contains("MMMM"))
-                                formatArgument = formatArgument.NextReplace("MMMM", "%M");
-                            else if (formatArgument.Contains("MMM"))
-                                formatArgument = formatArgument.NextReplace("MMM", "%b");
-                            else if (formatArgument.Contains("MM"))
-                                formatArgument = formatArgument.NextReplace("MM", "%m");
-                            else if (formatArgument.Contains("M"))
-                                formatArgument = formatArgument.NextReplace("M", "%c");
-
-                            if (formatArgument.Contains("dddd"))
-                                formatArgument = formatArgument.NextReplace("dddd", "%W");
-                            else if (formatArgument.Contains("ddd"))
-                                formatArgument = formatArgument.NextReplace("ddd", "%a");
-                            else if (formatArgument.Contains("dd"))
-                                formatArgument = formatArgument.NextReplace("dd", "%d");
-                            else if (formatArgument.Contains("d"))
-                                formatArgument = formatArgument.NextReplace("d", "%e");
-
-                            if (formatArgument.Contains("HH"))
-                                formatArgument = formatArgument.NextReplace("HH", "%H");
-                            else if (formatArgument.Contains("H"))
-                                formatArgument = formatArgument.NextReplace("H", "%k");
-                            else if (formatArgument.Contains("hh"))
-                                formatArgument = formatArgument.NextReplace("hh", "%h");
-                            else if (formatArgument.Contains("h"))
-                                formatArgument = formatArgument.NextReplace("h", "%l");
-
-                            if (formatArgument.Contains("ss"))
-                                formatArgument = formatArgument.NextReplace("ss", "%s");
-                            else if (formatArgument.Contains("s"))
-                                formatArgument = formatArgument.NextReplace("s", "%s");
-
-                            if (formatArgument.Contains("tt"))
-                                formatArgument = formatArgument.NextReplace("tt", "%p");
-                            else if (formatArgument.Contains("t"))
-                                formatArgument = formatArgument.NextReplace("t", "SUBSTRING(%p,1,1)");
-                        }
-
                         valueSegment.Merge(formatSegment);
-                        return valueSegment.Change($"STR_TO_DATE({this.GetQuotedValue(valueSegment)},'{formatArgument}')", false, true);
+                        return valueSegment.Change($"CAST({this.GetQuotedValue(valueSegment)} AS DATETIME)", false, true);
                     });
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 1 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
@@ -336,22 +281,22 @@ partial class MySqlProvider
                             return targetSegment.Change(Convert.ToDateTime(targetSegment.Value).Add((TimeSpan)rightSegment.Value));
 
                         targetSegment.Merge(rightSegment);
-                        return targetSegment.Change($"DATE_ADD({this.GetQuotedValue(targetSegment)},INTERVAL({this.GetQuotedValue(rightSegment)}) MICROSECOND)", false, true);
+                        return targetSegment.Change($"DATEADD(SECOND,{this.GetQuotedValue(rightSegment)},{this.GetQuotedValue(targetSegment)})", false, true);
                     });
                     result = true;
                     break;
                 case "AddDays":
                     methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
-                     {
-                         var targetSegment = visitor.VisitAndDeferred(target);
-                         var rightSegment = visitor.VisitAndDeferred(args[0]);
+                    {
+                        var targetSegment = visitor.VisitAndDeferred(target);
+                        var rightSegment = visitor.VisitAndDeferred(args[0]);
 
-                         if (targetSegment.IsConstantValue && rightSegment.IsConstantValue)
-                             return targetSegment.Change(Convert.ToDateTime(targetSegment.Value).AddDays(Convert.ToDouble(rightSegment.Value)));
+                        if (targetSegment.IsConstantValue && rightSegment.IsConstantValue)
+                            return targetSegment.Change(Convert.ToDateTime(targetSegment.Value).AddDays(Convert.ToDouble(rightSegment.Value)));
 
-                         targetSegment.Merge(rightSegment);
-                         return targetSegment.Change($"DATE_ADD({this.GetQuotedValue(targetSegment)},INTERVAL({rightSegment}) DAY)", false, true);
-                     });
+                        targetSegment.Merge(rightSegment);
+                        return targetSegment.Change($"DATEADD(DAY,{this.GetQuotedValue(rightSegment)},{this.GetQuotedValue(targetSegment)})", false, true);
+                    });
                     result = true;
                     break;
                 case "AddHours":
@@ -364,7 +309,7 @@ partial class MySqlProvider
                             return targetSegment.Change(Convert.ToDateTime(targetSegment.Value).AddHours(Convert.ToDouble(rightSegment.Value)));
 
                         targetSegment.Merge(rightSegment);
-                        return targetSegment.Change($"DATE_ADD({this.GetQuotedValue(targetSegment)},INTERVAL({rightSegment}) HOUR)", false, true);
+                        return targetSegment.Change($"DATEADD(HOUR,{this.GetQuotedValue(rightSegment)},{this.GetQuotedValue(targetSegment)})", false, true);
                     });
                     result = true;
                     break;
@@ -378,7 +323,7 @@ partial class MySqlProvider
                             return targetSegment.Change(Convert.ToDateTime(targetSegment.Value).AddMilliseconds(Convert.ToDouble(rightSegment.Value)));
 
                         targetSegment.Merge(rightSegment);
-                        return targetSegment.Change($"DATE_ADD({this.GetQuotedValue(targetSegment)},INTERVAL({rightSegment})*1000 MICROSECOND)", false, true);
+                        return targetSegment.Change($"DATEADD(SECOND,{this.GetQuotedValue(rightSegment)}/1000,{this.GetQuotedValue(targetSegment)})", false, true);
                     });
                     result = true;
                     break;
@@ -392,22 +337,22 @@ partial class MySqlProvider
                             return targetSegment.Change(Convert.ToDateTime(targetSegment.Value).AddMinutes(Convert.ToDouble(rightSegment.Value)));
 
                         targetSegment.Merge(rightSegment);
-                        return targetSegment.Change($"DATE_ADD({this.GetQuotedValue(targetSegment)},INTERVAL({rightSegment}) MINUTE)", false, true);
+                        return targetSegment.Change($"DATEADD(MINUTE,{this.GetQuotedValue(rightSegment)},{this.GetQuotedValue(targetSegment)})", false, true);
                     });
                     result = true;
                     break;
                 case "AddMonths":
                     methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
-                      {
-                          var targetSegment = visitor.VisitAndDeferred(target);
-                          var rightSegment = visitor.VisitAndDeferred(args[0]);
+                    {
+                        var targetSegment = visitor.VisitAndDeferred(target);
+                        var rightSegment = visitor.VisitAndDeferred(args[0]);
 
-                          if (targetSegment.IsConstantValue && rightSegment.IsConstantValue)
-                              return targetSegment.Change(Convert.ToDateTime(targetSegment.Value).AddMonths(Convert.ToInt32(rightSegment.Value)));
+                        if (targetSegment.IsConstantValue && rightSegment.IsConstantValue)
+                            return targetSegment.Change(Convert.ToDateTime(targetSegment.Value).AddMonths(Convert.ToInt32(rightSegment.Value)));
 
-                          targetSegment.Merge(rightSegment);
-                          return targetSegment.Change($"DATE_ADD({this.GetQuotedValue(targetSegment)},INTERVAL({rightSegment}) MONTH)", false, true);
-                      });
+                        targetSegment.Merge(rightSegment);
+                        return targetSegment.Change($"DATEADD(MONTH,{this.GetQuotedValue(rightSegment)},{this.GetQuotedValue(targetSegment)})", false, true);
+                    });
                     result = true;
                     break;
                 case "AddSeconds":
@@ -420,7 +365,7 @@ partial class MySqlProvider
                             return targetSegment.Change(Convert.ToDateTime(targetSegment.Value).AddSeconds(Convert.ToDouble(rightSegment.Value)));
 
                         targetSegment.Merge(rightSegment);
-                        return targetSegment.Change($"DATE_ADD({this.GetQuotedValue(targetSegment)},INTERVAL({rightSegment}) SECOND)", false, true);
+                        return targetSegment.Change($"DATEADD(SECOND,{this.GetQuotedValue(rightSegment)},{this.GetQuotedValue(targetSegment)})", false, true);
                     });
                     result = true;
                     break;
@@ -434,7 +379,7 @@ partial class MySqlProvider
                             return targetSegment.Change(Convert.ToDateTime(targetSegment.Value).AddTicks(Convert.ToInt64(rightSegment.Value)));
 
                         targetSegment.Merge(rightSegment);
-                        return targetSegment.Change($"DATE_ADD({this.GetQuotedValue(targetSegment)},INTERVAL({rightSegment})/10 MICROSECOND)", false, true);
+                        return targetSegment.Change($"DATEADD(SECOND,{this.GetQuotedValue(rightSegment)}/10000000,{this.GetQuotedValue(targetSegment)})", false, true);
                     });
                     result = true;
                     break;
@@ -448,7 +393,7 @@ partial class MySqlProvider
                             return targetSegment.Change(Convert.ToDateTime(targetSegment.Value).AddYears(Convert.ToInt32(rightSegment.Value)));
 
                         targetSegment.Merge(rightSegment);
-                        return targetSegment.Change($"DATE_ADD({this.GetQuotedValue(targetSegment)},INTERVAL({rightSegment}) YEAR)", false, true);
+                        return targetSegment.Change($"DATEADD(YEAR,{this.GetQuotedValue(rightSegment)},{this.GetQuotedValue(targetSegment)})", false, true);
                     });
                     result = true;
                     break;
@@ -464,7 +409,7 @@ partial class MySqlProvider
                                 return targetSegment.Change(Convert.ToDateTime(targetSegment.Value).Subtract(Convert.ToDateTime(rightSegment.Value)));
 
                             targetSegment.Merge(rightSegment);
-                            return targetSegment.Change($"TIMESTAMPDIFF(MICROSECOND,{this.GetQuotedValue(rightSegment)})", false, true);
+                            return targetSegment.Change($"DATEDIFF(SECOND,{this.GetQuotedValue(rightSegment)},{this.GetQuotedValue(targetSegment)})", false, true);
                         });
                         result = true;
                     }
@@ -479,7 +424,7 @@ partial class MySqlProvider
                                 return targetSegment.Change(Convert.ToDateTime(targetSegment.Value).Subtract((TimeSpan)rightSegment.Value));
 
                             targetSegment.Merge(rightSegment);
-                            return targetSegment.Change($"DATE_SUB({this.GetQuotedValue(targetSegment)},INTERVAL {this.GetQuotedValue(rightSegment)} MICROSECOND)", false, true);
+                            return targetSegment.Change($"DATEADD(SECOND,{this.GetQuotedValue(rightSegment)}*-1,{this.GetQuotedValue(targetSegment)})", false, true);
                         });
                         result = true;
                     }
@@ -515,7 +460,7 @@ partial class MySqlProvider
                             if (targetSegment.IsConstantValue)
                                 return targetSegment.Change(this.GetQuotedValue(targetSegment));
 
-                            return targetSegment.Change($"DATE_FORMAT({this.GetQuotedValue(targetSegment)},'%Y-%m-%d %H:%i:%s')", false, true);
+                            return targetSegment.Change($"CONVERT(VARCHAR,{this.GetQuotedValue(targetSegment)},121)", false, true);
                         });
                         result = true;
                     }
@@ -526,65 +471,13 @@ partial class MySqlProvider
                             var targetSegment = visitor.VisitAndDeferred(target);
                             var rightSegment = visitor.VisitAndDeferred(args[0]);
 
-                            string formatArgument = null;
-                            if (rightSegment.IsConstantValue)
-                            {
-                                formatArgument = $"'{rightSegment}'";
-
-                                //分钟
-                                if (formatArgument.Contains("mm"))
-                                    formatArgument = formatArgument.NextReplace("mm", "%i");
-                                else formatArgument = formatArgument.NextReplace("m", "%i");
-
-                                if (formatArgument.Contains("yyyy"))
-                                    formatArgument = formatArgument.NextReplace("yyyy", "%Y");
-                                else if (formatArgument.Contains("yyy"))
-                                    formatArgument = formatArgument.NextReplace("yyy", "%Y");
-                                else if (formatArgument.Contains("yy"))
-                                    formatArgument = formatArgument.NextReplace("yy", "%y");
-
-                                if (formatArgument.Contains("MMMM"))
-                                    formatArgument = formatArgument.NextReplace("MMMM", "%M");
-                                else if (formatArgument.Contains("MMM"))
-                                    formatArgument = formatArgument.NextReplace("MMM", "%b");
-                                else if (formatArgument.Contains("MM"))
-                                    formatArgument = formatArgument.NextReplace("MM", "%m");
-                                else if (formatArgument.Contains("M"))
-                                    formatArgument = formatArgument.NextReplace("M", "%c");
-
-                                if (formatArgument.Contains("dddd"))
-                                    formatArgument = formatArgument.NextReplace("dddd", "%W");
-                                else if (formatArgument.Contains("ddd"))
-                                    formatArgument = formatArgument.NextReplace("ddd", "%a");
-                                else if (formatArgument.Contains("dd"))
-                                    formatArgument = formatArgument.NextReplace("dd", "%d");
-                                else if (formatArgument.Contains("d"))
-                                    formatArgument = formatArgument.NextReplace("d", "%e");
-
-                                if (formatArgument.Contains("HH"))
-                                    formatArgument = formatArgument.NextReplace("HH", "%H");
-                                else if (formatArgument.Contains("H"))
-                                    formatArgument = formatArgument.NextReplace("H", "%k");
-                                else if (formatArgument.Contains("hh"))
-                                    formatArgument = formatArgument.NextReplace("hh", "%h");
-                                else if (formatArgument.Contains("h"))
-                                    formatArgument = formatArgument.NextReplace("h", "%l");
-
-                                if (formatArgument.Contains("ss"))
-                                    formatArgument = formatArgument.NextReplace("ss", "%s");
-                                else if (formatArgument.Contains("s"))
-                                    formatArgument = formatArgument.NextReplace("s", "%s");
-
-                                if (formatArgument.Contains("tt"))
-                                    formatArgument = formatArgument.NextReplace("tt", "%p");
-                                else if (formatArgument.Contains("t"))
-                                    formatArgument = formatArgument.NextReplace("t", "SUBSTRING(%p,1,1)");
-                            }
-
                             if (targetSegment.IsConstantValue && rightSegment.IsConstantValue)
                                 return targetSegment.Change(((DateTime)targetSegment.Value).ToString(rightSegment.ToString()));
 
-                            return targetSegment.Change($"DATE_FORMAT({this.GetQuotedValue(targetSegment)},{formatArgument})", false, true);
+                            if (rightSegment.IsConstantValue)
+                                return targetSegment.Change($"FORMAT({this.GetQuotedValue(targetSegment)},{rightSegment})", false, true);
+
+                            throw new NotSupportedException("DateTime类型暂时不支持非常量的格式化字符串");
                         });
                         result = true;
                     }

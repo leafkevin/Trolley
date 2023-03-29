@@ -15,8 +15,7 @@ public static class Extensions
     private static readonly ConcurrentDictionary<int, Delegate> valueTupleReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
-
-
+       
     public static bool IsNullableType(this Type type, out Type underlyingType)
     {
         if (type.IsValueType)
@@ -454,6 +453,12 @@ public static class Extensions
             hashCode.Add(reader.GetFieldType(i));
         }
         return hashCode.ToHashCode();
+    }
+    internal static string NextReplace(this string content, string oldValue, string newValue)
+    {
+        if (!content.Contains(oldValue))
+            return content;
+        return content.Replace(oldValue, newValue);
     }
     class EntityBuildInfo
     {

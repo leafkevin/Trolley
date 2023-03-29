@@ -5,6 +5,9 @@ namespace Trolley;
 
 public interface IGroupingAggregate<TGrouping> : IAggregateSelect
 {
+    /// <summary>
+    /// 分组对象，快捷的访问分组的所有字段
+    /// </summary>
     TGrouping Grouping { get; set; }
 }
 public interface IGroupingQuery<T, TGrouping>

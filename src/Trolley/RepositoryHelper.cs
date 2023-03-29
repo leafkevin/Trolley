@@ -3,10 +3,8 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text.RegularExpressions;
 
 namespace Trolley;
 
@@ -164,62 +162,6 @@ class RepositoryHelper
         //var parameter = ormProvider.CreateParameter("@Parameter", nativeDbType, whereObj.Name);
         var valueExpr = Expression.PropertyOrField(typedParameterExpr, memberMapper.MemberName);
         AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, valueExpr, false, memberMapper.NativeDbType, ormProvider, null, null, blockBodies);
-    }
-
-    public static List<IDbDataParameter> CreateDbParameters(IOrmProvider ormProvider, string rawSql, object parameters)
-    {
-        if (parameters == null)
-            return null;
-        var result = new List<IDbDataParameter>();
-        if (parameters is Dictionary<string, object> dict)
-        {
-            foreach (var item in dict)
-            {
-                var parameterName = ormProvider.ParameterPrefix + item.Key;
-                if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                    continue;
-                var dbParameter = ormProvider.CreateParameter(parameterName, dict[item.Key]);
-                result.Add(dbParameter);
-            }
-        }
-        else
-        {
-            var parameterType = parameters.GetType();
-            if (parameterType.IsEntityType())
-            {
-                var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-                    .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
-                foreach (var memberInfo in memberInfos)
-                {
-                    var parameterName = ormProvider.ParameterPrefix + memberInfo.Name;
-                    if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                        continue;
-                    var memberValue = EvaluateValue(parameterType, parameters, memberInfo.Name);
-                    var dbParameter = ormProvider.CreateParameter(parameterName, memberValue);
-                    result.Add(dbParameter);
-                }
-            }
-        }
-        return result;
-    }
-    public static object EvaluateValue(Type entityType, object objEntity, string memberName)
-    {
-        var typedObjExpr = Expression.Constant(objEntity, entityType);
-        var memberExpr = Expression.PropertyOrField(typedObjExpr, memberName);
-        var lambda = Expression.Lambda(memberExpr);
-        var getter = lambda.Compile();
-        return getter.DynamicInvoke();
-    }
-    public static T EvaluateValue<T>(Type entityType, object objEntity, string memberName)
-    {
-        var typedObjExpr = Expression.Constant(objEntity, entityType);
-        var memberExpr = Expression.PropertyOrField(typedObjExpr, memberName);
-        var lambda = Expression.Lambda<Func<T>>(memberExpr);
-        var getter = lambda.Compile();
-        var objValue = getter();
-        if (objValue == null)
-            return default;
-        return objValue;
     }
     private static ParameterExpression DefineLocalParameter(string namePrefix, Type localVariableType, Dictionary<string, int> localParameters, List<ParameterExpression> blockParameters)
     {

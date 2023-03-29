@@ -38,8 +38,16 @@ public class ReaderField
     /// </summary>
     public string Body { get; set; }
     /// <summary>
+    /// 是否是最外层返回实体的字段，只对当前字段有效，
+    /// 如果当前字段类型还是一个实体，就是一个嵌套的匿名对象了
+    /// </summary>
+    public bool IsTarget { get; set; }
+    /// <summary>
     /// 是否有后续的子对象
     /// </summary>
     public bool HasNextInclude { get; set; }
+    /// <summary>
+    /// 临时表的字段集合，通常是从一个子查询返回的
+    /// </summary>
     public List<ReaderField> ReaderFields { get; set; }
 }

@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-partial class MySqlProvider
+partial class SqlServerProvider
 {
     public virtual bool TryGetMathMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
