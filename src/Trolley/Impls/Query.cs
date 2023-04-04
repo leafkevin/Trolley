@@ -407,7 +407,8 @@ class Query<T> : IQuery<T>
     public T First()
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, null, null, out var dbParameters, out var readerFields, out var isTarget);
+        this.visitor.DefaultSelect(defaultExpr);
+        var sql = this.visitor.BuildSql(null, null, out var dbParameters, out var readerFields, out var isTarget);
         using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
@@ -433,7 +434,7 @@ class Query<T> : IQuery<T>
         {
             command.CommandText = sql;
             command.Parameters.Clear();
-            using var includeReader = command.ExecuteReader(behavior);
+            using var includeReader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             this.visitor.SetIncludeValues(result, includeReader);
         }
         command.Dispose();
@@ -442,7 +443,8 @@ class Query<T> : IQuery<T>
     public async Task<T> FirstAsync(CancellationToken cancellationToken = default)
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, null, null, out var dbParameters, out var readerFields, out var isTarget);
+        this.visitor.DefaultSelect(defaultExpr);
+        var sql = this.visitor.BuildSql(null, null, out var dbParameters, out var readerFields, out var isTarget);
 
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
@@ -473,7 +475,7 @@ class Query<T> : IQuery<T>
         {
             command.CommandText = sql;
             command.Parameters.Clear();
-            using var includeReader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+            using var includeReader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             this.visitor.SetIncludeValues(result, includeReader);
         }
         await command.DisposeAsync();
@@ -481,9 +483,10 @@ class Query<T> : IQuery<T>
     }
     public TTarget First<TTarget>(Expression<Func<T, TTarget>> toTargetExpr)
     {
-        var entityType = typeof(T);
+        var targetType = typeof(TTarget);
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, entityType, toTargetExpr, out var dbParameters, out var readerFields, out var isTarget);
+        this.visitor.DefaultSelect(defaultExpr);
+        var sql = this.visitor.BuildSql(targetType, toTargetExpr, out var dbParameters, out var readerFields, out var isTarget);
         using var command = this.connection.CreateCommand();
         command.CommandText = sql;
         command.CommandType = CommandType.Text;
@@ -491,7 +494,6 @@ class Query<T> : IQuery<T>
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        var targetType = typeof(TTarget);
         TTarget result = default;
         this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -509,7 +511,7 @@ class Query<T> : IQuery<T>
         {
             command.CommandText = sql;
             command.Parameters.Clear();
-            using var includeReader = command.ExecuteReader(behavior);
+            using var includeReader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             this.visitor.SetIncludeValues(result, includeReader);
         }
         command.Dispose();
@@ -517,9 +519,10 @@ class Query<T> : IQuery<T>
     }
     public async Task<TTarget> FirstAsync<TTarget>(Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default)
     {
-        var entityType = typeof(T);
+        var targetType = typeof(TTarget);
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, entityType, toTargetExpr, out var dbParameters, out var readerFields, out var isTarget);
+        this.visitor.DefaultSelect(defaultExpr);
+        var sql = this.visitor.BuildSql(targetType, toTargetExpr, out var dbParameters, out var readerFields, out var isTarget);
 
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
@@ -532,7 +535,6 @@ class Query<T> : IQuery<T>
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
-        var targetType = typeof(TTarget);
         TTarget result = default;
         await this.connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -550,7 +552,7 @@ class Query<T> : IQuery<T>
         {
             command.CommandText = sql;
             command.Parameters.Clear();
-            using var includeReader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+            using var includeReader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             this.visitor.SetIncludeValues(result, includeReader);
         }
         await command.DisposeAsync();
@@ -560,7 +562,8 @@ class Query<T> : IQuery<T>
     public List<T> ToList()
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, null, null, out var dbParameters, out var readerFields, out var isTarget);
+        this.visitor.DefaultSelect(defaultExpr);
+        var sql = this.visitor.BuildSql(null, null, out var dbParameters, out var readerFields, out var isTarget);
 
         using var command = this.connection.CreateCommand();
         command.CommandText = sql;
@@ -605,7 +608,8 @@ class Query<T> : IQuery<T>
     public async Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, null, null, out var dbParameters, out var readerFields, out var isTarget);
+        this.visitor.DefaultSelect(defaultExpr);
+        var sql = this.visitor.BuildSql(null, null, out var dbParameters, out var readerFields, out var isTarget);
 
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
@@ -653,9 +657,10 @@ class Query<T> : IQuery<T>
     }
     public List<TTarget> ToList<TTarget>(Expression<Func<T, TTarget>> toTargetExpr)
     {
-        var entityType = typeof(TTarget);
+        var targetType = typeof(TTarget);
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, entityType, toTargetExpr, out var dbParameters, out var readerFields, out var isTarget);
+        this.visitor.DefaultSelect(defaultExpr);
+        var sql = this.visitor.BuildSql(targetType, toTargetExpr, out var dbParameters, out var readerFields, out var isTarget);
 
         using var command = this.connection.CreateCommand();
         command.CommandText = sql;
@@ -669,7 +674,7 @@ class Query<T> : IQuery<T>
         this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess;
         using var reader = command.ExecuteReader(behavior);
-        if (entityType.IsEntityType())
+        if (targetType.IsEntityType())
         {
             while (reader.Read())
             {
@@ -698,9 +703,10 @@ class Query<T> : IQuery<T>
     }
     public async Task<List<TTarget>> ToListAsync<TTarget>(Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default)
     {
-        var entityType = typeof(TTarget);
+        var targetType = typeof(TTarget);
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, entityType, toTargetExpr, out var dbParameters, out var readerFields, out var isTarget);
+        this.visitor.DefaultSelect(defaultExpr);
+        var sql = this.visitor.BuildSql(targetType, toTargetExpr, out var dbParameters, out var readerFields, out var isTarget);
 
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
@@ -718,7 +724,7 @@ class Query<T> : IQuery<T>
         var behavior = CommandBehavior.SequentialAccess;
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
 
-        if (entityType.IsEntityType())
+        if (targetType.IsEntityType())
         {
             while (await reader.ReadAsync(cancellationToken))
             {
@@ -749,7 +755,8 @@ class Query<T> : IQuery<T>
     public IPagedList<T> ToPageList()
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, null, null, out var dbParameters, out var readerFields, out var isTarget);
+        this.visitor.DefaultSelect(defaultExpr);
+        var sql = this.visitor.BuildSql(null, null, out var dbParameters, out var readerFields, out var isTarget);
 
         using var command = this.connection.CreateCommand();
         command.CommandText = sql;
@@ -791,7 +798,8 @@ class Query<T> : IQuery<T>
     public async Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default)
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, null, null, out var dbParameters, out var readerFields, out var isTarget);
+        this.visitor.DefaultSelect(defaultExpr);
+        var sql = this.visitor.BuildSql(null, null, out var dbParameters, out var readerFields, out var isTarget);
 
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
@@ -834,9 +842,9 @@ class Query<T> : IQuery<T>
     }
     public IPagedList<TTarget> ToPageList<TTarget>(Expression<Func<T, TTarget>> toTargetExpr)
     {
-        var entityType = typeof(TTarget);
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, entityType, toTargetExpr, out var dbParameters, out var readerFields, out var isTarget);
+        this.visitor.DefaultSelect(defaultExpr);
+        var sql = this.visitor.BuildSql(typeof(TTarget), toTargetExpr, out var dbParameters, out var readerFields, out var isTarget);
 
         using var command = this.connection.CreateCommand();
         command.CommandText = sql;
@@ -877,9 +885,9 @@ class Query<T> : IQuery<T>
     }
     public async Task<IPagedList<TTarget>> ToPageListAsync<TTarget>(Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default)
     {
-        var entityType = typeof(TTarget);
         Expression<Func<T, T>> defaultExpr = f => f;
-        var sql = this.visitor.BuildSql(defaultExpr, entityType, toTargetExpr, out var dbParameters, out var readerFields, out var isTarget);
+        this.visitor.DefaultSelect(defaultExpr);
+        var sql = this.visitor.BuildSql(typeof(TTarget), toTargetExpr, out var dbParameters, out var readerFields, out var isTarget);
 
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
@@ -943,7 +951,8 @@ class Query<T> : IQuery<T>
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        return this.visitor.BuildSql(defaultExpr, null, null, out dbParameters, out _, out _);
+        this.visitor.DefaultSelect(defaultExpr);
+        return this.visitor.BuildSql(null, null, out dbParameters, out _, out _);
     }
 
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)

@@ -1,4 +1,6 @@
-﻿namespace Trolley.Test;
+﻿using System.Data;
+
+namespace Trolley.Test;
 
 class SqlServerModelConfiguration : IModelConfiguration
 {
@@ -12,6 +14,8 @@ class SqlServerModelConfiguration : IModelConfiguration
             f.Member(t => t.Gender).Field(nameof(User.Gender)).NativeDbType(20);
             f.Member(t => t.Age).Field(nameof(User.Age)).NativeDbType(8);
             f.Member(t => t.CompanyId).Field(nameof(User.CompanyId)).NativeDbType(8);
+            f.Member(t => t.GuidField).Field(nameof(User.GuidField)).NativeDbType(22);
+            f.Member(t => t.SomeTimes).Field(nameof(User.SomeTimes)).NativeDbType(32);
             f.Member(t => t.IsEnabled).Field(nameof(User.IsEnabled)).NativeDbType(2);
             f.Member(t => t.CreatedAt).Field(nameof(User.CreatedAt)).NativeDbType(4);
             f.Member(t => t.CreatedBy).Field(nameof(User.CreatedBy)).NativeDbType(8);
@@ -26,6 +30,7 @@ class SqlServerModelConfiguration : IModelConfiguration
             f.ToTable("sys_company").Key(t => t.Id);
             f.Member(t => t.Id).Field(nameof(Company.Id)).NativeDbType(8).AutoIncrement();
             f.Member(t => t.Name).Field(nameof(Company.Name)).NativeDbType(12);
+            f.Member(t => t.Nature).Field(nameof(Company.Nature)).NativeDbType(12);
             f.Member(t => t.IsEnabled).Field(nameof(Company.IsEnabled)).NativeDbType(2);
             f.Member(t => t.CreatedAt).Field(nameof(Company.CreatedAt)).NativeDbType(4);
             f.Member(t => t.CreatedBy).Field(nameof(Company.CreatedBy)).NativeDbType(8);
@@ -47,6 +52,8 @@ class SqlServerModelConfiguration : IModelConfiguration
             f.Member(t => t.SellerId).Field(nameof(Order.SellerId)).NativeDbType(8);
             //特殊类型JSON
             f.Member(t => t.Products).Field(nameof(Order.Products)).NativeDbType(12).SetTypeHandler<JsonTypeHandler>();
+            f.Member(t => t.Disputes).Field(nameof(Order.Disputes)).NativeDbType(18).SetTypeHandler<JsonTypeHandler>();
+
             f.Member(t => t.IsEnabled).Field(nameof(Order.IsEnabled)).NativeDbType(20);
             f.Member(t => t.CreatedBy).Field(nameof(Order.CreatedBy)).NativeDbType(8);
             f.Member(t => t.CreatedAt).Field(nameof(Order.CreatedAt)).NativeDbType(33);

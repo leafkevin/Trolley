@@ -38,7 +38,7 @@ partial class MySqlProvider
                             return args[0].Change(this.GetQuotedValue(methodCallExpr.Type, args[0]));
 
                         target.Merge(args[0]);
-                        return target.Change($"CAST({this.GetQuotedValue(args[0])} AS {this.CastTo(methodCallExpr.Type)})", false, true);
+                        return target.Change(this.CastTo(methodCallExpr.Type, this.GetQuotedValue(args[0])), false, true);
                     });
                     result = true;
                 }

@@ -15,7 +15,10 @@
 	  <Compile Remove="Providers\NpgsqlProvider.cs" />
 	  <Compile Remove="Providers\OracleProvider.cs" />
 	  <Compile Remove="Providers\SqLiteProvider.cs" />
-	  <Compile Remove="Providers\SqlServerProvider.cs" />
+	</ItemGroup>
+	<ItemGroup>
+	  <PackageReference Include="MySqlConnector" Version="2.2.5" />
+	  <PackageReference Include="Npgsql" Version="7.0.2" />
 	</ItemGroup>
 	<ItemGroup>
 		<Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />

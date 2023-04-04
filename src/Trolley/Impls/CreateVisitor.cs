@@ -182,7 +182,7 @@ class CreateVisitor : SqlVisitor
                 this.AddMemberElement(i, new SqlSegment { Expression = newExpr.Arguments[i] }, memberInfo, insertBuilder, fromBuilder);
             }
             insertBuilder.Append(fromBuilder);
-            return sqlSegment.Change(insertBuilder.ToString());
+            return sqlSegment.ChangeValue(insertBuilder.ToString());
         }
         return this.Evaluate(sqlSegment);
     }
@@ -202,7 +202,7 @@ class CreateVisitor : SqlVisitor
             this.AddMemberElement(i, new SqlSegment { Expression = memberAssignment.Expression }, memberAssignment.Member, insertBuilder, fromBuilder);
         }
         insertBuilder.Append(fromBuilder);
-        return sqlSegment.Change(insertBuilder.ToString());
+        return sqlSegment.ChangeValue(insertBuilder.ToString());
     }
     private void InitTableAlias(LambdaExpression lambdaExpr)
     {

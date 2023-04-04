@@ -47,6 +47,17 @@ public class SqlSegment
     /// </summary>
     public bool IsParameterized { get; set; }
     public bool IsArray { get; set; }
+    /// <summary>
+    /// string.Concat,string.Format,string.Join，数据库VARCHAR类型的Enum实体成员，此字段会有值
+    /// 做字符串连接时，此值为typeof(string)
+    /// 数据库VARCHAR类型的Enum实体成员时，此值是对应的枚举类型，TargetType类型是typeof(string)
+    /// </summary>
+    public Type ExpectType { get; set; }
+    /// <summary>
+    /// 目标类型，与ExpectType类型，可能一致也可能不一致。
+    /// 如：Enum类型，对应的数据库字段类型是VARCHAR时，就不一致，ExpectType是枚举类型，TargetType是字符串类型
+    /// </summary>
+    public Type TargetType { get; set; }
     public TableSegment TableSegment { get; set; }
     public ReaderFieldType MemberType { get; set; }
     public MemberInfo FromMember { get; set; }

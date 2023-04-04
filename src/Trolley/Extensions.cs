@@ -15,7 +15,7 @@ public static class Extensions
     private static readonly ConcurrentDictionary<int, Delegate> valueTupleReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
-       
+
     public static bool IsNullableType(this Type type, out Type underlyingType)
     {
         if (type.IsValueType)
@@ -31,9 +31,9 @@ public static class Extensions
         underlyingType = type;
         return false;
     }
-    public static bool IsEnumType(this Type type, out Type enumUnderlyingType)
+    public static bool IsEnumType(this Type type, out Type underlyingType, out Type enumUnderlyingType)
     {
-        type.IsNullableType(out var underlyingType);
+        type.IsNullableType(out underlyingType);
         if (underlyingType.IsEnum)
         {
             enumUnderlyingType = underlyingType.GetEnumUnderlyingType();
@@ -198,7 +198,6 @@ public static class Extensions
                     if (readerField.ParentIndex.HasValue)
                         parent = readerBuilders[readerField.ParentIndex.Value];
                     else parent = root;
-                    //current = NewBuildInfo(readerField.FromMember.GetMemberType(), readerField.TargetMember ?? readerField.FromMember, parent);
                     current = NewBuildInfo(readerField.FromMember.GetMemberType(), readerField.FromMember, parent);
                 }
                 readerBuilders.Add(readerField.Index, current);
@@ -308,13 +307,24 @@ public static class Extensions
                 var getCharExpr = Expression.Call(strLocalExpr, methodInfo, Expression.Constant(0, typeof(int)));
                 typedValueExpr = Expression.IfThenElse(compareExpr, getCharExpr, Expression.Default(underlyingType));
             }
-            else throw new Exception($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
+            else throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
         }
         else if (underlyingType == typeof(Guid))
         {
             if (fieldType != typeof(string) && fieldType != typeof(byte[]))
-                throw new Exception($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
+                throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
             typedValueExpr = Expression.New(typeof(Guid).GetConstructor(new Type[] { fieldType }), Expression.Convert(objLocalExpr, fieldType));
+        }
+        else if (underlyingType == typeof(TimeSpan) || underlyingType == typeof(TimeOnly))
+        {
+            if (fieldType == typeof(long))
+                typedValueExpr = Expression.New(typeof(TimeSpan).GetConstructor(new Type[] { fieldType }), Expression.Convert(objLocalExpr, fieldType));
+            if (fieldType == typeof(TimeSpan) && underlyingType == typeof(TimeOnly))
+            {
+                Expression fieldValueExpr = Expression.Convert(objLocalExpr, fieldType);
+                fieldValueExpr = Expression.Property(fieldValueExpr, nameof(TimeSpan.Ticks));
+                typedValueExpr = Expression.New(typeof(TimeOnly).GetConstructor(new Type[] { typeof(long) }), fieldValueExpr);
+            }
         }
         else if (targetType.FullName == "System.Data.Linq.Binary")
         {

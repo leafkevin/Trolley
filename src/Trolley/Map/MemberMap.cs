@@ -21,7 +21,8 @@ public class MemberMap
     /// </summary>
     public Type NavigationType { get; set; }
     /// <summary>
-    /// 当前值对象映射的实体模型Type
+    /// 当前属性是导航属性，映射的实体类不是真实的模型，瘦身版的模型Type，
+    /// 与真正的模型属性名都一样，只是属性较少
     /// </summary>
     public Type MapType { get; set; }
     /// <summary>

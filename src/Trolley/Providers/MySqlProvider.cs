@@ -14,6 +14,7 @@ public partial class MySqlProvider : BaseOrmProvider
     private static Func<string, object, object, IDbDataParameter> createNativeParameterDelegate = null;
     private static ConcurrentDictionary<int, MemberAccessSqlFormatter> memberAccessSqlFormatterCahe = new();
     private static ConcurrentDictionary<int, MethodCallSqlFormatter> methodCallSqlFormatterCahe = new();
+    private static Dictionary<object, Type> defaultMapTypes = new();
     private static Dictionary<Type, object> defaultDbTypes = new();
     private static Dictionary<int, object> nativeDbTypes = new();
     private static Dictionary<Type, string> castTos = new();
@@ -31,56 +32,119 @@ public partial class MySqlProvider : BaseOrmProvider
         createNativeParameterDelegate = BaseOrmProvider.CreateParameterDelegate(dbTypeType, dbParameterType, valuePropertyInfo);
 
 
-        defaultDbTypes[typeof(bool)] = Enum.ToObject(dbTypeType, -1);
-        defaultDbTypes[typeof(sbyte)] = Enum.ToObject(dbTypeType, 1);
-        defaultDbTypes[typeof(short)] = Enum.ToObject(dbTypeType, 2);
-        defaultDbTypes[typeof(int)] = Enum.ToObject(dbTypeType, 3);
-        defaultDbTypes[typeof(long)] = Enum.ToObject(dbTypeType, 8);
-        defaultDbTypes[typeof(float)] = Enum.ToObject(dbTypeType, 4);
-        defaultDbTypes[typeof(double)] = Enum.ToObject(dbTypeType, 5);
-        defaultDbTypes[typeof(TimeSpan)] = Enum.ToObject(dbTypeType, 11);
-        defaultDbTypes[typeof(DateTime)] = Enum.ToObject(dbTypeType, 12);
-        defaultDbTypes[typeof(string)] = Enum.ToObject(dbTypeType, 253);
-        defaultDbTypes[typeof(byte)] = Enum.ToObject(dbTypeType, 501);
-        defaultDbTypes[typeof(ushort)] = Enum.ToObject(dbTypeType, 502);
-        defaultDbTypes[typeof(uint)] = Enum.ToObject(dbTypeType, 503);
-        defaultDbTypes[typeof(ulong)] = Enum.ToObject(dbTypeType, 508);
-        defaultDbTypes[typeof(Guid)] = Enum.ToObject(dbTypeType, 253);
-        defaultDbTypes[typeof(decimal)] = Enum.ToObject(dbTypeType, 0);
-        defaultDbTypes[typeof(byte[])] = Enum.ToObject(dbTypeType, 601);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Bit")] = typeof(bool);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Bool")] = typeof(bool);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Byte")] = typeof(sbyte);
+        defaultMapTypes[Enum.Parse(dbTypeType, "UByte")] = typeof(byte);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Int16")] = typeof(short);
+        defaultMapTypes[Enum.Parse(dbTypeType, "UInt16")] = typeof(ushort);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Int24")] = typeof(int);
+        defaultMapTypes[Enum.Parse(dbTypeType, "UInt24")] = typeof(uint);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Int32")] = typeof(int);
+        defaultMapTypes[Enum.Parse(dbTypeType, "UInt32")] = typeof(uint);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Int64")] = typeof(long);
+        defaultMapTypes[Enum.Parse(dbTypeType, "UInt64")] = typeof(ulong);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Float")] = typeof(float);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Double")] = typeof(double);
+        defaultMapTypes[Enum.Parse(dbTypeType, "NewDecimal")] = typeof(decimal);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Decimal")] = typeof(decimal);
+        defaultMapTypes[Enum.Parse(dbTypeType, "String")] = typeof(string);
+        defaultMapTypes[Enum.Parse(dbTypeType, "VarString")] = typeof(string);
+        defaultMapTypes[Enum.Parse(dbTypeType, "VarChar")] = typeof(string);
+        defaultMapTypes[Enum.Parse(dbTypeType, "TinyText")] = typeof(string);
+        defaultMapTypes[Enum.Parse(dbTypeType, "MediumText")] = typeof(string);
+        defaultMapTypes[Enum.Parse(dbTypeType, "LongText")] = typeof(string);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Text")] = typeof(string);
+        defaultMapTypes[Enum.Parse(dbTypeType, "JSON")] = typeof(string);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Date")] = typeof(DateTime);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Datetime")] = typeof(DateTime);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Newdate")] = typeof(DateTime);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Timestamp")] = typeof(DateTime);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Time")] = typeof(TimeSpan);
+        defaultMapTypes[Enum.Parse(dbTypeType, "TinyBlob")] = typeof(byte[]);
+        defaultMapTypes[Enum.Parse(dbTypeType, "MediumBlob")] = typeof(byte[]);
+        defaultMapTypes[Enum.Parse(dbTypeType, "LongBlob")] = typeof(byte[]);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Blob")] = typeof(byte[]);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Binary")] = typeof(byte[]);
+        defaultMapTypes[Enum.Parse(dbTypeType, "VarBinary")] = typeof(byte[]);
+        defaultMapTypes[Enum.Parse(dbTypeType, "Guid")] = typeof(Guid);
 
-        defaultDbTypes[typeof(bool?)] = Enum.ToObject(dbTypeType, -1);
-        defaultDbTypes[typeof(sbyte?)] = Enum.ToObject(dbTypeType, 1);
-        defaultDbTypes[typeof(short?)] = Enum.ToObject(dbTypeType, 2);
-        defaultDbTypes[typeof(int?)] = Enum.ToObject(dbTypeType, 3);
-        defaultDbTypes[typeof(long?)] = Enum.ToObject(dbTypeType, 8);
-        defaultDbTypes[typeof(float?)] = Enum.ToObject(dbTypeType, 4);
-        defaultDbTypes[typeof(double?)] = Enum.ToObject(dbTypeType, 5);
-        defaultDbTypes[typeof(TimeSpan?)] = Enum.ToObject(dbTypeType, 11);
-        defaultDbTypes[typeof(DateTime?)] = Enum.ToObject(dbTypeType, 12);
-        defaultDbTypes[typeof(string)] = Enum.ToObject(dbTypeType, 253);
-        defaultDbTypes[typeof(byte?)] = Enum.ToObject(dbTypeType, 501);
-        defaultDbTypes[typeof(ushort?)] = Enum.ToObject(dbTypeType, 502);
-        defaultDbTypes[typeof(uint?)] = Enum.ToObject(dbTypeType, 503);
-        defaultDbTypes[typeof(ulong?)] = Enum.ToObject(dbTypeType, 508);
-        defaultDbTypes[typeof(Guid?)] = Enum.ToObject(dbTypeType, 253);
-        defaultDbTypes[typeof(decimal?)] = Enum.ToObject(dbTypeType, 0);
+        defaultDbTypes[typeof(bool)] = Enum.Parse(dbTypeType, "Bool");
+        defaultDbTypes[typeof(sbyte)] = Enum.Parse(dbTypeType, "Byte");
+        defaultDbTypes[typeof(byte)] = Enum.Parse(dbTypeType, "UByte");
+        defaultDbTypes[typeof(short)] = Enum.Parse(dbTypeType, "Int16");
+        defaultDbTypes[typeof(ushort)] = Enum.Parse(dbTypeType, "UInt16");
+        defaultDbTypes[typeof(int)] = Enum.Parse(dbTypeType, "Int32");
+        defaultDbTypes[typeof(uint)] = Enum.Parse(dbTypeType, "UInt32");
+        defaultDbTypes[typeof(long)] = Enum.Parse(dbTypeType, "Int64");
+        defaultDbTypes[typeof(ulong)] = Enum.Parse(dbTypeType, "UInt64");
+        defaultDbTypes[typeof(float)] = Enum.Parse(dbTypeType, "Float");
+        defaultDbTypes[typeof(double)] = Enum.Parse(dbTypeType, "Double");
+        defaultDbTypes[typeof(decimal)] = Enum.Parse(dbTypeType, "Decimal");
+        defaultDbTypes[typeof(string)] = Enum.Parse(dbTypeType, "VarChar");
+        defaultDbTypes[typeof(TimeSpan)] = Enum.Parse(dbTypeType, "Time");
+        defaultDbTypes[typeof(DateTime)] = Enum.Parse(dbTypeType, "DateTime");
+        defaultDbTypes[typeof(Guid)] = Enum.Parse(dbTypeType, "Guid");
+        defaultDbTypes[typeof(byte[])] = Enum.Parse(dbTypeType, "VarBinary");
 
-        nativeDbTypes[-1] = Enum.ToObject(dbTypeType, -1);
-        nativeDbTypes[1] = Enum.ToObject(dbTypeType, 1);
-        nativeDbTypes[2] = Enum.ToObject(dbTypeType, 2);
-        nativeDbTypes[3] = Enum.ToObject(dbTypeType, 3);
-        nativeDbTypes[8] = Enum.ToObject(dbTypeType, 8);
-        nativeDbTypes[4] = Enum.ToObject(dbTypeType, 4);
-        nativeDbTypes[5] = Enum.ToObject(dbTypeType, 5);
-        nativeDbTypes[11] = Enum.ToObject(dbTypeType, 11);
-        nativeDbTypes[12] = Enum.ToObject(dbTypeType, 12);
-        nativeDbTypes[253] = Enum.ToObject(dbTypeType, 253);
-        nativeDbTypes[501] = Enum.ToObject(dbTypeType, 501);
-        nativeDbTypes[502] = Enum.ToObject(dbTypeType, 502);
-        nativeDbTypes[503] = Enum.ToObject(dbTypeType, 503);
-        nativeDbTypes[508] = Enum.ToObject(dbTypeType, 508);
-        nativeDbTypes[0] = Enum.ToObject(dbTypeType, 0);
+        defaultDbTypes[typeof(bool?)] = Enum.Parse(dbTypeType, "Bool");
+        defaultDbTypes[typeof(sbyte?)] = Enum.Parse(dbTypeType, "Byte");
+        defaultDbTypes[typeof(byte?)] = Enum.Parse(dbTypeType, "UByte");
+        defaultDbTypes[typeof(short?)] = Enum.Parse(dbTypeType, "Int16");
+        defaultDbTypes[typeof(ushort?)] = Enum.Parse(dbTypeType, "UInt16");
+        defaultDbTypes[typeof(int?)] = Enum.Parse(dbTypeType, "Int32");
+        defaultDbTypes[typeof(uint?)] = Enum.Parse(dbTypeType, "UInt32");
+        defaultDbTypes[typeof(long?)] = Enum.Parse(dbTypeType, "Int64");
+        defaultDbTypes[typeof(ulong?)] = Enum.Parse(dbTypeType, "UInt64");
+        defaultDbTypes[typeof(float?)] = Enum.Parse(dbTypeType, "Float");
+        defaultDbTypes[typeof(double?)] = Enum.Parse(dbTypeType, "Double");
+        defaultDbTypes[typeof(decimal?)] = Enum.Parse(dbTypeType, "Decimal");
+        defaultDbTypes[typeof(TimeSpan?)] = Enum.Parse(dbTypeType, "Time");
+        defaultDbTypes[typeof(DateTime?)] = Enum.Parse(dbTypeType, "DateTime");
+        defaultDbTypes[typeof(Guid?)] = Enum.Parse(dbTypeType, "Guid");
+
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Decimal")] = Enum.Parse(dbTypeType, "Decimal");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Byte")] = Enum.Parse(dbTypeType, "Byte");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Int16")] = Enum.Parse(dbTypeType, "Int16");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Int32")] = Enum.Parse(dbTypeType, "Int32");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Float")] = Enum.Parse(dbTypeType, "Float");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Double")] = Enum.Parse(dbTypeType, "Double");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Null")] = Enum.Parse(dbTypeType, "Null");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Timestamp")] = Enum.Parse(dbTypeType, "Timestamp");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Int64")] = Enum.Parse(dbTypeType, "Int64");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Int24")] = Enum.Parse(dbTypeType, "Int24");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Date")] = Enum.Parse(dbTypeType, "Date");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Time")] = Enum.Parse(dbTypeType, "Time");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "DateTime")] = Enum.Parse(dbTypeType, "DateTime");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Datetime")] = Enum.Parse(dbTypeType, "Datetime");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Year")] = Enum.Parse(dbTypeType, "Year");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Newdate")] = Enum.Parse(dbTypeType, "Newdate");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "VarString")] = Enum.Parse(dbTypeType, "VarString");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Bit")] = Enum.Parse(dbTypeType, "Bit");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "JSON")] = Enum.Parse(dbTypeType, "JSON");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "NewDecimal")] = Enum.Parse(dbTypeType, "NewDecimal");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Enum")] = Enum.Parse(dbTypeType, "Enum");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Set")] = Enum.Parse(dbTypeType, "Set");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "TinyBlob")] = Enum.Parse(dbTypeType, "TinyBlob");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "MediumBlob")] = Enum.Parse(dbTypeType, "MediumBlob");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "LongBlob")] = Enum.Parse(dbTypeType, "LongBlob");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Blob")] = Enum.Parse(dbTypeType, "Blob");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "VarChar")] = Enum.Parse(dbTypeType, "VarChar");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "String")] = Enum.Parse(dbTypeType, "String");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Geometry")] = Enum.Parse(dbTypeType, "Geometry");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "UByte")] = Enum.Parse(dbTypeType, "UByte");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "UInt16")] = Enum.Parse(dbTypeType, "UInt16");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "UInt32")] = Enum.Parse(dbTypeType, "UInt32");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "UInt64")] = Enum.Parse(dbTypeType, "UInt64");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "UInt24")] = Enum.Parse(dbTypeType, "UInt24");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Binary")] = Enum.Parse(dbTypeType, "Binary");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "VarBinary")] = Enum.Parse(dbTypeType, "VarBinary");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "TinyText")] = Enum.Parse(dbTypeType, "TinyText");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "MediumText")] = Enum.Parse(dbTypeType, "MediumText");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "LongText")] = Enum.Parse(dbTypeType, "LongText");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Text")] = Enum.Parse(dbTypeType, "Text");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Guid")] = Enum.Parse(dbTypeType, "Guid");
+        nativeDbTypes[(int)Enum.Parse(dbTypeType, "Bool")] = Enum.Parse(dbTypeType, "Bool");
 
         castTos[typeof(string)] = "CHAR";
         castTos[typeof(bool)] = "SIGNED";
@@ -115,10 +179,10 @@ public partial class MySqlProvider : BaseOrmProvider
         => createNativeParameterDelegate.Invoke(parameterName, nativeDbType, value);
     public override string GetTableName(string entityName) => "`" + entityName + "`";
     public override string GetFieldName(string propertyName) => "`" + propertyName + "`";
-    public override object GetNativeDbType(Type type)
+    public override object GetNativeDbType(Type fieldType)
     {
-        if (!defaultDbTypes.TryGetValue(type, out var dbType))
-            throw new Exception($"类型{type.FullName}没有对应的MySqlConnector.MySqlDbType映射类型");
+        if (!defaultDbTypes.TryGetValue(fieldType, out var dbType))
+            throw new Exception($"类型{fieldType.FullName}没有对应的MySqlConnector.MySqlDbType映射类型");
         return dbType;
     }
     public override object GetNativeDbType(int nativeDbType)
@@ -140,20 +204,22 @@ public partial class MySqlProvider : BaseOrmProvider
         }
         throw new Exception($"数值{nativeDbType}没有对应的MySqlConnector.MySqlDbType映射类型");
     }
-    public override bool IsStringDbType(int nativeDbType)
+    public override Type MapDefaultType(object nativeDbType)
     {
-        if (nativeDbType == 15 || nativeDbType == 253 || nativeDbType == 254)
-            return true;
-        if (nativeDbType >= 749 && nativeDbType <= 752)
-            return true;
-        return false;
+        if (defaultMapTypes.TryGetValue(nativeDbType, out var result))
+            return result;
+        return typeof(object);
     }
-    public override string CastTo(Type type)
+    public override string GetQuotedValue(Type expectType, object value)
     {
-        if (castTos.TryGetValue(type, out var dbType))
-            return dbType;
-        return type.ToString().ToLower();
+        if (expectType == typeof(TimeSpan) && value is TimeSpan timeSpan)
+            return $"TIME('{timeSpan.ToString("d\\ hh\\:mm\\:ss\\.fffffff")}')";
+        if (expectType == typeof(TimeOnly) && value is TimeOnly timeOnly)
+            return $"TIME('{timeOnly.ToString("hh\\:mm\\:ss\\.fffffff")}')";
+        return base.GetQuotedValue(expectType, value);
     }
+    public override string CastTo(Type type, object value)
+       => $"CAST({value} AS {castTos[type]})";
     public override bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
     {
         var memberInfo = memberExpr.Member;
@@ -183,7 +249,8 @@ public partial class MySqlProvider : BaseOrmProvider
                 return true;
             if (methodInfo.DeclaringType == typeof(TimeSpan) && this.TryGetTimeSpanMethodCallSqlFormatter(methodCallExpr, out formatter))
                 return true;
-            if (this.TryGetIEnumerableMethodCallSqlFormatter(methodCallExpr, out formatter))
+            if (methodInfo.DeclaringType == typeof(Convert) && this.TryGetConvertMethodCallSqlFormatter(methodCallExpr, out formatter))
+                return true; if (this.TryGetIEnumerableMethodCallSqlFormatter(methodCallExpr, out formatter))
                 return true;
             if (methodInfo.DeclaringType == typeof(Math) && this.TryGetMathMethodCallSqlFormatter(methodCallExpr, out formatter))
                 return true;
@@ -222,7 +289,7 @@ public partial class MySqlProvider : BaseOrmProvider
                         methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
                             var targetSegment = visitor.VisitAndDeferred(target);
-                            var rightSegment = visitor.VisitAndDeferred(target);
+                            var rightSegment = visitor.VisitAndDeferred(args[0]);
 
                             targetSegment.Merge(rightSegment);
                             return targetSegment.Change($"(CASE WHEN {this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(targetSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END)", false, true);
@@ -237,8 +304,8 @@ public partial class MySqlProvider : BaseOrmProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(target);
                             if (targetSegment.IsConstantValue)
-                                return targetSegment.Change(this.GetQuotedValue(targetSegment.ToString()));
-                            return targetSegment.Change($"CAST({this.GetQuotedValue(targetSegment)} AS {this.CastTo(typeof(string))})", false, true);
+                                return targetSegment.Change( targetSegment.ToString() );
+                            return targetSegment.Change(this.CastTo(typeof(string), this.GetQuotedValue(targetSegment)), false, true);
                         });
                         result = true;
                     }
@@ -252,7 +319,7 @@ public partial class MySqlProvider : BaseOrmProvider
                             args[0] = visitor.VisitAndDeferred(args[0]);
                             if (args[0].IsConstantValue)
                                 return args[0].Change(this.GetQuotedValue(methodInfo.DeclaringType, args[0]));
-                            return args[0].Change($"CAST({this.GetQuotedValue(args[0])} AS {this.CastTo(methodInfo.DeclaringType)})", false, true);
+                            return args[0].Change(this.CastTo(methodInfo.DeclaringType, this.GetQuotedValue(args[0])), false, true);
                         });
                         result = true;
                     }

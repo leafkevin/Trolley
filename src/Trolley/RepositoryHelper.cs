@@ -26,17 +26,72 @@ class RepositoryHelper
         if (valueExpr.Type.IsNullableType(out var underlyingType))
             valueExpr = Expression.Property(valueExpr, "Value");
 
-        //Gender? gender = Gender.Male;
-        //(int)gender.Value;
-        if (underlyingType.IsEnumType(out var enumUnderlyingType))
+        if (nativeDbType != null)
         {
-            if (nativeDbType != null && ormProvider.IsStringDbType((int)nativeDbType))
+            var defaultType = ormProvider.MapDefaultType(nativeDbType);
+            if (defaultType != underlyingType)
             {
-                methodInfo = typeof(Enum).GetMethod(nameof(Enum.GetName), new Type[] { typeof(Type), typeof(object) });
-                valueExpr = Expression.Call(methodInfo, Expression.Constant(underlyingType), valueExpr);
+                //Gender? gender = Gender.Male;
+                //(int)gender.Value;
+                if (underlyingType.IsEnumType(out _, out var enumUnderlyingType))
+                {
+                    if (defaultType == typeof(string))
+                    {
+                        methodInfo = typeof(Enum).GetMethod(nameof(Enum.GetName), new Type[] { typeof(Type), typeof(object) });
+                        var convertExpr = Expression.Convert(valueExpr, typeof(object));
+                        valueExpr = Expression.Call(methodInfo, Expression.Constant(underlyingType), convertExpr);
+                    }
+                    else if (defaultType == typeof(byte) || defaultType == typeof(sbyte) || defaultType == typeof(short)
+                          || defaultType == typeof(ushort) || defaultType == typeof(int) || defaultType == typeof(uint)
+                          || defaultType == typeof(long) || defaultType == typeof(ulong))
+                        valueExpr = Expression.Convert(valueExpr, enumUnderlyingType);
+                    else throw new NotSupportedException($"不支持的NativeDbType类型,MemberType:{underlyingType.FullName},NativeDbType:{nativeDbType}");
+                }
+                else if (underlyingType == typeof(Guid))
+                {
+                    if (defaultType == typeof(string))
+                        valueExpr = Expression.Call(valueExpr, typeof(Guid).GetMethod(nameof(Guid.ToString), Type.EmptyTypes));
+                    else if (defaultType == typeof(byte[]))
+                        valueExpr = Expression.Call(valueExpr, typeof(Guid).GetMethod(nameof(Guid.ToByteArray), Type.EmptyTypes));
+                    else throw new NotSupportedException($"不支持的NativeDbType类型,MemberType:{underlyingType.FullName},NativeDbType:{nativeDbType}");
+                }
+                else if (underlyingType == typeof(TimeSpan) || underlyingType == typeof(TimeOnly))
+                {
+                    if (defaultType == typeof(long))
+                        valueExpr = Expression.Property(valueExpr, "Ticks");
+                }
+                else
+                {
+                    var typeCode = Type.GetTypeCode(defaultType);
+                    string toTypeMethod = null;
+                    switch (typeCode)
+                    {
+                        case TypeCode.Boolean: toTypeMethod = nameof(Convert.ToBoolean); break;
+                        case TypeCode.Char: toTypeMethod = nameof(Convert.ToChar); break;
+                        case TypeCode.Byte: toTypeMethod = nameof(Convert.ToByte); break;
+                        case TypeCode.SByte: toTypeMethod = nameof(Convert.ToSByte); break;
+                        case TypeCode.Int16: toTypeMethod = nameof(Convert.ToInt16); break;
+                        case TypeCode.UInt16: toTypeMethod = nameof(Convert.ToUInt16); break;
+                        case TypeCode.Int32: toTypeMethod = nameof(Convert.ToInt32); break;
+                        case TypeCode.UInt32: toTypeMethod = nameof(Convert.ToUInt32); break;
+                        case TypeCode.Int64: toTypeMethod = nameof(Convert.ToInt64); break;
+                        case TypeCode.UInt64: toTypeMethod = nameof(Convert.ToUInt64); break;
+                        case TypeCode.Single: toTypeMethod = nameof(Convert.ToSingle); break;
+                        case TypeCode.Double: toTypeMethod = nameof(Convert.ToDouble); break;
+                        case TypeCode.Decimal: toTypeMethod = nameof(Convert.ToDecimal); break;
+                        case TypeCode.DateTime: toTypeMethod = nameof(Convert.ToDateTime); break;
+                        case TypeCode.String: toTypeMethod = nameof(Convert.ToString); break;
+                    }
+                    if (!string.IsNullOrEmpty(toTypeMethod))
+                    {
+                        methodInfo = typeof(Convert).GetMethod(toTypeMethod, new Type[] { underlyingType });
+                        valueExpr = Expression.Call(methodInfo, valueExpr);
+                    }
+                    else valueExpr = Expression.Convert(valueExpr, defaultType);
+                }
             }
-            else valueExpr = Expression.Convert(valueExpr, enumUnderlyingType);
         }
+
         valueExpr = Expression.Convert(valueExpr, typeof(object));
 
         if (isExpectNullable)
@@ -44,7 +99,7 @@ class RepositoryHelper
             //object localValue;
             //if(gender == null)
             //  localValue = DBNull.Value;
-            //else localValue = (int)gender.Value;
+            //else localValue = (object)gender.Value;
             var isNullExpr = Expression.Equal(parameterValueExpr, Expression.Constant(null));
             var objLocalExpr = DefineLocalParameter("objLocal", typeof(object), localParameters, blockParameters);
             var assignNullExpr = Expression.Assign(objLocalExpr, Expression.Constant(DBNull.Value));
@@ -162,7 +217,7 @@ class RepositoryHelper
         //var parameter = ormProvider.CreateParameter("@Parameter", nativeDbType, whereObj.Name);
         var valueExpr = Expression.PropertyOrField(typedParameterExpr, memberMapper.MemberName);
         AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, valueExpr, false, memberMapper.NativeDbType, ormProvider, null, null, blockBodies);
-    }
+    }  
     private static ParameterExpression DefineLocalParameter(string namePrefix, Type localVariableType, Dictionary<string, int> localParameters, List<ParameterExpression> blockParameters)
     {
         if (!localParameters.TryGetValue(namePrefix, out var index))

@@ -316,7 +316,7 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(args[1]);
 
                         leftSegment.Merge(rightSegment);
-                        return leftSegment.Change($"(CASE WHEN {this.GetQuotedValue(leftSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(leftSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END)", false, true);
+                        return leftSegment.Change($"(CASE WHEN TIMEDIFF({this.GetQuotedValue(leftSegment)},{this.GetQuotedValue(rightSegment)})=0 THEN 0 WHEN TIMEDIFF({this.GetQuotedValue(leftSegment)},{this.GetQuotedValue(rightSegment)})>0 THEN 1 ELSE -1 END)", false, true);
                     });
                     result = true;
                     break;
@@ -491,7 +491,7 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(args[0]);
 
                         targetSegment.Merge(rightSegment);
-                        return targetSegment.Change($"{this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)}", false, true);
+                        return targetSegment.Change($"(CASE WHEN TIMEDIFF({this.GetQuotedValue(targetSegment)},{this.GetQuotedValue(rightSegment)})=0 THEN 0 ELSE 0 END)", false, true);
                     });
                     result = true;
                     break;
@@ -502,7 +502,7 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(args[0]);
 
                         targetSegment.Merge(rightSegment);
-                        return targetSegment.Change($"(CASE WHEN {this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(targetSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END)", false, true);
+                        return targetSegment.Change($"(CASE WHEN TIMEDIFF({this.GetQuotedValue(targetSegment)},{this.GetQuotedValue(rightSegment)})=0 THEN 0 WHEN TIMEDIFF({this.GetQuotedValue(targetSegment)},{this.GetQuotedValue(rightSegment)})>0 THEN 1 ELSE -1 END)", false, true);
                     });
                     result = true;
                     break;

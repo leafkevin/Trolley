@@ -78,9 +78,8 @@ partial class MySqlProvider
                                 if (i == 0) resultSegment = sqlSegment;
                                 else resultSegment.Merge(sqlSegment);
 
-                                var strValue = sqlSegment.ToString();
                                 if (sqlSegment.IsConstantValue)
-                                    constBuilder.Append(strValue);
+                                    constBuilder.Append(sqlSegment.ToString());
                                 else
                                 {
                                     if (constBuilder.Length > 0)
@@ -93,7 +92,7 @@ partial class MySqlProvider
                                     }
                                     if (builder.Length > 0)
                                         builder.Append(',');
-                                    builder.Append(strValue);
+                                    builder.Append(sqlSegment.ToString());
                                 }
                             }
                             if (builder.Length > 0)
@@ -198,12 +197,12 @@ partial class MySqlProvider
                     {
                         methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
-                            var targetSegment = visitor.VisitAndDeferred(args[0]);
+                            var valueSegment = visitor.VisitAndDeferred(args[0]);
                             string targetAugment = null;
-                            if (targetSegment.IsConstantValue)
-                                targetAugment = this.GetQuotedValue(targetSegment.ToString());
-                            else targetAugment = targetSegment.ToString();
-                            return targetSegment.Change($"({targetAugment} IS NULL OR {targetAugment}='')", false, true);
+                            if (valueSegment.IsConstantValue)
+                                targetAugment = this.GetQuotedValue(valueSegment.ToString());
+                            else targetAugment = valueSegment.ToString();
+                            return valueSegment.Change($"({targetAugment} IS NULL OR {targetAugment}='')", false, true);
                         });
                         result = true;
                     }
@@ -521,7 +520,7 @@ partial class MySqlProvider
                     }
                     break;
                 case "ToUpper":
-                    if (!methodInfo.IsStatic && parameterInfos.Length >= 0 && typeof(string).IsAssignableFrom(methodInfo.DeclaringType))
+                    if (parameterInfos.Length >= 0)
                     {
                         methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
@@ -532,7 +531,7 @@ partial class MySqlProvider
                     }
                     break;
                 case "ToLower":
-                    if (!methodInfo.IsStatic && parameterInfos.Length >= 0 && typeof(string).IsAssignableFrom(methodInfo.DeclaringType))
+                    if (parameterInfos.Length >= 0)
                     {
                         methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
@@ -620,7 +619,7 @@ partial class MySqlProvider
 
                             string rightArgument = null;
                             if (rightSegment.IsConstantValue)
-                                rightArgument = this.GetQuotedValue($"%{rightSegment.ToString().Replace("%", "\\%")}");
+                                rightArgument = $"'%{rightSegment.ToString().Replace("%", "\\%")}'";
                             else rightArgument = $"CONCAT('%',REPLACE({rightSegment},'%','\\%'))";
                             int notIndex = 0;
 
@@ -679,22 +678,30 @@ partial class MySqlProvider
                         result = true;
                     }
                     break;
+
                 case "ToString":
-                    //int.ToString();
-                    //int.ToString(IFormatProvider);
-                    //double.ToString();
-                    //double.ToString(IFormatProvider);
-                    //DateTime.ToString();
-                    if (parameterInfos.Length == 0 || (parameterInfos.Length == 1 && typeof(IFormatProvider).IsAssignableFrom(parameterInfos[0].ParameterType)))
+                    if (parameterInfos.Length >= 0)
                     {
-                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        //int.ToString();
+                        //int.ToString(IFormatProvider);
+                        //double.ToString();
+                        //double.ToString(IFormatProvider);
+                        //DateTime.ToString();
+                        if (parameterInfos.Length == 0 || (parameterInfos.Length == 1 && typeof(IFormatProvider).IsAssignableFrom(parameterInfos[0].ParameterType)))
                         {
-                            var targetSegment = visitor.VisitAndDeferred(target);
-                            if (targetSegment.IsConstantValue)
-                                return targetSegment.Change(targetSegment.ToString());
-                            return targetSegment.Change($"CAST({targetSegment} AS {this.CastTo(typeof(string))})", false, true);
-                        });
-                        result = true;
+                            methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                            {
+                                var targetSegment = visitor.VisitAndDeferred(target);
+                                if (targetSegment.IsConstantValue)
+                                    return targetSegment.Change(this.GetQuotedValue(targetSegment));
+                                return targetSegment.Change(this.CastTo(typeof(string), this.GetQuotedValue(targetSegment)), false, true);
+                            });
+                            result = true;
+                        }
+                        //放到其他类型的方法中实现
+                        //int.ToString(string format);
+                        //double.ToString(string format);
+                        //DateTime.ToString(string format);
                     }
                     break;
                 case "IndexOf":

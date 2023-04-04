@@ -27,9 +27,11 @@ public interface IOrmProvider
     string GetPagingTemplate(int? skip, int? limit, string orderBy = null);
     object GetNativeDbType(Type type);
     object GetNativeDbType(int nativeDbType);
-    bool IsStringDbType(int nativeDbType);
-    string CastTo(Type type);
+    Type MapDefaultType(object nativeDbType);
+    string CastTo(Type type, object value);
     string GetQuotedValue(Type fieldType, object value);
+    object ToFieldValue(object fieldValue, object nativeDbType);
+    Expression ToFieldValue(Expression fieldValueExpr, object nativeDbType);
     string GetBinaryOperator(ExpressionType nodeType);
     bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
     bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);

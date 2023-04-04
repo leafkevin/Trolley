@@ -35,8 +35,8 @@ public abstract class BaseOrmProvider : IOrmProvider
     //}
     public abstract object GetNativeDbType(Type type);
     public abstract object GetNativeDbType(int nativeDbType);
-    public abstract bool IsStringDbType(int nativeDbType);
-    public abstract string CastTo(Type type);
+    public abstract Type MapDefaultType(object nativeDbType);
+    public abstract string CastTo(Type type, object value);
     public virtual string GetQuotedValue(Type expectType, object value)
     {
         if (value == null) return "NULL";
@@ -46,8 +46,6 @@ public abstract class BaseOrmProvider : IOrmProvider
             return "'" + value.ToString().Replace("\\", "\\\\").Replace("'", @"\'") + "'";
         if (expectType == typeof(DateTime))
             return $"'{Convert.ToDateTime(value):yyyy-MM-dd HH:mm:ss}'";
-        if (expectType == typeof(TimeSpan))
-            return ((TimeSpan)value).Ticks.ToString();
         if (value is SqlSegment sqlSegment)
         {
             if (sqlSegment == SqlSegment.Null || !sqlSegment.IsConstantValue)
@@ -55,6 +53,116 @@ public abstract class BaseOrmProvider : IOrmProvider
             return this.GetQuotedValue(sqlSegment.Value);
         }
         return value.ToString();
+    }
+    public virtual object ToFieldValue(object fieldValue, object nativeDbType)
+    {
+        if (fieldValue == null)
+            return DBNull.Value;
+        var result = fieldValue;
+        var fieldType = fieldValue.GetType();
+        if (fieldType.IsNullableType(out var underlyingType))
+            result = Convert.ChangeType(result, underlyingType);
+        if (nativeDbType != null)
+        {
+            var defaultType = this.MapDefaultType(nativeDbType);
+            if (defaultType == underlyingType)
+                return result;
+
+            //Gender? gender = Gender.Male;
+            //(int)gender.Value;
+            if (underlyingType.IsEnumType(out _, out var enumUnderlyingType))
+            {
+                if (defaultType == typeof(string))
+                    result = result.ToString();
+                else result = Convert.ChangeType(result, enumUnderlyingType);
+            }
+            else if (underlyingType == typeof(Guid))
+            {
+                if (defaultType == typeof(string))
+                    result = result.ToString();
+                if (defaultType == typeof(byte[]))
+                    result = ((Guid)result).ToByteArray();
+            }
+            else if (underlyingType == typeof(TimeSpan) || underlyingType == typeof(TimeOnly))
+            {
+                if (defaultType == typeof(long))
+                {
+                    if (result is TimeSpan timeSpan)
+                        result = timeSpan.Ticks;
+                    if (result is TimeOnly timeOnly)
+                        result = timeOnly.Ticks;
+                }
+            }
+            else result = Convert.ChangeType(result, defaultType);
+        }
+        return result;
+    }
+    public virtual Expression ToFieldValue(Expression fieldValueExpr, object nativeDbType)
+    {
+        var resultExpr = fieldValueExpr;
+        if (fieldValueExpr.Type.IsNullableType(out var underlyingType))
+            resultExpr = Expression.Property(resultExpr, "Value");
+        if (nativeDbType != null)
+        {
+            var defaultType = this.MapDefaultType(nativeDbType);
+            //Gender? gender = Gender.Male;
+            //(int)gender.Value;
+            if (underlyingType.IsEnumType(out _, out var enumUnderlyingType))
+            {
+                if (defaultType == typeof(string))
+                {
+                    var methodInfo = typeof(Enum).GetMethod(nameof(Enum.GetName), new Type[] { typeof(Type), typeof(object) });
+                    var convertExpr = Expression.Convert(resultExpr, typeof(object));
+                    resultExpr = Expression.Call(methodInfo, Expression.Constant(underlyingType), convertExpr);
+                }
+                else resultExpr = Expression.Convert(resultExpr, enumUnderlyingType);
+            }
+            else if (underlyingType == typeof(Guid))
+            {
+                if (defaultType != underlyingType)
+                {
+                    if (defaultType == typeof(string))
+                        resultExpr = Expression.Call(resultExpr, typeof(Guid).GetMethod(nameof(Guid.ToString), Type.EmptyTypes));
+                    if (defaultType == typeof(byte[]))
+                        resultExpr = Expression.Call(resultExpr, typeof(Guid).GetMethod(nameof(Guid.ToByteArray), Type.EmptyTypes));
+                }
+            }
+            else if (underlyingType == typeof(TimeSpan) || underlyingType == typeof(TimeOnly))
+            {
+                if (defaultType == typeof(long))
+                    resultExpr = Expression.Property(resultExpr, "Ticks");
+            }
+            else
+            {
+                var typeCode = Type.GetTypeCode(defaultType);
+                string toTypeMethod = null;
+                switch (typeCode)
+                {
+                    case TypeCode.Boolean: toTypeMethod = nameof(Convert.ToBoolean); break;
+                    case TypeCode.Char: toTypeMethod = nameof(Convert.ToChar); break;
+                    case TypeCode.Byte: toTypeMethod = nameof(Convert.ToByte); break;
+                    case TypeCode.SByte: toTypeMethod = nameof(Convert.ToSByte); break;
+                    case TypeCode.Int16: toTypeMethod = nameof(Convert.ToInt16); break;
+                    case TypeCode.UInt16: toTypeMethod = nameof(Convert.ToUInt16); break;
+                    case TypeCode.Int32: toTypeMethod = nameof(Convert.ToInt32); break;
+                    case TypeCode.UInt32: toTypeMethod = nameof(Convert.ToUInt32); break;
+                    case TypeCode.Int64: toTypeMethod = nameof(Convert.ToInt64); break;
+                    case TypeCode.UInt64: toTypeMethod = nameof(Convert.ToUInt64); break;
+                    case TypeCode.Single: toTypeMethod = nameof(Convert.ToSingle); break;
+                    case TypeCode.Double: toTypeMethod = nameof(Convert.ToDouble); break;
+                    case TypeCode.Decimal: toTypeMethod = nameof(Convert.ToDecimal); break;
+                    case TypeCode.DateTime: toTypeMethod = nameof(Convert.ToDateTime); break;
+                    case TypeCode.String: toTypeMethod = nameof(Convert.ToString); break;
+                }
+                if (!string.IsNullOrEmpty(toTypeMethod))
+                {
+                    var methodInfo = typeof(Convert).GetMethod(toTypeMethod, new Type[] { underlyingType });
+                    resultExpr = Expression.Call(methodInfo, resultExpr);
+                }
+                else resultExpr = Expression.Convert(resultExpr, defaultType);
+            }
+        }
+        return resultExpr;
     }
     public virtual string GetBinaryOperator(ExpressionType nodeType) =>
        nodeType switch

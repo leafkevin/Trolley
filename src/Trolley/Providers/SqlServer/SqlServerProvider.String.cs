@@ -79,9 +79,8 @@ partial class SqlServerProvider
                                 if (i == 0) resultSegment = sqlSegment;
                                 else resultSegment.Merge(sqlSegment);
 
-                                var strValue = sqlSegment.ToString();
                                 if (sqlSegment.IsConstantValue)
-                                    constBuilder.Append(strValue);
+                                    constBuilder.Append(sqlSegment.ToString());
                                 else
                                 {
                                     if (constBuilder.Length > 0)
@@ -94,7 +93,7 @@ partial class SqlServerProvider
                                     }
                                     if (builder.Length > 0)
                                         builder.Append('+');
-                                    builder.Append(strValue);
+                                    builder.Append(sqlSegment.ToString());
                                 }
                             }
                             if (builder.Length > 0)
@@ -106,6 +105,8 @@ partial class SqlServerProvider
                                     builder.Append(constValue);
                                     constBuilder.Clear();
                                 }
+                                builder.Insert(0, '(');
+                                builder.Append(')');
                                 return resultSegment.Change(builder.ToString(), false, true);
                             }
                             return resultSegment.Change(constBuilder.ToString());
@@ -163,6 +164,8 @@ partial class SqlServerProvider
                                     builder.Append(constValue);
                                     constBuilder.Clear();
                                 }
+                                builder.Insert(0, '(');
+                                builder.Append(')');
                                 return resultSegment.Change(builder.ToString(), false, true);
                             }
                             return resultSegment.Change(constBuilder.ToString());
@@ -277,6 +280,8 @@ partial class SqlServerProvider
                                     builder.Append(constValue);
                                     constBuilder.Clear();
                                 }
+                                builder.Insert(0, '(');
+                                builder.Append(')');
                                 return valuesSegment.Change(builder.ToString(), false, true);
                             }
                             else return valuesSegment.Change(constBuilder.ToString());
@@ -342,6 +347,8 @@ partial class SqlServerProvider
                                     builder.Append(constValue);
                                     constBuilder.Clear();
                                 }
+                                builder.Insert(0, '(');
+                                builder.Append(')');
                                 return valuesSegment.Change(builder.ToString(), false, true);
                             }
                             else return valuesSegment.Change(constBuilder.ToString());
@@ -447,12 +454,11 @@ partial class SqlServerProvider
                 case "Trim":
                     if (parameterInfos.Length == 0)
                     {
-                        formatter = (visitor, target, deferExprs, args) =>
+                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
                             var targetSegment = visitor.VisitAndDeferred(target);
                             return targetSegment.Change($"TRIM({this.GetQuotedValue(targetSegment)})", false, true);
-                        };
-                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter);
+                        });
                         result = true;
                     }
                     if (parameterInfos.Length == 1 && parameterInfos[0].ParameterType == typeof(char))
@@ -666,8 +672,8 @@ partial class SqlServerProvider
                             {
                                 var targetSegment = visitor.VisitAndDeferred(target);
                                 if (targetSegment.IsConstantValue)
-                                    return targetSegment.Change(targetSegment.ToString());
-                                return targetSegment.Change($"CAST({targetSegment} AS {this.CastTo(typeof(string))})", false, true);
+                                    return targetSegment.Change(this.GetQuotedValue(targetSegment));
+                                return targetSegment.Change(this.CastTo(typeof(string), this.GetQuotedValue(targetSegment)), false, true);
                             });
                             result = true;
                         }

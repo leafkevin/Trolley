@@ -6,14 +6,15 @@ namespace Trolley;
 
 public static class Sql
 {
-    /// <summary>
-    /// 使用原始SQL变成字段
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="rawSql"></param>
-    /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
-    public static T Field<T>(string rawSql = "*")
+    public static T RawSql<T>(string rawSql)
+    {
+        throw new NotImplementedException();
+    }
+    public static T ToField<T>(this string rawSql)
+    {
+        throw new NotImplementedException();
+    }
+    public static bool IsNull<TField>(this TField field)
     {
         throw new NotImplementedException();
     }

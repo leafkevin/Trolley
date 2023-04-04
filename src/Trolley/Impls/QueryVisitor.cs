@@ -156,13 +156,12 @@ class QueryVisitor : SqlVisitor
     /// <summary>
     /// First,ToList,ToPageList接口使用,First,ToList有转换其他类型时，entityType，toTargetExpr两个栏位有值
     /// </summary>
-    /// <param name="defaultExpr"></param>
-    /// <param name="entityType"></param>
+    /// <param name="targetType"></param>
     /// <param name="toTargetExpr"></param>
     /// <param name="dbParameters"></param>
     /// <param name="readerFields"></param>
     /// <returns></returns>
-    public string BuildSql(Expression defaultExpr, Type entityType, Expression toTargetExpr, out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields, out bool isTarget)
+    public string BuildSql(Type targetType, Expression toTargetExpr, out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields, out bool isTarget)
     {
         if (!string.IsNullOrEmpty(sql))
         {
@@ -172,12 +171,9 @@ class QueryVisitor : SqlVisitor
             return this.sql;
         }
 
-        if (this.readerFields == null || this.readerFields.Count == 0)
-            this.Select(null, defaultExpr);
-
         List<ReaderField> targetFields = null;
         if (toTargetExpr != null)//有其他类型转换，entityType, toTargetExpr必须有值
-            targetFields = this.FlattenFieldsTo(entityType, toTargetExpr);
+            targetFields = this.FlattenFieldsTo(targetType, toTargetExpr);
         else targetFields = this.readerFields;
 
         var builder = new StringBuilder();
@@ -588,6 +584,11 @@ class QueryVisitor : SqlVisitor
         this.isSelect = false;
     }
     public void SelectGrouping() => this.readerFields = this.groupFields;
+    public void DefaultSelect(Expression defaultExpr)
+    {
+        if (this.readerFields == null || this.readerFields.Count == 0)
+            this.Select(null, defaultExpr);
+    }
     public void GroupBy(Expression expr)
     {
         var lambdaExpr = expr as LambdaExpression;
@@ -645,9 +646,6 @@ class QueryVisitor : SqlVisitor
     public QueryVisitor Take(int limit)
     {
         this.limit = limit;
-        //如果Union后再Take，直接加载Union语句后面
-        if (!string.IsNullOrEmpty(this.sql))
-            this.sql += " ";
         return this;
     }
     public QueryVisitor Where(Expression whereExpr, bool isClearTableAlias = true)
@@ -710,7 +708,7 @@ class QueryVisitor : SqlVisitor
             {
                 this.AddSelectElement(newExpr.Arguments[i], newExpr.Members[i], readerFields);
             }
-            return sqlSegment.Change(readerFields);
+            return sqlSegment.ChangeValue(readerFields);
         }
         return this.Evaluate(sqlSegment);
     }
@@ -725,7 +723,7 @@ class QueryVisitor : SqlVisitor
             var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
             this.AddSelectElement(memberAssignment.Expression, memberAssignment.Member, readerFields);
         }
-        return sqlSegment.Change(readerFields);
+        return sqlSegment.ChangeValue(readerFields);
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
@@ -811,6 +809,7 @@ class QueryVisitor : SqlVisitor
                     {
                         //From子查询中，Select语句又做了参数访问，没有Include操作
                         //Select之后，得到一个临时表，并作为主表参与其他表进行关联操作
+                        //另一个场景就是访问了Grouping对象
                         tableSegment = rootTableSegment;
                         var readerField = this.FindReaderField(memberExpr, tableSegment.ReaderFields);
                         return new SqlSegment
@@ -915,6 +914,8 @@ class QueryVisitor : SqlVisitor
                         var readerField = this.FindReaderField(memberExpr, tableSegment.ReaderFields);
                         memberInfo = readerField.FromMember;
                         fieldName = readerField.Body;
+                        //TODO:访问了临时表的Enum类型，对应的数据库类型是VARCHAR类型，此栏位只做SELECT子句操作，不需要处理
+                        //如果还做Where条件，就需要处理
                     }
                     else
                     {
@@ -932,6 +933,16 @@ class QueryVisitor : SqlVisitor
                         //有Join时采用别名，如果当前类是IncludeMany的导航类时，没有别名
                         fieldName = this.GetFieldName(tableSegment, memberMapper.FieldName);
                         memberInfo = memberMapper.Member;
+
+                        Type targetType = null;
+                        //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
+                        //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
+                        if (memberMapper.MemberType.IsEnumType(out var expectType, out _))
+                        {
+                            if (this.ormProvider.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                                targetType = typeof(string);
+                            else targetType = expectType;
+                        }
                     }
                     if (this.isSelect || this.isWhere)
                         tableSegment.IsUsed = true;
@@ -1110,16 +1121,27 @@ class QueryVisitor : SqlVisitor
                             FieldType = ReaderFieldType.AnonymousObject,
                             FromMember = memberInfo,
                             ReaderFields = this.groupFields,
-                            IsTarget = true
+                            IsTarget = this.isSelect
                         });
                     }
                     else
                     {
                         sqlSegment = this.VisitMemberAccess(sqlSegment);
-                        var tableReaderFields = sqlSegment.Value as List<ReaderField>;
-                        tableReaderFields[0].FromMember = memberInfo;
-                        tableReaderFields[0].IsTarget = true;
-                        readerFields.AddRange(tableReaderFields);
+                        if (sqlSegment.Value is List<ReaderField> tableReaderFields)
+                        {
+                            tableReaderFields[0].FromMember = memberInfo;
+                            //TODO:待测试
+                            tableReaderFields[0].IsTarget = this.isSelect;
+                            readerFields.AddRange(tableReaderFields);
+                        }
+                        else
+                        {
+                            //分组子查询后作为Select的临时表，访问x.Grouping对象
+                            var readerField = sqlSegment.Value as ReaderField;
+                            readerField.FromMember = memberInfo;
+                            readerField.IsTarget = this.isSelect;
+                            readerFields.Add(readerField);
+                        }
                     }
                 }
                 else
@@ -1140,7 +1162,7 @@ class QueryVisitor : SqlVisitor
                         TableSegment = sqlSegment.TableSegment,
                         FromMember = memberInfo,
                         Body = fieldName,
-                        IsTarget = true
+                        IsTarget = this.isSelect
                     });
                 }
                 break;
@@ -1500,6 +1522,7 @@ class QueryVisitor : SqlVisitor
             Type parameterType = null;
             if (isMulti) parameterType = typeof(List<>).MakeGenericType(targetType);
             else parameterType = targetType;
+            //可能是单个实体，也可能是多个实体
             var targetExpr = Expression.Variable(parameterType, "target");
             blockParameters.Add(targetExpr);
             blockBodies.Add(Expression.Assign(targetExpr, Expression.Convert(objExpr, parameterType)));
@@ -1516,6 +1539,19 @@ class QueryVisitor : SqlVisitor
                 blockBodies.Add(Expression.Assign(includeResultExpr, Expression.New(includeType.GetConstructor(Type.EmptyTypes))));
                 index++;
             }
+
+            //while(true)
+            //{
+            //  if(!reader.Read())break;
+            //  includeResult1.Add(reader.To<T>(reader, dbKey, ormProvider, false, readerFields));
+            //}
+            //reader.NextResult()
+            //while(true)
+            //{
+            //  if(!reader.Read())break;
+            //  includeResult2.Add(reader.To<T>(reader, dbKey, ormProvider, false, readerFields));
+            //}
+            //reader.NextResult()           
             var breakLabel = Expression.Label();
             var toMethodInfo = typeof(Extensions).GetMethod(nameof(Extensions.To),
                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static,
@@ -1528,14 +1564,18 @@ class QueryVisitor : SqlVisitor
             {
                 var includeResultExpr = blockParameters[index];
                 var readBreakLabel = Expression.Label();
+                //if(!reader.Read())break;
                 var ifFalseExpr = Expression.IsFalse(Expression.Call(readerExpr, readMethodInfo));
                 var ifThenBreakExpr = Expression.IfThen(ifFalseExpr, Expression.Break(readBreakLabel));
                 var methodInfo = toMethodInfo.MakeGenericMethod(includeSegment.FromMember.NavigationType);
+                //reader.To<T>(reader, dbKey, ormProvider, false, readerFields);
                 var includeValueExpr = Expression.Call(methodInfo, readerExpr, dbKeyExpr, ormProviderExpr, mapProviderExpr);
                 var includeType = typeof(List<>).MakeGenericType(includeSegment.FromMember.NavigationType);
                 methodInfo = includeType.GetMethod("Add", new Type[] { includeSegment.FromMember.NavigationType });
                 var addValueExpr = Expression.Call(includeResultExpr, methodInfo, includeValueExpr);
+                //includeResult1.Add(entity);
                 blockBodies.Add(Expression.Loop(Expression.Block(ifThenBreakExpr, addValueExpr), readBreakLabel));
+                //reader.NextResult()
                 if (index < includeSegments.Count - 1)
                 {
                     methodInfo = typeof(IDataReader).GetMethod(nameof(IDataReader.NextResult), Type.EmptyTypes);
@@ -1543,6 +1583,8 @@ class QueryVisitor : SqlVisitor
                 }
                 index++;
             }
+            //reader.Close();
+            //reader.Dispose();
             var closeMethodInfo = typeof(IDataReader).GetMethod(nameof(IDataReader.Close), Type.EmptyTypes);
             blockBodies.Add(Expression.Call(readerExpr, closeMethodInfo));
             var disposeMethodInfo = typeof(IDisposable).GetMethod(nameof(IDisposable.Dispose), Type.EmptyTypes);
@@ -1550,6 +1592,7 @@ class QueryVisitor : SqlVisitor
 
             var indexExpr = Expression.Variable(typeof(int), "index");
             var countExpr = Expression.Variable(typeof(int), "count");
+            //ToList场景
             if (isMulti)
             {
                 blockParameters.Add(indexExpr);
@@ -1593,6 +1636,7 @@ class QueryVisitor : SqlVisitor
                     var setValueExpr = this.SetValue(indexTargetExpr, includeSegment, filterValuesExpr);
                     var ifThenExpr = Expression.IfThen(Expression.AndAlso(notNullExpr, greaterThanThenExpr), setValueExpr);
                     var indexIncrementExpr = Expression.Assign(indexExpr, Expression.Increment(indexExpr));
+
                     //while(true)
                     //{
                     //  if(index==count)break;

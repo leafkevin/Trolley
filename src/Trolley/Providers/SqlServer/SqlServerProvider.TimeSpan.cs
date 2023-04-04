@@ -175,7 +175,7 @@ partial class SqlServerProvider
                         var rightSegment = visitor.VisitAndDeferred(args[1]);
 
                         leftSegment.Merge(rightSegment);
-                        return args[0].Change($"(CASE WHEN {leftSegment}={rightSegment} THEN 0 WHEN {leftSegment}>{rightSegment} THEN 1 ELSE -1 END)", false, true);
+                        return args[0].Change($"(CASE WHEN DATEDIFF(MICROSECOND,{this.GetQuotedValue(leftSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {leftSegment}>{rightSegment} THEN 1 ELSE -1 END)", false, true);
                     });
                     result = true;
                     break;
@@ -286,7 +286,7 @@ partial class SqlServerProvider
                         var rightSegment = visitor.VisitAndDeferred(args[0]);
 
                         targetSegment.Merge(rightSegment);
-                        return targetSegment.Change($"{targetSegment}={rightSegment}", false, true);
+                        return targetSegment.Change($"{this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)}", false, true);
                     });
                     result = true;
                     break;

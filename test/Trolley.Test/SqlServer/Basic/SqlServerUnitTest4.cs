@@ -3,11 +3,10 @@ using System;
 using System.Linq;
 using Xunit;
 
-namespace Trolley.Test;
+namespace Trolley.Test.SqlServer;
 
-public class SqlServerUnitTest4
+public class SqlServerUnitTest4 : UnitTestBase
 {
-    private readonly IOrmDbFactory dbFactory;
     public SqlServerUnitTest4()
     {
         var services = new ServiceCollection();
@@ -24,12 +23,12 @@ public class SqlServerUnitTest4
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
-        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+        dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
     [Fact]
     public async void Delete()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         repository.BeginTransaction();
         repository.Delete<User>(f => f.Id == 1);
         var count = repository.Create<User>(new User
@@ -53,7 +52,7 @@ public class SqlServerUnitTest4
     [Fact]
     public async void Delete_Multi()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         repository.BeginTransaction();
         repository.Delete<User>(new[] { new { Id = 1 }, new { Id = 2 } });
         var count = repository.Create<User>(new[]
@@ -93,7 +92,7 @@ public class SqlServerUnitTest4
     [Fact]
     public async void Delete_Multi1()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         repository.BeginTransaction();
         repository.Delete<User>(new[] { 1, 2 });
         var count = repository.Create<User>(new[]
@@ -133,7 +132,7 @@ public class SqlServerUnitTest4
     [Fact]
     public async void Delete_Multi_Where()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         repository.BeginTransaction();
         repository.Delete<User>(f => new int[] { 1, 2 }.Contains(f.Id));
         var count = repository.Create<User>(new[]
@@ -173,7 +172,7 @@ public class SqlServerUnitTest4
     [Fact]
     public void Delete_Where_And()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         bool? isMale = true;
         var sql = repository.Delete<User>()
             .Where(f => f.Name.Contains("kevin"))
@@ -184,7 +183,7 @@ public class SqlServerUnitTest4
     [Fact]
     public void Transation()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         bool? isMale = true;
         repository.Timeout(60);
         repository.BeginTransaction();

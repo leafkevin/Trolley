@@ -78,7 +78,7 @@ public class NpgsqlMethodCallUnitTest
                 CreatedAtCompare = DateTime.Compare(f.CreatedAt, DateTime.Parse("2022-12-20"))
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (CASE WHEN \"Name\"='leafkevin' THEN 0 WHEN \"Name\">'leafkevin' THEN 1 ELSE -1 END) AS NameCompare,(CASE WHEN \"CreatedAt\"=CAST('2022-12-20' AS TIMESTAMP) THEN 0 WHEN \"CreatedAt\">CAST('2022-12-20' AS TIMESTAMP) THEN 1 ELSE -1 END) AS CreatedAtCompare FROM \"sys_user\"");
+        Assert.True(sql == "SELECT (CASE WHEN `Name`='leafkevin' THEN 0 WHEN `Name`>'leafkevin' THEN 1 ELSE -1 END) AS NameCompare,(CASE WHEN `CreatedAt`=CAST('2022-12-20' AS DATETIME) THEN 0 WHEN `CreatedAt`>CAST('2022-12-20' AS DATETIME) THEN 1 ELSE -1 END) AS CreatedAtCompare FROM `sys_user`");
     }
     [Fact]
     public void CompareTo()

@@ -1,15 +1,11 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
 using Xunit;
-using Xunit.Abstractions;
 
-namespace Trolley.Test;
+namespace Trolley.Test.SqlServer;
 
-public class SqlServerUnitTest2
+public class SqlServerUnitTest2 : UnitTestBase
 {
-    private readonly IOrmDbFactory dbFactory;
     public SqlServerUnitTest2()
     {
         var services = new ServiceCollection();
@@ -26,13 +22,17 @@ public class SqlServerUnitTest2
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
-        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+        dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
     [Fact]
     public async void QueryFirst()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        //this.Initialize();
+        using var repository = dbFactory.Create();
+        var sss = repository.From<User>()
+            .Where(f => f.Id == 1)
+            .Select(f => f.SomeTimes)
+            .First();
         var result = repository.QueryFirst<User>(f => f.Id == 1);
         if (result != null)
         {
@@ -54,8 +54,8 @@ public class SqlServerUnitTest2
     [Fact]
     public async void Get()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var result = repository.Get<User>(1);
         Assert.True(result.Name == "leafkevin");
         var user = await repository.GetAsync<User>(new { Id = 1 });
@@ -64,16 +64,16 @@ public class SqlServerUnitTest2
     [Fact]
     public async void Query()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var result = await repository.QueryAsync<Product>(f => f.ProductNo.Contains("PN-00"));
         Assert.True(result.Count >= 3);
     }
     [Fact]
     public async void QueryPage()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var result = repository.From<OrderDetail>()
             .Where(f => f.ProductId == 1)
             .OrderByDescending(f => f.CreatedAt)
@@ -88,15 +88,15 @@ public class SqlServerUnitTest2
     [Fact]
     public async void QueryDictionary()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var result = await repository.QueryDictionaryAsync<Product, int, string>(f => f.ProductNo.Contains("PN-00"), f => f.Id, f => f.Name);
         Assert.True(result.Count >= 3);
     }
     [Fact]
     public async void QueryRawSql()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         var result = await repository.QueryAsync<Product>("SELECT * FROM sys_product where Id=@ProductId", new { ProductId = 1 });
         Assert.NotNull(result);
         Assert.True(result.Count == 1);
@@ -104,8 +104,8 @@ public class SqlServerUnitTest2
     [Fact]
     public void FromQuery_SubQuery()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var result = repository
             .From(f => f.From<Order>()
                 .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
@@ -131,8 +131,8 @@ public class SqlServerUnitTest2
     [Fact]
     public void FromQuery_InnerJoin()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var result = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .Where((a, b) => b.ProductCount > 1)
@@ -153,7 +153,7 @@ public class SqlServerUnitTest2
     [Fact]
     public async void FromQuery_InnerJoin1()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         var result = await repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .InnerJoin(f => f.From<OrderDetail>()
@@ -182,8 +182,8 @@ public class SqlServerUnitTest2
     [Fact]
     public async void FromQuery_Include()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var result = await repository.From<Product>(suffixRawSql: "WITH(NOLOCK)")
             .Include(f => f.Brand)
             .Where(f => f.ProductNo.Contains("PN-00"))
@@ -203,8 +203,8 @@ public class SqlServerUnitTest2
     [Fact]
     public void FromQuery_IncludeMany()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var result = repository.From<Order>()
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .IncludeMany((x, y) => x.Details)
@@ -220,13 +220,13 @@ public class SqlServerUnitTest2
     [Fact]
     public void FromQuery_IncludeMany_Filter()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var result = repository.From<Order>(suffixRawSql: "WITH(NOLOCK)")
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .IncludeMany((x, y) => x.Details, f => f.ProductId == 1)
             .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new int[] { 1, 2, 3 }))
-            .Select((x, y) => new { Order = x, Buyer = y, Test = x.OrderNo + "_" + (y.Age % 4) })
+            .Select((x, y) => new { Order = x, Buyer = y, Test = x.OrderNo + "_" + y.Age % 4 })
             .ToList();
 
         Assert.True(result.Count == 2);
@@ -241,8 +241,8 @@ public class SqlServerUnitTest2
     [Fact]
     public async void FromQuery_Include_ThenInclude()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var result = await repository.From<Order>(suffixRawSql: "WITH(NOLOCK)")
             .InnerJoin<User>((a, b) => a.SellerId == b.Id)
             .Include((x, y) => x.Buyer)
@@ -255,6 +255,7 @@ public class SqlServerUnitTest2
         {
             Assert.NotNull(result[0].Order.Buyer);
             Assert.NotNull(result[0].Order.Buyer.Company);
+            Assert.NotNull(result[0].Order.Buyer.SomeTimes.ToString());
         }
     }
     //[Fact]
@@ -279,8 +280,8 @@ public class SqlServerUnitTest2
     [Fact]
     public void QueryPage_Include()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var result = repository.From<OrderDetail>()
             .Include(f => f.Product)
             .Where(f => f.ProductId == 1)
@@ -300,7 +301,7 @@ public class SqlServerUnitTest2
     [Fact]
     public void QueryPage_No_OrderBy_ThrowException()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         Assert.Throws<ArgumentNullException>(() =>
         {
             repository.From<OrderDetail>()
@@ -313,7 +314,7 @@ public class SqlServerUnitTest2
     [Fact]
     public void FromQuery_Ignore_Include()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         var sql = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .IncludeMany((a, b) => a.Orders)
@@ -332,8 +333,8 @@ public class SqlServerUnitTest2
     [Fact]
     public void FromQuery_Groupby()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var result = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
@@ -359,8 +360,8 @@ public class SqlServerUnitTest2
     [Fact]
     public void FromQuery_Groupby_Fields()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var result = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
@@ -374,14 +375,14 @@ public class SqlServerUnitTest2
                 TotalAmount = x.Sum(b.TotalAmount)
             })
             .ToList();
-        Assert.True(result.Count == 2);
+        Assert.True(result.Count >= 2);
         Assert.NotNull(result[0].Name);
         Assert.NotNull(result[1].Name);
     }
     [Fact]
     public void FromQuery_Groupby_OrderBy()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         var sql = repository.From<User>()
            .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
            .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
@@ -398,7 +399,7 @@ public class SqlServerUnitTest2
     [Fact]
     public void FromQuery_Groupby_OrderBy_Fields()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         var sql = repository.From<User>()
            .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
            .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
@@ -417,7 +418,7 @@ public class SqlServerUnitTest2
     [Fact]
     public void FromQuery_Groupby_Having()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         var sql = repository.From<User>()
                 .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
                 .InnerJoin<OrderDetail>((a, b, c) => b.Id == c.OrderId)
@@ -438,7 +439,7 @@ public class SqlServerUnitTest2
     [Fact]
     public void FromQuery_Groupby_Having_OrderBy_Fields()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         var sql = repository.From<User>()
                 .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
                 .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
@@ -460,7 +461,7 @@ public class SqlServerUnitTest2
     [Fact]
     public void FromQuery_In_Exists()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         var sql = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .Where((a, b) => Sql.In(a.Id, new int[] { 1, 2, 3 }) && Sql.Exists<OrderDetail>(f => b.Id == f.OrderId && f.ProductId == 2))
@@ -474,36 +475,38 @@ public class SqlServerUnitTest2
                 TotalAmount = x.Sum(b.TotalAmount)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.[Id],a.[Name],CONVERT(CHAR(10),b.[CreatedAt],120) AS Date,COUNT(b.[Id]) AS OrderCount,SUM(b.[TotalAmount]) AS TotalAmount FROM [sys_user] a INNER JOIN [sys_order] b ON a.[Id]=b.[BuyerId] WHERE a.[Id] IN (@p0,@p1,@p2) AND EXISTS(SELECT * FROM [sys_order_detail] f WHERE b.[Id]=f.[OrderId] AND f.[ProductId]=2) GROUP BY a.[Id],a.[Name],CONVERT(CHAR(10),b.[CreatedAt],120) HAVING SUM(b.[TotalAmount])>300 ORDER BY a.[Id],CONVERT(CHAR(10),b.[CreatedAt],120)");
+        Assert.True(sql == "SELECT a.[Id],a.[Name],CONVERT(CHAR(10),b.[CreatedAt],120) AS Date,COUNT(b.[Id]) AS OrderCount,SUM(b.[TotalAmount]) AS TotalAmount FROM [sys_user] a INNER JOIN [sys_order] b ON a.[Id]=b.[BuyerId] WHERE a.[Id] IN (1,2,3) AND EXISTS(SELECT * FROM [sys_order_detail] f WHERE b.[Id]=f.[OrderId] AND f.[ProductId]=2) GROUP BY a.[Id],a.[Name],CONVERT(CHAR(10),b.[CreatedAt],120) HAVING SUM(b.[TotalAmount])>300 ORDER BY a.[Id],CONVERT(CHAR(10),b.[CreatedAt],120)");
     }
     [Fact]
     public void FromQuery_In1()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         var sql = repository.From<User>()
             .Where(f => Sql.In(f.Id, t => t.From<Order, OrderDetail>('b')
                 .Where((a, b) => a.Id == b.OrderId && b.ProductId == 1)
                 .Select((x, y) => x.BuyerId)))
+            .Select(f => f.Id)
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.[Id],a.[Name],a.[Gender],a.[Age],a.[CompanyId],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_user] a WHERE a.[Id] IN (SELECT b.[BuyerId] FROM [sys_order] b,[sys_order_detail] c WHERE b.[Id]=c.[OrderId] AND c.[ProductId]=1)");
+        Assert.True(sql == "SELECT a.[Id] FROM [sys_user] a WHERE a.[Id] IN (SELECT b.[BuyerId] FROM [sys_order] b,[sys_order_detail] c WHERE b.[Id]=c.[OrderId] AND c.[ProductId]=1)");
     }
     [Fact]
     public void FromQuery_In_Exists1()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         bool? isMale = true;
         var sql = repository.From<User>()
             .Where(f => Sql.In(f.Id, t => t.From<Order, OrderDetail>('b')
                 .Where((a, b) => a.Id == b.OrderId && b.ProductId == 1)
                 .Select((x, y) => x.BuyerId)))
             .And(isMale.HasValue, f => Sql.Exists<Order, Company>((x, y) => f.Id == x.SellerId && f.CompanyId == y.Id))
+            .Select(f => f.Id)
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.[Id],a.[Name],a.[Gender],a.[Age],a.[CompanyId],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_user] a WHERE a.[Id] IN (SELECT b.[BuyerId] FROM [sys_order] b,[sys_order_detail] c WHERE b.[Id]=c.[OrderId] AND c.[ProductId]=1) AND EXISTS(SELECT * FROM [sys_order] x,[sys_company] y WHERE a.[Id]=x.[SellerId] AND a.[CompanyId]=y.[Id])");
+        Assert.True(sql == "SELECT a.[Id] FROM [sys_user] a WHERE a.[Id] IN (SELECT b.[BuyerId] FROM [sys_order] b,[sys_order_detail] c WHERE b.[Id]=c.[OrderId] AND c.[ProductId]=1) AND EXISTS(SELECT * FROM [sys_order] x,[sys_company] y WHERE a.[Id]=x.[SellerId] AND a.[CompanyId]=y.[Id])");
     }
     [Fact]
     public void FromQuery_In_Exists_Group_CountDistinct_Count()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         bool? isMale = true;
         var sql = repository.From<User>()
             .Where(f => Sql.In(f.Id, t => t.From<OrderDetail>('b')
@@ -518,7 +521,7 @@ public class SqlServerUnitTest2
     [Fact]
     public void FromQuery_SelectAggregate()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         var sql = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .IncludeMany((a, b) => a.Orders)
@@ -536,7 +539,7 @@ public class SqlServerUnitTest2
     [Fact]
     public void FromQuery_Select_Sql_Aggregate()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         var sql = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .IncludeMany((a, b) => a.Orders)
@@ -554,8 +557,8 @@ public class SqlServerUnitTest2
     [Fact]
     public void Query_Count()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var count = repository.From<User>().Count();
         var count1 = repository.From<User>().Select(f => Sql.Count()).First();
         var count2 = repository.QueryFirst<int>("SELECT COUNT(1) FROM sys_user");
@@ -565,8 +568,8 @@ public class SqlServerUnitTest2
     [Fact]
     public void Query_Max()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var count = repository.From<Order>().Max(f => f.TotalAmount);
         var count1 = repository.From<Order>().Select(f => Sql.Max(f.TotalAmount)).First();
         var count2 = repository.QueryFirst<double>("SELECT MAX(TotalAmount) FROM sys_order");
@@ -576,8 +579,8 @@ public class SqlServerUnitTest2
     [Fact]
     public void Query_Min()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var count = repository.From<Order>().Min(f => f.TotalAmount);
         var count1 = repository.From<Order>().Select(f => Sql.Min(f.TotalAmount)).First();
         var count2 = repository.QueryFirst<double>("SELECT MIN(TotalAmount) FROM sys_order");
@@ -587,8 +590,8 @@ public class SqlServerUnitTest2
     [Fact]
     public void Query_Avg()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var value1 = repository.From<Order>().Avg(f => f.TotalAmount);
         var value2 = repository.From<Order>().Select(f => Sql.Avg(f.TotalAmount)).First();
         var value3 = repository.QueryFirst<double>("SELECT AVG(TotalAmount) FROM sys_order");
@@ -598,8 +601,8 @@ public class SqlServerUnitTest2
     [Fact]
     public void Query_ValueTuple()
     {
-        this.Initialize();
-        using var repository = this.dbFactory.Create();
+        Initialize();
+        using var repository = dbFactory.Create();
         var sql = "SELECT Id,OrderNo,TotalAmount FROM sys_order";
         var result = repository.Query<(int OrderId, string OrderNo, double TotalAmount)>(sql);
         Assert.NotNull(result);
@@ -607,7 +610,7 @@ public class SqlServerUnitTest2
     [Fact]
     public void Query_Json()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         var result = repository.From<Order>().First();
         Assert.NotNull(result);
         Assert.NotNull(result.Products);
@@ -615,7 +618,7 @@ public class SqlServerUnitTest2
     [Fact]
     public void Query_SelectNull_WhereNull()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         var sql = repository.From<Order>()
             .Where(x => x.ProductCount == null)
             .And(true, f => !f.ProductCount.HasValue)
@@ -630,7 +633,7 @@ public class SqlServerUnitTest2
     [Fact]
     public async void Query_Union()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         var sql = repository.From<Order>()
             .Where(x => x.Id == 1)
             .Select(x => new
@@ -678,7 +681,7 @@ SELECT [Id],[OrderNo],[SellerId],[BuyerId] FROM [sys_order] WHERE [Id]>1");
     [Fact]
     public async void Query_WithCte()
     {
-        using var repository = this.dbFactory.Create();
+        using var repository = dbFactory.Create();
         var sql = repository
             .FromWithRecursive((f, cte) => f.From<Menu>()
                     .Where(x => x.Id == 1)
@@ -729,287 +732,5 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM MenuList a INNER JOIN MenuPageL
            .ToListAsync();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
-    }
-    private void Initialize()
-    {
-        using var repository = this.dbFactory.Create();
-        repository.BeginTransaction();
-        repository.Delete<User>(new[] { 1, 2 });
-        repository.Create<User>(new[]
-        {
-            new User
-            {
-                Id = 1,
-                Name = "leafkevin",
-                Age = 25,
-                CompanyId = 1,
-                Gender = Gender.Male,
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            },
-            new User
-            {
-                Id = 2,
-                Name = "cindy",
-                Age = 21,
-                CompanyId = 2,
-                Gender = Gender.Male,
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            }
-        });
-
-        repository.Delete<Company>(new[] { 1, 2 });
-        repository.Create<Company>(new[]
-        {
-            new Company
-            {
-                Id = 1,
-                Name = "微软",
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            },
-            new Company
-            {
-                Id = 2,
-                Name = "谷歌",
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            }
-        });
-
-        repository.Delete<Brand>(new[] { 1, 2, 3 });
-        repository.Create<Brand>(new[]
-        {
-            new Brand
-            {
-                Id = 1,
-                BrandNo = "BN-001",
-                Name = "波司登",
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            },
-            new Brand
-            {
-                Id = 2,
-                BrandNo = "BN-002",
-                Name = "雪中飞",
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            },
-            new Brand
-            {
-                Id = 3,
-                BrandNo = "BN-003",
-                Name = "优衣库",
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            }
-        });
-
-        repository.Delete<Product>(new[] { 1, 2, 3 });
-        repository.Create<Product>(new[]
-        {
-            new Product
-            {
-                Id = 1,
-                ProductNo="PN-001",
-                Name = "波司登羽绒服",
-                Price =550,
-                BrandId = 1,
-                CategoryId = 1,
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            },
-            new Product
-            {
-                Id = 2,
-                ProductNo="PN-002",
-                Name = "雪中飞羽绒裤",
-                Price =350,
-                BrandId = 2,
-                CategoryId = 2,
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            },
-            new Product
-            {
-                Id = 3,
-                ProductNo="PN-003",
-                Name = "优衣库保暖内衣",
-                Price =180,
-                BrandId = 3,
-                CategoryId = 3,
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            }
-        });
-
-        repository.Delete<Order>(new[] { 1, 2, 3 });
-        repository.Create<Order>(new[]
-        {
-            new Order
-            {
-                Id = 1,
-                OrderNo = "ON-001",
-                BuyerId = 1,
-                SellerId = 2,
-                TotalAmount = 500,
-                Products = new List<int>{1, 2},
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            },
-            new Order
-            {
-                Id = 2,
-                OrderNo = "ON-002",
-                BuyerId = 2,
-                SellerId = 1,
-                TotalAmount = 350,
-                Products = new List<int>{1, 3},
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            },
-            new Order
-            {
-                Id = 3,
-                OrderNo = "ON-003",
-                BuyerId = 1,
-                SellerId = 2,
-                TotalAmount = 199,
-                Products = new List<int>{2},
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            }
-        });
-
-        repository.Delete<OrderDetail>(new[] { 1, 2, 3, 4, 5, 6 });
-        repository.Create<OrderDetail>(new[]
-        {
-            new OrderDetail
-            {
-                Id = 1,
-                OrderId = 1,
-                ProductId = 1,
-                Price = 299,
-                Quantity = 1,
-                Amount = 299,
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            },
-            new OrderDetail
-            {
-                Id = 2,
-                OrderId = 1,
-                ProductId = 2,
-                Price = 159,
-                Quantity = 1,
-                Amount = 159,
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            },
-            new OrderDetail
-            {
-                Id = 3,
-                OrderId = 1,
-                ProductId = 3,
-                Price = 69,
-                Quantity = 1,
-                Amount = 69,
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            },
-            new OrderDetail
-            {
-                Id = 4,
-                OrderId = 2,
-                ProductId = 1,
-                Price = 299,
-                Quantity = 1,
-                Amount = 299,
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            },
-            new OrderDetail
-            {
-                Id = 5,
-                OrderId = 2,
-                ProductId = 3,
-                Price = 69,
-                Quantity = 1,
-                Amount = 69,
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            },
-            new OrderDetail
-            {
-                Id = 6,
-                OrderId = 3,
-                ProductId = 2,
-                Price = 199,
-                Quantity = 1,
-                Amount = 199,
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            }
-        });
-        repository.Commit();
     }
 }

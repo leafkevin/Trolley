@@ -138,7 +138,7 @@ class DeleteVisitor : SqlVisitor
                     continue;
                 this.AddMemberElement(sqlSegment.Next(newExpr.Arguments[i]), memberInfo, builder);
             }
-            return sqlSegment.Change(builder.ToString());
+            return sqlSegment.ChangeValue(builder.ToString());
         }
         return this.Evaluate(sqlSegment);
     }
@@ -156,7 +156,7 @@ class DeleteVisitor : SqlVisitor
                 continue;
             this.AddMemberElement(sqlSegment.Next(memberAssignment.Expression), memberAssignment.Member, builder);
         }
-        return sqlSegment.Change(builder.ToString());
+        return sqlSegment.ChangeValue(builder.ToString());
     }
     private void AddMemberElement(SqlSegment sqlSegment, MemberInfo memberInfo, StringBuilder builder)
     {

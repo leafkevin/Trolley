@@ -300,7 +300,7 @@ partial class MySqlProvider
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Add((TimeSpan)rightSegment.Value));
 
                         targetSegment.Merge(rightSegment);
-                        return targetSegment.Change($"{targetSegment}+{rightSegment}", false, true);
+                        return targetSegment.Change($"ADDTIME({this.GetQuotedValue(targetSegment)},{this.GetQuotedValue(rightSegment)})", false, true);
                     });
                     result = true;
                     break;
@@ -313,7 +313,7 @@ partial class MySqlProvider
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Subtract((TimeSpan)rightSegment.Value));
 
                         targetSegment.Merge(rightSegment);
-                        return targetSegment.Change($"{targetSegment}-{rightSegment}", false, true);
+                        return targetSegment.Change($"SUBTIME({this.GetQuotedValue(targetSegment)},{this.GetQuotedValue(rightSegment)})", false, true);
                     });
                     result = true;
                     break;
