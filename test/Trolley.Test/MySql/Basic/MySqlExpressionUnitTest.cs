@@ -54,7 +54,7 @@ public class MySqlExpressionUnitTest : UnitTestBase
                 IsNeedParameter = f.Name.Contains("kevin".ToParameter()) ? "Yes".ToParameter() : noParameter,
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (CASE WHEN `IsEnabled` THEN 'Enabled' ELSE 'Disabled' END) AS `IsEnabled`,(CASE WHEN `Age`>35 THEN 1 ELSE 0 END) AS `IsOld`,(CASE WHEN `Name` LIKE CONCAT('%',@p0,'%') THEN @p1 ELSE 'No' END) AS `IsNeedParameter` FROM `sys_user` WHERE (CASE WHEN `IsEnabled` THEN 'Enabled' ELSE 'Disabled' END)='Enabled'");
+        Assert.True(sql == "SELECT (CASE WHEN `IsEnabled` THEN 'Enabled' ELSE 'Disabled' END) AS `IsEnabled`,(CASE WHEN `Age`>35 THEN 1 ELSE 0 END) AS `IsOld`,(CASE WHEN `Name` LIKE CONCAT('%',REPLACE(@p0,'%','\\%'),'%') THEN @p1 ELSE 'No' END) AS `IsNeedParameter` FROM `sys_user` WHERE (CASE WHEN `IsEnabled` THEN 'Enabled' ELSE 'Disabled' END)='Enabled'");
     }
     [Fact]
     public void Index()

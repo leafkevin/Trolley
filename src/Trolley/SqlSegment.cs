@@ -13,6 +13,7 @@ public class SqlSegment
     public static SqlSegment True = new SqlSegment { isFixValue = true, OperationType = OperationType.None, IsConstantValue = true, Value = true };
     public static SqlSegment Null = new SqlSegment { isFixValue = true, OperationType = OperationType.None, IsConstantValue = true, Value = "NULL" };
     private bool isFixValue = false;
+    private Type currentType = null;
 
     /// <summary>
     /// 操作符:And/Or/Concat/Equals/NotEquals/Convert/,
@@ -47,6 +48,16 @@ public class SqlSegment
     /// </summary>
     public bool IsParameterized { get; set; }
     public bool IsArray { get; set; }
+    public Type Type
+    {
+        get
+        {
+            if (this.currentType == null)
+                return this.Expression.Type;
+            return this.currentType;
+        }
+        set { this.currentType = value; }
+    }
     /// <summary>
     /// string.Concat,string.Format,string.Join，数据库VARCHAR类型的Enum实体成员，此字段会有值
     /// 做字符串连接时，此值为typeof(string)

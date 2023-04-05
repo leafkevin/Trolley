@@ -58,6 +58,7 @@ public abstract class BaseOrmProvider : IOrmProvider
     {
         if (fieldValue == null)
             return DBNull.Value;
+
         var result = fieldValue;
         var fieldType = fieldValue.GetType();
         if (fieldType.IsNullableType(out var underlyingType))
@@ -102,6 +103,7 @@ public abstract class BaseOrmProvider : IOrmProvider
         var resultExpr = fieldValueExpr;
         if (fieldValueExpr.Type.IsNullableType(out var underlyingType))
             resultExpr = Expression.Property(resultExpr, "Value");
+
         if (nativeDbType != null)
         {
             var defaultType = this.MapDefaultType(nativeDbType);

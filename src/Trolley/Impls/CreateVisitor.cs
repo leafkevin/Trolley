@@ -139,6 +139,18 @@ class CreateVisitor : SqlVisitor
                 if (memberMapper.MemberType.IsEntityType() && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                     throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
 
+                //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
+                //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
+                if (memberMapper.MemberType.IsEnumType(out var expectType, out _))
+                {
+                    Type targetType = null;
+                    if (this.ormProvider.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                        targetType = typeof(string);
+                    else targetType = expectType;
+                    sqlSegment.ExpectType = expectType;
+                    sqlSegment.TargetType = targetType;
+                }
+
                 var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
                 //都需要带有别名
                 fieldName = tableSegment.AliasName + "." + fieldName;
@@ -179,6 +191,7 @@ class CreateVisitor : SqlVisitor
                 var memberInfo = newExpr.Members[i];
                 if (!entityMapper.TryGetMemberMap(memberInfo.Name, out _))
                     continue;
+
                 this.AddMemberElement(i, new SqlSegment { Expression = newExpr.Arguments[i] }, memberInfo, insertBuilder, fromBuilder);
             }
             insertBuilder.Append(fromBuilder);
@@ -251,6 +264,8 @@ class CreateVisitor : SqlVisitor
                         }
                         memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, sqlSegment.Value);
                     }
+                    else dbParameter.Value = this.ormProvider.ToFieldValue(sqlSegment.Value, memberMapper.NativeDbType);
+
                     this.dbParameters.Add(dbParameter);
                     sqlSegment.Value = parameterName;
                     sqlSegment.IsParameter = true;

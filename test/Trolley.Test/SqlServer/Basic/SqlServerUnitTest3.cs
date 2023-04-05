@@ -187,7 +187,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
         Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(b.[Amount]) FROM [sys_order_detail] b WHERE b.[OrderId]=[sys_order].[Id]),[OrderNo]=([sys_order].[OrderNo]+'_111'),[BuyerId]=NULL WHERE [sys_order].[BuyerId]=1");
-    }
+    }   
     [Fact]
     public void Update_Set_FromQuery_One()
     {
@@ -204,6 +204,21 @@ public class SqlServerUnitTest3 : UnitTestBase
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
         Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(b.[Amount]) FROM [sys_order_detail] b WHERE b.[OrderId]=[sys_order].[Id]),[OrderNo]=@p0,[BuyerId]=NULL WHERE [sys_order].[BuyerId]=1");
+    }
+    [Fact]
+    public void Update_Set_FromQuery_One_Enum()
+    {
+        using var repository = dbFactory.Create();
+        var sql = repository.Update<Company>()
+            .Set((a, b) => new
+            {
+                Nature = a.From<Company>('b')
+                    .Where(f => f.Name.Contains("Internet"))
+                    .Select(t => t.Nature)
+            })
+            .Where(f => f.Nature == CompanyNature.Production)
+            .ToSql(out _);
+        Assert.True(sql == "UPDATE [sys_company] SET [Nature]=(SELECT b.[Nature] FROM [sys_company] b WHERE b.[Name] LIKE '%Internet%') WHERE CAST([sys_company].[Nature] AS NVARCHAR(MAX))='Production'");
     }
     [Fact]
     public void Update_Set_FromQuery_Fields()

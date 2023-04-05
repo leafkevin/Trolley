@@ -194,8 +194,7 @@ class UpdateVisitor : SqlVisitor
                     var memberInfo = newExpr.Members[i];
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out memberMapper))
                         continue;
-
-                    //只一个成员访问，没有设置语句，什么也不做，忽略
+                    
                     var argumentExpr = newExpr.Arguments[i];
                     //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
                     //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
@@ -211,6 +210,8 @@ class UpdateVisitor : SqlVisitor
                         ExpectType = expectType,
                         TargetType = targetType
                     });
+
+                    //只一个成员访问，没有设置语句，什么也不做，忽略
                     if (sqlSegment.HasField && !sqlSegment.IsExpression && sqlSegment.FromMember.Name == memberInfo.Name)
                         continue;
                     setFields.Add(this.AddMemberElement(sqlSegment, memberMapper));
@@ -225,7 +226,6 @@ class UpdateVisitor : SqlVisitor
                     if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out memberMapper))
                         continue;
 
-                    //只一个成员访问，没有设置语句，什么也不做，忽略
                     var argumentExpr = memberAssignment.Expression;
                     //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
                     //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
@@ -240,6 +240,7 @@ class UpdateVisitor : SqlVisitor
                         ExpectType = expectType,
                         TargetType = targetType
                     });
+                    //只一个成员访问，没有设置语句，什么也不做，忽略
                     if (sqlSegment.HasField && !sqlSegment.IsExpression && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
                         continue;
                     setFields.Add(this.AddMemberElement(sqlSegment, memberMapper));
@@ -325,10 +326,23 @@ class UpdateVisitor : SqlVisitor
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out memberMapper))
                         continue;
 
-                    //只一个成员访问，没有设置语句，什么也不做，忽略
                     var argumentExpr = newExpr.Arguments[i];
-                    if (argumentExpr is MemberExpression newMemberExpr && newMemberExpr.Member.Name == memberInfo.Name)
-                        continue;
+                    ////.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
+                    ////如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
+                    //if (memberMapper.MemberType.IsEnumType(out var expectType, out var targetType))
+                    //{
+                    //    if (this.ormProvider.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                    //        targetType = typeof(string);
+                    //}
+                    //var sqlSegment = this.VisitAndDeferred(new SqlSegment
+                    //{
+                    //    Expression = argumentExpr,
+                    //    ExpectType = expectType,
+                    //    TargetType = targetType
+                    //});
+                    ////只一个成员访问，没有设置语句，什么也不做，忽略
+                    //if (sqlSegment.HasField && !sqlSegment.IsExpression && sqlSegment.FromMember.Name == memberInfo.Name)
+                    //    continue;
 
                     if (argumentExpr.GetParameters(out argumentParameters)
                         && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
@@ -467,6 +481,18 @@ class UpdateVisitor : SqlVisitor
                 if (memberMapper.MemberType.IsEntityType() && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                     throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
 
+                //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
+                //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
+                if (memberMapper.MemberType.IsEnumType(out var expectType, out _))
+                {
+                    Type targetType = null;
+                    if (this.ormProvider.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                        targetType = typeof(string);
+                    else targetType = expectType;
+                    sqlSegment.ExpectType = expectType;
+                    sqlSegment.TargetType = targetType;
+                }
+
                 var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
                 if (this.isNeedAlias)
                     fieldName = tableSegment.AliasName + "." + fieldName;
@@ -539,14 +565,14 @@ class UpdateVisitor : SqlVisitor
             this.dbParameters ??= new();
             IDbDataParameter dbParameter = null;
             var parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
-           
+
             if (memberMapper.NativeDbType != null)
                 dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
             else dbParameter = this.ormProvider.CreateParameter(parameterName, fieldValue);
 
             if (memberMapper.TypeHandler != null)
                 memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, fieldValue);
-            else fieldValue = this.ormProvider.ToFieldValue(fieldValue, memberMapper.NativeDbType);
+            else dbParameter.Value = this.ormProvider.ToFieldValue(fieldValue, memberMapper.NativeDbType);
             this.dbParameters.Add(dbParameter);
             return new SetField { MemberMapper = memberMapper, Value = parameterName };
         }

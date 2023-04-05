@@ -184,8 +184,11 @@ class SqlVisitor : ISqlVisitor
                 //string.Concat,string.Format,string.Join等方法，参数都是object，
                 //最终变成string，字段访问、表达式需要强制转换,如：a.IntField + 5, b.Field等，常量不需要强转
                 sqlSegment = this.Visit(sqlSegment.Next(unaryExpr.Operand));
-                if (sqlSegment.TargetType != null && unaryExpr.Operand.Type != sqlSegment.TargetType && !sqlSegment.IsConstantValue)
+                if (sqlSegment.TargetType != null && sqlSegment.Type != sqlSegment.TargetType && !sqlSegment.IsConstantValue)
+                {
+                    sqlSegment.Type = sqlSegment.TargetType;
                     return sqlSegment.Change(this.ormProvider.CastTo(sqlSegment.TargetType, this.GetQuotedValue(sqlSegment)), false, true);
+                }
                 return sqlSegment;
         }
         return this.Visit(sqlSegment.Next(unaryExpr.Operand));
@@ -283,6 +286,8 @@ class SqlVisitor : ISqlVisitor
                 //    throw new NotSupportedException("不支持的数组访问，只支持常量访问");
 
                 leftSegment.Merge(rightSegment);
+                if (leftSegment.Type != rightSegment.Type)
+                    leftSegment.Type = rightSegment.Type;
                 var operators = this.ormProvider.GetBinaryOperator(binaryExpr.NodeType);
                 if (binaryExpr.NodeType == ExpressionType.Coalesce)
                     return leftSegment.Change($"{operators}({this.GetQuotedValue(leftSegment)},{this.GetQuotedValue(rightSegment)})", false, true);
@@ -307,12 +312,18 @@ class SqlVisitor : ISqlVisitor
         if (sqlSegment.ExpectType != null)
         {
             if (sqlSegment.ExpectType != currentType)
-                objValue = Convert.ChangeType(objValue, sqlSegment.ExpectType);
-            if (sqlSegment.ExpectType.IsEnum && sqlSegment.TargetType != null)
+            {
+                if (sqlSegment.ExpectType.IsEnum)
+                    objValue = Enum.ToObject(sqlSegment.ExpectType, objValue);
+                else objValue = Convert.ChangeType(objValue, sqlSegment.ExpectType);
+                sqlSegment.Type = sqlSegment.ExpectType;
+            }
+            if (sqlSegment.TargetType != null)
             {
                 if (sqlSegment.TargetType == typeof(string))
                     objValue = objValue.ToString();
                 else objValue = Convert.ChangeType(objValue, sqlSegment.TargetType);
+                sqlSegment.Type = sqlSegment.TargetType;
             }
         }
 

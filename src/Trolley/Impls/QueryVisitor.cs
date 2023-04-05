@@ -930,19 +930,21 @@ class QueryVisitor : SqlVisitor
                         if (memberMapper.IsIgnore)
                             throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
 
-                        //有Join时采用别名，如果当前类是IncludeMany的导航类时，没有别名
-                        fieldName = this.GetFieldName(tableSegment, memberMapper.FieldName);
-                        memberInfo = memberMapper.Member;
-
-                        Type targetType = null;
                         //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
                         //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
                         if (memberMapper.MemberType.IsEnumType(out var expectType, out _))
                         {
+                            Type targetType = null;
                             if (this.ormProvider.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
                                 targetType = typeof(string);
                             else targetType = expectType;
+                            sqlSegment.ExpectType = expectType;
+                            sqlSegment.TargetType = targetType;
                         }
+
+                        //有Join时采用别名，如果当前类是IncludeMany的导航类时，没有别名
+                        fieldName = this.GetFieldName(tableSegment, memberMapper.FieldName);
+                        memberInfo = memberMapper.Member;                       
                     }
                     if (this.isSelect || this.isWhere)
                         tableSegment.IsUsed = true;

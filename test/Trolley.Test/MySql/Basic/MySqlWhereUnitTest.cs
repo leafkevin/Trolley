@@ -52,8 +52,8 @@ public class MySqlWhereUnitTest : UnitTestBase
     {
         this.Initialize();
         using var repository = dbFactory.Create();
-        //var result1 = await repository.QueryAsync<Company>(f => f.Nature == CompanyNature.Internet);
-        //Assert.True(result1.Count >= 2);
+        var result1 = await repository.QueryAsync<Company>(f => f.Nature == CompanyNature.Internet);
+        Assert.True(result1.Count >= 2);
         var result2 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet);
         Assert.True(result2.Count >= 2);
         //Assert.True(result1.Count == result2.Count);
