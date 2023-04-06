@@ -136,6 +136,9 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
         }
         else
         {
+            if (!parameterType.IsEntityType())
+                throw new NotSupportedException("只支持对象，不支持基础类型");
+
             this.builders.Add(new BuilderCache
             {
                 CommandInitializer = this.BuildCommandInitializer(this.builders.Count, parameterType),

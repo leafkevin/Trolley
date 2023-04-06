@@ -28,7 +28,7 @@ public static class TheaTrolleyExtensions
 
                 var ormProviderTypeName = connString.GetValue<string>("OrmProvider");
                 var ormProviderType = typeof(IOrmDbFactory).Assembly.GetType(ormProviderTypeName);
-                builder.Register(database.DbKey, database.IsDefault, f =>
+                builder.Register(database.DbKey, databaseProvider.IsDefault, f =>
                     f.Add(database).Use(ormProviderType));
             }
         }
