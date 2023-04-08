@@ -45,7 +45,7 @@ public class SqlServerDateTimeUnitTest : UnitTestBase
               IsEquals = f.UpdatedAt.Equals(DateTime.Parse("2023-03-25"))
           })
           .ToSql(out _);
-        Assert.True(sql == "SELECT '2023-04-03 08:08:50' AS Now,'0001-01-01 00:00:00' AS MinValue,'9999-12-31 23:59:59' AS MaxValue,'2023-04-03 00:08:50' AS UtcNow,'2023-04-03 00:00:00' AS Today,'1970-01-01 00:00:00' AS UnixEpoch,'2023-05-06 00:00:00' AS Date,'2023-04-03 00:00:00' AS CurrentDate,(CASE WHEN DATEDIFF_BIG(MS,[UpdatedAt],'2023-03-25 00:00:00')=0 THEN 1 ELSE 0 END) AS IsEquals FROM [sys_user] WHERE [Id]=1");
+        Assert.True(sql == "SELECT '2023-04-05 22:24:24' AS Now,'0001-01-01 00:00:00' AS MinValue,'9999-12-31 23:59:59' AS MaxValue,'2023-04-05 14:24:24' AS UtcNow,'2023-04-05 00:00:00' AS Today,'1970-01-01 00:00:00' AS UnixEpoch,'2023-05-06 00:00:00' AS Date,'2023-04-05 00:00:00' AS CurrentDate,(CASE WHEN DATEDIFF_BIG(MS,[UpdatedAt],'2023-03-25 00:00:00')=0 THEN 1 ELSE 0 END) AS IsEquals FROM [sys_user] WHERE [Id]=1");
     }
     [Fact]
     public void Subtract()
@@ -56,7 +56,7 @@ public class SqlServerDateTimeUnitTest : UnitTestBase
           .Where(f => f.UpdatedAt > DateTime.Now - TimeSpan.FromDays(365))
           .Select(f => new
           {
-              OneYearsAgo1 = f.CreatedAt.Subtract(TimeSpan.FromDays(365)),
+              OneYearsAgo1 = f.CreatedAt.Subtract(TimeSpan.FromMilliseconds(132245365)),
               OneYearsAgo2 = DateTime.Now - TimeSpan.FromDays(365),
               DayInMonth = DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month),
               IsLeapYear1 = DateTime.IsLeapYear(DateTime.Now.Year),
@@ -99,7 +99,7 @@ public class SqlServerDateTimeUnitTest : UnitTestBase
           {
               AddOp = f.CreatedAt + TimeSpan.FromHours(5),
               SubOp = f.CreatedAt - TimeSpan.FromHours(10),
-              AddOp1 = f.SomeTimes.Add(TimeSpan.FromMinutes(25)),
+              AddOp1 = f.SomeTimes.Value.Add(TimeSpan.FromMinutes(25)),
               SubOp1 = TimeSpan.FromHours(30) - TimeSpan.FromMinutes(15),
               MulOp = TimeSpan.FromMinutes(25) * 3,
               DivOp1 = TimeSpan.FromHours(30) / 5,

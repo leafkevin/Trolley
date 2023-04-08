@@ -16,8 +16,8 @@ public class User
     public Gender Gender { get; set; }
     public int Age { get; set; }
     public int CompanyId { get; set; }
-    public TimeOnly SomeTimes { get; set; }
-    public Guid GuidField { get; set; }
+    public TimeOnly? SomeTimes { get; set; }
+    public Guid? GuidField { get; set; }
     public bool IsEnabled { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }

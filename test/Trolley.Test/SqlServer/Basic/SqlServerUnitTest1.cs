@@ -176,6 +176,35 @@ public class SqlServerUnitTest1 : UnitTestBase
         Assert.Equal("INSERT INTO [sys_user] ([Id],[Name],[Age],[CompanyId],[Gender],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
     }
     [Fact]
+    public void Insert_WithBy_AnonymousObject_Condition()
+    {
+        this.Initialize();
+        Guid? guidField = Guid.NewGuid();
+        using var repository = dbFactory.Create();
+        repository.BeginTransaction();
+        var user = repository.Get<User>(1);
+        var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
+        var sql = repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .WithBy(false, new { user.SomeTimes })
+            .WithBy(guidField.HasValue, new { GuidField = guidField })
+            .ToSql(out _);
+        repository.Commit();
+        Assert.True(sql == "INSERT INTO [sys_user] ([Id],[Name],[Age],[CompanyId],[Gender],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy],[GuidField]) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@GuidField)");
+    }
+    [Fact]
     public async void Insert_WithBy_Dictionary_AutoIncrement()
     {
         using var repository = dbFactory.Create();

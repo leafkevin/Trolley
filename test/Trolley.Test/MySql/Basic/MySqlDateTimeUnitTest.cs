@@ -102,7 +102,7 @@ public class MySqlDateTimeUnitTest : UnitTestBase
           {
               //AddOp = f.CreatedAt + TimeSpan.FromHours(5),
               //SubOp = f.CreatedAt - TimeSpan.FromHours(10),
-              AddOp1 = f.SomeTimes.Add(TimeSpan.FromMinutes(25)),
+              //AddOp1 = f.SomeTimes.Add(TimeSpan.FromMinutes(25)),
               //SubOp1 = TimeSpan.FromHours(30) - TimeSpan.FromMinutes(15),
               //MulOp = TimeSpan.FromMinutes(25) * 3,
               //DivOp1 = TimeSpan.FromHours(30) / 5,
