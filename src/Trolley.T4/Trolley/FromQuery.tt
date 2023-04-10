@@ -24,12 +24,6 @@ class FromQuery : IFromQuery
         this.visitor.From(tableAsStart, typeof(T));
         return new FromQuery<T>(this.visitor);
     }
-    public IFromQuery<T> From<T>(string rawSql, object parameters = null, char tableAsStart = 'a')
-    {
-        this.visitor.tableAsStart = tableAsStart;
-        this.visitor.WithTable(typeof(T), rawSql, parameters);
-        return new FromQuery<T>(this.visitor);
-    }
     public IFromQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
         this.visitor.tableAsStart = tableAsStart;
@@ -129,10 +123,10 @@ class FromQuery<T> : IFromQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
-        var query = subQuery.Invoke(fromQuery);
-        var sql = " UNION " + Environment.NewLine + query.ToSql(out var dbParameters);
-        this.visitor.Union(typeof(T), sql, dbParameters);
+        var newVisitor = this.visitor.Clone('a', $"p{this.unionIndex++}u");
+        subQuery.Invoke(new FromQuery(newVisitor));
+        var sql = " UNION" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true);
+        this.visitor.Union(sql, readerFields, dbParameters);
         return this;
     }
     public IFromQuery<T> UnionAll(Func<IFromQuery, IFromQuery<T>> subQuery)
@@ -140,10 +134,10 @@ class FromQuery<T> : IFromQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
-        var query = subQuery.Invoke(fromQuery);
-        var sql = " UNION ALL " + Environment.NewLine + query.ToSql(out var dbParameters);
-        this.visitor.Union(typeof(T), sql, dbParameters);
+        var newVisitor = this.visitor.Clone('a', $"p{this.unionIndex++}u");
+        subQuery.Invoke(new FromQuery(newVisitor));
+        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true);
+        this.visitor.Union(sql, readerFields, dbParameters);
         return this;
     }
     public IFromQuery<T> UnionRecursive(Func<IFromQuery, IFromQuery<T>, IFromQuery<T>> subQuery)
@@ -151,10 +145,10 @@ class FromQuery<T> : IFromQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
-        var query = subQuery.Invoke(fromQuery, null);
-        var sql = " UNION " + Environment.NewLine + query.ToSql(out var dbParameters);
-        this.visitor.Union(typeof(T), sql, dbParameters);
+        var newVisitor = this.visitor.Clone('a', $"p{this.unionIndex++}u");
+        subQuery.Invoke(new FromQuery(newVisitor), null);
+        var sql = " UNION" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true);
+        this.visitor.Union(sql, readerFields, dbParameters);
         return this;
     }
     public IFromQuery<T> UnionAllRecursive(Func<IFromQuery, IFromQuery<T>, IFromQuery<T>> subQuery)
@@ -162,10 +156,10 @@ class FromQuery<T> : IFromQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.visitor.Clone('a', $"p{this.unionIndex++}u"));
-        var query = subQuery.Invoke(fromQuery, null);
-        var sql = " UNION ALL " + Environment.NewLine + query.ToSql(out var dbParameters);
-        this.visitor.Union(typeof(T), sql, dbParameters);
+        var newVisitor = this.visitor.Clone('a', $"p{this.unionIndex++}u");
+        subQuery.Invoke(new FromQuery(newVisitor), null);
+        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true);
+        this.visitor.Union(sql, readerFields, dbParameters);
         return this;
     }
     public IFromQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)

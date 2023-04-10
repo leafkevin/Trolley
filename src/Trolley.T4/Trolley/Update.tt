@@ -700,7 +700,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant(this.ormProvider.GetFieldName(propMapper.FieldName) + "=")));
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.IsNullable, parameterMemberMapper.NativeDbType, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, false, parameterMemberMapper.NativeDbType, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
                 columnIndex++;
             }
             columnIndex = 0;
@@ -788,8 +788,9 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                     sqlBuilder.Append(',');
                 var parameterName = this.ormProvider.ParameterPrefix + propMapper.MemberName;
                 sqlBuilder.Append($"{this.ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
+
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, parameterMemberMapper.IsNullable, parameterMemberMapper.NativeDbType, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, false, parameterMemberMapper.NativeDbType, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
                 columnIndex++;
             }
             columnIndex = 0;

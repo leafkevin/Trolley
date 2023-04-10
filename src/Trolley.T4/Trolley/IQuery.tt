@@ -14,6 +14,10 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
+/// <summary>
+/// 查询数据
+/// </summary>
+/// <typeparam name="T">实体类型，需要有对应的模型映射找到要查询的表</typeparam>
 public interface IQuery<T>
 {
     #region Union
@@ -62,7 +66,7 @@ public interface IQuery<T>
     /// <returns>返回查询对象</returns>
     IQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery);
     /// <summary>
-    /// Union操作，用法：
+    /// Union All操作，用法：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .Where(x =&gt; x.Id == 1)
@@ -108,7 +112,7 @@ public interface IQuery<T>
 
     #region WithCte
     /// <summary>
-    /// CTE With子句，在Select之前，With子句要连续定义，用法：
+    /// CTE With子句，在Select之前，With子句要连续使用，用法：
     /// <code>
     /// repository
     ///     .FromWith((f =&gt; ...), "MenuList")
@@ -143,11 +147,11 @@ public interface IQuery<T>
     /// </code>
     /// </param>
     /// <param name="cteTableName">CTE表名</param>
-    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
+    /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
     IQuery<T, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     /// <summary>
-    /// 递归CTE With子句，在Select之前，With子句要连续定义，用法：
+    /// 递归CTE With子句，在Select之前，With子句要连续使用，用法：
     /// <code>
     /// repository
     ///     .FromWithRecursive((f, cte) =&gt; f.From&lt;Menu&gt;()
@@ -191,7 +195,7 @@ public interface IQuery<T>
     /// </code>
     /// </param>
     /// <param name="cteTableName">CTE表名</param>
-    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
+    /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
     IQuery<T, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     #endregion
@@ -381,9 +385,36 @@ public interface IQuery<T>
 
     #region Include
     /// <summary>
-    /// 单表查询，包含1:1关联方式的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系。
-    /// 可以通过使用InnerJoin(Expression&lt;Func&lt;T, bool&gt;&gt; joinOn)、RightJoin(Expression&lt;Func&lt;T, bool&gt;&gt; joinOn)方法改变默认关联方式
+    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
+    /// 可以通过使用InnerJoin(Expression&lt;Func&lt;T, bool&gt;&gt; joinOn)、RightJoin(Expression&lt;Func&lt;T, bool&gt;&gt; joinOn)方法改变默认关联方式。
+    /// 1:1关联关系，随主表一起查询，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
     /// </summary>
+    /// <example>
+    /// 1:1关联关系导航属性
+    /// <code>
+    /// repository.From&lt;Product&gt;()
+    ///   .Include(f =&gt; f.Brand)
+    ///   .Where(f =&gt; f.ProductNo.Contains("PN-00"))
+    ///   .ToSql(out _);
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`Price`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
+    /// </code>
+    /// </example>
+    /// <example>
+    /// 1:1关联关系导航属性
+    /// <code>
+    /// repository.From&lt;Product&gt;()
+    ///   .Include(f =&gt; f.Brand)
+    ///   .Where(f =&gt; f.ProductNo.Contains("PN-00"))
+    ///   .ToSql(out _);
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`Price`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
+    /// </code>
+    /// </example>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
     /// <param name="memberSelector">导航属性选择表达式</param>
     /// <returns>返回实体对象，带有导航属性</returns>
@@ -450,8 +481,14 @@ public interface IQuery<T>
     Task<TTarget> FirstAsync<TTarget>(Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default);
     List<T> ToList();
     Task<List<T>> ToListAsync(CancellationToken cancellationToken = default);
-    IPagedList<T> ToPageList(int pageIndex, int pageSize);
-    Task<IPagedList<T>> ToPageListAsync(int pageIndex, int pageSize, CancellationToken cancellationToken = default);
+    List<TTarget> ToList<TTarget>(Expression<Func<T, TTarget>> toTargetExpr);
+    Task<List<TTarget>> ToListAsync<TTarget>(Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default(CancellationToken));
+
+    IPagedList<T> ToPageList();
+    Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default);
+    IPagedList<TTarget> ToPageList<TTarget>(Expression<Func<T, TTarget>> toTargetExpr);
+    Task<IPagedList<TTarget>> ToPageListAsync<TTarget>(Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default(CancellationToken));
+
     Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull;
     Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull;
     

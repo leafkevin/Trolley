@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq.Expressions;
+using System.Text;
 
 namespace Trolley;
 
@@ -34,9 +35,15 @@ partial class SqlServerProvider
                 {
                     var targetSegment = visitor.VisitAndDeferred(target);
                     if (targetSegment.IsConstantValue)
-                        return targetSegment.Change(((TimeOnly)targetSegment.Value).Ticks);
-                    //mysql只返回6位，丢失一位精度
-                    return targetSegment.Change($"(DATEDIFF_BIG(NANOSECOND,'00:00:00',{this.GetQuotedValue(targetSegment)})/100)", false, true);
+                        return targetSegment.Change(((TimeSpan)targetSegment.Value).Ticks);
+                    var targetArgument = this.GetQuotedValue(targetSegment);
+                    var builder = new StringBuilder();
+                    builder.Append($"CAST(DATEPART(DD,{targetArgument}) AS BIGINT)*24*60*60*10000000");
+                    builder.Append($"+CAST(DATEPART(HH,{targetArgument}) AS BIGINT)*60*60*10000000");
+                    builder.Append($"+CAST(DATEPART(MI,{targetArgument}) AS BIGINT)*60*10000000");
+                    builder.Append($"+CAST(DATEPART(SS,{targetArgument}) AS BIGINT)*10000000");
+                    builder.Append($"+CAST(DATEPART(NS,{targetArgument}) AS BIGINT)/100");
+                    return targetSegment.Change($"({builder})", false, true);
                 });
                 result = true;
                 break;
@@ -47,7 +54,7 @@ partial class SqlServerProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((TimeOnly)targetSegment.Value).Hour);
 
-                    return targetSegment.Change($"DATEPART(HOUR,{this.GetQuotedValue(targetSegment)})", false, true);
+                    return targetSegment.Change($"DATEPART(HH,{this.GetQuotedValue(targetSegment)})", false, true);
                 });
                 result = true;
                 break;
@@ -58,7 +65,7 @@ partial class SqlServerProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((TimeOnly)targetSegment.Value).Millisecond);
 
-                    return targetSegment.Change($"DATEPART(MILLISECOND,{this.GetQuotedValue(targetSegment)})", false, true);
+                    return targetSegment.Change($"DATEPART(MS,{this.GetQuotedValue(targetSegment)})");
                 });
                 result = true;
                 break;
@@ -69,7 +76,7 @@ partial class SqlServerProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((TimeOnly)targetSegment.Value).Minute);
 
-                    return targetSegment.Change($"DATEPART(MINUTE,{this.GetQuotedValue(targetSegment)})", false, true);
+                    return targetSegment.Change($"DATEPART(MI,{this.GetQuotedValue(targetSegment)})", false, true);
                 });
                 result = true;
                 break;
@@ -80,7 +87,7 @@ partial class SqlServerProvider
                     if (targetSegment.IsConstantValue)
                         return targetSegment.Change(((TimeOnly)targetSegment.Value).Second);
 
-                    return targetSegment.Change($"DATEPART(SECOND,{this.GetQuotedValue(targetSegment)})", false, true);
+                    return targetSegment.Change($"DATEPART(SS,{this.GetQuotedValue(targetSegment)})", false, true);
                 });
                 result = true;
                 break;
@@ -105,7 +112,7 @@ partial class SqlServerProvider
                         if (valueSegment.IsConstantValue)
                             valueSegment.Change(TimeOnly.FromTimeSpan((TimeSpan)valueSegment.Value));
 
-                        return valueSegment.Change($"CAST({this.GetQuotedValue(valueSegment)} AS TIME(7))", false, true);
+                        return valueSegment;
                     });
                     result = true;
                     break;

@@ -30,7 +30,6 @@ partial class SqlServerProvider
                     result = true;
                     break;
             }
-            return result;
         }
         else
         {
@@ -119,7 +118,7 @@ partial class SqlServerProvider
                         builder.Append($"CAST(DATEPART(DD,{this.GetQuotedValue(targetSegment)}) AS REAL)");
                         builder.Append($"+CAST(CAST(DATEPART(HH,{this.GetQuotedValue(targetSegment)}) AS REAL)/24 AS REAL)");
                         builder.Append($"+CAST(CAST(DATEPART(MI,{this.GetQuotedValue(targetSegment)}) AS REAL)/24/60 AS REAL)");
-                        return targetSegment.Change($"DATEPART(DD,{builder})", false, true);
+                        return targetSegment.Change($"({builder})", false, true);
                     });
                     result = true;
                     break;
@@ -129,7 +128,13 @@ partial class SqlServerProvider
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstantValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalHours);
-                        return targetSegment.Change($"DATEPART(HH,{this.GetQuotedValue(targetSegment)})", false, true);
+
+                        var builder = new StringBuilder();
+                        builder.Append($"CAST(DATEPART(DD,{this.GetQuotedValue(targetSegment)}) AS REAL)*24");
+                        builder.Append($"+CAST(DATEPART(HH,{this.GetQuotedValue(targetSegment)}) AS REAL)");
+                        builder.Append($"+CAST(CAST(DATEPART(MI,{this.GetQuotedValue(targetSegment)}) AS REAL)/60 AS REAL)");
+                        builder.Append($"+CAST(CAST(DATEPART(SS,{this.GetQuotedValue(targetSegment)}) AS REAL)/60/60 AS REAL)");
+                        return targetSegment.Change($"({builder})", false, true);
                     });
                     result = true;
                     break;
@@ -140,7 +145,15 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstantValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalMilliseconds);
 
-                        return targetSegment.Change($"{targetSegment}/1000", false, true);
+                        var builder = new StringBuilder();
+                        builder.Append($"CAST(DATEPART(DD,{this.GetQuotedValue(targetSegment)}) AS REAL)*24*60*60*1000");
+                        builder.Append($"+CAST(DATEPART(HH,{this.GetQuotedValue(targetSegment)}) AS REAL)*60*60*1000");
+                        builder.Append($"+CAST(DATEPART(MI,{this.GetQuotedValue(targetSegment)}) AS REAL)*60*1000");
+                        builder.Append($"+CAST(DATEPART(SS,{this.GetQuotedValue(targetSegment)}) AS REAL)*1000");
+                        builder.Append($"+CAST(DATEPART(MS,{this.GetQuotedValue(targetSegment)}) AS REAL)");
+                        builder.Append($"+CAST(CAST(DATEPART(MCS,{this.GetQuotedValue(targetSegment)}) AS REAL)/1000 AS REAL)");
+                        builder.Append($"+CAST(CAST(DATEPART(NS,{this.GetQuotedValue(targetSegment)}) AS REAL)/1000/1000 AS REAL)");
+                        return targetSegment.Change($"({builder})", false, true);
                     });
                     result = true;
                     break;
@@ -151,7 +164,14 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstantValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalMinutes);
 
-                        return targetSegment.Change($"{targetSegment}/{(long)1000000 * 60}", false, true);
+                        var builder = new StringBuilder();
+                        builder.Append($"CAST(DATEPART(DD,{this.GetQuotedValue(targetSegment)}) AS REAL)*24*60");
+                        builder.Append($"+CAST(DATEPART(HH,{this.GetQuotedValue(targetSegment)}) AS REAL)*60");
+                        builder.Append($"+CAST(DATEPART(MI,{this.GetQuotedValue(targetSegment)}) AS REAL)");
+                        builder.Append($"+CAST(CAST(DATEPART(SS,{this.GetQuotedValue(targetSegment)}) AS REAL)/60 AS REAL)");
+                        builder.Append($"+CAST(CAST(DATEPART(MS,{this.GetQuotedValue(targetSegment)}) AS REAL)/1000 AS REAL)");
+                        builder.Append($"+CAST(CAST(DATEPART(MCS,{this.GetQuotedValue(targetSegment)}) AS REAL)/1000/1000 AS REAL)");
+                        return targetSegment.Change($"({builder})", false, true);
                     });
                     result = true;
                     break;
@@ -162,7 +182,14 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstantValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalSeconds);
 
-                        return targetSegment.Change($"{targetSegment}/1000000", false, true);
+                        var builder = new StringBuilder();
+                        builder.Append($"CAST(DATEPART(DD,{this.GetQuotedValue(targetSegment)}) AS REAL)*24*60*60");
+                        builder.Append($"+CAST(DATEPART(HH,{this.GetQuotedValue(targetSegment)}) AS REAL)*60*60");
+                        builder.Append($"+CAST(DATEPART(MI,{this.GetQuotedValue(targetSegment)}) AS REAL)*60");
+                        builder.Append($"+CAST(DATEPART(SS,{this.GetQuotedValue(targetSegment)}) AS REAL)");
+                        builder.Append($"+CAST(CAST(DATEPART(MS,{this.GetQuotedValue(targetSegment)}) AS REAL)/1000 AS REAL)");
+                        builder.Append($"+CAST(CAST(DATEPART(MCS,{this.GetQuotedValue(targetSegment)}) AS REAL)/1000/1000 AS REAL)");
+                        return targetSegment.Change($"({builder})", false, true);
                     });
                     result = true;
                     break;
@@ -261,7 +288,7 @@ partial class SqlServerProvider
                         if (valueSegment.IsConstantValue)
                             return valueSegment.Change(TimeSpan.Parse(valueSegment.ToString()));
 
-                        return valueSegment.Change($"CAST({this.GetQuotedValue(valueSegment)} AS SIGNED)", false, true);
+                        return valueSegment.Change($"CAST({this.GetQuotedValue(valueSegment)} AS TIME(7))", false, true);
                     });
                     result = true;
                     break;
@@ -273,7 +300,7 @@ partial class SqlServerProvider
                         if (valueSegment.IsConstantValue)
                             return valueSegment.Change(TimeSpan.Parse(valueSegment.ToString()));
 
-                        return valueSegment.Change($"CAST({this.GetQuotedValue(valueSegment)} AS SIGNED)", false, true);
+                        return valueSegment.Change($"CAST({this.GetQuotedValue(valueSegment)} AS TIME(7))", false, true);
                     });
                     result = true;
                     break;
