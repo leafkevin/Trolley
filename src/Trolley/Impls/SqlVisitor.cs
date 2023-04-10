@@ -327,9 +327,6 @@ class SqlVisitor : ISqlVisitor
             }
         }
 
-        if (sqlSegment.IsParameterized || this.isParameterized)
-            return this.ToParameter(sqlSegment.ChangeValue(objValue));
-
         return sqlSegment.Change(objValue);
     }
     public virtual SqlSegment VisitMethodCall(SqlSegment sqlSegment)
@@ -518,10 +515,7 @@ class SqlVisitor : ISqlVisitor
         var lambdaExpr = Expression.Lambda(sqlSegment.Expression);
         var objValue = lambdaExpr.Compile().DynamicInvoke();
         if (objValue == null)
-            return SqlSegment.Null;
-
-        if (sqlSegment.IsParameterized || this.isParameterized)
-            return this.ToParameter(sqlSegment.ChangeValue(objValue));
+            return SqlSegment.Null;      
 
         return sqlSegment.Change(objValue);
     }

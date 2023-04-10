@@ -340,9 +340,22 @@ partial class SqlServerProvider
 
                         if (targetSegment.IsConstantValue && rightSegment.IsConstantValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Add((TimeSpan)rightSegment.Value));
+                    
+                        if (!rightSegment.IsConstantValue)
+                            throw new NotSupportedException("TimeSpan.Add方法，只支持常量参数解析");
+                        var targetArgument = this.GetQuotedValue(targetSegment);
+                        var rightArgument = this.GetQuotedValue(rightSegment);
 
                         targetSegment.Merge(rightSegment);
-                        return targetSegment.Change($"{targetSegment}+{rightSegment}", false, true);
+                        var builder = new StringBuilder();
+                        builder.Append($"DATEADD(DD,DATEPART(DD,{rightArgument}),{targetArgument})");
+                        builder.Append($"+DATEADD(HH,DATEPART(HH,{rightArgument}),{targetArgument})");
+                        builder.Append($"+DATEADD(MI,DATEPART(MI,{rightArgument}),{targetArgument})");
+                        builder.Append($"+DATEADD(SS,DATEPART(SS,{rightArgument}),{targetArgument})");
+                        builder.Append($"+DATEADD(MS,DATEPART(MS,{rightArgument}),{targetArgument})");
+                        builder.Append($"+DATEADD(MCS,DATEPART(MCS,{rightArgument}),{targetArgument})");
+                        builder.Append($"+DATEADD(NS,DATEPART(NS,{rightArgument}),{targetArgument})");
+                        return targetSegment.Change($"({builder})", false, true);
                     });
                     result = true;
                     break;
@@ -354,8 +367,21 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstantValue && rightSegment.IsConstantValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Subtract((TimeSpan)rightSegment.Value));
 
+                        if (!rightSegment.IsConstantValue)
+                            throw new NotSupportedException("TimeSpan.Add方法，只支持常量参数解析");
+                        var targetArgument = this.GetQuotedValue(targetSegment);
+                        var rightArgument = this.GetQuotedValue(rightSegment);
+
                         targetSegment.Merge(rightSegment);
-                        return targetSegment.Change($"{targetSegment}-{rightSegment}", false, true);
+                        var builder = new StringBuilder();
+                        builder.Append($"DATEADD(DD,-DATEPART(DD,{rightArgument}),{targetArgument})");
+                        builder.Append($"+DATEADD(HH,-DATEPART(HH,{rightArgument}),{targetArgument})");
+                        builder.Append($"+DATEADD(MI,-DATEPART(MI,{rightArgument}),{targetArgument})");
+                        builder.Append($"+DATEADD(SS,-DATEPART(SS,{rightArgument}),{targetArgument})");
+                        builder.Append($"+DATEADD(MS,-DATEPART(MS,{rightArgument}),{targetArgument})");
+                        builder.Append($"+DATEADD(MCS,-DATEPART(MCS,{rightArgument}),{targetArgument})");
+                        builder.Append($"+DATEADD(NS,DATEPART(NS,{rightArgument}),{targetArgument})");
+                        return targetSegment.Change($"({builder})", false, true);
                     });
                     result = true;
                     break;

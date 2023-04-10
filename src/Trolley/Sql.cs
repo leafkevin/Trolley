@@ -61,7 +61,11 @@ public static class Sql
         throw new NotImplementedException();
     }
     /// <summary>
-    /// 参数化当前值，当前值都将被参数化如：@p0,@p1等，本函数只用来解析，并不实现。
+    /// 参数化当前值，当前值都将被参数化如：@p0,@p1等，本函数只用来解析，并不实现，用法：
+    /// string productNo="xxx";
+    /// using var repository = dbFactory.Create();
+    /// var result1 = await repository.QueryAsync&lt;Product&gt;(f =&gt; f.ProductNo.Contains(productNo.ToParameter()));
+    /// var result2 = await repository.QueryAsync&lt;Product&gt;(f =&gt; f.ProductNo.Contains("PN-001".ToParameter()));
     /// </summary>
     /// <typeparam name="T">原值类型</typeparam>
     /// <param name="value">原值</param>

@@ -176,7 +176,13 @@ class CreateVisitor : SqlVisitor
         //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
         //var orderId=10; Select(f=>new {OrderId=orderId,...}
         //Select(f=>new {OrderId=this.Order.Id, ...}
-        return this.Evaluate(sqlSegment);
+        this.Evaluate(sqlSegment);
+
+        //只有变量做参数化
+        if (sqlSegment.IsParameterized || this.isParameterized)
+            return this.ToParameter(sqlSegment);
+
+        return sqlSegment;
     }
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
     {

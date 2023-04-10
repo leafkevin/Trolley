@@ -944,7 +944,7 @@ class QueryVisitor : SqlVisitor
 
                         //有Join时采用别名，如果当前类是IncludeMany的导航类时，没有别名
                         fieldName = this.GetFieldName(tableSegment, memberMapper.FieldName);
-                        memberInfo = memberMapper.Member;                       
+                        memberInfo = memberMapper.Member;
                     }
                     if (this.isSelect || this.isWhere)
                         tableSegment.IsUsed = true;
@@ -970,7 +970,13 @@ class QueryVisitor : SqlVisitor
         //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
         //var orderId=10; Select(f=>new {OrderId=orderId,...}
         //Select(f=>new {OrderId=this.Order.Id, ...}
-        return this.Evaluate(sqlSegment);
+        this.Evaluate(sqlSegment);
+
+        //只有变量做参数化
+        if (sqlSegment.IsParameterized || this.isParameterized)
+            return this.ToParameter(sqlSegment);
+
+        return sqlSegment;
     }
     public TableSegment FindTableSegment(string parameterName, string path, bool isToOne = true)
     {

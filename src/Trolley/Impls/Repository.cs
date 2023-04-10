@@ -1619,7 +1619,7 @@ public class Repository : IRepository
         this.connection.CommandTimeout = timeout;
         return this;
     }
-    public IRepository RequireParameterized(bool isParameterized = true)
+    public IRepository WithParameterized(bool isParameterized = true)
     {
         this.isParameterized = isParameterized;
         return this;
