@@ -8,11 +8,12 @@
 目前支持：MySql,PostgreSql,Sql Sever,其他的provider会稍后慢慢提供。  
 
 支持分页查询  
-支持Join、group by,order by等操作  
-支持各种聚合查询，Count,Max,Min,Avg,Sum等操作  
+支持Join, group by, order by等操作  
+支持各种聚合查询, Count,Max,Min,Avg,Sum 等操作  
 支持In,Exists操作  
 支持Insert Select From  
 支持Update From Join  
+支持条件插入，条件更新
 支持批量插入、更新、删除   
 支持模型导航属性，值对象导航属性，就是瘦身版模型  
 支持模型映射，采用流畅API方式，目前不支持特性方式映射  
@@ -33,10 +34,15 @@
 没有租户或是没有租户独立分库的场景
 ```csharp
 var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
-var builder = new OrmDbFactoryBuilder();
-builder.Register("fengling", true, f => f.Add<MySqlProvider>(connectionString, true))
-    .Configure(f => new ModelConfiguration().OnModelCreating(f));
-var dbFactory = builder.Build();
+var builder = new OrmDbFactoryBuilder()
+.Register("fengling", true, f =>
+{
+    var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
+    f.Add<MySqlProvider>(connectionString, true);
+})
+.AddTypeHandler<JsonTypeHandler>()
+.Configure<MySqlProvider, MySqlModelConfiguration>();
+return builder.Build();
 ```
 多租户，不同租户，不同数据库的场景  
 
@@ -47,9 +53,10 @@ var builder = new OrmDbFactoryBuilder();
 builder.Register("fengling", true, f =>
 {
     f.Add<MySqlProvider>(connectionString1, true) //默认数据库，除了指定租户外的其他所有租户使用的数据库
-     .Add<NpgSqlProvider>(connectionString2, false, new List<int> { 1, 2, 3, 4, 5 });//租户ID为1，2，3，4，5的租户使用的数据库
+     .AddTenant<NpgSqlProvider>(connectionString2, false, new int[] { 1, 2, 3, 4, 5 });//租户ID为1，2，3，4，5的租户使用的数据库
 })
-.Configure(f => new ModelConfiguration().OnModelCreating(f));
+.AddTypeHandler<JsonTypeHandler>()
+.Configure<MySqlProvider, ModelConfiguration>();
 var dbFactory = builder.Build();
 
 ```
@@ -69,6 +76,19 @@ class ModelConfiguration : IModelConfiguration
         {
             //这里只列出了需要特殊指定的列，其他的列在Trolley Build的时候，会自动根据模型结构添加进来的。
             f.ToTable("sys_user").Key(t => t.Id);//表，主键
+            f.Member(t => t.Id).Field(nameof(User.Id)).NativeDbType(3);
+            f.Member(t => t.Name).Field(nameof(User.Name)).NativeDbType(253);
+            f.Member(t => t.Gender).Field(nameof(User.Gender)).NativeDbType(1);
+            f.Member(t => t.Age).Field(nameof(User.Age)).NativeDbType(3);
+            f.Member(t => t.CompanyId).Field(nameof(User.CompanyId)).NativeDbType(3);
+            f.Member(t => t.SomeTimes).Field(nameof(User.SomeTimes)).NativeDbType(11);
+            f.Member(t => t.GuidField).Field(nameof(User.GuidField)).NativeDbType(800);
+            f.Member(t => t.IsEnabled).Field(nameof(User.IsEnabled)).NativeDbType(1);
+            f.Member(t => t.CreatedBy).Field(nameof(User.CreatedBy)).NativeDbType(3);
+            f.Member(t => t.CreatedAt).Field(nameof(User.CreatedAt)).NativeDbType(12);
+            f.Member(t => t.UpdatedBy).Field(nameof(User.UpdatedBy)).NativeDbType(3);
+            f.Member(t => t.UpdatedAt).Field(nameof(User.UpdatedAt)).NativeDbType(12);
+	    
 	    //导航属性的设置，是单向的，只需要把本模型内的导航属性列出来就可以了。  
 	    //对应的导航属性类，在应设置再设置它所引用的类型映射。  
             f.HasOne(t => t.Company).HasForeignKey(t => t.CompanyId).MapTo<Company>();//导航属性，这里是值对象，不是真正的模型，是模型Company的瘦身版，使用MapTo指定对应的模型Company
@@ -76,7 +96,17 @@ class ModelConfiguration : IModelConfiguration
         });
         builder.Entity<Company>(f =>
         {
-            f.ToTable("sys_company").Key(t => t.Id).AutoIncrement(t => t.Id);//表，主键，自动增长列
+            f.ToTable("sys_company").Key(t => t.Id);//表，主键
+	    //自动增长列
+	    f.Member(t => t.Id).Field(nameof(Company.Id)).AutoIncrement(t => t.Id).NativeDbType(3);
+            f.Member(t => t.Name).Field(nameof(Company.Name)).NativeDbType(253);
+            f.Member(t => t.Nature).Field(nameof(Company.Nature)).NativeDbType(253);
+            f.Member(t => t.IsEnabled).Field(nameof(Company.IsEnabled)).NativeDbType(1);
+            f.Member(t => t.CreatedBy).Field(nameof(Company.CreatedBy)).NativeDbType(3);
+            f.Member(t => t.CreatedAt).Field(nameof(Company.CreatedAt)).NativeDbType(12);
+            f.Member(t => t.UpdatedBy).Field(nameof(Company.UpdatedBy)).NativeDbType(3);
+            f.Member(t => t.UpdatedAt).Field(nameof(Company.UpdatedAt)).NativeDbType(12);
+	    
 	    //导航属性的设置，是单向的，只需要把本模型内的导航属性列出来就可以了。  
 	    //对应的导航属性类，在应设置再设置它所引用的类型映射。  
             f.HasMany(t => t.Users).HasForeignKey(t => t.CompanyId);//导航属性，这里是真正的模型
@@ -84,6 +114,17 @@ class ModelConfiguration : IModelConfiguration
         builder.Entity<Order>(f =>
         {
             f.ToTable("sys_order").Key(t => t.Id);
+	    f.Member(t => t.Id).Field(nameof(Order.Id)).NativeDbType(3);
+            f.Member(t => t.OrderNo).Field(nameof(Order.OrderNo)).NativeDbType(253);
+            f.Member(t => t.TotalAmount).Field(nameof(Order.TotalAmount)).NativeDbType(5);
+            f.Member(t => t.BuyerId).Field(nameof(Order.BuyerId)).NativeDbType(3);
+            f.Member(t => t.SellerId).Field(nameof(Order.SellerId)).NativeDbType(3);
+            f.Member(t => t.IsEnabled).Field(nameof(Order.IsEnabled)).NativeDbType(1);
+            f.Member(t => t.CreatedBy).Field(nameof(Order.CreatedBy)).NativeDbType(3);
+            f.Member(t => t.CreatedAt).Field(nameof(Order.CreatedAt)).NativeDbType(12);
+            f.Member(t => t.UpdatedBy).Field(nameof(Order.UpdatedBy)).NativeDbType(3);
+            f.Member(t => t.UpdatedAt).Field(nameof(Order.UpdatedAt)).NativeDbType(12);
+	    
             f.HasOne(t => t.Buyer).HasForeignKey(t => t.BuyerId);	    
             f.HasOne(t => t.Seller).HasForeignKey(t => t.SellerId).MapTo<User>();//导航属性，这里是值对象，不是真正的模型，是模型User的瘦身版，使用MapTo指定对应的模型User
             f.HasMany(t => t.Details).HasForeignKey(t => t.OrderId);
@@ -91,6 +132,18 @@ class ModelConfiguration : IModelConfiguration
         builder.Entity<OrderDetail>(f =>
         {
             f.ToTable("sys_order_detail").Key(f => f.Id);
+	    f.Member(t => t.Id).Field(nameof(OrderDetail.Id)).NativeDbType(3);
+            f.Member(t => t.OrderId).Field(nameof(OrderDetail.OrderId)).NativeDbType(3);
+            f.Member(t => t.ProductId).Field(nameof(OrderDetail.ProductId)).NativeDbType(3);
+            f.Member(t => t.Price).Field(nameof(OrderDetail.Price)).NativeDbType(5);
+            f.Member(t => t.Quantity).Field(nameof(OrderDetail.Quantity)).NativeDbType(3);
+            f.Member(t => t.Amount).Field(nameof(OrderDetail.Amount)).NativeDbType(5);
+            f.Member(t => t.IsEnabled).Field(nameof(OrderDetail.IsEnabled)).NativeDbType(1);
+            f.Member(t => t.CreatedBy).Field(nameof(OrderDetail.CreatedBy)).NativeDbType(3);
+            f.Member(t => t.CreatedAt).Field(nameof(OrderDetail.CreatedAt)).NativeDbType(12);
+            f.Member(t => t.UpdatedBy).Field(nameof(OrderDetail.UpdatedBy)).NativeDbType(3);
+            f.Member(t => t.UpdatedAt).Field(nameof(OrderDetail.UpdatedAt)).NativeDbType(12);
+	    
             f.HasOne(t => t.Order).HasForeignKey(t => t.OrderId);
         });
     }
@@ -104,7 +157,10 @@ Trolley在配置各个数据库模型映射时是无侵入的，无需引入对�
 在运行Trolley的项目中再引入对应的数据库.NET驱动就可以。  
 对应的模型映射，每个列也可以指定对应的本地DbType，用int类型来指定。  
 在Trolley build的时候，会把int类型数据转换成对应的数据库驱动的本地DbType类型。  
-如果不设置NativeDbType类型映射，Trolley会根据类型自动完成映射。  
+如果不设置NativeDbType类型映射，Trolley会根据类型自动完成映射。 
+在实际项目中，会使用Trolley.T4中的各个驱动下的Entities.tt，Entity.tt，ModelConfiguration.tt模板，来生成。
+路径在：Trolley.T4\SqlServer\ModelConfiguration.tt, Trolley.T4\MySql\ModelConfiguration.tt
+
 示例：  
 ```csharp
 class ModelConfiguration: IModelConfiguration
@@ -160,13 +216,15 @@ public class User
     public Gender Gender { get; set; }
     public int Age { get; set; }
     public int CompanyId { get; set; }
+    public TimeOnly? SomeTimes { get; set; }
+    public Guid? GuidField { get; set; }
     public bool IsEnabled { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
     public int UpdatedBy { get; set; }
     public DateTime UpdatedAt { get; set; }
 
-    public CompanyInfo Company { get; set; }//值对象，是模型Company的瘦身版
+    public CompanyInfo Company { get; set; }
     public List<Order> Orders { get; set; }
 }
 //模型Company
@@ -174,6 +232,7 @@ public class Company
 {
     public int Id { get; set; }
     public string Name { get; set; }
+    public CompanyNature? Nature { get; set; }
     public bool IsEnabled { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -181,6 +240,8 @@ public class Company
     public DateTime UpdatedAt { get; set; }
 
     public List<User> Users { get; set; }
+    public List<Brand> Brands { get; set; }
+    public List<Product> Products { get; set; }
 }
 //值对象，就是瘦身版模型CompanyInfo，只有两个字段
 public class CompanyInfo
@@ -198,14 +259,14 @@ Trolley是无侵入的，支持多个数据库操作。
 
 MySql：MySqlConnector 社区版  
 PostgreSql：Npgsql 官方版  
-Sql Server：System.Data.SqlClient 官方版  
+Sql Server：Microsoft.Data.SqlClient 官方版  
 Oracle：Oracle.ManagedDataAccess 官方版  
 
 
 
 最后，创建IRepository对象，就可以做各种操作了  
 ------------------------------------------------------------
-所有的操作都是从创建IRepository对象开始的，IRepository可以开启事务，设置command超时时间、各种查询、命令的执行。   
+所有的操作都是从创建IRepository对象开始的，IRepository可以开启事务，设置command超时时间、设置参数化、各种查询、命令的执行。   
 不同模型的操作都是采用IRepository泛型方法来完成的。  
 所有的查询操作，都支持ToSql方法，可以查看生成SQL语句，方便诊断。  
 
@@ -225,6 +286,15 @@ var result = await repository.QueryFirstAsync<User>(f => f.Name == "leafkevin");
 var result = repository.Query<Product>(f => f.ProductNo.Contains("PN-00"));
 var result = await repository.QueryAsync<Product>(f => f.ProductNo.Contains("PN-00"));
 //SELECT `Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_product` WHERE `ProductNo` LIKE '%PN-00%'
+
+//Get
+using var repository = dbFactory.Create();
+var result = repository.Get<Product>(1);
+//SELECT `Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_product` WHERE `Id`=1
+//也可以使用匿名对象
+using var repository = dbFactory.Create();
+var result = repository.Get<Product>(new { Id = 1 });
+//Get方法是根据主键来查询，单个主键可以直接使用值来查询，多个主键只能通过匿名对象来访问
 
 //Page 分页
 var result = repository.From<OrderDetail>()
@@ -253,9 +323,9 @@ var result = await repository.From<Product>()
 ```csharp
 //One to One  Include
 var result = await repository.From<Product>()
-            .Include(f => f.Brand)
-            .Where(f => f.ProductNo.Contains("PN-00"))
-            .ToListAsync();	    
+    .Include(f => f.Brand)
+    .Where(f => f.ProductNo.Contains("PN-00"))
+    .ToListAsync();	    
 //SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
 //一对一的Include查询，Include表数据和主表一起查出来。
 ```
