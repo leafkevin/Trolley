@@ -96,17 +96,8 @@ public class EntityMap
                 if (memberMapper.MemberType.IsEntityType() && (!memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler == null))
                     throw new Exception($"类{this.EntityType.FullName}的成员{memberInfo.Name}不是值类型，未配置为导航属性也没有配置TypeHandler，也不是忽略成员");
             }
-            if (memberMapper.typeHandlerType != null)
-            {
-                if (!typeHandlerProvider.TryGetTypeHandler(memberMapper.typeHandlerType, out var typeHandler))
-                    throw new Exception($"{memberMapper.typeHandlerType.FullName}类型TypeHandler没有注册");
-                memberMapper.TypeHandler = typeHandler;
-            }
-
-            if (memberMapper.nativeDbType.HasValue)
-                memberMapper.NativeDbType = ormProvider.GetNativeDbType(memberMapper.nativeDbType.Value);
             //生成默认的数据库映射类型
-            else
+            if (memberMapper.NativeDbType == null)
             {
                 if (!memberMapper.MemberType.IsEntityType() && !memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler != null)
                     memberMapper.NativeDbType = ormProvider.GetNativeDbType(memberMapper.MemberType);

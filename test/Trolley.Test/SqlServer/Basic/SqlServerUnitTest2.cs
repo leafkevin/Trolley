@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
+using Trolley.SqlServer;
 using Xunit;
 
 namespace Trolley.Test.SqlServer;

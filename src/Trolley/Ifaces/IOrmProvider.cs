@@ -24,9 +24,15 @@ public interface IOrmProvider
     IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
     string GetTableName(string entityName);
     string GetFieldName(string propertyName);
+    /// <summary>
+    /// 子查询中字段的别名，只有在子查询中的字段别名才会调用此方法
+    /// 最外层字段别名不需要调用此方法
+    /// </summary>
+    /// <param name="fieldName"></param>
+    /// <returns></returns>
+    //string GetFieldAliasName(string fieldName);
     string GetPagingTemplate(int? skip, int? limit, string orderBy = null);
-    object GetNativeDbType(Type type);
-    object GetNativeDbType(int nativeDbType);
+    object GetNativeDbType(Type type); 
     Type MapDefaultType(object nativeDbType);
     string CastTo(Type type, object value);
     string GetQuotedValue(Type fieldType, object value);

@@ -33,10 +33,10 @@ public class MemberMap
     /// 外键成员，是类属性
     /// </summary>
     public string ForeignKey { get; set; }
+    /// <summary>
+    /// 类型处理器
+    /// </summary>
     public ITypeHandler TypeHandler { get; set; }
-
-    internal int? nativeDbType;
-    internal Type typeHandlerType;
 
     public MemberMap(EntityMap parent, string fieldPrefix, MemberInfo memberInfo)
     {
@@ -74,8 +74,6 @@ public class MemberMap
                 result.MemberType = propertyInfo.PropertyType;
                 break;
         }
-        result.nativeDbType = this.nativeDbType;
-        result.typeHandlerType = this.typeHandlerType;
         result.NativeDbType = this.NativeDbType;
         result.TypeHandler = this.TypeHandler;
         return result;

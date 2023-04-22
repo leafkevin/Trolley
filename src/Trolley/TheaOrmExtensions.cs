@@ -72,7 +72,6 @@ public static class TheaOrmExtensions
        => (T)typeHandler.Parse(ormProvider, typeof(T), value);
 
 
-
     public static TEntity QueryFirst<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate = null)
        => repository.From<TEntity>().Where(predicate).First();
     public static async Task<TEntity> QueryFirstAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default)

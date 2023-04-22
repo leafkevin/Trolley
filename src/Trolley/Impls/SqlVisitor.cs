@@ -172,7 +172,6 @@ class SqlVisitor : ISqlVisitor
                     sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Not });
                     return this.Visit(sqlSegment.Next(unaryExpr.Operand));
                 }
-                //TODO:暂时好像没有这种场景待测试
                 return sqlSegment.ChangeValue($"~{this.Visit(sqlSegment)}");
             case ExpressionType.Convert:
                 if (unaryExpr.Method != null)
@@ -515,7 +514,7 @@ class SqlVisitor : ISqlVisitor
         var lambdaExpr = Expression.Lambda(sqlSegment.Expression);
         var objValue = lambdaExpr.Compile().DynamicInvoke();
         if (objValue == null)
-            return SqlSegment.Null;      
+            return SqlSegment.Null;
 
         return sqlSegment.Change(objValue);
     }
@@ -705,19 +704,6 @@ class SqlVisitor : ISqlVisitor
             var methodCallExpr = Expression.Call(methodInfo, parameters);
             sqlSegment.Expression = methodCallExpr;
             this.ormProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formater);
-            //if (this.isSelect)
-            //{
-            //    //SqlServer,Postgresql,Oracle都是使用连接字符串拼接的，
-            //    //在SELECT语句中，加()会优雅一点，在最外层添加()
-            //    switch (this.ormProvider.DatabaseType)
-            //    {
-            //        case DatabaseType.SqlServer:
-            //        case DatabaseType.Postgresql:
-            //        case DatabaseType.Oracle:
-            //            sqlSegment.IsNeedParentheses = true;
-            //            break;
-            //    }
-            //}
             //返回的SQL表达式中直接拼接好
             result = formater.Invoke(this, null, null, concatSegments);
             return true;
@@ -1390,13 +1376,8 @@ class SqlVisitor : ISqlVisitor
     }
     public string GetFieldAliasName(string fieldName)
     {
-        switch (this.ormProvider.DatabaseType)
-        {
-            case DatabaseType.MySql:
-            case DatabaseType.Postgresql:
-                return this.ormProvider.GetFieldName(fieldName);
-            default: return fieldName;
-        }
+        if (this.isFromQuery) return this.ormProvider.GetFieldName(fieldName);
+        return fieldName;
     }
     private SqlSegment CreateConditionSegment(Expression conditionExpr)
     {

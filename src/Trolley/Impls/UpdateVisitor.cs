@@ -25,12 +25,6 @@ class UpdateVisitor : SqlVisitor
             Mapper = this.mapProvider.GetEntityMap(entityType),
             AliasName = tableAsStart.ToString()
         });
-        switch (this.ormProvider.DatabaseType)
-        {
-            case DatabaseType.SqlServer:
-                this.tables[0].AliasName = this.ormProvider.GetTableName(this.tables[0].Mapper.TableName);
-                break;
-        }
     }
     public string BuildSql(out List<IDbDataParameter> dbParameters)
     {
@@ -194,7 +188,7 @@ class UpdateVisitor : SqlVisitor
                     var memberInfo = newExpr.Members[i];
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out memberMapper))
                         continue;
-                    
+
                     var argumentExpr = newExpr.Arguments[i];
                     //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
                     //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。

@@ -16,9 +16,9 @@ public class MemberBuilder<TMember>
         this.mapper.FieldName = fieldName;
         return this;
     }
-    public virtual MemberBuilder<TMember> NativeDbType(int nativeDbType)
+    public virtual MemberBuilder<TMember> NativeDbType(object nativeDbType)
     {
-        this.mapper.nativeDbType = nativeDbType;
+        this.mapper.NativeDbType = nativeDbType;
         return this;
     }
     public virtual MemberBuilder<TMember> AutoIncrement()
@@ -26,9 +26,14 @@ public class MemberBuilder<TMember>
         this.mapper.IsAutoIncrement = true;
         return this;
     }
-    public virtual MemberBuilder<TMember> SetTypeHandler<TTypeHandler>() where TTypeHandler : class, ITypeHandler, new()
+    public virtual MemberBuilder<TMember> TypeHandler(ITypeHandler typeHandler)
     {
-        this.mapper.typeHandlerType = typeof(TTypeHandler);
+        this.mapper.TypeHandler = typeHandler;
+        return this;
+    }
+    public virtual MemberBuilder<TMember> TypeHandler<TTypeHandler>() where TTypeHandler : class, ITypeHandler, new()
+    {
+        this.mapper.TypeHandler = new TTypeHandler();
         return this;
     }
     public virtual MemberBuilder<TMember> Ignore()

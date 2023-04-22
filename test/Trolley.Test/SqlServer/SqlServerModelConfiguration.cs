@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using Trolley.SqlServer;
 
 namespace Trolley.Test;
 
@@ -9,8 +10,8 @@ class SqlServerModelConfiguration : IModelConfiguration
         builder.Entity<User>(f =>
         {
             f.ToTable("sys_user").Key(t => t.Id);
-            f.Member(t => t.Id).Field(nameof(User.Id)).NativeDbType(8);
-            f.Member(t => t.Name).Field(nameof(User.Name)).NativeDbType(22);
+            f.Member(t => t.Id).Field(nameof(User.Id)).NativeDbType<int>(SqlDbType.Int);
+            f.Member(t => t.Name).Field(nameof(User.Name)).NativeDbType(SqlDbType.NVarChar);
             f.Member(t => t.Gender).Field(nameof(User.Gender)).NativeDbType(20);
             f.Member(t => t.Age).Field(nameof(User.Age)).NativeDbType(8);
             f.Member(t => t.CompanyId).Field(nameof(User.CompanyId)).NativeDbType(8);
@@ -51,8 +52,8 @@ class SqlServerModelConfiguration : IModelConfiguration
             f.Member(t => t.BuyerId).Field(nameof(Order.BuyerId)).NativeDbType(8);
             f.Member(t => t.SellerId).Field(nameof(Order.SellerId)).NativeDbType(8);
             //特殊类型JSON
-            f.Member(t => t.Products).Field(nameof(Order.Products)).NativeDbType(12).SetTypeHandler<JsonTypeHandler>();
-            f.Member(t => t.Disputes).Field(nameof(Order.Disputes)).NativeDbType(18).SetTypeHandler<JsonTypeHandler>();
+            f.Member(t => t.Products).Field(nameof(Order.Products)).NativeDbType(12).TypeHandler<JsonTypeHandler>();
+            f.Member(t => t.Disputes).Field(nameof(Order.Disputes)).NativeDbType(18).TypeHandler<JsonTypeHandler>();
 
             f.Member(t => t.IsEnabled).Field(nameof(Order.IsEnabled)).NativeDbType(20);
             f.Member(t => t.CreatedBy).Field(nameof(Order.CreatedBy)).NativeDbType(8);

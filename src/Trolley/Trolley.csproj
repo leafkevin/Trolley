@@ -12,11 +12,6 @@
 	  <None Remove="Attributes\**" />
 	</ItemGroup>
 	<ItemGroup>
-	  <Compile Remove="Providers\NpgsqlProvider.cs" />
-	  <Compile Remove="Providers\OracleProvider.cs" />
-	  <Compile Remove="Providers\SqLiteProvider.cs" />
-	</ItemGroup>
-	<ItemGroup>
 	  <PackageReference Include="MySqlConnector" Version="2.2.5" />
 	  <PackageReference Include="Npgsql" Version="7.0.2" />
 	</ItemGroup>

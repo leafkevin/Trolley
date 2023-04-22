@@ -18,6 +18,7 @@ public abstract class BaseOrmProvider : IOrmProvider
     public abstract IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
     public virtual string GetTableName(string entityName) => entityName;
     public virtual string GetFieldName(string propertyName) => propertyName;
+    public virtual string GetFieldAliasName(string fieldName) => this.GetFieldName(fieldName);
     public virtual string GetPagingTemplate(int? skip, int? limit, string orderBy = null)
     {
         var builder = new StringBuilder("SELECT /**fields**/ FROM /**tables**/ /**others**/");
@@ -34,7 +35,6 @@ public abstract class BaseOrmProvider : IOrmProvider
     //    return result;
     //}
     public abstract object GetNativeDbType(Type type);
-    public abstract object GetNativeDbType(int nativeDbType);
     public abstract Type MapDefaultType(object nativeDbType);
     public abstract string CastTo(Type type, object value);
     public virtual string GetQuotedValue(Type expectType, object value)

@@ -257,7 +257,7 @@ class FromQuery<T> : IFromQuery<T>
     public IFromQuery<T> Select()
     {
         Expression<Func<T, T>> defaultExpr = f => f;
-        this.visitor.Select(null, defaultExpr);
+        this.visitor.Select(null, defaultExpr, true);
         return this;
     }
     public IQueryAnonymousObject Select(string fields = "*")
@@ -265,7 +265,7 @@ class FromQuery<T> : IFromQuery<T>
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
@@ -273,7 +273,7 @@ class FromQuery<T> : IFromQuery<T>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
@@ -281,7 +281,7 @@ class FromQuery<T> : IFromQuery<T>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public string ToSql(out List<IDbDataParameter> dbParameters)
@@ -416,7 +416,7 @@ class FromQuery<T1, T2> : IFromQuery<T1, T2>
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr)
@@ -424,7 +424,7 @@ class FromQuery<T1, T2> : IFromQuery<T1, T2>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, TTarget>> fieldsExpr)
@@ -432,7 +432,7 @@ class FromQuery<T1, T2> : IFromQuery<T1, T2>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public string ToSql(out List<IDbDataParameter> dbParameters)
@@ -567,7 +567,7 @@ class FromQuery<T1, T2, T3> : IFromQuery<T1, T2, T3>
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr)
@@ -575,7 +575,7 @@ class FromQuery<T1, T2, T3> : IFromQuery<T1, T2, T3>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, TTarget>> fieldsExpr)
@@ -583,7 +583,7 @@ class FromQuery<T1, T2, T3> : IFromQuery<T1, T2, T3>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public string ToSql(out List<IDbDataParameter> dbParameters)
@@ -718,7 +718,7 @@ class FromQuery<T1, T2, T3, T4> : IFromQuery<T1, T2, T3, T4>
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr)
@@ -726,7 +726,7 @@ class FromQuery<T1, T2, T3, T4> : IFromQuery<T1, T2, T3, T4>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, TTarget>> fieldsExpr)
@@ -734,7 +734,7 @@ class FromQuery<T1, T2, T3, T4> : IFromQuery<T1, T2, T3, T4>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public string ToSql(out List<IDbDataParameter> dbParameters)
@@ -869,7 +869,7 @@ class FromQuery<T1, T2, T3, T4, T5> : IFromQuery<T1, T2, T3, T4, T5>
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
@@ -877,7 +877,7 @@ class FromQuery<T1, T2, T3, T4, T5> : IFromQuery<T1, T2, T3, T4, T5>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
@@ -885,7 +885,7 @@ class FromQuery<T1, T2, T3, T4, T5> : IFromQuery<T1, T2, T3, T4, T5>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public string ToSql(out List<IDbDataParameter> dbParameters)
@@ -1020,7 +1020,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6> : IFromQuery<T1, T2, T3, T4, T5, T6>
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
@@ -1028,7 +1028,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6> : IFromQuery<T1, T2, T3, T4, T5, T6>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
@@ -1036,7 +1036,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6> : IFromQuery<T1, T2, T3, T4, T5, T6>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public string ToSql(out List<IDbDataParameter> dbParameters)
@@ -1171,7 +1171,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7> : IFromQuery<T1, T2, T3, T4, T5, T6,
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr)
@@ -1179,7 +1179,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7> : IFromQuery<T1, T2, T3, T4, T5, T6,
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr)
@@ -1187,7 +1187,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7> : IFromQuery<T1, T2, T3, T4, T5, T6,
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public string ToSql(out List<IDbDataParameter> dbParameters)
@@ -1322,7 +1322,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IFromQuery<T1, T2, T3, T4, T5,
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr)
@@ -1330,7 +1330,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IFromQuery<T1, T2, T3, T4, T5,
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr)
@@ -1338,7 +1338,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IFromQuery<T1, T2, T3, T4, T5,
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public string ToSql(out List<IDbDataParameter> dbParameters)
@@ -1473,7 +1473,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IFromQuery<T1, T2, T3, T4,
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr)
@@ -1481,7 +1481,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IFromQuery<T1, T2, T3, T4,
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr)
@@ -1489,7 +1489,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IFromQuery<T1, T2, T3, T4,
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public string ToSql(out List<IDbDataParameter> dbParameters)
@@ -1624,7 +1624,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IFromQuery<T1, T2, T3
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr)
@@ -1632,7 +1632,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IFromQuery<T1, T2, T3
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr)
@@ -1640,7 +1640,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IFromQuery<T1, T2, T3
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public string ToSql(out List<IDbDataParameter> dbParameters)
@@ -1775,7 +1775,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IFromQuery<T1, T
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr)
@@ -1783,7 +1783,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IFromQuery<T1, T
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr)
@@ -1791,7 +1791,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IFromQuery<T1, T
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public string ToSql(out List<IDbDataParameter> dbParameters)
@@ -1926,7 +1926,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IFromQuery<
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr)
@@ -1934,7 +1934,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IFromQuery<
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr)
@@ -1942,7 +1942,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IFromQuery<
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public string ToSql(out List<IDbDataParameter> dbParameters)
@@ -2077,7 +2077,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IFromQ
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr)
@@ -2085,7 +2085,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IFromQ
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr)
@@ -2093,7 +2093,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IFromQ
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public string ToSql(out List<IDbDataParameter> dbParameters)
@@ -2228,7 +2228,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : I
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr)
@@ -2236,7 +2236,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : I
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr)
@@ -2244,7 +2244,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : I
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public string ToSql(out List<IDbDataParameter> dbParameters)
@@ -2323,7 +2323,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr)
@@ -2331,7 +2331,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr)
@@ -2339,7 +2339,7 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
     public string ToSql(out List<IDbDataParameter> dbParameters)

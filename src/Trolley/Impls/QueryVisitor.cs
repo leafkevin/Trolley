@@ -385,20 +385,6 @@ class QueryVisitor : SqlVisitor
         });
         return this;
     }
-    //public TableSegment WithTable(Type entityType, string rawSql, object parameters = null, string joinType = "")
-    //{
-    //    if (string.IsNullOrEmpty(joinType) && this.tables.Count > 0)
-    //        joinType = "INNER JOIN";
-    //    var tableSegment = this.AddTable(entityType, joinType, TableType.MapTable, $"({rawSql})");
-    //    if (parameters != null)
-    //    {
-    //        var dbParameters = RepositoryHelper.CreateDbParameters(this.ormProvider, rawSql, parameters);
-    //        if (this.dbParameters == null)
-    //            this.dbParameters = dbParameters;
-    //        else this.dbParameters.AddRange(dbParameters);
-    //    }
-    //    return tableSegment;
-    //}
     public TableSegment WithTable(Type entityType, string body, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null, string joinType = "")
     {
         var tableSegment = this.AddTable(entityType, joinType, TableType.MapTable, $"({body})", readerFields);
@@ -583,7 +569,11 @@ class QueryVisitor : SqlVisitor
         this.isFromQuery = false;
         this.isSelect = false;
     }
-    public void SelectGrouping() => this.readerFields = this.groupFields;
+    public void SelectGrouping(bool isFromQuery = false)
+    {
+        this.readerFields = this.groupFields;
+        this.isFromQuery = isFromQuery;
+    }
     public void DefaultSelect(Expression defaultExpr)
     {
         if (this.readerFields == null || this.readerFields.Count == 0)
@@ -1120,8 +1110,9 @@ class QueryVisitor : SqlVisitor
                         foreach (var readerField in this.groupFields)
                         {
                             readerField.TableSegment.IsUsed = true;
+                            //子查询中的字段别名要带有本地化包装
                             if (readerField.TargetMember != null && readerField.FromMember.Name != readerField.TargetMember.Name)
-                                readerField.Body += " AS " + this.GetFieldAliasName(readerField.TargetMember.Name);
+                                readerField.Body += " AS " + this.ormProvider.GetFieldName(readerField.TargetMember.Name);
                         }
                         readerFields.Add(new ReaderField
                         {
@@ -1161,7 +1152,10 @@ class QueryVisitor : SqlVisitor
                     if (sqlSegment.IsExpression && sqlSegment.IsNeedParentheses)
                         fieldName = $"({fieldName})";
                     if (sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.FromMember?.Name != memberInfo.Name)
-                        fieldName += " AS " + this.GetFieldAliasName(memberInfo.Name);
+                    {
+                        var aliasName = this.isFromQuery ? this.ormProvider.GetFieldName(memberInfo.Name) : memberInfo.Name;
+                        fieldName += " AS " + aliasName;
+                    }
 
                     readerFields.Add(new ReaderField
                     {
@@ -1183,7 +1177,10 @@ class QueryVisitor : SqlVisitor
                 if (sqlSegment.IsExpression && sqlSegment.IsNeedParentheses)
                     fieldName = $"({fieldName})";
                 if (sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.FromMember?.Name != memberInfo.Name)
-                    fieldName += " AS " + this.GetFieldAliasName(memberInfo.Name);
+                {
+                    var aliasName = this.isFromQuery ? this.ormProvider.GetFieldName(memberInfo.Name) : memberInfo.Name;
+                    fieldName += " AS " + aliasName;
+                }
 
                 readerFields.Add(new ReaderField
                 {

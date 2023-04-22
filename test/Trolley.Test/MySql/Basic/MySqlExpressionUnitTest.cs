@@ -1,8 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
-using System;
-using Xunit;
 using System.Collections.ObjectModel;
+using Xunit;
 
 namespace Trolley.Test.MySql;
 

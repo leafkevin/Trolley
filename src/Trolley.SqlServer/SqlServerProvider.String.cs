@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 
-namespace Trolley;
+namespace Trolley.SqlServer;
 
 partial class SqlServerProvider
 {

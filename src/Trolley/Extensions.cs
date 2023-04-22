@@ -91,6 +91,12 @@ public static class Extensions
         parameterNames = null;
         return false;
     }
+    public static string NextReplace(this string content, string oldValue, string newValue)
+    {
+        if (!content.Contains(oldValue))
+            return content;
+        return content.Replace(oldValue, newValue);
+    }
     internal static TValue To<TValue>(this IDataReader reader, int columnIndex = 0)
     {
         var targetType = typeof(TValue);
@@ -463,13 +469,7 @@ public static class Extensions
             hashCode.Add(reader.GetFieldType(i));
         }
         return hashCode.ToHashCode();
-    }
-    internal static string NextReplace(this string content, string oldValue, string newValue)
-    {
-        if (!content.Contains(oldValue))
-            return content;
-        return content.Replace(oldValue, newValue);
-    }
+    }   
     class EntityBuildInfo
     {
         public bool IsDefault { get; set; }

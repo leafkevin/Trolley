@@ -7,5 +7,6 @@
 	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\..\src\Trolley.AspNetCore\Trolley.AspNetCore.csproj" />
+	  <ProjectReference Include="..\..\src\Trolley.MySqlConnector\Trolley.MySqlConnector.csproj" />
 	</ItemGroup>
 </Project>

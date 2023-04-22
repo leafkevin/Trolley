@@ -55,7 +55,7 @@ class FromGroupingQuery<T, TGrouping> : IFromGroupingQuery<T, TGrouping>
     }
     public IFromQuery<TGrouping> Select()
     {
-        this.visitor.SelectGrouping();
+        this.visitor.SelectGrouping(true);
         return new FromQuery<TGrouping>(this.visitor);
     }
     public IQueryAnonymousObject Select(string fields = "*")
@@ -63,7 +63,7 @@ class FromGroupingQuery<T, TGrouping> : IFromGroupingQuery<T, TGrouping>
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields, isFromQuery: true);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
@@ -120,7 +120,7 @@ class FromGroupingQuery<<#=tables#>, TGrouping> : IFromGroupingQuery<<#=tables#>
     }
     public IFromQuery<TGrouping> Select()
     {
-        this.visitor.SelectGrouping();
+        this.visitor.SelectGrouping(true);
         return new FromQuery<TGrouping>(this.visitor);
     }
     public IQueryAnonymousObject Select(string fields = "*")
@@ -128,7 +128,7 @@ class FromGroupingQuery<<#=tables#>, TGrouping> : IFromGroupingQuery<<#=tables#>
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
@@ -136,7 +136,7 @@ class FromGroupingQuery<<#=tables#>, TGrouping> : IFromGroupingQuery<<#=tables#>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
 }
@@ -159,7 +159,7 @@ class FromGroupingQuery<<#=tables#>, TGrouping> : IFromGroupingQuery<<#=tables#>
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields);
+        this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
@@ -167,7 +167,7 @@ class FromGroupingQuery<<#=tables#>, TGrouping> : IFromGroupingQuery<<#=tables#>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.visitor.Select(null, fieldsExpr, true);
         return new FromQuery<TTarget>(this.visitor);
     }
 }

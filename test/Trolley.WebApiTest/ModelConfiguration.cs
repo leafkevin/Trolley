@@ -46,7 +46,7 @@ class ModelConfiguration : IModelConfiguration
             f.Member(t => t.BuyerId).Field("BuyerId").NativeDbType(3);
             f.Member(t => t.SellerId).Field("SellerId").NativeDbType(3);
             //特殊类型JSON
-            f.Member(t => t.Products).NativeDbType(245).SetTypeHandler<JsonTypeHandler>();
+            f.Member(t => t.Products).NativeDbType(245).TypeHandler<JsonTypeHandler>();
             f.Member(t => t.IsEnabled).Field("IsEnabled").NativeDbType(1);
             f.Member(t => t.CreatedBy).Field("CreatedBy").NativeDbType(3);
             f.Member(t => t.CreatedAt).Field("CreatedAt").NativeDbType(12);
