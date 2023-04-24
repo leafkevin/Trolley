@@ -18,6 +18,7 @@ public partial class MySqlProvider : BaseOrmProvider
 
     public override DatabaseType DatabaseType => DatabaseType.MySql;
     public override string SelectIdentitySql => " RETURNING {0}";
+    public override Type NativeDbTypeType => typeof(MySqlDbType);
     static MySqlProvider()
     {
         defaultMapTypes[MySqlDbType.Bit] = typeof(bool);

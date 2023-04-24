@@ -19,6 +19,7 @@ public partial class SqlServerProvider : BaseOrmProvider
 
     public override DatabaseType DatabaseType => DatabaseType.SqlServer;
     public override string SelectIdentitySql => ";SELECT SCOPE_IDENTITY()";
+    public override Type NativeDbTypeType => typeof(SqlDbType);
     static SqlServerProvider()
     {
         defaultMapTypes[SqlDbType.Bit] = typeof(bool);

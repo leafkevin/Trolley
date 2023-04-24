@@ -11,13 +11,13 @@ class OrmDbFactory : IOrmDbFactory
     private readonly ConcurrentDictionary<Type, IOrmProvider> ormProviders = new();
     private readonly ConcurrentDictionary<string, TheaDatabaseProvider> databaseProviders = new();
     private readonly ConcurrentDictionary<Type, IEntityMapProvider> entityMapProviders = new();
-    private readonly ITypeHandlerProvider typeHandlerProvider = new TypeHandlerProvider();
+    private readonly TypeHandlerProvider typeHandlerProvider = new TypeHandlerProvider();
     private OrmDbFactoryOptions options;
 
-    public ITypeHandlerProvider TypeHandlerProvider => this.typeHandlerProvider;
+    public TypeHandlerProvider TypeHandlerProvider => this.typeHandlerProvider;
     public ICollection<TheaDatabaseProvider> DatabaseProviders => this.databaseProviders.Values;
     public void Register(string dbKey, bool isDefault, Action<TheaDatabaseBuilder> databaseInitializer)
-    {
+    {         
         if (!this.databaseProviders.TryGetValue(dbKey, out var database))
         {
             this.databaseProviders.TryAdd(dbKey, database = new TheaDatabaseProvider

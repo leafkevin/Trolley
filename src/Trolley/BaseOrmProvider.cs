@@ -12,13 +12,12 @@ public abstract class BaseOrmProvider : IOrmProvider
     public abstract DatabaseType DatabaseType { get; }
     public virtual string ParameterPrefix => "@";
     public virtual string SelectIdentitySql => ";SELECT @@IDENTITY";
-
+    public abstract Type NativeDbTypeType { get; }
     public abstract IDbConnection CreateConnection(string connectionString);
     public abstract IDbDataParameter CreateParameter(string parameterName, object value);
     public abstract IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
     public virtual string GetTableName(string entityName) => entityName;
     public virtual string GetFieldName(string propertyName) => propertyName;
-    public virtual string GetFieldAliasName(string fieldName) => this.GetFieldName(fieldName);
     public virtual string GetPagingTemplate(int? skip, int? limit, string orderBy = null)
     {
         var builder = new StringBuilder("SELECT /**fields**/ FROM /**tables**/ /**others**/");
