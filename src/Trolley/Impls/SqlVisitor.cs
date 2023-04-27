@@ -9,7 +9,7 @@ using System.Text;
 
 namespace Trolley;
 
-class SqlVisitor : ISqlVisitor
+public class SqlVisitor : ISqlVisitor
 {
     protected internal readonly string dbKey;
     protected internal readonly IOrmProvider ormProvider;
@@ -83,8 +83,6 @@ class SqlVisitor : ISqlVisitor
         {
             case ExpressionType.Lambda:
                 var lambdaExpr = sqlSegment.Expression as LambdaExpression;
-                if (this.IsFromQuery(lambdaExpr))
-                    result = sqlSegment.ChangeValue(this.VisitFromQuery(lambdaExpr, out _));
                 result = this.Visit(sqlSegment.Next(lambdaExpr.Body));
                 break;
             case ExpressionType.Negate:
@@ -183,10 +181,19 @@ class SqlVisitor : ISqlVisitor
                 //string.Concat,string.Format,string.Join等方法，参数都是object，
                 //最终变成string，字段访问、表达式需要强制转换,如：a.IntField + 5, b.Field等，常量不需要强转
                 sqlSegment = this.Visit(sqlSegment.Next(unaryExpr.Operand));
-                if (sqlSegment.TargetType != null && sqlSegment.Type != sqlSegment.TargetType && !sqlSegment.IsConstantValue)
+                if (sqlSegment.TargetType != null && sqlSegment.Type != sqlSegment.TargetType)
                 {
-                    sqlSegment.Type = sqlSegment.TargetType;
-                    return sqlSegment.Change(this.ormProvider.CastTo(sqlSegment.TargetType, this.GetQuotedValue(sqlSegment)), false, true);
+                    //单独对枚举做了特殊处理
+                    if (sqlSegment.Type.IsEnumType(out var enumType, out _) && sqlSegment.TargetType == typeof(string) && sqlSegment.IsConstantValue)
+                    {
+                        sqlSegment.Type = sqlSegment.TargetType;
+                        return sqlSegment.Change(Enum.GetName(enumType, sqlSegment.Value), true, true);
+                    }
+                    if (!sqlSegment.IsConstantValue)
+                    {
+                        sqlSegment.Type = sqlSegment.TargetType;
+                        return sqlSegment.Change(this.ormProvider.CastTo(sqlSegment.TargetType, this.GetQuotedValue(sqlSegment)), false, true);
+                    }
                 }
                 return sqlSegment;
         }
@@ -933,83 +940,7 @@ class SqlVisitor : ISqlVisitor
         }
         return completedExprs.ToArray();
     }
-    public virtual bool IsDateTimeOperator(SqlSegment sqlSegment, out SqlSegment result)
-    {
-        var binaryExpr = sqlSegment.Expression as BinaryExpression;
-        if (binaryExpr.Left.Type == typeof(DateTime) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Add)
-        {
-            var methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.Add), new Type[] { binaryExpr.Right.Type });
-            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
-            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
-            return true;
-        }
-        if (binaryExpr.Left.Type == typeof(DateTime) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Subtract)
-        {
-            var methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.Subtract), new Type[] { binaryExpr.Right.Type });
-            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
-            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
-            return true;
-        }
-        result = null;
-        return false;
-    }
-    public virtual bool IsTimeSpanOperator(SqlSegment sqlSegment, out SqlSegment result)
-    {
-        var binaryExpr = sqlSegment.Expression as BinaryExpression;
-        if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Add)
-        {
-            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Add), new Type[] { binaryExpr.Right.Type });
-            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
-            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
-            return true;
-        }
-        if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Subtract)
-        {
-            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Subtract), new Type[] { binaryExpr.Right.Type });
-            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
-            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
-            return true;
-        }
-        if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Multiply)
-        {
-            var rightExpr = binaryExpr.Right;
-            if (binaryExpr.Right.Type != typeof(double))
-                rightExpr = Expression.Convert(rightExpr, typeof(double));
-            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Multiply), new Type[] { typeof(double) });
-            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, rightExpr);
-            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
-            return true;
-        }
-        if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Divide)
-        {
-            Type divideType = null;
-            if (binaryExpr.Right.Type == typeof(TimeSpan))
-                divideType = typeof(TimeSpan);
-            else divideType = typeof(double);
-            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Divide), new Type[] { divideType });
-            var rightExpr = binaryExpr.Right;
-            if (divideType == typeof(double) && binaryExpr.Right.Type != typeof(double))
-                rightExpr = Expression.Convert(rightExpr, typeof(double));
-            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, rightExpr);
-            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
-            return true;
-        }
-        result = null;
-        return false;
-    }
-    public virtual string GetQuotedValue(SqlSegment sqlSegment)
-        => this.ormProvider.GetQuotedValue(sqlSegment);
-    public virtual TableSegment FindTableSegment(string parameterName, string path)
-    {
-        var index = path.IndexOf(".");
-        if (index > 0)
-        {
-            var rootTableSegment = this.tableAlias[parameterName];
-            path = path.Replace(parameterName + ".", rootTableSegment.AliasName + ".");
-            return this.tables.Find(f => f.Path == path);
-        }
-        else return this.tableAlias[parameterName];
-    }
+
     public virtual List<ReaderField> AddTableRecursiveReaderFields(int readerIndex, TableSegment fromSegment)
     {
         var readerFields = new List<ReaderField>();
@@ -1056,25 +987,6 @@ class SqlVisitor : ISqlVisitor
             this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, sqlSegment.Value));
             return sqlSegment.Change(parameterName, false);
         }
-    }
-    public virtual bool IsFromQuery(LambdaExpression lambdaExpr)
-    {
-        if (!lambdaExpr.Type.IsGenericType)
-            return false;
-        var genericArguments = lambdaExpr.Type.GetGenericArguments();
-        if (genericArguments == null || genericArguments.Length < 2)
-            return false;
-        if (genericArguments[0] != typeof(IFromQuery))
-            return false;
-        var queryType = genericArguments.Last();
-        if (!queryType.IsGenericType) return false;
-        var queryGenericArguments = queryType.GetGenericArguments();
-        if (queryGenericArguments == null || queryGenericArguments.Length < 1)
-            return false;
-
-        if (!typeof(IFromQuery<>).MakeGenericType(queryGenericArguments[0]).IsAssignableFrom(queryType))
-            return false;
-        return true;
     }
     public virtual string VisitFromQuery(LambdaExpression lambdaExpr, out bool isNeedAlias)
     {
@@ -1290,20 +1202,6 @@ class SqlVisitor : ISqlVisitor
         }
         return result;
     }
-    public void FlattenReaderFields(List<ReaderField> readerFields, List<ReaderField> result)
-    {
-        foreach (var readerField in readerFields)
-        {
-            if (readerField.FieldType == ReaderFieldType.Entity)
-                result.AddRange(readerField.ReaderFields);
-            else if (readerField.FieldType == ReaderFieldType.AnonymousObject)
-            {
-                if (readerField.ReaderFields != null && readerField.ReaderFields.Count > 0)
-                    this.FlattenReaderFields(readerField.ReaderFields, result);
-            }
-            else result.Add(readerField);
-        }
-    }
     /// <summary>
     /// 展开当前表tableSegment的所有字段，tableSegment是实体表(主表或Include表)
     /// repository.From(f => f.From<Order, OrderDetail, User>()
@@ -1338,28 +1236,6 @@ class SqlVisitor : ISqlVisitor
         }
         return targetFields;
     }
-    public ReaderField FindReaderField(MemberExpression memberExpr, List<ReaderField> readerFields)
-    {
-        var currentExpr = memberExpr;
-        var visitedStack = new Stack<string>();
-        while (true)
-        {
-            if (currentExpr == null || currentExpr.NodeType == ExpressionType.Parameter)
-                break;
-            visitedStack.Push(currentExpr.Member.Name);
-            currentExpr = currentExpr.Expression as MemberExpression;
-        }
-        List<ReaderField> currentFields = readerFields;
-        ReaderField readerField = null;
-        //From语句生成的临时表，没有Include操作，实体类的成员，只能是参数访问
-        while (visitedStack.TryPop(out var memberName))
-        {
-            readerField = currentFields.Find(f => f.FromMember.Name == memberName);
-            if (readerField.ReaderFields != null && readerField.ReaderFields.Count > 0)
-                currentFields = readerField.ReaderFields;
-        }
-        return readerField;
-    }
     /// <summary>
     /// 根据表、字段获取Field表达式,SELECT和WHERE语句都可以使用
     /// 有表且有别名，将生成a.Field，常量访问没有表则就是字段访问Field
@@ -1374,10 +1250,71 @@ class SqlVisitor : ISqlVisitor
             fieldName = tableSegment.AliasName + "." + fieldName;
         return fieldName;
     }
-    public string GetFieldAliasName(string fieldName)
+    private string GetQuotedValue(SqlSegment sqlSegment)
+        => this.ormProvider.GetQuotedValue(sqlSegment);
+    private bool IsDateTimeOperator(SqlSegment sqlSegment, out SqlSegment result)
     {
-        if (this.isFromQuery) return this.ormProvider.GetFieldName(fieldName);
-        return fieldName;
+        var binaryExpr = sqlSegment.Expression as BinaryExpression;
+        if (binaryExpr.Left.Type == typeof(DateTime) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Add)
+        {
+            var methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.Add), new Type[] { binaryExpr.Right.Type });
+            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
+            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
+            return true;
+        }
+        if (binaryExpr.Left.Type == typeof(DateTime) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Subtract)
+        {
+            var methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.Subtract), new Type[] { binaryExpr.Right.Type });
+            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
+            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
+            return true;
+        }
+        result = null;
+        return false;
+    }
+    private bool IsTimeSpanOperator(SqlSegment sqlSegment, out SqlSegment result)
+    {
+        var binaryExpr = sqlSegment.Expression as BinaryExpression;
+        if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Add)
+        {
+            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Add), new Type[] { binaryExpr.Right.Type });
+            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
+            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
+            return true;
+        }
+        if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Subtract)
+        {
+            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Subtract), new Type[] { binaryExpr.Right.Type });
+            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
+            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
+            return true;
+        }
+        if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Multiply)
+        {
+            var rightExpr = binaryExpr.Right;
+            if (binaryExpr.Right.Type != typeof(double))
+                rightExpr = Expression.Convert(rightExpr, typeof(double));
+            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Multiply), new Type[] { typeof(double) });
+            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, rightExpr);
+            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
+            return true;
+        }
+        if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Divide)
+        {
+            Type divideType = null;
+            if (binaryExpr.Right.Type == typeof(TimeSpan))
+                divideType = typeof(TimeSpan);
+            else divideType = typeof(double);
+            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Divide), new Type[] { divideType });
+            var rightExpr = binaryExpr.Right;
+            if (divideType == typeof(double) && binaryExpr.Right.Type != typeof(double))
+                rightExpr = Expression.Convert(rightExpr, typeof(double));
+            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, rightExpr);
+            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
+            return true;
+        }
+        result = null;
+        return false;
     }
     private SqlSegment CreateConditionSegment(Expression conditionExpr)
     {
@@ -1389,7 +1326,7 @@ class SqlVisitor : ISqlVisitor
         }
         return sqlSegment;
     }
-    public void Swap<T>(ref T left, ref T right)
+    private void Swap<T>(ref T left, ref T right)
     {
         var temp = right;
         right = left;
@@ -1419,17 +1356,6 @@ class SqlVisitor : ISqlVisitor
                     this.AddIncludeTables(readerField, readerFields);
             }
         }
-    }
-    private bool IsEnumerableString(Type type)
-    {
-        if (!typeof(IEnumerable).IsAssignableFrom(type))
-            return false;
-        var genericArguments = type.GetGenericArguments();
-        if (genericArguments == null || genericArguments.Length <= 0)
-            return false;
-        if (genericArguments[0] == typeof(string))
-            return true;
-        return false;
     }
     private LambdaExpression EnsureLambda(Expression expr)
     {

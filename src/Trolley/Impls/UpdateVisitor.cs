@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Trolley;
 
-class UpdateVisitor : SqlVisitor
+public class UpdateVisitor : SqlVisitor
 {
     private bool isFrom = false;
     private bool isJoin = false;
@@ -26,7 +26,7 @@ class UpdateVisitor : SqlVisitor
             AliasName = tableAsStart.ToString()
         });
     }
-    public string BuildSql(out List<IDbDataParameter> dbParameters)
+    public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
         var entityTableName = this.ormProvider.GetTableName(this.tables[0].Mapper.TableName);
         var builder = new StringBuilder($"UPDATE {entityTableName} ");
@@ -104,7 +104,7 @@ class UpdateVisitor : SqlVisitor
         dbParameters = this.dbParameters;
         return builder.ToString();
     }
-    public UpdateVisitor From(params Type[] entityTypes)
+    public virtual UpdateVisitor From(params Type[] entityTypes)
     {
         this.isNeedAlias = true;
         this.isFrom = true;
@@ -126,7 +126,7 @@ class UpdateVisitor : SqlVisitor
         }
         return this;
     }
-    public UpdateVisitor Join(string joinType, Type entityType, Expression joinOn)
+    public virtual UpdateVisitor Join(string joinType, Type entityType, Expression joinOn)
     {
         this.isNeedAlias = true;
         this.isJoin = true;
@@ -151,7 +151,7 @@ class UpdateVisitor : SqlVisitor
         joinTable.OnExpr = this.VisitConditionExpr(lambdaExpr.Body);
         return this;
     }
-    public UpdateVisitor Set(Expression fieldsExpr, object fieldValue = null)
+    public virtual UpdateVisitor Set(Expression fieldsExpr, object fieldValue = null)
     {
         var lambdaExpr = fieldsExpr as LambdaExpression;
         var entityMapper = this.tables[0].Mapper;
@@ -262,20 +262,20 @@ class UpdateVisitor : SqlVisitor
         this.setSql = builder.ToString();
         return this;
     }
-    public SqlSegment SetValue(Expression valueExpr, out List<IDbDataParameter> dbParameters)
+    public virtual SqlSegment SetValue(Expression valueExpr, out List<IDbDataParameter> dbParameters)
     {
         var result = this.VisitAndDeferred(new SqlSegment { Expression = valueExpr });
         dbParameters = this.dbParameters;
         return result;
     }
-    public SqlSegment SetValue(Expression fieldsExpr, Expression valueExpr, out List<IDbDataParameter> dbParameters)
+    public virtual SqlSegment SetValue(Expression fieldsExpr, Expression valueExpr, out List<IDbDataParameter> dbParameters)
     {
         this.InitTableAlias(fieldsExpr as LambdaExpression);
         var result = this.VisitAndDeferred(new SqlSegment { Expression = valueExpr });
         dbParameters = this.dbParameters;
         return result;
     }
-    public UpdateVisitor SetFromQuery(Expression fieldsExpr, Expression valueExpr = null)
+    public virtual UpdateVisitor SetFromQuery(Expression fieldsExpr, Expression valueExpr = null)
     {
         var lambdaExpr = fieldsExpr as LambdaExpression;
         var entityMapper = this.tables[0].Mapper;
@@ -404,7 +404,7 @@ class UpdateVisitor : SqlVisitor
         this.setSql = builder.ToString();
         return this;
     }
-    public UpdateVisitor Where(Expression whereExpr)
+    public virtual UpdateVisitor Where(Expression whereExpr)
     {
         this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
@@ -413,7 +413,7 @@ class UpdateVisitor : SqlVisitor
         this.isWhere = false;
         return this;
     }
-    public UpdateVisitor And(Expression whereExpr)
+    public virtual UpdateVisitor And(Expression whereExpr)
     {
         this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;

@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Trolley;
 
-class DeleteVisitor : SqlVisitor
+public class DeleteVisitor : SqlVisitor
 {
     private readonly TableSegment tableSegment;
     private string whereSql = string.Empty;
@@ -22,7 +22,7 @@ class DeleteVisitor : SqlVisitor
             Mapper = this.mapProvider.GetEntityMap(entityType)
         };
     }
-    public string BuildSql(out List<IDbDataParameter> dbParameters)
+    public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
         var entityMapper = this.tableSegment.Mapper;
         var entityTableName = this.ormProvider.GetTableName(entityMapper.TableName);
@@ -33,7 +33,7 @@ class DeleteVisitor : SqlVisitor
         dbParameters = this.dbParameters;
         return builder.ToString();
     }
-    public DeleteVisitor Where(Expression whereExpr)
+    public virtual DeleteVisitor Where(Expression whereExpr)
     {
         this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
@@ -41,7 +41,7 @@ class DeleteVisitor : SqlVisitor
         this.isWhere = false;
         return this;
     }
-    public DeleteVisitor And(Expression whereExpr)
+    public virtual DeleteVisitor And(Expression whereExpr)
     {
         this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
