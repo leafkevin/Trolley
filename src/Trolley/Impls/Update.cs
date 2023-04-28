@@ -693,7 +693,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant(this.ormProvider.GetFieldName(propMapper.FieldName) + "=")));
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, false, parameterMemberMapper.NativeDbType, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, false, propMapper.NativeDbType, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
                 columnIndex++;
             }
             columnIndex = 0;
@@ -783,7 +783,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
                 sqlBuilder.Append($"{this.ormProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
 
                 var parameterNameExpr = Expression.Constant(parameterName);
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, false, parameterMemberMapper.NativeDbType, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
+                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, false, propMapper.NativeDbType, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
                 columnIndex++;
             }
             columnIndex = 0;

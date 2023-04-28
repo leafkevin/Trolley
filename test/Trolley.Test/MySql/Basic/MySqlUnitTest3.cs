@@ -339,4 +339,66 @@ public class MySqlUnitTest3 : UnitTestBase
             Assert.True(order.Products[2] == 3);
         }
     }
+    [Fact]
+    public void Update_Enum_Fields()
+    {
+        using var repository = dbFactory.Create();
+        var sql1 = repository.Update<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                Gender = Gender.Male
+            })
+            .ToSql(out var parameters1);
+        Assert.True(sql1 == "UPDATE `sys_user` SET `Gender`=@Gender WHERE `Id`=@kId");
+        Assert.True(parameters1[0].ParameterName == "@Gender");
+        Assert.True(parameters1[0].Value.GetType() == typeof(sbyte));
+        Assert.True((sbyte)parameters1[0].Value == (sbyte)Gender.Male);
+
+        var sql2 = repository.Update<User>()
+            .Set(f => new { Gender = Gender.Male })
+            .Where(f => f.Id == 1)
+            .ToSql(out var parameters2);
+        Assert.True(sql2 == "UPDATE `sys_user` SET `Gender`=@Gender WHERE `Id`=1");
+        Assert.True(parameters2[0].ParameterName == "@Gender");
+        Assert.True(parameters2[0].Value.GetType() == typeof(sbyte));
+        Assert.True((sbyte)parameters2[0].Value == (sbyte)Gender.Male);
+
+        var sql3 = repository.Update<User>()
+            .WithBy(f => new { f.Gender }, new { Id = 1, Gender = Gender.Male })
+            .ToSql(out var parameters3);
+        Assert.True(sql3 == "UPDATE `sys_user` SET `Gender`=@Gender WHERE `Id`=@kId");
+        Assert.True(parameters3[0].ParameterName == "@Gender");
+        Assert.True(parameters3[0].Value.GetType() == typeof(sbyte));
+        Assert.True((sbyte)parameters3[0].Value == (sbyte)Gender.Male);
+
+        var sql4 = repository.Update<Company>()
+             .WithBy(new
+             {
+                 Id = 1,
+                 Nature = CompanyNature.Internet
+             })
+             .ToSql(out var parameters4);
+        Assert.True(sql4 == "UPDATE `sys_company` SET `Nature`=@Nature WHERE `Id`=@kId");
+        Assert.True(parameters4[0].ParameterName == "@Nature");
+        Assert.True(parameters4[0].Value.GetType() == typeof(string));
+        Assert.True((string)parameters4[0].Value == CompanyNature.Internet.ToString());
+
+        var sql5 = repository.Update<Company>()
+            .Set(f => new { Nature = CompanyNature.Internet })
+            .Where(f => f.Id == 1)
+            .ToSql(out var parameters5);
+        Assert.True(sql5 == "UPDATE `sys_company` SET `Nature`=@Nature WHERE `Id`=1");
+        Assert.True(parameters5[0].ParameterName == "@Nature");
+        Assert.True(parameters5[0].Value.GetType() == typeof(string));
+        Assert.True((string)parameters5[0].Value == CompanyNature.Internet.ToString());
+
+        var sql6 = repository.Update<Company>()
+            .WithBy(f => new { f.Nature }, new { Id = 1, Nature = CompanyNature.Internet })
+            .ToSql(out var parameters6);
+        Assert.True(sql6 == "UPDATE `sys_company` SET `Nature`=@Nature WHERE `Id`=@kId");
+        Assert.True(parameters6[0].ParameterName == "@Nature");
+        Assert.True(parameters6[0].Value.GetType() == typeof(string));
+        Assert.True((string)parameters6[0].Value == CompanyNature.Internet.ToString());
+    }
 }

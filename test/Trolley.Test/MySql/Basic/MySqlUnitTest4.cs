@@ -191,4 +191,24 @@ public class MySqlUnitTest4 : UnitTestBase
         repository.Commit();
         Assert.Equal(2, count);
     }
+    [Fact]
+    public void Delete_Enum_Fields()
+    {
+        using var repository = dbFactory.Create();
+        var sql1 = repository.Delete<User>()
+            .Where(f => f.Gender == Gender.Male)
+            .ToSql(out var parameters1);
+        Assert.True(sql1 == "DELETE FROM `sys_user` WHERE `Gender`=2");
+        Assert.True(parameters1[0].ParameterName == "@Gender");
+        Assert.True(parameters1[0].Value.GetType() == typeof(byte));
+        Assert.True((byte)parameters1[0].Value == (byte)Gender.Male);
+
+        var sql2 = repository.Delete<Company>()
+             .Where(f => f.Nature == CompanyNature.Internet)
+             .ToSql(out var parameters2);
+        Assert.True(sql2 == "UPDATE `sys_company` SET `Nature`=@Nature WHERE `Id`=@kId");
+        Assert.True(parameters2[0].ParameterName == "@Nature");
+        Assert.True(parameters2[0].Value.GetType() == typeof(string));
+        Assert.True((string)parameters2[0].Value == CompanyNature.Internet.ToString());
+    }
 }

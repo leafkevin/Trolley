@@ -172,12 +172,12 @@ public class UpdateVisitor : SqlVisitor
                 memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
                 //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
                 //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
-                if (memberMapper.MemberType.IsEnumType(out _, out var underlyingType))
-                {
-                    if (this.ormProvider.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
-                        fieldValue = fieldValue.ToString();
-                    else fieldValue = Convert.ChangeType(fieldValue, underlyingType);
-                }
+                //if (memberMapper.MemberType.IsEnumType(out _, out var underlyingType))
+                //{
+                //    if (this.ormProvider.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                //        fieldValue = fieldValue.ToString();
+                //    else fieldValue = Convert.ChangeType(fieldValue, underlyingType);
+                //}
                 setFields.Add(this.AddMemberElement(fieldValue, memberMapper));
                 break;
             case ExpressionType.New:
@@ -192,19 +192,19 @@ public class UpdateVisitor : SqlVisitor
                     var argumentExpr = newExpr.Arguments[i];
                     //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
                     //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
-                    if (memberMapper.MemberType.IsEnumType(out var expectType, out var targetType))
-                    {
-                        if (this.ormProvider.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
-                            targetType = typeof(string);
-                    }
-
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment
-                    {
-                        Expression = argumentExpr,
-                        ExpectType = expectType,
-                        TargetType = targetType
-                    });
-
+                    //此处相当于VisitMemberAccess
+                    //if (memberMapper.MemberType.IsEnumType(out var expectType, out var targetType))
+                    //{
+                    //    if (this.ormProvider.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                    //        targetType = typeof(string);
+                    //}
+                    //var sqlSegment = this.VisitAndDeferred(new SqlSegment
+                    //{
+                    //    Expression = argumentExpr,
+                    //    ExpectType = expectType,
+                    //    TargetType = targetType
+                    //});
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
                     //只一个成员访问，没有设置语句，什么也不做，忽略
                     if (sqlSegment.HasField && !sqlSegment.IsExpression && sqlSegment.FromMember.Name == memberInfo.Name)
                         continue;
@@ -223,17 +223,19 @@ public class UpdateVisitor : SqlVisitor
                     var argumentExpr = memberAssignment.Expression;
                     //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
                     //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
-                    if (memberMapper.MemberType.IsEnumType(out var expectType, out var targetType))
-                    {
-                        if (this.ormProvider.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
-                            targetType = typeof(string);
-                    }
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment
-                    {
-                        Expression = argumentExpr,
-                        ExpectType = expectType,
-                        TargetType = targetType
-                    });
+                    //此处相当于VisitMemberAccess
+                    //if (memberMapper.MemberType.IsEnumType(out var expectType, out var targetType))
+                    //{
+                    //    if (this.ormProvider.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                    //        targetType = typeof(string);
+                    //}
+                    //var sqlSegment = this.VisitAndDeferred(new SqlSegment
+                    //{
+                    //    Expression = argumentExpr,
+                    //    ExpectType = expectType,
+                    //    TargetType = targetType
+                    //});
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
                     //只一个成员访问，没有设置语句，什么也不做，忽略
                     if (sqlSegment.HasField && !sqlSegment.IsExpression && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
                         continue;
@@ -477,12 +479,10 @@ public class UpdateVisitor : SqlVisitor
 
                 //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
                 //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
-                if (memberMapper.MemberType.IsEnumType(out var expectType, out _))
+                if (this.isWhere && memberMapper.MemberType.IsEnumType(out var expectType, out _))
                 {
-                    Type targetType = null;
-                    if (this.ormProvider.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
-                        targetType = typeof(string);
-                    else targetType = expectType;
+                    var targetType = this.ormProvider.MapDefaultType(memberMapper.NativeDbType);
+                    sqlSegment.ExpectType = expectType;
                     sqlSegment.ExpectType = expectType;
                     sqlSegment.TargetType = targetType;
                 }
@@ -512,7 +512,8 @@ public class UpdateVisitor : SqlVisitor
         //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
         //var orderId=10; Select(f=>new {OrderId=orderId,...}
         //Select(f=>new {OrderId=this.Order.Id, ...}
-        this.Evaluate(sqlSegment);
+        sqlSegment = this.Evaluate(sqlSegment);
+        this.ConvertTo(sqlSegment);
 
         //只有变量做参数化
         if (sqlSegment.IsParameterized || this.isParameterized)
@@ -564,15 +565,29 @@ public class UpdateVisitor : SqlVisitor
         {
             this.dbParameters ??= new();
             IDbDataParameter dbParameter = null;
-            var parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
-
-            if (memberMapper.NativeDbType != null)
-                dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
-            else dbParameter = this.ormProvider.CreateParameter(parameterName, fieldValue);
+            var parameterName = this.ormProvider.ParameterPrefix + memberMapper.MemberName;
+            if (this.dbParameters.Exists(f => f.ParameterName == parameterName))
+                parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
 
             if (memberMapper.TypeHandler != null)
+            {
+                if (memberMapper.NativeDbType != null)
+                {
+                    fieldValue = this.ormProvider.ToFieldValue(fieldValue, memberMapper.NativeDbType);
+                    dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
+                }
+                else dbParameter = this.ormProvider.CreateParameter(parameterName, fieldValue);
                 memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, fieldValue);
-            else dbParameter.Value = this.ormProvider.ToFieldValue(fieldValue, memberMapper.NativeDbType);
+            }
+            else
+            {
+                if (memberMapper.NativeDbType != null)
+                {
+                    fieldValue = this.ormProvider.ToFieldValue(fieldValue, memberMapper.NativeDbType);
+                    dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
+                }
+                else dbParameter = this.ormProvider.CreateParameter(parameterName, fieldValue);
+            }
             this.dbParameters.Add(dbParameter);
             return new SetField { MemberMapper = memberMapper, Value = parameterName };
         }
@@ -585,30 +600,35 @@ public class UpdateVisitor : SqlVisitor
         {
             if (sqlSegment.IsConstantValue)
             {
-                if (!sqlSegment.IsParameter)
+                this.dbParameters ??= new();
+                IDbDataParameter dbParameter = null;
+                var parameterName = this.ormProvider.ParameterPrefix + memberMapper.MemberName;
+                if (this.dbParameters.Exists(f => f.ParameterName == parameterName))
+                    parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
+
+                if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
+                    sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
+
+                if (memberMapper.TypeHandler != null)
                 {
-                    this.dbParameters ??= new();
-                    IDbDataParameter dbParameter = null;
-                    var parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
                     if (memberMapper.NativeDbType != null)
                         dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
                     else dbParameter = this.ormProvider.CreateParameter(parameterName, sqlSegment.Value);
-
-                    if (memberMapper.TypeHandler != null)
-                    {
-                        if (sqlSegment.IsArray)
-                        {
-                            var sqlSegments = sqlSegment.Value as List<SqlSegment>;
-                            sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
-                        }
-                        memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, sqlSegment.Value);
-                    }
-                    else dbParameter.Value = this.ormProvider.ToFieldValue(sqlSegment.Value, memberMapper.NativeDbType);
-                    this.dbParameters.Add(dbParameter);
-                    sqlSegment.Value = parameterName;
-                    sqlSegment.IsParameter = true;
-                    sqlSegment.IsConstantValue = false;
+                    memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, sqlSegment.Value);
                 }
+                else
+                {
+                    if (memberMapper.NativeDbType != null)
+                    {
+                        sqlSegment.Value = this.ormProvider.ToFieldValue(sqlSegment.Value, memberMapper.NativeDbType);
+                        dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
+                    }
+                    else dbParameter = this.ormProvider.CreateParameter(parameterName, sqlSegment.Value);
+                }
+                this.dbParameters.Add(dbParameter);
+                sqlSegment.Value = parameterName;
+                sqlSegment.IsParameter = true;
+                sqlSegment.IsConstantValue = false;
                 return new SetField { MemberMapper = memberMapper, Value = sqlSegment.Value.ToString() };
             }
             return new SetField { MemberMapper = memberMapper, Value = sqlSegment.ToString() };

@@ -523,4 +523,46 @@ public class MySqlUnitTest1 : UnitTestBase
             Assert.True(order.Products[1] == 2);
         }
     }
+    [Fact]
+    public void Insert_Enum_Fields()
+    {
+        using var repository = dbFactory.Create();
+        var sql1 = repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .ToSql(out var parameters1);
+        Assert.True(sql1 == "INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+        Assert.True(parameters1[4].ParameterName == "@Gender");
+        Assert.True(parameters1[4].Value.GetType() == typeof(byte));
+        Assert.True((byte)parameters1[4].Value == (byte)Gender.Male);
+
+        var sql2 = repository.Create<Company>()
+             .WithBy(new Company
+             {
+                 Id = 1,
+                 Name = "leafkevin",
+                 Nature = CompanyNature.Internet,
+                 IsEnabled = true,
+                 CreatedAt = DateTime.Now,
+                 CreatedBy = 1,
+                 UpdatedAt = DateTime.Now,
+                 UpdatedBy = 1
+             })
+             .ToSql(out var parameters2);
+        Assert.True(sql2 == "INSERT INTO `sys_company` (`Id`,`Name`,`Nature`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) VALUES(@Id,@Name,@Nature,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
+        Assert.True(parameters2[2].ParameterName == "@Nature");
+        Assert.True(parameters2[2].Value.GetType() == typeof(string));
+        Assert.True((string)parameters2[2].Value == CompanyNature.Internet.ToString());
+    }
 }

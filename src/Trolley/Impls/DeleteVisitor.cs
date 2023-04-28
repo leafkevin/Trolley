@@ -102,12 +102,9 @@ public class DeleteVisitor : SqlVisitor
 
                 //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
                 //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
-                if (memberMapper.MemberType.IsEnumType(out var expectType, out _))
+                if (this.isWhere && memberMapper.MemberType.IsEnumType(out var expectType, out _))
                 {
-                    Type targetType = null;
-                    if (this.ormProvider.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
-                        targetType = typeof(string);
-                    else targetType = expectType;
+                    var targetType = this.ormProvider.MapDefaultType(memberMapper.NativeDbType);
                     sqlSegment.ExpectType = expectType;
                     sqlSegment.TargetType = targetType;
                 }
@@ -134,7 +131,8 @@ public class DeleteVisitor : SqlVisitor
         //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
         //var orderId=10; Select(f=>new {OrderId=orderId,...}
         //Select(f=>new {OrderId=this.Order.Id, ...}
-        this.Evaluate(sqlSegment);
+        sqlSegment = this.Evaluate(sqlSegment);
+        this.ConvertTo(sqlSegment);
 
         //只有变量做参数化
         if (sqlSegment.IsParameterized || this.isParameterized)
@@ -190,32 +188,36 @@ public class DeleteVisitor : SqlVisitor
         {
             if (sqlSegment.IsConstantValue)
             {
-                if (!sqlSegment.IsParameter)
+                this.dbParameters ??= new();
+                IDbDataParameter dbParameter = null;
+                var parameterName = this.ormProvider.ParameterPrefix + memberMapper.MemberName;
+                if (this.dbParameters.Exists(f => f.ParameterName == parameterName))
+                    parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
+
+                if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
+                    sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
+
+                if (memberMapper.TypeHandler != null)
                 {
-                    sqlSegment.IsParameter = true;
-                    var parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
-                    this.dbParameters ??= new();
-                    IDbDataParameter dbParameter = null;
                     if (memberMapper.NativeDbType != null)
                         dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
                     else dbParameter = this.ormProvider.CreateParameter(parameterName, sqlSegment.Value);
-
-                    if (memberMapper.TypeHandler != null)
-                    {
-                        if (sqlSegment.IsArray)
-                        {
-                            var sqlSegments = sqlSegment.Value as List<SqlSegment>;
-                            sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
-                        }
-                        memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, sqlSegment.Value);
-                    }
-                    else dbParameter.Value = this.ormProvider.ToFieldValue(sqlSegment.Value, memberMapper.NativeDbType);
-
-                    this.dbParameters.Add(dbParameter);
-                    sqlSegment.Value = parameterName;
-                    sqlSegment.IsParameter = true;
-                    sqlSegment.IsConstantValue = false;
+                    memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, sqlSegment.Value);
                 }
+                else
+                {
+                    if (memberMapper.NativeDbType != null)
+                    {
+                        sqlSegment.Value = this.ormProvider.ToFieldValue(sqlSegment.Value, memberMapper.NativeDbType);
+                        dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
+                    }
+                    else dbParameter = this.ormProvider.CreateParameter(parameterName, sqlSegment.Value);
+                }
+
+                this.dbParameters.Add(dbParameter);
+                sqlSegment.Value = parameterName;
+                sqlSegment.IsParameter = true;
+                sqlSegment.IsConstantValue = false;
                 builder.Append(sqlSegment.Value.ToString());
             }
             else builder.Append(sqlSegment.ToString());

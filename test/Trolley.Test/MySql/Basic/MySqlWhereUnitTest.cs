@@ -50,12 +50,14 @@ public class MySqlWhereUnitTest : UnitTestBase
     [Fact]
     public async void WhereStringEnum()
     {
-        this.Initialize();
+        this.Initialize();      
         using var repository = dbFactory.Create();
         var result1 = await repository.QueryAsync<Company>(f => f.Nature == CompanyNature.Internet);
         Assert.True(result1.Count >= 2);
         var result2 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet);
         Assert.True(result2.Count >= 2);
-        //Assert.True(result1.Count == result2.Count);
+        var localNature = CompanyNature.Internet;
+        var result3 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == localNature);
+        Assert.True(result2.Count >= 2);
     }
 }

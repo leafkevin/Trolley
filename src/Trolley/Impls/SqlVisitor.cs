@@ -181,19 +181,14 @@ public class SqlVisitor : ISqlVisitor
                 //string.Concat,string.Format,string.Join等方法，参数都是object，
                 //最终变成string，字段访问、表达式需要强制转换,如：a.IntField + 5, b.Field等，常量不需要强转
                 sqlSegment = this.Visit(sqlSegment.Next(unaryExpr.Operand));
-                if (sqlSegment.TargetType != null && sqlSegment.Type != sqlSegment.TargetType)
+                if (sqlSegment.TargetType != null && sqlSegment.Type != sqlSegment.TargetType && sqlSegment.HasField && !sqlSegment.IsExpression)
                 {
-                    //单独对枚举做了特殊处理
-                    if (sqlSegment.Type.IsEnumType(out var enumType, out _) && sqlSegment.TargetType == typeof(string) && sqlSegment.IsConstantValue)
-                    {
+                    sqlSegment.TableSegment.Mapper ??= this.mapProvider.GetEntityMap(sqlSegment.TableSegment.EntityType);
+                    var memberMapper = sqlSegment.TableSegment.Mapper.GetMemberMap(sqlSegment.FromMember.Name);
+                    if (this.ormProvider.MapDefaultType(memberMapper.NativeDbType) != sqlSegment.TargetType)
+                        sqlSegment.Value = this.ormProvider.CastTo(sqlSegment.TargetType, this.GetQuotedValue(sqlSegment));
+                    if (sqlSegment.Type != sqlSegment.TargetType)
                         sqlSegment.Type = sqlSegment.TargetType;
-                        return sqlSegment.Change(Enum.GetName(enumType, sqlSegment.Value), true, true);
-                    }
-                    if (!sqlSegment.IsConstantValue)
-                    {
-                        sqlSegment.Type = sqlSegment.TargetType;
-                        return sqlSegment.Change(this.ormProvider.CastTo(sqlSegment.TargetType, this.GetQuotedValue(sqlSegment)), false, true);
-                    }
                 }
                 return sqlSegment;
         }
@@ -311,29 +306,11 @@ public class SqlVisitor : ISqlVisitor
         if (constantExpr.Value == null)
             return SqlSegment.Null;
 
-        var objValue = constantExpr.Value;
+        sqlSegment.Value = constantExpr.Value;
+        sqlSegment.IsConstantValue = true;
         //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
         //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
-        var currentType = constantExpr.Value.GetType();
-        if (sqlSegment.ExpectType != null)
-        {
-            if (sqlSegment.ExpectType != currentType)
-            {
-                if (sqlSegment.ExpectType.IsEnum)
-                    objValue = Enum.ToObject(sqlSegment.ExpectType, objValue);
-                else objValue = Convert.ChangeType(objValue, sqlSegment.ExpectType);
-                sqlSegment.Type = sqlSegment.ExpectType;
-            }
-            if (sqlSegment.TargetType != null)
-            {
-                if (sqlSegment.TargetType == typeof(string))
-                    objValue = objValue.ToString();
-                else objValue = Convert.ChangeType(objValue, sqlSegment.TargetType);
-                sqlSegment.Type = sqlSegment.TargetType;
-            }
-        }
-
-        return sqlSegment.Change(objValue);
+        return this.ConvertTo(sqlSegment);
     }
     public virtual SqlSegment VisitMethodCall(SqlSegment sqlSegment)
     {
@@ -940,7 +917,6 @@ public class SqlVisitor : ISqlVisitor
         }
         return completedExprs.ToArray();
     }
-
     public virtual List<ReaderField> AddTableRecursiveReaderFields(int readerIndex, TableSegment fromSegment)
     {
         var readerFields = new List<ReaderField>();
@@ -1108,6 +1084,29 @@ public class SqlVisitor : ISqlVisitor
         }
         isNeedAlias = queryVisitor.isNeedAlias;
         return result;
+    }
+    public SqlSegment ConvertTo(SqlSegment sqlSegment)
+    {
+        if (sqlSegment.TargetType != null && sqlSegment.TargetType != sqlSegment.Type)
+        {
+            if (sqlSegment.ExpectType != null)
+            {
+                var currentType = sqlSegment.Value.GetType();
+                if (sqlSegment.ExpectType != currentType)
+                {
+                    if (sqlSegment.ExpectType.IsEnumType(out var enumType, out _))
+                        sqlSegment.Value = Enum.ToObject(enumType, sqlSegment.Value);
+                    else sqlSegment.Value = Convert.ChangeType(sqlSegment.Value, sqlSegment.ExpectType);
+                    sqlSegment.Type = sqlSegment.ExpectType;
+                }
+            }
+
+            if (sqlSegment.TargetType == typeof(string))
+                sqlSegment.Value = sqlSegment.Value.ToString();
+            else sqlSegment.Value = Convert.ChangeType(sqlSegment.Value, sqlSegment.TargetType);
+            sqlSegment.Type = sqlSegment.TargetType;
+        }
+        return sqlSegment;
     }
     public List<ReaderField> FlattenFieldsTo(Type targetType, Expression toTargetExpr = null)
     {

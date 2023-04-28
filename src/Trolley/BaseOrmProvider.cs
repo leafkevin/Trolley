@@ -62,6 +62,7 @@ public abstract class BaseOrmProvider : IOrmProvider
         var fieldType = fieldValue.GetType();
         if (fieldType.IsNullableType(out var underlyingType))
             result = Convert.ChangeType(result, underlyingType);
+
         if (nativeDbType != null)
         {
             var defaultType = this.MapDefaultType(nativeDbType);
@@ -70,11 +71,11 @@ public abstract class BaseOrmProvider : IOrmProvider
 
             //Gender? gender = Gender.Male;
             //(int)gender.Value;
-            if (underlyingType.IsEnumType(out _, out var enumUnderlyingType))
+            if (underlyingType.IsEnum)
             {
                 if (defaultType == typeof(string))
                     result = result.ToString();
-                else result = Convert.ChangeType(result, enumUnderlyingType);
+                else result = Convert.ChangeType(result, defaultType);
             }
             else if (underlyingType == typeof(Guid))
             {
@@ -97,98 +98,30 @@ public abstract class BaseOrmProvider : IOrmProvider
         }
         return result;
     }
-    public virtual Expression ToFieldValue(Expression fieldValueExpr, object nativeDbType)
-    {
-        var resultExpr = fieldValueExpr;
-        if (fieldValueExpr.Type.IsNullableType(out var underlyingType))
-            resultExpr = Expression.Property(resultExpr, "Value");
-
-        if (nativeDbType != null)
-        {
-            var defaultType = this.MapDefaultType(nativeDbType);
-            //Gender? gender = Gender.Male;
-            //(int)gender.Value;
-            if (underlyingType.IsEnumType(out _, out var enumUnderlyingType))
-            {
-                if (defaultType == typeof(string))
-                {
-                    var methodInfo = typeof(Enum).GetMethod(nameof(Enum.GetName), new Type[] { typeof(Type), typeof(object) });
-                    var convertExpr = Expression.Convert(resultExpr, typeof(object));
-                    resultExpr = Expression.Call(methodInfo, Expression.Constant(underlyingType), convertExpr);
-                }
-                else resultExpr = Expression.Convert(resultExpr, enumUnderlyingType);
-            }
-            else if (underlyingType == typeof(Guid))
-            {
-                if (defaultType != underlyingType)
-                {
-                    if (defaultType == typeof(string))
-                        resultExpr = Expression.Call(resultExpr, typeof(Guid).GetMethod(nameof(Guid.ToString), Type.EmptyTypes));
-                    if (defaultType == typeof(byte[]))
-                        resultExpr = Expression.Call(resultExpr, typeof(Guid).GetMethod(nameof(Guid.ToByteArray), Type.EmptyTypes));
-                }
-            }
-            else if (underlyingType == typeof(TimeSpan) || underlyingType == typeof(TimeOnly))
-            {
-                if (defaultType == typeof(long))
-                    resultExpr = Expression.Property(resultExpr, "Ticks");
-            }
-            else
-            {
-                var typeCode = Type.GetTypeCode(defaultType);
-                string toTypeMethod = null;
-                switch (typeCode)
-                {
-                    case TypeCode.Boolean: toTypeMethod = nameof(Convert.ToBoolean); break;
-                    case TypeCode.Char: toTypeMethod = nameof(Convert.ToChar); break;
-                    case TypeCode.Byte: toTypeMethod = nameof(Convert.ToByte); break;
-                    case TypeCode.SByte: toTypeMethod = nameof(Convert.ToSByte); break;
-                    case TypeCode.Int16: toTypeMethod = nameof(Convert.ToInt16); break;
-                    case TypeCode.UInt16: toTypeMethod = nameof(Convert.ToUInt16); break;
-                    case TypeCode.Int32: toTypeMethod = nameof(Convert.ToInt32); break;
-                    case TypeCode.UInt32: toTypeMethod = nameof(Convert.ToUInt32); break;
-                    case TypeCode.Int64: toTypeMethod = nameof(Convert.ToInt64); break;
-                    case TypeCode.UInt64: toTypeMethod = nameof(Convert.ToUInt64); break;
-                    case TypeCode.Single: toTypeMethod = nameof(Convert.ToSingle); break;
-                    case TypeCode.Double: toTypeMethod = nameof(Convert.ToDouble); break;
-                    case TypeCode.Decimal: toTypeMethod = nameof(Convert.ToDecimal); break;
-                    case TypeCode.DateTime: toTypeMethod = nameof(Convert.ToDateTime); break;
-                    case TypeCode.String: toTypeMethod = nameof(Convert.ToString); break;
-                }
-                if (!string.IsNullOrEmpty(toTypeMethod))
-                {
-                    var methodInfo = typeof(Convert).GetMethod(toTypeMethod, new Type[] { underlyingType });
-                    resultExpr = Expression.Call(methodInfo, resultExpr);
-                }
-                else resultExpr = Expression.Convert(resultExpr, defaultType);
-            }
-        }
-        return resultExpr;
-    }
     public virtual string GetBinaryOperator(ExpressionType nodeType) =>
-       nodeType switch
-       {
-           ExpressionType.Equal => "=",
-           ExpressionType.NotEqual => "<>",
-           ExpressionType.GreaterThan => ">",
-           ExpressionType.GreaterThanOrEqual => ">=",
-           ExpressionType.LessThan => "<",
-           ExpressionType.LessThanOrEqual => "<=",
-           ExpressionType.AndAlso => "AND",
-           ExpressionType.OrElse => "OR",
-           ExpressionType.Add => "+",
-           ExpressionType.Subtract => "-",
-           ExpressionType.Multiply => "*",
-           ExpressionType.Divide => "/",
-           ExpressionType.Modulo => "%",
-           ExpressionType.Coalesce => "COALESCE",
-           ExpressionType.And => "&",
-           ExpressionType.Or => "|",
-           ExpressionType.ExclusiveOr => "^",
-           ExpressionType.LeftShift => "<<",
-           ExpressionType.RightShift => ">>",
-           _ => nodeType.ToString()
-       };
+        nodeType switch
+        {
+            ExpressionType.Equal => "=",
+            ExpressionType.NotEqual => "<>",
+            ExpressionType.GreaterThan => ">",
+            ExpressionType.GreaterThanOrEqual => ">=",
+            ExpressionType.LessThan => "<",
+            ExpressionType.LessThanOrEqual => "<=",
+            ExpressionType.AndAlso => "AND",
+            ExpressionType.OrElse => "OR",
+            ExpressionType.Add => "+",
+            ExpressionType.Subtract => "-",
+            ExpressionType.Multiply => "*",
+            ExpressionType.Divide => "/",
+            ExpressionType.Modulo => "%",
+            ExpressionType.Coalesce => "COALESCE",
+            ExpressionType.And => "&",
+            ExpressionType.Or => "|",
+            ExpressionType.ExclusiveOr => "^",
+            ExpressionType.LeftShift => "<<",
+            ExpressionType.RightShift => ">>",
+            _ => nodeType.ToString()
+        };
     public abstract bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
     public abstract bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
     public override int GetHashCode() => HashCode.Combine(this.DatabaseType);

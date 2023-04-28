@@ -922,12 +922,9 @@ public class QueryVisitor : SqlVisitor
 
                         //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
                         //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
-                        if (memberMapper.MemberType.IsEnumType(out var expectType, out _))
+                        if (this.isWhere && memberMapper.MemberType.IsEnumType(out var expectType, out _))
                         {
-                            Type targetType = null;
-                            if (this.ormProvider.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
-                                targetType = typeof(string);
-                            else targetType = expectType;
+                            var targetType = this.ormProvider.MapDefaultType(memberMapper.NativeDbType);
                             sqlSegment.ExpectType = expectType;
                             sqlSegment.TargetType = targetType;
                         }
@@ -960,7 +957,8 @@ public class QueryVisitor : SqlVisitor
         //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
         //var orderId=10; Select(f=>new {OrderId=orderId,...}
         //Select(f=>new {OrderId=this.Order.Id, ...}
-        this.Evaluate(sqlSegment);
+        sqlSegment = this.Evaluate(sqlSegment);
+        this.ConvertTo(sqlSegment);
 
         //只有变量做参数化
         if (sqlSegment.IsParameterized || this.isParameterized)
