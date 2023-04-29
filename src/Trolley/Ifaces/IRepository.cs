@@ -59,21 +59,6 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns></returns>
     IQuery<T> From<T>(Func<IFromQuery, IFromQuery<T>> subQuery, char tableAsStart = 'a');
     /// <summary>
-    /// 使用原始SQL创建查询对象，用法：
-    /// <code>
-    /// repository.From&lt;User&gt;("SELECT a.Id,b.Name,b.Name CompanyName FROM sys_user a,sys_company b WHERE a.CompanyId=b.Id and b.Id=@CompanyId", new { CompanyId = 1 }, 'a')
-    ///     .First(x =&gt; x);
-    /// </code>
-    /// </summary>
-    /// <typeparam name="T">实体类型</typeparam>
-    /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">SQL中使用的参数，可以是匿名对象或是实体对象，如：
-    /// <code>new { Id = 1, Name = "xxx" } 或是 new Order{ ... }</code>
-    /// </param>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    //IQuery<T> FromRaw<T>(string rawSql, object parameters = null, char tableAsStart = 'a');
-    /// <summary>
     /// 使用CTE子句创建查询对象，不能自我引用不能递归查询，用法：
     /// <code>
     /// repository

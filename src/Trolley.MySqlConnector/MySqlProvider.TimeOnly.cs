@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace Trolley;
+namespace Trolley.MySqlConnector;
 
 partial class MySqlProvider
 {

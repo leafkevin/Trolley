@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace Trolley;
+
 public class SetField
 {
     public MemberMap MemberMapper { get; set; }

@@ -123,6 +123,11 @@ public partial class SqlServerProvider : BaseOrmProvider
         parameter.Value = value;
         return parameter;
     }
+    public override IQueryVisitor NewQueryVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+       => new SqlServerQueryVisitor(dbKey, this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
+    public override IUpdateVisitor NewUpdateVisitor(string dbKey, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+        => new SqlServerUpdateVisitor(dbKey, this, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix);
+
     public override string GetFieldName(string propertyName) => "[" + propertyName + "]";
     public override string GetTableName(string entityName) => "[" + entityName + "]";
     public override string GetPagingTemplate(int? skip, int? limit, string orderBy = null)

@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Trolley;
 
-public class CreateVisitor : SqlVisitor
+public class CreateVisitor : SqlVisitor, ICreateVisitor
 {
     private string selectSql = null;
     private string whereSql = null;
@@ -45,7 +45,7 @@ public class CreateVisitor : SqlVisitor
         dbParameters = this.dbParameters;
         return builder.ToString();
     }
-    public virtual CreateVisitor From(Expression fieldSelector)
+    public virtual ICreateVisitor From(Expression fieldSelector)
     {
         var lambdaExpr = fieldSelector as LambdaExpression;
         for (int i = 0; i < lambdaExpr.Parameters.Count; i++)
@@ -70,7 +70,7 @@ public class CreateVisitor : SqlVisitor
         this.selectSql = sqlSegment.ToString();
         return this;
     }
-    public virtual CreateVisitor Where(Expression whereExpr)
+    public virtual ICreateVisitor Where(Expression whereExpr)
     {
         this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
@@ -79,7 +79,7 @@ public class CreateVisitor : SqlVisitor
         this.isWhere = false;
         return this;
     }
-    public virtual CreateVisitor And(Expression whereExpr)
+    public virtual ICreateVisitor And(Expression whereExpr)
     {
         this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
@@ -144,7 +144,6 @@ public class CreateVisitor : SqlVisitor
                 if (this.isWhere && memberMapper.MemberType.IsEnumType(out var expectType, out _))
                 {
                     var targetType = this.ormProvider.MapDefaultType(memberMapper.NativeDbType);
-                    sqlSegment.ExpectType = expectType;
                     sqlSegment.ExpectType = expectType;
                     sqlSegment.TargetType = targetType;
                 }

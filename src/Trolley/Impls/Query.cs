@@ -80,7 +80,7 @@ class Query<T> : IQuery<T>
         var newVisitor = this.visitor.Clone(tableAsStart, $"p{this.withIndex++}w");
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
         var rawSql = newVisitor.BuildSql(out var dbDataParameters, out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, dbDataParameters, readerFields);
+        this.visitor.WithCteTable(typeof(TOther), cteTableName, true, rawSql, dbDataParameters, readerFields);
         return new Query<T, TOther>(this.connection, this.transaction, this.visitor, this.withIndex);
     }
     #endregion

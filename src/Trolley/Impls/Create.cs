@@ -26,13 +26,15 @@ class Create<TEntity> : ICreate<TEntity>
     private readonly IDbTransaction transaction;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
+    private readonly bool isParameterized;
 
-    public Create(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
+    public Create(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false)
     {
         this.connection = connection;
         this.transaction = transaction;
         this.ormProvider = ormProvider;
         this.mapProvider = mapProvider;
+        this.isParameterized = isParameterized;
     }
     public ICreated<TEntity> RawSql(string rawSql, object parameters)
     {
@@ -63,7 +65,7 @@ class Create<TEntity> : ICreate<TEntity>
             throw new ArgumentNullException(nameof(fieldSelector));
 
         var entityType = typeof(TEntity);
-        var visitor = new CreateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType).From(fieldSelector);
+        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
         return new ContinuedCreate<TEntity, TSource>(this.connection, this.transaction, visitor);
     }
     public IContinuedCreate<TEntity, T1, T2> From<T1, T2>(Expression<Func<T1, T2, object>> fieldSelector)
@@ -72,7 +74,8 @@ class Create<TEntity> : ICreate<TEntity>
             throw new ArgumentNullException(nameof(fieldSelector));
 
         var entityType = typeof(TEntity);
-        var visitor = new CreateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType).From(fieldSelector);
+
+        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
         return new ContinuedCreate<TEntity, T1, T2>(this.connection, this.transaction, visitor);
     }
     public IContinuedCreate<TEntity, T1, T2, T3> From<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> fieldSelector)
@@ -81,7 +84,7 @@ class Create<TEntity> : ICreate<TEntity>
             throw new ArgumentNullException(nameof(fieldSelector));
 
         var entityType = typeof(TEntity);
-        var visitor = new CreateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType).From(fieldSelector);
+        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
         return new ContinuedCreate<TEntity, T1, T2, T3>(this.connection, this.transaction, visitor);
     }
     public IContinuedCreate<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, object>> fieldSelector)
@@ -90,7 +93,7 @@ class Create<TEntity> : ICreate<TEntity>
             throw new ArgumentNullException(nameof(fieldSelector));
 
         var entityType = typeof(TEntity);
-        var visitor = new CreateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType).From(fieldSelector);
+        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
         return new ContinuedCreate<TEntity, T1, T2, T3, T4>(this.connection, this.transaction, visitor);
     }
     public IContinuedCreate<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, object>> fieldSelector)
@@ -99,7 +102,7 @@ class Create<TEntity> : ICreate<TEntity>
             throw new ArgumentNullException(nameof(fieldSelector));
 
         var entityType = typeof(TEntity);
-        var visitor = new CreateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType).From(fieldSelector);
+        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
         return new ContinuedCreate<TEntity, T1, T2, T3, T4, T5>(this.connection, this.transaction, visitor);
     }
 }
@@ -917,9 +920,9 @@ class ContinuedCreateBase
 {
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly CreateVisitor visitor;
+    protected readonly ICreateVisitor visitor;
 
-    public ContinuedCreateBase(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+    public ContinuedCreateBase(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -965,7 +968,7 @@ class ContinuedCreateBase
 }
 class ContinuedCreate<TEntity, T1> : ContinuedCreateBase, IContinuedCreate<TEntity, T1>
 {
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
         : base(connection, transaction, visitor) { }
     public IContinuedCreate<TEntity, T1> Where(Expression<Func<T1, bool>> predicate)
     {
@@ -987,7 +990,7 @@ class ContinuedCreate<TEntity, T1> : ContinuedCreateBase, IContinuedCreate<TEnti
 }
 class ContinuedCreate<TEntity, T1, T2> : ContinuedCreateBase, IContinuedCreate<TEntity, T1, T2>
 {
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
         : base(connection, transaction, visitor) { }
     public IContinuedCreate<TEntity, T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
     {
@@ -1009,7 +1012,7 @@ class ContinuedCreate<TEntity, T1, T2> : ContinuedCreateBase, IContinuedCreate<T
 }
 class ContinuedCreate<TEntity, T1, T2, T3> : ContinuedCreateBase, IContinuedCreate<TEntity, T1, T2, T3>
 {
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
         : base(connection, transaction, visitor) { }
     public IContinuedCreate<TEntity, T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
     {
@@ -1031,7 +1034,7 @@ class ContinuedCreate<TEntity, T1, T2, T3> : ContinuedCreateBase, IContinuedCrea
 }
 class ContinuedCreate<TEntity, T1, T2, T3, T4> : ContinuedCreateBase, IContinuedCreate<TEntity, T1, T2, T3, T4>
 {
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
         : base(connection, transaction, visitor) { }
     public IContinuedCreate<TEntity, T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
     {
@@ -1053,7 +1056,7 @@ class ContinuedCreate<TEntity, T1, T2, T3, T4> : ContinuedCreateBase, IContinued
 }
 class ContinuedCreate<TEntity, T1, T2, T3, T4, T5> : ContinuedCreateBase, IContinuedCreate<TEntity, T1, T2, T3, T4, T5>
 {
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, CreateVisitor visitor)
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
         : base(connection, transaction, visitor) { }
     public IContinuedCreate<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
     {

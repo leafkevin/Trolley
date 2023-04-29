@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Trolley;
 using Trolley.AspNetCore;
+using Trolley.MySqlConnector;
 using Trolley.WebApiTest;
 
 var builder = WebApplication.CreateBuilder(args);

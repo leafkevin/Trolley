@@ -1263,15 +1263,15 @@ public class Repository : IRepository
     #endregion
 
     #region Create
-    public ICreate<TEntity> Create<TEntity>() => new Create<TEntity>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider);
+    public ICreate<TEntity> Create<TEntity>() => new Create<TEntity>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, this.isParameterized);
     #endregion
 
     #region Update
-    public IUpdate<T> Update<T>() => new Update<T>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, this.isParameterized);
+    public IUpdate<TEntity> Update<TEntity>() => new Update<TEntity>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, this.isParameterized);
     #endregion
 
     #region Delete
-    public IDelete<T> Delete<T>() => new Delete<T>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, this.isParameterized);
+    public IDelete<TEntity> Delete<TEntity>() => new Delete<TEntity>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, this.isParameterized);
     #endregion
 
     #region Exists

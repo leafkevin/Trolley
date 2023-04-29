@@ -9,23 +9,23 @@ using System.Text;
 
 namespace Trolley;
 
-public class QueryVisitor : SqlVisitor
+public class QueryVisitor : SqlVisitor, IQueryVisitor
 {
     private static ConcurrentDictionary<int, string> sqlCache = new();
     private static ConcurrentDictionary<int, object> getterCache = new();
     private static ConcurrentDictionary<int, object> setterCache = new();
-    private string sql = string.Empty;
-    private string whereSql = string.Empty;
-    private string groupBySql = string.Empty;
-    private string havingSql = string.Empty;
-    private string orderBySql = string.Empty;
-    private int? skip = null;
-    private int? limit = null;
-    private bool isDistinct = false;
-    private string cteTableSql = null;
-    private List<TableSegment> includeSegments = null;
-    private TableSegment lastIncludeSegment = null;
-    private List<ReaderField> groupFields = null;
+    protected string sql = string.Empty;
+    protected string whereSql = string.Empty;
+    protected string groupBySql = string.Empty;
+    protected string havingSql = string.Empty;
+    protected string orderBySql = string.Empty;
+    protected int? skip = null;
+    protected int? limit = null;
+    protected bool isDistinct = false;
+    protected string cteTableSql = null;
+    protected List<TableSegment> includeSegments = null;
+    protected TableSegment lastIncludeSegment = null;
+    protected List<ReaderField> groupFields = null;
 
     public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix)
@@ -1019,6 +1019,28 @@ public class QueryVisitor : SqlVisitor
         });
     }
 
+    protected void InitMapTableReaderFields(TableSegment tableSegment, List<ReaderField> readerFields)
+    {
+        if (readerFields == null || readerFields.Count == 0)
+            return;
+
+        foreach (var readerField in readerFields)
+        {
+            if (readerField.FieldType == ReaderFieldType.Entity
+                || readerField.FieldType == ReaderFieldType.AnonymousObject)
+            {
+                readerField.TableSegment = tableSegment;
+                this.InitMapTableReaderFields(tableSegment, readerField.ReaderFields);
+            }
+            else
+            {
+                readerField.TableSegment = tableSegment;
+                //中间临时表的字段，可能会有更改，优先取TargetMember，没有则取FromMember
+                var memberInfo = readerField.TargetMember ?? readerField.FromMember;
+                readerField.Body = this.GetFieldName(tableSegment, memberInfo.Name);
+            }
+        }
+    }
     private ReaderField FindReaderField(MemberExpression memberExpr, List<ReaderField> readerFields)
     {
         var currentExpr = memberExpr;
@@ -1317,28 +1339,6 @@ public class QueryVisitor : SqlVisitor
             if (!string.IsNullOrEmpty(suffix))
                 return fieldName + suffix;
             return fieldName;
-        }
-    }
-    private void InitMapTableReaderFields(TableSegment tableSegment, List<ReaderField> readerFields)
-    {
-        if (readerFields == null || readerFields.Count == 0)
-            return;
-
-        foreach (var readerField in readerFields)
-        {
-            if (readerField.FieldType == ReaderFieldType.Entity
-                || readerField.FieldType == ReaderFieldType.AnonymousObject)
-            {
-                readerField.TableSegment = tableSegment;
-                this.InitMapTableReaderFields(tableSegment, readerField.ReaderFields);
-            }
-            else
-            {
-                readerField.TableSegment = tableSegment;
-                //中间临时表的字段，可能会有更改，优先取TargetMember，没有则取FromMember
-                var memberInfo = readerField.TargetMember ?? readerField.FromMember;
-                readerField.Body = this.GetFieldName(tableSegment, memberInfo.Name);
-            }
         }
     }
     private TableSegment AddIncludeTables(MemberExpression memberExpr)

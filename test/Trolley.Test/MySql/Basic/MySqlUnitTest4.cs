@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
+using Trolley.MySqlConnector;
 using Xunit;
 
 namespace Trolley.Test.MySql;

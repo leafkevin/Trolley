@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Trolley;
 
-public class DeleteVisitor : SqlVisitor
+public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 {
     private readonly TableSegment tableSegment;
     private string whereSql = string.Empty;

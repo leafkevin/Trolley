@@ -7,12 +7,12 @@ using System.Text;
 
 namespace Trolley;
 
-public class UpdateVisitor : SqlVisitor
+public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 {
-    private bool isFrom = false;
-    private bool isJoin = false;
-    private string whereSql = string.Empty;
-    private string setSql = string.Empty;
+    protected bool isFrom = false;
+    protected bool isJoin = false;
+    protected string whereSql = string.Empty;
+    protected string setSql = string.Empty;
 
     public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix)
@@ -34,7 +34,7 @@ public class UpdateVisitor : SqlVisitor
         {
             case DatabaseType.MySql:
                 if (this.isNeedAlias) builder.Append("a ");
-                if (isJoin && this.tables.Count > 1)
+                if (this.isJoin && this.tables.Count > 1)
                 {
                     for (var i = 1; i < this.tables.Count; i++)
                     {
@@ -170,7 +170,7 @@ public class UpdateVisitor : SqlVisitor
             case ExpressionType.MemberAccess:
                 var memberExpr = lambdaExpr.Body as MemberExpression;
                 memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
-                setFields.Add(this.AddMemberElement(fieldValue, memberMapper));
+                setFields.Add(this.AddMemberElement(memberMapper, fieldValue));
                 break;
             case ExpressionType.New:
                 this.InitTableAlias(lambdaExpr);
@@ -450,10 +450,9 @@ public class UpdateVisitor : SqlVisitor
         //var orderId=10; Select(f=>new {OrderId=orderId,...}
         //Select(f=>new {OrderId=this.Order.Id, ...}
         sqlSegment = this.Evaluate(sqlSegment);
-        this.ConvertTo(sqlSegment);
 
-        //暂时不做参数化，后面统一做参数化
-        return sqlSegment;
+        //暂时不做参数化，只有WithBy场景还没有参数化，走RepositoryHelper的参数化处理
+        return this.ConvertTo(sqlSegment);
     }
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
     {
@@ -469,7 +468,7 @@ public class UpdateVisitor : SqlVisitor
             throw new NotSupportedException($"不支持的表达式访问,{memberInitExpr}");
         return this.Evaluate(sqlSegment);
     }
-    private void InitTableAlias(LambdaExpression lambdaExpr)
+    protected void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.tableAlias.Clear();
         lambdaExpr.Body.GetParameterNames(out var parameters);
@@ -491,7 +490,7 @@ public class UpdateVisitor : SqlVisitor
             index++;
         }
     }
-    private SetField AddMemberElement(object fieldValue, MemberMap memberMapper)
+    protected SetField AddMemberElement(MemberMap memberMapper, object fieldValue)
     {
         if (fieldValue is DBNull)
             return new SetField { MemberMapper = memberMapper, Value = "NULL" };
@@ -526,7 +525,7 @@ public class UpdateVisitor : SqlVisitor
             return new SetField { MemberMapper = memberMapper, Value = parameterName };
         }
     }
-    private SetField AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)
+    protected SetField AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)
     {
         if (sqlSegment == SqlSegment.Null)
             return new SetField { MemberMapper = memberMapper, Value = "NULL" };
