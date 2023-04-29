@@ -11,7 +11,12 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace Trolley;
-
+public class SetField
+{
+    public MemberMap MemberMapper { get; set; }
+    public string Value { get; set; }
+    public List<IDbDataParameter> DbParameters { get; set; }
+}
 /// <summary>
 /// PostgreSql:
 /// UPDATE sys_order a 
@@ -57,13 +62,15 @@ class Update<TEntity> : IUpdate<TEntity>
     private readonly IDbTransaction transaction;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
+    private readonly bool isParameterized;
 
-    public Update(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
+    public Update(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false)
     {
         this.connection = connection;
         this.transaction = transaction;
         this.ormProvider = ormProvider;
         this.mapProvider = mapProvider;
+        this.isParameterized = isParameterized;
     }
     public IUpdateSet<TEntity> WithBy<TField>(TField parameters, int bulkCount = 500)
     {
@@ -93,37 +100,18 @@ class Update<TEntity> : IUpdate<TEntity>
                 break;
             case ExpressionType.New:
                 var newExpr = fieldsExpr.Body as NewExpression;
-
-                UpdateVisitor visitor = null;
-                bool hasParameterFields = false;
+                var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
+                bool hasParameterFields = false, isParameterField;
                 for (int i = 0; i < newExpr.Arguments.Count; i++)
                 {
                     var memberInfo = newExpr.Members[i];
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out memberMapper))
                         continue;
                     var argumentExpr = newExpr.Arguments[i];
-                    if (argumentExpr is MemberExpression newMemberExpr && newMemberExpr.Member.Name == memberInfo.Name)
-                    {
-                        setFields.Add(new SetField { MemberMapper = memberMapper });
+                    if (i == 0) setFields.Add(visitor.SetValue(fieldsExpr, memberMapper, argumentExpr, out isParameterField));
+                    else setFields.Add(visitor.SetValue(memberMapper, argumentExpr, out isParameterField));
+                    if (isParameterField)
                         hasParameterFields = true;
-                    }
-                    else
-                    {
-                        SqlSegment sqlSegment = null;
-                        List<IDbDataParameter> dbParameters = null;
-                        if (visitor == null)
-                        {
-                            visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity));
-                            sqlSegment = visitor.SetValue(fieldsExpr, argumentExpr, out dbParameters);
-                        }
-                        else sqlSegment = visitor.SetValue(argumentExpr, out dbParameters);
-                        setFields.Add(new SetField
-                        {
-                            MemberMapper = memberMapper,
-                            Value = sqlSegment.Value.ToString(),
-                            DbParameters = dbParameters
-                        });
-                    }
                 }
                 if (!hasParameterFields)
                     throw new NotSupportedException("WithBy方法参数fieldsExpr需要有直接成员访问的栏位才能被parameters参数进行设置，如：WithBy(f => new { f.OrderNo ,f.TotalAmount }, parameters)");
@@ -138,7 +126,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
 
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity));
+        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor.Set(fieldsExpr));
     }
     public IUpdateSetting<TEntity> Set<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr)
@@ -148,7 +136,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
 
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity));
+        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor.SetFromQuery(fieldsExpr));
     }
     public IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsExpr)
@@ -158,7 +146,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
 
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity));
+        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
         if (condition) visitor.Set(fieldsExpr);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
@@ -169,7 +157,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
 
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity));
+        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
         if (condition) visitor.SetFromQuery(fieldsExpr, null);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
@@ -183,7 +171,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity));
+        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor.Set(fieldExpr, fieldValue));
     }
     public IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
@@ -194,9 +182,10 @@ class Update<TEntity> : IUpdate<TEntity>
             throw new ArgumentNullException(nameof(subQueryExpr));
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
+        if (subQueryExpr.Body.NodeType != ExpressionType.New && subQueryExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(subQueryExpr)},只支持New或MemberInit类型表达式");
 
-        var entityType = typeof(TEntity);
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType);
+        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor.SetFromQuery(fieldExpr, subQueryExpr));
     }
     public IUpdateSetting<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -208,7 +197,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity));
+        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
         if (condition) visitor.Set(fieldExpr, fieldValue);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
@@ -220,53 +209,54 @@ class Update<TEntity> : IUpdate<TEntity>
             throw new ArgumentNullException(nameof(subQueryExpr));
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
+        if (subQueryExpr.Body.NodeType != ExpressionType.New && subQueryExpr.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(subQueryExpr)},只支持New或MemberInit类型表达式");
 
-        var entityType = typeof(TEntity);
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, entityType);
+        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
         if (condition) visitor.SetFromQuery(fieldExpr, subQueryExpr);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
 
     public IUpdateFrom<TEntity, T> From<T>()
     {
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity))
+        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized)
             .From(typeof(T));
         return new UpdateFrom<TEntity, T>(this.connection, this.transaction, visitor);
     }
     public IUpdateFrom<TEntity, T1, T2> From<T1, T2>()
     {
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity))
+        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized)
             .From(typeof(T1), typeof(T2));
         return new UpdateFrom<TEntity, T1, T2>(this.connection, this.transaction, visitor);
     }
     public IUpdateFrom<TEntity, T1, T2, T3> From<T1, T2, T3>()
     {
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity))
+        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized)
              .From(typeof(T1), typeof(T2), typeof(T3));
         return new UpdateFrom<TEntity, T1, T2, T3>(this.connection, this.transaction, visitor);
     }
     public IUpdateFrom<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>()
     {
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity))
+        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized)
              .From(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         return new UpdateFrom<TEntity, T1, T2, T3, T4>(this.connection, this.transaction, visitor);
     }
     public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
     {
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity))
+        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized)
              .From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
         return new UpdateFrom<TEntity, T1, T2, T3, T4, T5>(this.connection, this.transaction, visitor);
     }
 
     public IUpdateJoin<TEntity, T> InnerJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
     {
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity))
+        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized)
             .Join("INNER JOIN", typeof(T), joinOn);
         return new UpdateJoin<TEntity, T>(this.connection, this.transaction, visitor);
     }
     public IUpdateJoin<TEntity, T> LeftJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
     {
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity))
+        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized)
            .Join("INNER JOIN", typeof(T), joinOn);
         return new UpdateJoin<TEntity, T>(this.connection, this.transaction, visitor);
     }
@@ -1113,12 +1103,6 @@ class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
             this.visitor.And(predicate);
         return this;
     }
-}
-class SetField
-{
-    public MemberMap MemberMapper { get; set; }
-    public string Value { get; set; }
-    public List<IDbDataParameter> DbParameters { get; set; }
 }
 class UpdateFrom<TEntity, T1> : UpdateBase, IUpdateFrom<TEntity, T1>
 {

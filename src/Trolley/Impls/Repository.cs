@@ -1267,11 +1267,11 @@ public class Repository : IRepository
     #endregion
 
     #region Update
-    public IUpdate<T> Update<T>() => new Update<T>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider);
+    public IUpdate<T> Update<T>() => new Update<T>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, this.isParameterized);
     #endregion
 
     #region Delete
-    public IDelete<T> Delete<T>() => new Delete<T>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider);
+    public IDelete<T> Delete<T>() => new Delete<T>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, this.isParameterized);
     #endregion
 
     #region Exists
@@ -1622,6 +1622,13 @@ public class Repository : IRepository
     public IRepository WithParameterized(bool isParameterized = true)
     {
         this.isParameterized = isParameterized;
+        return this;
+    }
+    public IRepository With(OrmDbFactoryOptions options)
+    {
+        if (options == null) return this;
+        this.isParameterized = options.IsParameterized;
+        this.connection.CommandTimeout = options.Timeout;
         return this;
     }
     public void BeginTransaction()

@@ -18,13 +18,15 @@ class Delete<TEntity> : IDelete<TEntity>
     private readonly IDbTransaction transaction;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
+    private readonly bool isParameterized;
 
-    public Delete(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
+    public Delete(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false)
     {
         this.connection = connection;
         this.transaction = transaction;
         this.ormProvider = ormProvider;
         this.mapProvider = mapProvider;
+        this.isParameterized = isParameterized;
     }
 
     public IDeleted<TEntity> Where(object keys)
@@ -39,7 +41,7 @@ class Delete<TEntity> : IDelete<TEntity>
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        var visitor = new DeleteVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity));
+        var visitor = new DeleteVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
         visitor.Where(predicate);
         return new Deleting<TEntity>(this.connection, this.transaction, visitor);
     }

@@ -14,5 +14,5 @@ public class OrmDbFactoryOptions
     /// var result1 = await repository.QueryAsync&lt;Product&gt;(f =&gt; f.ProductNo.Contains(productNo));
     /// var result2 = await repository.QueryAsync&lt;Product&gt;(f =&gt; f.ProductNo.Contains("PN-001"));//常量，不会使用参数化
     /// </summary>
-    public bool IsNeedParameter { get; set; }
+    public bool IsParameterized { get; set; }
 }

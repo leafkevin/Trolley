@@ -163,7 +163,10 @@ class MySqlProvider : DbHelper
 
             case "bool": return "MySqlDbType.Bool";
 
-            case "tinyint": return isUnsigned ? "MySqlDbType.UByte" : "MySqlDbType.Byte";
+            case "tinyint": 
+            if(columnInfo.ColumnType == "tinyint(1)") return "MySqlDbType.Bool";
+            return isUnsigned ? "MySqlDbType.UByte" : "MySqlDbType.Byte";
+
             case "smallint": return isUnsigned ? "MySqlDbType.UInt16" : "MySqlDbType.Int16";
             case "mediumint": return isUnsigned ? "MySqlDbType.UInt24" : "MySqlDbType.Int24";
             case "int": return isUnsigned ? "MySqlDbType.UInt32" : "MySqlDbType.Int32";

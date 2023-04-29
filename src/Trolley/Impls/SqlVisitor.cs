@@ -944,13 +944,17 @@ public class SqlVisitor : ISqlVisitor
         //数组，直接返回@p0,@p1,@p2,@p3或是@Name0,@Name1,@Name2,@Name3
         if (sqlSegment.Value is IEnumerable objValues && objValues is not string)
         {
-            var paramPrefix = this.ormProvider.ParameterPrefix + this.parameterPrefix;
+            string parameterPrefix = null;
+            if (string.IsNullOrEmpty(sqlSegment.ParameterName))
+                parameterPrefix = this.ormProvider.ParameterPrefix + this.parameterPrefix;
+            else parameterPrefix = this.ormProvider.ParameterPrefix + sqlSegment.ParameterName;
+
             int index = 0;
             var builder = new StringBuilder();
             foreach (var objValue in objValues)
             {
                 if (index > 0) builder.Append(',');
-                var parameterName = paramPrefix + this.dbParameters.Count.ToString();
+                var parameterName = parameterPrefix + this.dbParameters.Count.ToString();
                 builder.Append(parameterName);
                 this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, objValue));
                 index++;
@@ -959,7 +963,10 @@ public class SqlVisitor : ISqlVisitor
         }
         else
         {
-            var parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
+            string parameterName = null;
+            if (string.IsNullOrEmpty(sqlSegment.ParameterName))
+                parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
+            else parameterName = this.ormProvider.ParameterPrefix + sqlSegment.ParameterName;
             this.dbParameters.Add(this.ormProvider.CreateParameter(parameterName, sqlSegment.Value));
             return sqlSegment.Change(parameterName, false);
         }

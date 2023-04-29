@@ -69,6 +69,7 @@ public class SqlSegment
     /// 如：Enum类型，对应的数据库字段类型是VARCHAR时，就不一致，ExpectType是枚举类型，TargetType是字符串类型
     /// </summary>
     public Type TargetType { get; set; }
+    public string ParameterName { get; set; }
     public TableSegment TableSegment { get; set; }
     public ReaderFieldType MemberType { get; set; }
     public MemberInfo FromMember { get; set; }
