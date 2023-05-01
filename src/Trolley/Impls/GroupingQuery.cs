@@ -8,9 +8,9 @@ class GroupingQuery<T, TGrouping> : IGroupingQuery<T, TGrouping>
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -68,9 +68,9 @@ class GroupingQuery<T1, T2, TGrouping> : IGroupingQuery<T1, T2, TGrouping>
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -128,9 +128,9 @@ class GroupingQuery<T1, T2, T3, TGrouping> : IGroupingQuery<T1, T2, T3, TGroupin
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -188,9 +188,9 @@ class GroupingQuery<T1, T2, T3, T4, TGrouping> : IGroupingQuery<T1, T2, T3, T4, 
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -248,9 +248,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IGroupingQuery<T1, T2, T3, 
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -308,9 +308,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IGroupingQuery<T1, T2, 
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -368,9 +368,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IGroupingQuery<T1, 
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -428,9 +428,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : IGroupingQuery<
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -488,9 +488,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : IGroupingQu
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -548,9 +548,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : IGroup
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -608,9 +608,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : I
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -668,9 +668,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -728,9 +728,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGro
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -788,9 +788,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14,
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -848,9 +848,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14,
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;

@@ -7,97 +7,97 @@ namespace Trolley;
 
 class FromQuery : IFromQuery
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<T> From<T>(char tableAsStart = 'a')
     {
-        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.TableAsStart = tableAsStart;
         this.visitor.From(tableAsStart, typeof(T));
         return new FromQuery<T>(this.visitor);
     }
     public IFromQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
-        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.TableAsStart = tableAsStart;
         this.visitor.From(tableAsStart, typeof(T1), typeof(T2));
         return new FromQuery<T1, T2>(this.visitor);
     }
     public IFromQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a')
     {
-        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.TableAsStart = tableAsStart;
         this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3));
         return new FromQuery<T1, T2, T3>(this.visitor);
     }
     public IFromQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a')
     {
-        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.TableAsStart = tableAsStart;
         this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         return new FromQuery<T1, T2, T3, T4>(this.visitor);
     }
     public IFromQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a')
     {
-        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.TableAsStart = tableAsStart;
         this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
         return new FromQuery<T1, T2, T3, T4, T5>(this.visitor);
     }
     public IFromQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a')
     {
-        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.TableAsStart = tableAsStart;
         this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
         return new FromQuery<T1, T2, T3, T4, T5, T6>(this.visitor);
     }
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a')
     {
-        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.TableAsStart = tableAsStart;
         this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
         return new FromQuery<T1, T2, T3, T4, T5, T6, T7>(this.visitor);
     }
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a')
     {
-        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.TableAsStart = tableAsStart;
         this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
         return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this.visitor);
     }
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a')
     {
-        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.TableAsStart = tableAsStart;
         this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
         return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.visitor);
     }
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')
     {
-        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.TableAsStart = tableAsStart;
         this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
         return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.visitor);
     }
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(char tableAsStart = 'a')
     {
-        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.TableAsStart = tableAsStart;
         this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10), typeof(T11));
         return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(this.visitor);
     }
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(char tableAsStart = 'a')
     {
-        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.TableAsStart = tableAsStart;
         this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10), typeof(T11), typeof(T12));
         return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(this.visitor);
     }
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(char tableAsStart = 'a')
     {
-        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.TableAsStart = tableAsStart;
         this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10), typeof(T11), typeof(T12), typeof(T13));
         return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(this.visitor);
     }
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(char tableAsStart = 'a')
     {
-        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.TableAsStart = tableAsStart;
         this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10), typeof(T11), typeof(T12), typeof(T13), typeof(T14));
         return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(this.visitor);
     }
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(char tableAsStart = 'a')
     {
-        this.visitor.tableAsStart = tableAsStart;
+        this.visitor.TableAsStart = tableAsStart;
         this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10), typeof(T11), typeof(T12), typeof(T13), typeof(T14), typeof(T15));
         return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(this.visitor);
     }
@@ -107,9 +107,9 @@ class FromQuery : IFromQuery
 class FromQuery<T> : IFromQuery<T>
 {
     private int unionIndex = 0;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery)
     {
@@ -289,9 +289,9 @@ class FromQuery<T> : IFromQuery<T>
 }
 class FromQuery<T1, T2> : IFromQuery<T1, T2>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<T1, T2> InnerJoin(Expression<Func<T1, T2, bool>> joinOn)
     {
@@ -440,9 +440,9 @@ class FromQuery<T1, T2> : IFromQuery<T1, T2>
 }
 class FromQuery<T1, T2, T3> : IFromQuery<T1, T2, T3>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<T1, T2, T3> InnerJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
     {
@@ -591,9 +591,9 @@ class FromQuery<T1, T2, T3> : IFromQuery<T1, T2, T3>
 }
 class FromQuery<T1, T2, T3, T4> : IFromQuery<T1, T2, T3, T4>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<T1, T2, T3, T4> InnerJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
     {
@@ -742,9 +742,9 @@ class FromQuery<T1, T2, T3, T4> : IFromQuery<T1, T2, T3, T4>
 }
 class FromQuery<T1, T2, T3, T4, T5> : IFromQuery<T1, T2, T3, T4, T5>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<T1, T2, T3, T4, T5> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
     {
@@ -893,9 +893,9 @@ class FromQuery<T1, T2, T3, T4, T5> : IFromQuery<T1, T2, T3, T4, T5>
 }
 class FromQuery<T1, T2, T3, T4, T5, T6> : IFromQuery<T1, T2, T3, T4, T5, T6>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<T1, T2, T3, T4, T5, T6> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
     {
@@ -1044,9 +1044,9 @@ class FromQuery<T1, T2, T3, T4, T5, T6> : IFromQuery<T1, T2, T3, T4, T5, T6>
 }
 class FromQuery<T1, T2, T3, T4, T5, T6, T7> : IFromQuery<T1, T2, T3, T4, T5, T6, T7>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn)
     {
@@ -1195,9 +1195,9 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7> : IFromQuery<T1, T2, T3, T4, T5, T6,
 }
 class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn)
     {
@@ -1346,9 +1346,9 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IFromQuery<T1, T2, T3, T4, T5,
 }
 class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn)
     {
@@ -1497,9 +1497,9 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IFromQuery<T1, T2, T3, T4,
 }
 class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn)
     {
@@ -1648,9 +1648,9 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IFromQuery<T1, T2, T3
 }
 class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn)
     {
@@ -1799,9 +1799,9 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IFromQuery<T1, T
 }
 class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn)
     {
@@ -1950,9 +1950,9 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IFromQuery<
 }
 class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn)
     {
@@ -2101,9 +2101,9 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IFromQ
 }
 class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn)
     {
@@ -2252,9 +2252,9 @@ class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : I
 }
 class FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
     {

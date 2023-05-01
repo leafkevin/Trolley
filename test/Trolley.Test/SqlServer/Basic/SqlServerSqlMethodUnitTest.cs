@@ -16,7 +16,7 @@ public class SqlServerSqlMethodCallUnitTest : UnitTestBase
             var builder = new OrmDbFactoryBuilder()
             .Register("fengling", true, f =>
             {
-                var connectionString = "Server=.;Database=fengling;Uid=sa;password=Angangyur123456;TrustServerCertificate=true";
+                var connectionString = "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true";
                 f.Add<SqlServerProvider>(connectionString, true);
             })
             .AddTypeHandler<JsonTypeHandler>()
@@ -75,15 +75,8 @@ public class SqlServerSqlMethodCallUnitTest : UnitTestBase
         repository.Commit();
         var result = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { 8 }))
-            .Select(f => new
-            {
-                f.Id,
-                f.OrderNo,
-                f.BuyerId,
-                f.Products,
-                f.TotalAmount
-            })
-            .ToList(f => f.FlattenTo<OrderInfo>());
+            .Select(f => Sql.FlattenTo<OrderInfo>())
+            .ToList();
         Assert.True(result[0].Id == 8);
         Assert.True(result[0].BuyerId == 1);
         Assert.True(result[0].OrderNo == "On-ZwYx");
@@ -91,18 +84,11 @@ public class SqlServerSqlMethodCallUnitTest : UnitTestBase
 
         result = repository.From<Order>()
         .Where(f => Sql.In(f.Id, new[] { 8 }))
-        .Select(f => new
-        {
-            f.Id,
-            f.OrderNo,
-            f.BuyerId,
-            f.Products,
-            f.TotalAmount
-        })
-        .ToList(f => f.FlattenTo<OrderInfo>(() => new OrderInfo
+        .Select(f => Sql.FlattenTo<OrderInfo>(() => new
         {
             Description = "TotalAmount:" + f.TotalAmount
-        }));
+        }))
+        .ToList();
         Assert.True(result[0].Id == 8);
         Assert.True(result[0].BuyerId == 1);
         Assert.True(result[0].OrderNo == "On-ZwYx");

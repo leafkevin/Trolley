@@ -15,10 +15,10 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
     }
     public override string BuildSql(out List<IDbDataParameter> dbParameters)
     {
-        var entityTableName = this.ormProvider.GetTableName(this.tables[0].Mapper.TableName);
+        var entityTableName = this.OrmProvider.GetTableName(this.tables[0].Mapper.TableName);
         var builder = new StringBuilder($"UPDATE {entityTableName} ");
 
-        if (this.isNeedAlias) builder.Append("a ");
+        if (this.IsNeedAlias) builder.Append("a ");
         if (this.isJoin && this.tables.Count > 1)
         {
             for (var i = 1; i < this.tables.Count; i++)
@@ -28,7 +28,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                 if (string.IsNullOrEmpty(tableName))
                 {
                     tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
-                    tableName = this.ormProvider.GetTableName(tableSegment.Mapper.TableName);
+                    tableName = this.OrmProvider.GetTableName(tableSegment.Mapper.TableName);
                 }
                 builder.Append($"{tableSegment.JoinType} {tableName} {tableSegment.AliasName}");
                 builder.Append($" ON {tableSegment.OnExpr} ");
@@ -42,13 +42,13 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
         dbParameters = this.dbParameters;
         return builder.ToString();
     }
-    public override UpdateVisitor From(params Type[] entityTypes)
+    public override IUpdateVisitor From(params Type[] entityTypes)
     {
         throw new NotSupportedException("MySql不支持Update From语法，支持Update InnerJoin/LeftJoin语法");
     }
-    public override UpdateVisitor Join(string joinType, Type entityType, Expression joinOn)
+    public override IUpdateVisitor Join(string joinType, Type entityType, Expression joinOn)
     {
-        this.isNeedAlias = true;
+        this.IsNeedAlias = true;
         this.isJoin = true;
         var lambdaExpr = joinOn as LambdaExpression;
         var joinTable = new TableSegment
@@ -62,7 +62,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
         joinTable.OnExpr = this.VisitConditionExpr(lambdaExpr.Body);
         return this;
     }
-    public override UpdateVisitor Set(Expression fieldsExpr, object fieldValue = null)
+    public override IUpdateVisitor Set(Expression fieldsExpr, object fieldValue = null)
     {
         var lambdaExpr = fieldsExpr as LambdaExpression;
         var entityMapper = this.tables[0].Mapper;
@@ -77,7 +77,6 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
         }
         switch (lambdaExpr.Body.NodeType)
         {
-            //单个字段设置
             case ExpressionType.MemberAccess:
                 var memberExpr = lambdaExpr.Body as MemberExpression;
                 memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
@@ -95,7 +94,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     var argumentExpr = newExpr.Arguments[i];
                     var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
                     //只一个成员访问，没有设置语句，什么也不做，忽略
-                    if (sqlSegment.HasField && !sqlSegment.IsExpression && sqlSegment.FromMember.Name == memberInfo.Name)
+                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberInfo.Name)
                         continue;
                     setFields.Add(this.AddMemberElement(sqlSegment, memberMapper));
                 }
@@ -112,7 +111,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     var argumentExpr = memberAssignment.Expression;
                     var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
                     //只一个成员访问，没有设置语句，什么也不做，忽略
-                    if (sqlSegment.HasField && !sqlSegment.IsExpression && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
+                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
                         continue;
                     setFields.Add(this.AddMemberElement(sqlSegment, memberMapper));
                 }
@@ -123,15 +122,15 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             for (int i = 0; i < setFields.Count; i++)
             {
                 if (i > 0) builder.Append(',');
-                if (this.isNeedAlias)
+                if (this.IsNeedAlias)
                     builder.Append("a.");
-                builder.Append($"{ormProvider.GetFieldName(setFields[i].MemberMapper.FieldName)}={setFields[i].Value}");
+                builder.Append($"{OrmProvider.GetFieldName(setFields[i].MemberMapper.FieldName)}={setFields[i].Value}");
             }
         }
         this.setSql = builder.ToString();
         return this;
     }
-    public override UpdateVisitor SetFromQuery(Expression fieldsExpr, Expression valueExpr = null)
+    public override IUpdateVisitor SetFromQuery(Expression fieldsExpr, Expression valueExpr = null)
     {
         var lambdaExpr = fieldsExpr as LambdaExpression;
         var entityMapper = this.tables[0].Mapper;
@@ -146,6 +145,17 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
         }
         switch (lambdaExpr.Body.NodeType)
         {
+            case ExpressionType.MemberAccess:
+                {
+                    var memberExpr = lambdaExpr.Body as MemberExpression;
+                    memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
+                    lambdaExpr = valueExpr as LambdaExpression;
+                    this.InitTableAlias(lambdaExpr);
+                    var sql = this.VisitFromQuery(lambdaExpr, out var isNeedAlias);
+                    if (isNeedAlias) this.IsNeedAlias = true;
+                    setFields.Add(new SetField { MemberMapper = memberMapper, Value = $"({sql})" });
+                }
+                break;
             case ExpressionType.New:
                 this.InitTableAlias(lambdaExpr);
                 var newExpr = lambdaExpr.Body as NewExpression;
@@ -161,14 +171,14 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
                         var sql = this.VisitFromQuery(newLambdaExpr, out var isNeedAlias);
-                        if (isNeedAlias) this.isNeedAlias = true;
+                        if (isNeedAlias) this.IsNeedAlias = true;
                         setFields.Add(new SetField { MemberMapper = memberMapper, Value = $"({sql})" });
                     }
                     else
                     {
                         var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
                         //只一个成员访问，没有设置语句，什么也不做，忽略
-                        if (sqlSegment.HasField && !sqlSegment.IsExpression && sqlSegment.FromMember.Name == memberInfo.Name)
+                        if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberInfo.Name)
                             continue;
                         setFields.Add(this.AddMemberElement(sqlSegment, memberMapper));
                     }
@@ -189,14 +199,14 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
                         var sql = this.VisitFromQuery(newLambdaExpr, out var isNeedAlias);
-                        if (isNeedAlias) this.isNeedAlias = true;
+                        if (isNeedAlias) this.IsNeedAlias = true;
                         setFields.Add(new SetField { MemberMapper = memberMapper, Value = $"({sql})" });
                     }
                     else
                     {
                         var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
                         //只一个成员访问，没有设置语句，什么也不做，忽略
-                        if (sqlSegment.HasField && !sqlSegment.IsExpression && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
+                        if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
                             continue;
                         setFields.Add(this.AddMemberElement(sqlSegment, memberMapper));
                     }
@@ -208,9 +218,9 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             for (int i = 0; i < setFields.Count; i++)
             {
                 if (i > 0) builder.Append(',');
-                if (this.isNeedAlias)
+                if (this.IsNeedAlias)
                     builder.Append("a.");
-                builder.Append($"{ormProvider.GetFieldName(setFields[i].MemberMapper.FieldName)}={setFields[i].Value}");
+                builder.Append($"{OrmProvider.GetFieldName(setFields[i].MemberMapper.FieldName)}={setFields[i].Value}");
             }
         }
         this.setSql = builder.ToString();

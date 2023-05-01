@@ -3,10 +3,22 @@ using System.Reflection;
 
 namespace Trolley;
 
+/// <summary>
+/// 实体字段，经过Select操作后，就会生成ReaderField
+/// </summary>
 public class ReaderField
 {
+    /// <summary>
+    /// 序号索引，当前字段在返回映射实体中的索引位置
+    /// </summary>
     public int Index { get; set; }
+    /// <summary>
+    /// 字段类型
+    /// </summary>
     public ReaderFieldType FieldType { get; set; }
+    /// <summary>
+    /// Include表的主表ReaderField的序号索引
+    /// </summary>
     public int? ParentIndex { get; set; }
     /// <summary>
     /// 当前查询中的Table，如：User表
@@ -25,16 +37,40 @@ public class ReaderField
     /// </summary>
     public string Body { get; set; }
     /// <summary>
-    /// 是否是最外层返回实体的字段，只对当前字段有效，
-    /// 如果当前字段类型还是一个实体，就是一个嵌套的匿名对象了
+    /// 当前ReaderField是否是已有ReaderField的引用，可以是实体表(真实表)也可以Include表引用 
+    /// ReaderField引用，查询数据库时，不会重复查询字段，在创建返回实体的时候，把对应数据再设置进去
+    /// Include表引用时，主表数据返回，Include表引用才生效
     /// </summary>
-    public bool IsTarget { get; set; }
+    public bool IsRef { get; set; }
     /// <summary>
-    /// 是否有后续的子对象
+    /// ReaderField引用的索引位置，IsRef为true，才会有值
+    /// </summary>
+    public int? RefIndex { get; set; }
+    /// <summary>
+    /// 是否有后续的Include表，当前是主表ReaderField时且有Include表，此值为true
     /// </summary>
     public bool HasNextInclude { get; set; }
     /// <summary>
-    /// 临时表的字段集合，通常是从一个子查询返回的
+    /// 实体表(真实表)或是子查询表的所有字段，FieldType为Entity或是AnonymousObject时有值
     /// </summary>
     public List<ReaderField> ReaderFields { get; set; }
+}
+public enum ReaderFieldType : byte
+{
+    /// <summary>
+    /// 字段
+    /// </summary>
+    Field = 1,
+    /// <summary>
+    /// 实体类型，实体表(真实表)、子查询表，都会返回此类型的ReaderField
+    /// 通过参数访问、实体类型的成员访问返回，返回的类型是ReaderField列表
+    /// </summary>
+    Entity = 2,
+    /// <summary>
+    /// 临时的匿名对象，像Grouping，FromQuery返回的实体对象中的实体类成员
+    /// 基于现有实体表(真实表)、子查询表的字段引用，组合生成的临时对象，方便后续SQL查询字段访问,减少代码编写
+    /// 通过ReaderFields获取字段，FromQuery返回的实体对象中的实体类成员只支持一层
+    /// 也就是说，FromQuery返回的实体中，只允许有一层实体类型的成员
+    /// </summary>
+    AnonymousObject = 3
 }

@@ -5,7 +5,7 @@ namespace Trolley.MySqlConnector;
 
 partial class MySqlProvider
 {
-    public virtual bool TryGetConvertMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
+    public override bool TryGetConvertMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
         var result = false;
         formatter = null;
@@ -31,14 +31,14 @@ partial class MySqlProvider
             case "ToString":
                 if (parameterInfos.Length == 1)
                 {
-                    methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         args[0] = visitor.VisitAndDeferred(args[0]);
                         if (args[0].IsConstantValue)
                             return args[0].Change(this.GetQuotedValue(methodCallExpr.Type, args[0]));
 
                         target.Merge(args[0]);
-                        return target.Change(this.CastTo(methodCallExpr.Type, this.GetQuotedValue(args[0])), false, true);
+                        return target.Change(this.CastTo(methodCallExpr.Type, this.GetQuotedValue(args[0])), false, false, true);
                     });
                     result = true;
                 }

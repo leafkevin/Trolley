@@ -100,6 +100,7 @@ public class MySqlUnitTest2 : UnitTestBase
     [Fact]
     public void FromQuery_SubQuery1()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.From(f => f.From<Page, Menu>('o')
                  .Where((a, b) => a.Id == b.PageId)
@@ -130,13 +131,15 @@ public class MySqlUnitTest2 : UnitTestBase
                  .Where((a, b) => a.Id == b.OrderId)
                  .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
                  .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
-                 .Select((x, a, b) => new { x.Grouping, ProductTotal = Sql.CountDistinct(b.ProductId) }))
-            .InnerJoin<User>((x, y) => x.Grouping.BuyerId == y.Id)
-            .Select((x, y) => new { x.Grouping, x.ProductTotal, y.Name })
-            .First(f => f.FlattenTo(() => new OrderBuyerInfo { BuyerId = f.Grouping.BuyerId, BuyerName = f.Name }));
+                 .Select((x, a, b) => new { x.Grouping.BuyerId, x.Grouping.OrderId, ProductTotal = Sql.CountDistinct(b.ProductId) }))
+            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+            .Select((x, y) => Sql.FlattenTo<OrderBuyerInfo>(() => new { BuyerName = y.Name }))
+            .First();
         if (result != null)
         {
             Assert.NotNull(result);
+            Assert.True(result.OrderId > 0);
+            Assert.True(result.BuyerId > 0);
             Assert.Null(result.OrderNo);
             Assert.NotNull(result.BuyerName);
         }
@@ -152,8 +155,8 @@ public class MySqlUnitTest2 : UnitTestBase
                  .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
                  .Select((x, a, b) => new { x.Grouping, ProductTotal = Sql.CountDistinct(b.ProductId), BuyerId1 = x.Grouping.BuyerId }))
             .InnerJoin<User>((x, y) => x.Grouping.BuyerId == y.Id)
-            .Select((x, y) => new { x.Grouping, x.ProductTotal, y.Name, x.BuyerId1 })
-            .First(f => new { f.Grouping, f.Grouping.BuyerId, BuyerName = f.Name, f.ProductTotal, BuyerId2 = f.BuyerId1 });
+            .Select((x, y) => new { x.Grouping, x.Grouping.BuyerId, x.ProductTotal, BuyerName = y.Name, BuyerId2 = x.BuyerId1 })
+            .First();
         if (result != null)
         {
             Assert.NotNull(result);
@@ -164,6 +167,7 @@ public class MySqlUnitTest2 : UnitTestBase
     [Fact]
     public async void QueryRawSql()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
         var result = await repository.QueryAsync<Product>("SELECT * FROM sys_product where Id=@ProductId", new { ProductId = 1 });
         Assert.NotNull(result);
@@ -189,7 +193,7 @@ public class MySqlUnitTest2 : UnitTestBase
     [Fact]
     public void FromQuery_InnerJoin()
     {
-        Initialize();
+        this.Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.From<User>()
            .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
@@ -200,7 +204,7 @@ public class MySqlUnitTest2 : UnitTestBase
                Order = y
            })
            .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`OrderNo`,b.`ProductCount`,b.`TotalAmount`,b.`BuyerId`,b.`SellerId`,b.`Products`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE b.`ProductCount`>1");
+        Assert.True(sql == "SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`OrderNo`,b.`ProductCount`,b.`TotalAmount`,b.`BuyerId`,b.`SellerId`,b.`Products`,b.`Disputes`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE b.`ProductCount`>1");
 
         var result = repository.From<User>()
             .Include(x => x.Orders)
@@ -241,7 +245,7 @@ public class MySqlUnitTest2 : UnitTestBase
               c.ProductCount
           })
           .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`OrderNo`,b.`ProductCount`,b.`TotalAmount`,b.`BuyerId`,b.`SellerId`,b.`Products`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt`,c.`ProductCount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` INNER JOIN (SELECT a.`OrderId`,COUNT(DISTINCT a.`ProductId`) AS ProductCount FROM `sys_order_detail` a GROUP BY a.`OrderId`) c ON b.`Id`=c.`OrderId` WHERE c.`ProductCount`>2");
+        Assert.True(sql == "SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`OrderNo`,b.`ProductCount`,b.`TotalAmount`,b.`BuyerId`,b.`SellerId`,b.`Products`,b.`Disputes`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,c.`ProductCount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` INNER JOIN (SELECT a.`OrderId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail` a GROUP BY a.`OrderId`) c ON b.`Id`=c.`OrderId` WHERE c.`ProductCount`>2");
 
         var result = await repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
@@ -277,7 +281,7 @@ public class MySqlUnitTest2 : UnitTestBase
           .Include(f => f.Brand)
           .Where(f => f.ProductNo.Contains("PN-00"))
           .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`Price`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'");
+        Assert.True(sql == "SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`Price`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'");
 
         var result = await repository.From<Product>()
             .Include(f => f.Brand)
@@ -399,7 +403,7 @@ public class MySqlUnitTest2 : UnitTestBase
                 TotalAmount = x.Sum(b.TotalAmount)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) ORDER BY a.`Id`,b.`Id`");
+        Assert.True(sql == "SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ORDER BY a.`Id`,b.`Id`");
     }
     [Fact]
     public void FromQuery_Groupby()
@@ -462,7 +466,7 @@ public class MySqlUnitTest2 : UnitTestBase
                TotalAmount = x.Sum(b.TotalAmount)
            })
            .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) ORDER BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME)");
+        Assert.True(sql == "SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ORDER BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE)");
     }
     [Fact]
     public void FromQuery_Groupby_OrderBy_Fields()
@@ -481,7 +485,7 @@ public class MySqlUnitTest2 : UnitTestBase
                TotalAmount = x.Sum(b.TotalAmount)
            })
            .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) ORDER BY a.`Id`,a.`Name` DESC,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME)");
+        Assert.True(sql == "SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ORDER BY a.`Id`,a.`Name` DESC,CONVERT(b.`CreatedAt`,DATE)");
     }
     [Fact]
     public void FromQuery_Groupby_Having()
@@ -510,7 +514,7 @@ public class MySqlUnitTest2 : UnitTestBase
                 TotalAmount = x.Sum(b.TotalAmount)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT c.`Id`,c.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,a.`ProductCount`,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM (SELECT `OrderId`,COUNT(`ProductId`) AS ProductCount FROM `sys_order_detail` GROUP BY `OrderId`) a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` INNER JOIN `sys_user` c ON b.`BuyerId`=c.`Id` WHERE a.`ProductCount`>2 GROUP BY c.`Id`,c.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) HAVING SUM(b.`TotalAmount`)>300 ORDER BY c.`Id`");
+        Assert.True(sql == "SELECT c.`Id`,c.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,a.`ProductCount`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM (SELECT `OrderId`,COUNT(`ProductId`) AS `ProductCount` FROM `sys_order_detail` GROUP BY `OrderId`) a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` INNER JOIN `sys_user` c ON b.`BuyerId`=c.`Id` WHERE a.`ProductCount`>2 GROUP BY c.`Id`,c.`Name`,CONVERT(b.`CreatedAt`,DATE) HAVING SUM(b.`TotalAmount`)>300 ORDER BY c.`Id`");
 
         var sql1 = repository.From<User>()
                .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
@@ -527,7 +531,7 @@ public class MySqlUnitTest2 : UnitTestBase
                    TotalAmount = x.Sum(b.TotalAmount)
                })
                .ToSql(out _);
-        Assert.True(sql1 == "SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) HAVING SUM(b.`TotalAmount`)>300 AND COUNT(DISTINCT c.`ProductId`)>2 ORDER BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME)");
+        Assert.True(sql1 == "SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) HAVING SUM(b.`TotalAmount`)>300 AND COUNT(DISTINCT c.`ProductId`)>2 ORDER BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE)");
 
         var sql2 = repository.From<User>()
            .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
@@ -551,7 +555,7 @@ public class MySqlUnitTest2 : UnitTestBase
                TotalAmount = x.Sum(b.TotalAmount)
            })
            .ToSql(out _);
-        Assert.True(sql2 == "SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` INNER JOIN (SELECT a.`OrderId`,COUNT(DISTINCT a.`ProductId`) AS ProductCount FROM `sys_order_detail` a GROUP BY a.`OrderId`) c ON b.`Id`=c.`OrderId` WHERE a.`Id`=c.`OrderId` AND c.`ProductCount`>2 GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) HAVING SUM(b.`TotalAmount`)>300 ORDER BY a.`Id`");
+        Assert.True(sql2 == "SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` INNER JOIN (SELECT a.`OrderId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail` a GROUP BY a.`OrderId`) c ON b.`Id`=c.`OrderId` WHERE a.`Id`=c.`OrderId` AND c.`ProductCount`>2 GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) HAVING SUM(b.`TotalAmount`)>300 ORDER BY a.`Id`");
     }
     [Fact]
     public void FromQuery_Groupby_Having_OrderBy()
@@ -572,7 +576,7 @@ public class MySqlUnitTest2 : UnitTestBase
                     TotalAmount = x.Sum(b.TotalAmount)
                 })
                 .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND f.`ProductId`=2) GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) HAVING SUM(b.`TotalAmount`)>300 ORDER BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME)");
+        Assert.True(sql == "SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND f.`ProductId`=2) GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) HAVING SUM(b.`TotalAmount`)>300 ORDER BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE)");
     }
     [Fact]
     public void FromQuery_Groupby_Having_OrderBy_Fields()
@@ -595,7 +599,7 @@ public class MySqlUnitTest2 : UnitTestBase
                     TotalAmount = x.Sum(b.TotalAmount)
                 })
                 .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND f.`ProductId`=2) GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) HAVING SUM(b.`TotalAmount`)>300 ORDER BY a.`Id`,a.`Name` DESC,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME)");
+        Assert.True(sql == "SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND f.`ProductId`=2) GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) HAVING SUM(b.`TotalAmount`)>300 ORDER BY a.`Id`,a.`Name` DESC,CONVERT(b.`CreatedAt`,DATE)");
     }
     [Fact]
     public void FromQuery_Exists()
@@ -610,7 +614,7 @@ public class MySqlUnitTest2 : UnitTestBase
             .GroupBy(f => new { f.Gender, f.CompanyId })
             .Select((t, a) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Gender`,a.`CompanyId`,COUNT(DISTINCT a.`Id`) AS UserTotal FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order_detail` b GROUP BY b.`OrderId` HAVING COUNT(DISTINCT b.`ProductId`)>0) GROUP BY a.`Gender`,a.`CompanyId`");
+        Assert.True(sql == "SELECT a.`Gender`,a.`CompanyId`,COUNT(DISTINCT a.`Id`) AS `UserTotal` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order_detail` b GROUP BY b.`OrderId` HAVING COUNT(DISTINCT b.`ProductId`)>0) GROUP BY a.`Gender`,a.`CompanyId`");
     }
     [Fact]
     public void FromQuery_Exists1()
@@ -627,17 +631,17 @@ public class MySqlUnitTest2 : UnitTestBase
             .GroupBy((x, y) => new { x.Gender, x.CompanyId })
             .Select((t, a, b) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Gender`,a.`CompanyId`,COUNT(DISTINCT a.`Id`) AS UserTotal FROM `sys_user` a INNER JOIN `sys_company` b ON a.`CompanyId`=b.`Id` WHERE EXISTS(SELECT * FROM `sys_order` c,`sys_order_detail` d,`sys_product` e WHERE c.`BuyerId`=a.`Id` AND c.`Id`=d.`OrderId` AND d.`ProductId`=e.`Id` AND e.`CompanyId`=b.`Id` GROUP BY c.`Id` HAVING COUNT(DISTINCT d.`ProductId`)>0) GROUP BY a.`Gender`,a.`CompanyId`");
+        Assert.True(sql == "SELECT a.`Gender`,a.`CompanyId`,COUNT(DISTINCT a.`Id`) AS `UserTotal` FROM `sys_user` a INNER JOIN `sys_company` b ON a.`CompanyId`=b.`Id` WHERE EXISTS(SELECT * FROM `sys_order` c,`sys_order_detail` d,`sys_product` e WHERE c.`BuyerId`=a.`Id` AND c.`Id`=d.`OrderId` AND d.`ProductId`=e.`Id` AND e.`CompanyId`=b.`Id` GROUP BY c.`Id` HAVING COUNT(DISTINCT d.`ProductId`)>0) GROUP BY a.`Gender`,a.`CompanyId`");
     }
     [Fact]
     public void FromQuery_In_Exists()
     {
         using var repository = dbFactory.Create();
         var sql = repository.From<User>()
-            .Where(f => Sql.In(f.Id, new int[] { 1, 2, 3 }))
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+            .Where((x, y) => Sql.In(x.Id, new int[] { 1, 2, 3 }) && Sql.Exists<OrderDetail>(f => y.Id == f.OrderId && f.ProductId == 2))
             .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
-            .Having((x, a, b) => x.Sum(b.TotalAmount) > 300 && Sql.Exists<OrderDetail>(f => b.Id == f.OrderId && f.ProductId == 2))
+            .Having((x, a, b) => x.Sum(b.TotalAmount) > 300)
             .OrderBy((x, a, b) => new { UserId = a.Id, OrderId = b.Id })
             .Select((x, a, b) => new
             {
@@ -646,7 +650,7 @@ public class MySqlUnitTest2 : UnitTestBase
                 TotalAmount = x.Sum(b.TotalAmount)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE `Id` IN (@p0,@p1,@p2) GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) HAVING SUM(b.`TotalAmount`)>300 AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND f.`ProductId`=2) ORDER BY a.`Id`,b.`Id`");
+        Assert.True(sql == "SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE a.`Id` IN (1,2,3) AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND f.`ProductId`=2) GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) HAVING SUM(b.`TotalAmount`)>300 ORDER BY a.`Id`,b.`Id`");
     }
     [Fact]
     public void FromQuery_In1()
@@ -656,8 +660,9 @@ public class MySqlUnitTest2 : UnitTestBase
             .Where(f => Sql.In(f.Id, t => t.From<Order>('b')
                 .InnerJoin<OrderDetail>((a, b) => a.Id == b.OrderId && b.ProductId == 1)
                 .Select((x, y) => x.BuyerId)))
+            .Select(f => f.Id)
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` AND c.`ProductId`=1)");
+        Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` AND c.`ProductId`=1)");
     }
     [Fact]
     public void FromQuery_In_Exists1()
@@ -666,10 +671,12 @@ public class MySqlUnitTest2 : UnitTestBase
         bool? isMale = true;
         var sql = repository.From<User>()
             .Where(f => Sql.In(f.Id, t => t.From<Order>('b')
-                .InnerJoin<OrderDetail>((a, b) => a.Id == b.OrderId && b.ProductId == 1).Select((x, y) => x.BuyerId)))
+                .InnerJoin<OrderDetail>((a, b) => a.Id == b.OrderId && b.ProductId == 1)
+                .Select((x, y) => x.BuyerId)))
             .And(isMale.HasValue, f => Sql.Exists<Order, Company>((x, y) => f.Id == x.SellerId && f.CompanyId == y.Id))
+            .Select(f => f.Id)
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` AND c.`ProductId`=1) AND EXISTS(SELECT * FROM `sys_order` x,`sys_company` y WHERE a.`Id`=x.`SellerId` AND a.`CompanyId`=y.`Id`)");
+        Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` AND c.`ProductId`=1) AND EXISTS(SELECT * FROM `sys_order` x,`sys_company` y WHERE a.`Id`=x.`SellerId` AND a.`CompanyId`=y.`Id`)");
     }
     [Fact]
     public void FromQuery_In_Exists_Group_CountDistinct_Count()
@@ -678,12 +685,13 @@ public class MySqlUnitTest2 : UnitTestBase
         bool? isMale = true;
         var sql = repository.From<User>()
             .Where(f => Sql.In(f.Id, t => t.From<OrderDetail>('b')
-                .InnerJoin<Order>((a, b) => a.OrderId == b.Id && a.ProductId == 1).Select((x, y) => y.BuyerId)))
+                .InnerJoin<Order>((a, b) => a.OrderId == b.Id && a.ProductId == 1)
+                .Select((x, y) => y.BuyerId)))
             .And(isMale.HasValue, f => Sql.Exists<Company, Order>((x, y) => f.Id == y.SellerId && f.CompanyId == x.Id))
             .GroupBy(f => new { f.Gender, f.Age })
             .Select((t, a) => new { t.Grouping, CompanyCount = t.CountDistinct(a.CompanyId), UserCount = t.Count(a.Id) })
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Gender`,a.`Age`,COUNT(DISTINCT a.`CompanyId`) AS CompanyCount,COUNT(a.`Id`) AS UserCount FROM `sys_user` a WHERE a.`Id` IN (SELECT c.`BuyerId` FROM `sys_order_detail` b INNER JOIN `sys_order` c ON b.`OrderId`=c.`Id` AND b.`ProductId`=1) AND EXISTS(SELECT * FROM `sys_company` x,`sys_order` y WHERE a.`Id`=y.`SellerId` AND a.`CompanyId`=x.`Id`) GROUP BY a.`Gender`,a.`Age`");
+        Assert.True(sql == "SELECT a.`Gender`,a.`Age`,COUNT(DISTINCT a.`CompanyId`) AS `CompanyCount`,COUNT(a.`Id`) AS `UserCount` FROM `sys_user` a WHERE a.`Id` IN (SELECT c.`BuyerId` FROM `sys_order_detail` b INNER JOIN `sys_order` c ON b.`OrderId`=c.`Id` AND b.`ProductId`=1) AND EXISTS(SELECT * FROM `sys_company` x,`sys_order` y WHERE a.`Id`=y.`SellerId` AND a.`CompanyId`=x.`Id`) GROUP BY a.`Gender`,a.`Age`");
     }
     [Fact]
     public void FromQuery_SelectAggregate()
@@ -701,7 +709,7 @@ public class MySqlUnitTest2 : UnitTestBase
                 TotalAmount = x.Sum(b.TotalAmount)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id` AS UserId,b.`Id` AS OrderId,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` ORDER BY a.`Id`,b.`Id`");
+        Assert.True(sql == "SELECT a.`Id` AS `UserId`,b.`Id` AS `OrderId`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` ORDER BY a.`Id`,b.`Id`");
     }
     [Fact]
     public void FromQuery_Select_Sql_Aggregate()
@@ -719,7 +727,7 @@ public class MySqlUnitTest2 : UnitTestBase
                 TotalAmount = Sql.Sum(b.TotalAmount)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id` AS UserId,b.`Id` AS OrderId,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` ORDER BY a.`Id`,b.`Id`");
+        Assert.True(sql == "SELECT a.`Id` AS `UserId`,b.`Id` AS `OrderId`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` ORDER BY a.`Id`,b.`Id`");
     }
     [Fact]
     public void Query_Count()
@@ -817,7 +825,18 @@ public class MySqlUnitTest2 : UnitTestBase
                 HasProduct = x.ProductCount.HasValue
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (`OrderNo` IS NULL) AS NoOrderNo,(`ProductCount` IS NOT NULL) AS HasProduct FROM `sys_order` WHERE `ProductCount` IS NULL AND `ProductCount` IS NULL");
+        Assert.True(sql == "SELECT (`OrderNo` IS NULL) AS `NoOrderNo`,(`ProductCount` IS NOT NULL) AS `HasProduct` FROM `sys_order` WHERE `ProductCount` IS NULL AND `ProductCount` IS NULL");
+    }
+    [Fact]
+    public void Query_WhereNull()
+    {
+        using var repository = dbFactory.Create();
+        var sql = repository.From<Order>()
+            .Where(x => x.ProductCount == null || x.BuyerId.IsNull())
+            .And(true, f => !f.ProductCount.HasValue)
+            .Select(x => x.Id)
+            .ToSql(out _);
+        Assert.True(sql == "SELECT `Id` FROM `sys_order` WHERE `ProductCount` IS NULL OR `BuyerId` IS NULL AND `ProductCount` IS NULL");
     }
     [Fact]
     public async void Query_Union()
@@ -914,7 +933,7 @@ SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`>2");
                     x.SellerId,
                     x.BuyerId
                 })
-               .Take(1))
+                .Take(1))
             .UnionAll(f => f.From<Order>()
                 .Where(x => x.Id > 2)
                 .Select(x => new
@@ -1017,6 +1036,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN `sys_page
     [Fact]
     public async void Query_WithNextCte()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
         var sql = repository
             .FromWithRecursive((f, cte) => f.From<Menu>()
@@ -1102,36 +1122,27 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageL
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
 
-        repository.From<Order, OrderDetail>()
+        var result1 = repository.From<Order, OrderDetail>()
+            .InnerJoin((x, y) => x.Id == y.OrderId)
             .Include((x, y) => x.Buyer)
             .Where((a, b) => a.Id == b.OrderId)
             .Select((a, b) => new { a.Buyer, Order = a, a.BuyerId, DetailId = b.Id, b.Price, b.Quantity, b.Amount })
             .ToList();
+        Assert.True(result1.Count > 0);
+        Assert.NotNull(result1[0].Buyer);
+        Assert.NotNull(result1[0].Order);
+        Assert.True(result1[0].Buyer.Id == result1[0].Order.Buyer.Id);
+        Assert.True(result1[0].Buyer.Name == result1[0].Order.Buyer.Name);
 
-        repository.From(f => f.From<Order, OrderDetail, User>()
-                .Where((a, b, c) => a.Id == b.OrderId && a.BuyerId == c.Id)
+        var sql1 = repository.From(f => f.From<Order, OrderDetail, User>()
+                .Where((a, b, c) => a.Id == b.OrderId && a.BuyerId == c.Id && c.Age > 20)
                 .GroupBy((a, b, c) => new { OrderId = a.Id, a.BuyerId })
-                .Having((x, a, b, c) => c.Age > 20 && x.Sum(b.Amount) > 500)
+                .Having((x, a, b, c) => x.Sum(b.Amount) > 500)
                 .Select((x, a, b, c) => new { x.Grouping.OrderId, x.Grouping.BuyerId, TotalAmount = x.Sum(b.Amount) }))
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .InnerJoin<Order>((a, b, c) => a.OrderId == c.Id)
             .Select((a, b, c) => new { a.OrderId, a.BuyerId, Buyer = b, Order = c, a.TotalAmount })
             .ToSql(out _);
-
-    }
-    [Fact]
-    public void Test1()
-    {
-        using var repository = dbFactory.Create();
-        var sql = repository.From(f => f.From<Order, OrderDetail, User>()
-                .Where((a, b, c) => a.Id == b.OrderId && a.BuyerId == c.Id)
-                .GroupBy((a, b, c) => new { OrderId = a.Id, a.BuyerId, c.Age })
-                .Having((x, a, b, c) => c.Age > 20 && x.Sum(b.Amount) > 500)
-                .Select((x, a, b, c) => new { x.Grouping.OrderId, a.BuyerId, TotalAmount = x.Sum(b.Amount) }))
-            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-            .InnerJoin<Order>((a, b, c) => a.OrderId == c.Id)
-            .Select((a, b, c) => new { a.OrderId, a.BuyerId, Buyer = b, Order = c, a.TotalAmount })
-            .ToSql(out _);
-        int sdfdsf = 0;
+        Assert.True(sql1 == "SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,c.`Id`,c.`OrderNo`,c.`ProductCount`,c.`TotalAmount`,c.`BuyerId`,c.`SellerId`,c.`Products`,c.`Disputes`,c.`IsEnabled`,c.`CreatedAt`,c.`CreatedBy`,c.`UpdatedAt`,c.`UpdatedBy`,a.`TotalAmount` FROM (SELECT a.`Id` AS `OrderId`,a.`BuyerId`,SUM(b.`Amount`) AS `TotalAmount` FROM `sys_order` a,`sys_order_detail` b,`sys_user` c WHERE a.`Id`=b.`OrderId` AND a.`BuyerId`=c.`Id` AND c.`Age`>20 GROUP BY a.`Id`,a.`BuyerId` HAVING SUM(b.`Amount`)>500) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` INNER JOIN `sys_order` c ON a.`OrderId`=c.`Id`");
     }
 }

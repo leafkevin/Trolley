@@ -74,11 +74,11 @@ public class MySqlMethodCallUnitTest : UnitTestBase
         int count = 10;
         var sql = repository.From<User>()
             .Where(f => f.Id == 1)
-            .Select(f => string.Concat(f.Name + "_1_" + isMale, f.Age, isMale) + "_2_" + f.Age + "_3_" + isMale + "_4_" + count)
+            .Select(f => string.Concat(f.Name + "_1_" + isMale, f.Age + 5, isMale) + "_2_" + f.Age + "_3_" + isMale + "_4_" + count)
             .ToSql(out _);
-        Assert.True(sql == "SELECT CONCAT(`Name`,'_1_False',CAST(`Age` AS CHAR),'False_2_',CAST(`Age` AS CHAR),'_3_False_4_10') FROM `sys_user` WHERE `Id`=1");
+        Assert.True(sql == "SELECT CONCAT(`Name`,'_1_False',CAST(`Age`+5 AS CHAR),'False_2_',CAST(`Age` AS CHAR),'_3_False_4_10') FROM `sys_user` WHERE `Id`=1");
         var result = repository.From<User>()
-            .Select(f => string.Concat(f.Name + "_1_" + isMale, f.Age, isMale) + "_2_" + f.Age + "_3_" + isMale + "_4_" + count)
+            .Select(f => string.Concat(f.Name + "_1_" + isMale, f.Age + 5, isMale) + "_2_" + f.Age + "_3_" + isMale + "_4_" + count)
             .First();
         Assert.NotNull(result);
         Assert.True(result == "leafkevin_1_False25False_2_25_3_False_4_10");
@@ -111,10 +111,11 @@ public class MySqlMethodCallUnitTest : UnitTestBase
             {
                 NameCompare = string.Compare(f.Name, "leafkevin".ToParameter()),
                 CreatedAtCompare = DateTime.Compare(f.CreatedAt, DateTime.Parse(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))),
+                CreatedAtCompare1 = DateTime.Compare(f.CreatedAt, DateTime.Now),
                 UpdatedAtCompare = DateTime.Compare(f.UpdatedAt, f.UpdatedAt.Subtract(TimeSpan.FromMinutes(5)))
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (CASE WHEN `Name`=@p0 THEN 0 WHEN `Name`>@p0 THEN 1 ELSE -1 END) AS NameCompare,(CASE WHEN TIMESTAMPDIFF(MICROSECOND,`CreatedAt`,CAST(@p1 AS DATETIME)) THEN 0 WHEN TIMESTAMPDIFF(MICROSECOND,`CreatedAt`,CAST(@p1 AS DATETIME))>0 THEN 1 ELSE -1 END) AS CreatedAtCompare FROM `sys_user` WHERE `Id`=1");
+        Assert.True(sql == "SELECT (CASE WHEN `Name`='leafkevin' THEN 0 WHEN `Name`>'leafkevin' THEN 1 ELSE -1 END) AS `NameCompare`,(CASE WHEN `CreatedAt`=CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) THEN 0 WHEN TIMESTAMPDIFF(MICROSECOND,`CreatedAt`,CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME))<0 THEN 1 ELSE -1 END) AS `CreatedAtCompare`,(CASE WHEN `CreatedAt`=NOW() THEN 0 WHEN TIMESTAMPDIFF(MICROSECOND,`CreatedAt`,NOW())<0 THEN 1 ELSE -1 END) AS `CreatedAtCompare1`,(CASE WHEN `UpdatedAt`=DATE_SUB(`UpdatedAt`,INTERVAL 5*60000000 MICROSECOND) THEN 0 WHEN TIMESTAMPDIFF(MICROSECOND,`UpdatedAt`,DATE_SUB(`UpdatedAt`,INTERVAL 5*60000000 MICROSECOND))<0 THEN 1 ELSE -1 END) AS `UpdatedAtCompare` FROM `sys_user` WHERE `Id`=1");
 
         var result = repository.From<User>()
             .Where(f => f.Id == 1)
@@ -122,12 +123,14 @@ public class MySqlMethodCallUnitTest : UnitTestBase
             {
                 NameCompare = string.Compare(f.Name, "leafkevin"),
                 CreatedAtCompare = DateTime.Compare(f.CreatedAt, DateTime.Parse(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))),
+                CreatedAtCompare1 = DateTime.Compare(f.CreatedAt, DateTime.Now),
                 UpdatedAtCompare = DateTime.Compare(f.UpdatedAt, f.UpdatedAt.Subtract(TimeSpan.FromMinutes(5)))
             })
             .First();
         Assert.NotNull(result);
         Assert.True(result.NameCompare == 0);
-        Assert.True(result.CreatedAtCompare == 1);
+        Assert.True(result.CreatedAtCompare == -1);
+        Assert.True(result.CreatedAtCompare1 == -1);
         Assert.True(result.UpdatedAtCompare == 1);
     }
     [Fact]
@@ -143,7 +146,7 @@ public class MySqlMethodCallUnitTest : UnitTestBase
                 BooleanCompare = f.IsEnabled.CompareTo(false)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (CASE WHEN `Id`=1 THEN 0 WHEN `Id`>1 THEN 1 ELSE -1 END) AS IntCompare,(CASE WHEN `OrderNo`='OrderNo-001' THEN 0 WHEN `OrderNo`>'OrderNo-001' THEN 1 ELSE -1 END) AS StringCompare,(CASE WHEN `CreatedAt`=CAST('2022-12-20' AS DATETIME) THEN 0 WHEN `CreatedAt`>CAST('2022-12-20' AS DATETIME) THEN 1 ELSE -1 END) AS DateTimeCompare,(CASE WHEN `IsEnabled`=0 THEN 0 WHEN `IsEnabled`>0 THEN 1 ELSE -1 END) AS BooleanCompare FROM `sys_order`");
+        Assert.True(sql == "SELECT (CASE WHEN `Id`=1 THEN 0 WHEN `Id`>1 THEN 1 ELSE -1 END) AS `IntCompare`,(CASE WHEN `OrderNo`='OrderNo-001' THEN 0 WHEN `OrderNo`>'OrderNo-001' THEN 1 ELSE -1 END) AS `StringCompare`,(CASE WHEN `CreatedAt`='2022-12-20 00:00:00.000' THEN 0 WHEN TIMESTAMPDIFF(MICROSECOND,`CreatedAt`,'2022-12-20 00:00:00.000')<0 THEN 1 ELSE -1 END) AS `DateTimeCompare`,(CASE WHEN `IsEnabled`=0 THEN 0 WHEN `IsEnabled`>0 THEN 1 ELSE -1 END) AS `BooleanCompare` FROM `sys_order`");
     }
     [Fact]
     public void Trims()
@@ -230,7 +233,7 @@ public class MySqlMethodCallUnitTest : UnitTestBase
                 Col2 = f.OrderNo.ToUpper() + "_AbCd".ToLower()
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT CONCAT(LOWER(`OrderNo`),UPPER('_AbCd')) AS Col1,CONCAT(UPPER(`OrderNo`),LOWER('_AbCd')) AS Col2 FROM `sys_order`");
+        Assert.True(sql == "SELECT CONCAT(LOWER(`OrderNo`),UPPER('_AbCd')) AS `Col1`,CONCAT(UPPER(`OrderNo`),LOWER('_AbCd')) AS `Col2` FROM `sys_order`");
 
         repository.BeginTransaction();
         repository.Delete<Order>(1);
@@ -332,39 +335,26 @@ public class MySqlMethodCallUnitTest : UnitTestBase
         });
         repository.Commit();
         var result = repository.From<Order>()
-            .Where(f => Sql.In(f.Id, new[] { 1, 2, 3 }))
-            .Select(f => new
-            {
-                f.Id,
-                f.OrderNo,
-                f.BuyerId,
-                f.Products,
-                f.TotalAmount
-            })
-            .ToList(f => f.FlattenTo<OrderInfo>());
-        Assert.True(result[0].Id == 1);
+            .Where(f => Sql.In(f.Id, new[] { 8 }))
+            .Select(f => Sql.FlattenTo<OrderInfo>())
+            .ToList();
+        Assert.True(result[0].Id == 8);
         Assert.True(result[0].BuyerId == 1);
         Assert.True(result[0].OrderNo == "On-ZwYx");
         Assert.Null(result[0].Description);
 
         result = repository.From<Order>()
-        .Where(f => Sql.In(f.Id, new[] { 1, 2, 3 }))
-        .Select(f => new
-        {
-            f.Id,
-            f.OrderNo,
-            f.BuyerId,
-            f.Products,
-            f.TotalAmount
-        })
-        .ToList(f => f.FlattenTo<OrderInfo>(() => new OrderInfo
+        .Where(f => Sql.In(f.Id, new[] { 8 }))
+        .Select(f => Sql.FlattenTo<OrderInfo>(() => new
         {
             Description = "TotalAmount:" + f.TotalAmount
-        }));
-        Assert.True(result[0].Id == 1);
+        }))
+        .ToList();
+        Assert.True(result[0].Id == 8);
         Assert.True(result[0].BuyerId == 1);
         Assert.True(result[0].OrderNo == "On-ZwYx");
         Assert.NotNull(result[0].Description);
+        Assert.True(result[0].Description == "TotalAmount:500");
     }
 
     [Fact]

@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -9,6 +11,10 @@ namespace Trolley;
 
 public abstract class BaseOrmProvider : IOrmProvider
 {
+    protected static ConcurrentDictionary<int, MemberAccessSqlFormatter> memberAccessSqlFormatterCache = new();
+    protected static ConcurrentDictionary<int, MethodCallSqlFormatter> methodCallSqlFormatterCache = new();
+    protected static ConcurrentDictionary<int, Func<object, object[], object>> indexMethodCallCache = new();
+
     public abstract DatabaseType DatabaseType { get; }
     public virtual string ParameterPrefix => "@";
     public virtual string SelectIdentitySql => ";SELECT @@IDENTITY";
@@ -52,7 +58,7 @@ public abstract class BaseOrmProvider : IOrmProvider
         if (expectType == typeof(string))
             return "'" + value.ToString().Replace("\\", "\\\\").Replace("'", @"\'") + "'";
         if (expectType == typeof(DateTime))
-            return $"'{Convert.ToDateTime(value):yyyy-MM-dd HH:mm:ss}'";
+            return "'" + Convert.ToDateTime(value).ToString("yyyy-MM-dd HH:mm:ss.fff") + "'";
         if (value is SqlSegment sqlSegment)
         {
             if (sqlSegment == SqlSegment.Null || !sqlSegment.IsConstantValue)
@@ -130,46 +136,171 @@ public abstract class BaseOrmProvider : IOrmProvider
             ExpressionType.RightShift => ">>",
             _ => nodeType.ToString()
         };
-    public abstract bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
-    public abstract bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
+    public virtual bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
+    {
+        var memberInfo = memberExpr.Member;
+        var cacheKey = HashCode.Combine(memberInfo.DeclaringType, memberInfo);
+        if (!memberAccessSqlFormatterCache.TryGetValue(cacheKey, out formatter))
+        {
+            bool result = false;
+            if (memberInfo.DeclaringType == typeof(DateTime) && this.TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out formatter))
+                return true;
+            if (memberInfo.DeclaringType == typeof(TimeSpan) && this.TryGetTimeSpanMemberAccessSqlFormatter(memberExpr, out formatter))
+                return true;
+            return result;
+        }
+        return true;
+    }
+    public virtual bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
+    {
+        var methodInfo = methodCallExpr.Method;
+        var parameterInfos = methodInfo.GetParameters();
+        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
+        if (!methodCallSqlFormatterCache.TryGetValue(cacheKey, out formatter))
+        {
+            bool result = false;
+            if (methodInfo.DeclaringType == typeof(string) && this.TryGetStringMethodCallSqlFormatter(methodCallExpr, out formatter))
+                return true;
+            if (methodInfo.DeclaringType == typeof(DateTime) && this.TryGetDateTimeMethodCallSqlFormatter(methodCallExpr, out formatter))
+                return true;
+            if (methodInfo.DeclaringType == typeof(TimeSpan) && this.TryGetTimeSpanMethodCallSqlFormatter(methodCallExpr, out formatter))
+                return true;
+            if (methodInfo.DeclaringType == typeof(Convert) && this.TryGetConvertMethodCallSqlFormatter(methodCallExpr, out formatter))
+                return true;
+            if (this.TryGetIEnumerableMethodCallSqlFormatter(methodCallExpr, out formatter))
+                return true;
+            if (methodInfo.DeclaringType == typeof(Math) && this.TryGetMathMethodCallSqlFormatter(methodCallExpr, out formatter))
+                return true;
+            switch (methodInfo.Name)
+            {
+                case "Equals":
+                    if (!methodInfo.IsStatic && parameterInfos.Length == 1)
+                    {
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        {
+                            var targetSegment = visitor.VisitAndDeferred(target);
+                            var rightSegment = visitor.VisitAndDeferred(target);
+                            targetSegment.Merge(rightSegment);
+                            return targetSegment.Change($"{this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)}", false, true);
+                        });
+                        result = true;
+                    }
+                    break;
+                case "Compare":
+                    if (methodInfo.IsStatic && parameterInfos.Length == 2)
+                    {
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        {
+                            var leftSegment = visitor.VisitAndDeferred(args[0]);
+                            var rightSegment = visitor.VisitAndDeferred(args[1]);
+
+                            leftSegment.Merge(rightSegment);
+                            return leftSegment.Change($"CASE WHEN {this.GetQuotedValue(leftSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(leftSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END", false, true);
+                        });
+                        result = true;
+                    }
+                    break;
+                case "CompareTo":
+                    if (!methodInfo.IsStatic && parameterInfos.Length == 1)
+                    {
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        {
+                            var targetSegment = visitor.VisitAndDeferred(target);
+                            var rightSegment = visitor.VisitAndDeferred(args[0]);
+
+                            targetSegment.Merge(rightSegment);
+                            return targetSegment.Change($"CASE WHEN {this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(targetSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END", false, true);
+                        });
+                        result = true;
+                    }
+                    break;
+                case "ToString":
+                    if (!methodInfo.IsStatic && parameterInfos.Length == 0)
+                    {
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        {
+                            var targetSegment = visitor.VisitAndDeferred(target);
+                            if (targetSegment.IsConstantValue)
+                                return targetSegment.Change(targetSegment.ToString());
+                            return targetSegment.Change(this.CastTo(typeof(string), this.GetQuotedValue(targetSegment)), false, true);
+                        });
+                        result = true;
+                    }
+                    break;
+                case "Parse":
+                case "TryParse":
+                    if (!methodInfo.IsStatic && parameterInfos.Length == 1)
+                    {
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        {
+                            args[0] = visitor.VisitAndDeferred(args[0]);
+                            if (args[0].IsConstantValue)
+                                return args[0].Change(this.GetQuotedValue(methodInfo.DeclaringType, args[0]));
+                            return args[0].Change(this.CastTo(methodInfo.DeclaringType, this.GetQuotedValue(args[0])), false, true);
+                        });
+                        result = true;
+                    }
+                    break;
+                case "get_Item":
+                    if (!methodInfo.IsStatic && parameterInfos.Length > 0)
+                    {
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        {
+                            var targetSegment = visitor.VisitAndDeferred(target);
+                            var isConstantValue = targetSegment.IsConstantValue;
+                            var targetType = targetSegment.Value.GetType();
+                            var arguments = new List<object>();
+                            for (int i = 0; i < args.Length; i++)
+                            {
+                                var argumentSegment = visitor.VisitAndDeferred(args[i]);
+                                isConstantValue = isConstantValue && argumentSegment.IsConstantValue;
+                                targetSegment.Merge(argumentSegment);
+                                arguments.Add(argumentSegment.Value);
+                            }
+                            if (isConstantValue)
+                            {
+                                if (!indexMethodCallCache.TryGetValue(cacheKey, out var indexDelegate))
+                                {
+                                    var listExpr = Expression.Parameter(typeof(object), "list");
+                                    var indicesExpr = Expression.Parameter(typeof(object[]), "indices");
+
+                                    var argumentsExpr = new List<Expression>();
+                                    for (int i = 0; i < parameterInfos.Length; i++)
+                                    {
+                                        var indexExpr = Expression.ArrayIndex(indicesExpr, Expression.Constant(i));
+                                        var typedIndexExpr = Expression.Convert(indexExpr, parameterInfos[i].ParameterType);
+                                        argumentsExpr.Add(typedIndexExpr);
+                                    }
+                                    var targetExpr = Expression.Convert(listExpr, targetType);
+                                    var callExpr = Expression.Call(targetExpr, methodInfo, argumentsExpr.ToArray());
+                                    var resultExpr = Expression.Convert(callExpr, typeof(object));
+
+                                    indexDelegate = Expression.Lambda<Func<object, object[], object>>(resultExpr, listExpr, indicesExpr).Compile();
+                                    indexMethodCallCache.TryAdd(cacheKey, indexDelegate);
+                                }
+                                return targetSegment.Change(indexDelegate.Invoke(targetSegment.Value, arguments.ToArray()));
+                            }
+                            throw new NotSupportedException($"不支持的方法调用,{methodInfo.DeclaringType.FullName}.{methodInfo.Name}");
+                        });
+                        result = true;
+                    }
+                    break;
+            }
+            return result;
+        }
+        return true;
+    }
+
+    public abstract bool TryGetStringMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
+    public abstract bool TryGetStringMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
+    public abstract bool TryGetDateTimeMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
+    public abstract bool TryGetDateTimeMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
+    public abstract bool TryGetTimeSpanMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
+    public abstract bool TryGetTimeSpanMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
+    public abstract bool TryGetTimeOnlyMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
+    public abstract bool TryGetTimeOnlyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
+    public abstract bool TryGetConvertMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
+    public abstract bool TryGetIEnumerableMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
+    public abstract bool TryGetMathMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
     public override int GetHashCode() => HashCode.Combine(this.DatabaseType);
-
-    public static Func<string, IDbConnection> CreateConnectionDelegate(Type connectionType)
-    {
-        var constructor = connectionType.GetConstructor(new Type[] { typeof(string) });
-        var connStringExpr = Expression.Parameter(typeof(string), "connectionString");
-        var instanceExpr = Expression.New(constructor, connStringExpr);
-        return Expression.Lambda<Func<string, IDbConnection>>(
-             Expression.Convert(instanceExpr, typeof(IDbConnection))
-             , connStringExpr).Compile();
-    }
-    public static Func<string, object, IDbDataParameter> CreateDefaultParameterDelegate(Type dbParameterType)
-    {
-        var constructor = dbParameterType.GetConstructor(new Type[] { typeof(string), typeof(object) });
-        var parametersExpr = new ParameterExpression[] {
-            Expression.Parameter(typeof(string), "name"),
-            Expression.Parameter(typeof(object), "value") };
-        var instanceExpr = Expression.New(constructor, parametersExpr[0], parametersExpr[1]);
-        var convertExpr = Expression.Convert(instanceExpr, typeof(IDbDataParameter));
-        return Expression.Lambda<Func<string, object, IDbDataParameter>>(convertExpr, parametersExpr).Compile();
-    }
-    public static Func<string, object, object, IDbDataParameter> CreateParameterDelegate(Type dbTypeType, Type dbParameterType, PropertyInfo valuePropertyInfo)
-    {
-        var constructor = dbParameterType.GetConstructor(new Type[] { typeof(string), dbTypeType });
-        var blockParameters = new List<ParameterExpression>();
-        var blockBodies = new List<Expression>();
-        var nameExpr = Expression.Parameter(typeof(string), "name");
-        var dbTypeExpr = Expression.Parameter(typeof(object), "dbType");
-        var valueExpr = Expression.Parameter(typeof(object), "value");
-        var resultExpr = Expression.Variable(dbParameterType, "result");
-        blockParameters.Add(resultExpr);
-
-        var nativeDbTypeExpr = Expression.Convert(dbTypeExpr, dbTypeType);
-        blockBodies.Add(Expression.Assign(resultExpr, Expression.New(constructor, nameExpr, nativeDbTypeExpr)));
-        blockBodies.Add(Expression.Call(resultExpr, valuePropertyInfo.GetSetMethod(), valueExpr));
-        var resultLabelExpr = Expression.Label(typeof(IDbDataParameter));
-        blockBodies.Add(Expression.Return(resultLabelExpr, Expression.Convert(resultExpr, typeof(IDbDataParameter))));
-        blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(IDbDataParameter))));
-        return Expression.Lambda<Func<string, object, object, IDbDataParameter>>(Expression.Block(blockParameters, blockBodies), nameExpr, dbTypeExpr, valueExpr).Compile();
-    }
 }

@@ -101,20 +101,17 @@ class Update<TEntity> : IUpdate<TEntity>
                 break;
             case ExpressionType.New:
                 var newExpr = fieldsExpr.Body as NewExpression;
-                var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
-                bool hasParameterFields = false, isParameterField;
+                var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
                 for (int i = 0; i < newExpr.Arguments.Count; i++)
                 {
                     var memberInfo = newExpr.Members[i];
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out memberMapper))
                         continue;
                     var argumentExpr = newExpr.Arguments[i];
-                    if (i == 0) setFields.Add(visitor.SetValue(fieldsExpr, memberMapper, argumentExpr, out isParameterField));
-                    else setFields.Add(visitor.SetValue(memberMapper, argumentExpr, out isParameterField));
-                    if (isParameterField)
-                        hasParameterFields = true;
+                    if (i == 0) setFields.Add(visitor.SetValue(fieldsExpr, memberMapper, argumentExpr));
+                    else setFields.Add(visitor.SetValue(memberMapper, argumentExpr));
                 }
-                if (!hasParameterFields)
+                if (setFields.Count == 0)
                     throw new NotSupportedException("WithBy方法参数fieldsExpr需要有直接成员访问的栏位才能被parameters参数进行设置，如：WithBy(f => new { f.OrderNo ,f.TotalAmount }, parameters)");
                 break;
         }
@@ -127,7 +124,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
 
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor.Set(fieldsExpr));
     }
     public IUpdateSetting<TEntity> Set<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr)
@@ -137,7 +134,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
 
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor.SetFromQuery(fieldsExpr));
     }
     public IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsExpr)
@@ -147,7 +144,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
 
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
         if (condition) visitor.Set(fieldsExpr);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
@@ -158,7 +155,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldsExpr.Body.NodeType != ExpressionType.New && fieldsExpr.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsExpr)},只支持New或MemberInit类型表达式");
 
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
         if (condition) visitor.SetFromQuery(fieldsExpr, null);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
@@ -172,7 +169,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor.Set(fieldExpr, fieldValue));
     }
     public IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> subQueryExpr)
@@ -183,10 +180,8 @@ class Update<TEntity> : IUpdate<TEntity>
             throw new ArgumentNullException(nameof(subQueryExpr));
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
-        if (subQueryExpr.Body.NodeType != ExpressionType.New && subQueryExpr.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(subQueryExpr)},只支持New或MemberInit类型表达式");
 
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor.SetFromQuery(fieldExpr, subQueryExpr));
     }
     public IUpdateSetting<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -198,7 +193,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
         if (condition) visitor.Set(fieldExpr, fieldValue);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
@@ -210,54 +205,52 @@ class Update<TEntity> : IUpdate<TEntity>
             throw new ArgumentNullException(nameof(subQueryExpr));
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
-        if (subQueryExpr.Body.NodeType != ExpressionType.New && subQueryExpr.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(subQueryExpr)},只支持New或MemberInit类型表达式");
 
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
         if (condition) visitor.SetFromQuery(fieldExpr, subQueryExpr);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
 
     public IUpdateFrom<TEntity, T> From<T>()
     {
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
             .From(typeof(T));
         return new UpdateFrom<TEntity, T>(this.connection, this.transaction, visitor);
     }
     public IUpdateFrom<TEntity, T1, T2> From<T1, T2>()
     {
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
             .From(typeof(T1), typeof(T2));
         return new UpdateFrom<TEntity, T1, T2>(this.connection, this.transaction, visitor);
     }
     public IUpdateFrom<TEntity, T1, T2, T3> From<T1, T2, T3>()
     {
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
              .From(typeof(T1), typeof(T2), typeof(T3));
         return new UpdateFrom<TEntity, T1, T2, T3>(this.connection, this.transaction, visitor);
     }
     public IUpdateFrom<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>()
     {
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
              .From(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         return new UpdateFrom<TEntity, T1, T2, T3, T4>(this.connection, this.transaction, visitor);
     }
     public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
     {
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
              .From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
         return new UpdateFrom<TEntity, T1, T2, T3, T4, T5>(this.connection, this.transaction, visitor);
     }
 
     public IUpdateJoin<TEntity, T> InnerJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
     {
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
             .Join("INNER JOIN", typeof(T), joinOn);
         return new UpdateJoin<TEntity, T>(this.connection, this.transaction, visitor);
     }
     public IUpdateJoin<TEntity, T> LeftJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
     {
-        var visitor = new UpdateVisitor(this.connection.DbKey, this.ormProvider, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
            .Join("INNER JOIN", typeof(T), joinOn);
         return new UpdateJoin<TEntity, T>(this.connection, this.transaction, visitor);
     }
@@ -946,9 +939,9 @@ class UpdateBase
 {
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly UpdateVisitor visitor;
+    protected readonly IUpdateVisitor visitor;
 
-    public UpdateBase(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
+    public UpdateBase(TheaConnection connection, IDbTransaction transaction, IUpdateVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -990,7 +983,7 @@ class UpdateBase
 }
 class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
 {
-    public UpdateSetting(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
+    public UpdateSetting(TheaConnection connection, IDbTransaction transaction, IUpdateVisitor visitor)
         : base(connection, transaction, visitor) { }
 
     public IUpdateSetting<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr)
@@ -1107,7 +1100,7 @@ class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
 }
 class UpdateFrom<TEntity, T1> : UpdateBase, IUpdateFrom<TEntity, T1>
 {
-    public UpdateFrom(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
+    public UpdateFrom(TheaConnection connection, IDbTransaction transaction, IUpdateVisitor visitor)
         : base(connection, transaction, visitor) { }
 
     public IUpdateFrom<TEntity, T1> Set<TFields>(Expression<Func<TEntity, T1, TFields>> fieldsExpr)
@@ -1224,7 +1217,7 @@ class UpdateFrom<TEntity, T1> : UpdateBase, IUpdateFrom<TEntity, T1>
 }
 class UpdateJoin<TEntity, T1> : UpdateBase, IUpdateJoin<TEntity, T1>
 {
-    public UpdateJoin(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
+    public UpdateJoin(TheaConnection connection, IDbTransaction transaction, IUpdateVisitor visitor)
         : base(connection, transaction, visitor) { }
 
     public IUpdateJoin<TEntity, T1, T2> InnerJoin<T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn)
@@ -1358,7 +1351,7 @@ class UpdateJoin<TEntity, T1> : UpdateBase, IUpdateJoin<TEntity, T1>
 }
 class UpdateFrom<TEntity, T1, T2> : UpdateBase, IUpdateFrom<TEntity, T1, T2>
 {
-    public UpdateFrom(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
+    public UpdateFrom(TheaConnection connection, IDbTransaction transaction, IUpdateVisitor visitor)
         : base(connection, transaction, visitor) { }
 
     public IUpdateFrom<TEntity, T1, T2> Set<TFields>(Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr)
@@ -1475,7 +1468,7 @@ class UpdateFrom<TEntity, T1, T2> : UpdateBase, IUpdateFrom<TEntity, T1, T2>
 }
 class UpdateJoin<TEntity, T1, T2> : UpdateBase, IUpdateJoin<TEntity, T1, T2>
 {
-    public UpdateJoin(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
+    public UpdateJoin(TheaConnection connection, IDbTransaction transaction, IUpdateVisitor visitor)
         : base(connection, transaction, visitor) { }
 
     public IUpdateJoin<TEntity, T1, T2, T3> InnerJoin<T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn)
@@ -1609,7 +1602,7 @@ class UpdateJoin<TEntity, T1, T2> : UpdateBase, IUpdateJoin<TEntity, T1, T2>
 }
 class UpdateFrom<TEntity, T1, T2, T3> : UpdateBase, IUpdateFrom<TEntity, T1, T2, T3>
 {
-    public UpdateFrom(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
+    public UpdateFrom(TheaConnection connection, IDbTransaction transaction, IUpdateVisitor visitor)
         : base(connection, transaction, visitor) { }
 
     public IUpdateFrom<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr)
@@ -1726,7 +1719,7 @@ class UpdateFrom<TEntity, T1, T2, T3> : UpdateBase, IUpdateFrom<TEntity, T1, T2,
 }
 class UpdateJoin<TEntity, T1, T2, T3> : UpdateBase, IUpdateJoin<TEntity, T1, T2, T3>
 {
-    public UpdateJoin(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
+    public UpdateJoin(TheaConnection connection, IDbTransaction transaction, IUpdateVisitor visitor)
         : base(connection, transaction, visitor) { }
 
     public IUpdateJoin<TEntity, T1, T2, T3, T4> InnerJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn)
@@ -1860,7 +1853,7 @@ class UpdateJoin<TEntity, T1, T2, T3> : UpdateBase, IUpdateJoin<TEntity, T1, T2,
 }
 class UpdateFrom<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateFrom<TEntity, T1, T2, T3, T4>
 {
-    public UpdateFrom(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
+    public UpdateFrom(TheaConnection connection, IDbTransaction transaction, IUpdateVisitor visitor)
         : base(connection, transaction, visitor) { }
 
     public IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr)
@@ -1977,7 +1970,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateFrom<TEntity, T1,
 }
 class UpdateJoin<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateJoin<TEntity, T1, T2, T3, T4>
 {
-    public UpdateJoin(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
+    public UpdateJoin(TheaConnection connection, IDbTransaction transaction, IUpdateVisitor visitor)
         : base(connection, transaction, visitor) { }
 
     public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> InnerJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn)
@@ -2111,7 +2104,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateJoin<TEntity, T1,
 }
 class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateFrom<TEntity, T1, T2, T3, T4, T5>
 {
-    public UpdateFrom(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
+    public UpdateFrom(TheaConnection connection, IDbTransaction transaction, IUpdateVisitor visitor)
         : base(connection, transaction, visitor) { }
 
     public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
@@ -2228,7 +2221,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateFrom<TEntity,
 }
 class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateJoin<TEntity, T1, T2, T3, T4, T5>
 {
-    public UpdateJoin(TheaConnection connection, IDbTransaction transaction, UpdateVisitor visitor)
+    public UpdateJoin(TheaConnection connection, IDbTransaction transaction, IUpdateVisitor visitor)
         : base(connection, transaction, visitor) { }
 
     public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr)

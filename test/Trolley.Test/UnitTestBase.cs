@@ -317,6 +317,71 @@ public class UnitTestBase
                 UpdatedBy = 1
             }
         });
+
+        repository.Delete<Menu>(new[] { 1, 2, 3 });
+        repository.Create<Menu>(new[]
+        {
+            new Menu
+            {
+                Id = 1,
+                Name = "系统管理",
+                PageId = 0,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            },
+            new Menu
+            {
+                Id = 2,
+                Name = "用户管理",
+                PageId = 1,
+                ParentId = 1,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            },
+            new Menu
+            {
+                Id = 3,
+                Name = "角色管理",
+                PageId = 2,
+                ParentId = 1,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            }
+        });
+
+        repository.Delete<Page>(new[] { 1, 2, 3 });
+        repository.Create<Page>(new[]
+        {
+            new Page
+            {
+                Id = 1,
+                Url = "/user/index",
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            },
+            new Page
+            {
+                Id = 2,
+                Url = "/role/index",
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            }
+        });
         repository.Commit();
     }
 }

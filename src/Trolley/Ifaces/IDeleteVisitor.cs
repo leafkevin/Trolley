@@ -7,6 +7,6 @@ namespace Trolley;
 public interface IDeleteVisitor
 {
     string BuildSql(out List<IDbDataParameter> dbParameters);
-    DeleteVisitor Where(Expression whereExpr);
-    DeleteVisitor And(Expression whereExpr);
+    IDeleteVisitor Where(Expression whereExpr);
+    IDeleteVisitor And(Expression whereExpr);
 }

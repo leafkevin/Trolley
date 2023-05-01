@@ -5,9 +5,9 @@ namespace Trolley;
 
 class FromGroupingQuery<T, TGrouping> : IFromGroupingQuery<T, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromGroupingQuery<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
     {
@@ -67,9 +67,9 @@ class FromGroupingQuery<T, TGrouping> : IFromGroupingQuery<T, TGrouping>
 }
 class FromGroupingQuery<T1, T2, TGrouping> : IFromGroupingQuery<T1, T2, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromGroupingQuery<T1, T2, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate)
     {
@@ -128,9 +128,9 @@ class FromGroupingQuery<T1, T2, TGrouping> : IFromGroupingQuery<T1, T2, TGroupin
 }
 class FromGroupingQuery<T1, T2, T3, TGrouping> : IFromGroupingQuery<T1, T2, T3, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromGroupingQuery<T1, T2, T3, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate)
     {
@@ -189,9 +189,9 @@ class FromGroupingQuery<T1, T2, T3, TGrouping> : IFromGroupingQuery<T1, T2, T3, 
 }
 class FromGroupingQuery<T1, T2, T3, T4, TGrouping> : IFromGroupingQuery<T1, T2, T3, T4, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromGroupingQuery<T1, T2, T3, T4, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate)
     {
@@ -250,9 +250,9 @@ class FromGroupingQuery<T1, T2, T3, T4, TGrouping> : IFromGroupingQuery<T1, T2, 
 }
 class FromGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IFromGroupingQuery<T1, T2, T3, T4, T5, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromGroupingQuery<T1, T2, T3, T4, T5, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate)
     {
@@ -311,9 +311,9 @@ class FromGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IFromGroupingQuery<T1, 
 }
 class FromGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IFromGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate)
     {
@@ -372,9 +372,9 @@ class FromGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IFromGroupingQuery<
 }
 class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
     {
@@ -433,9 +433,9 @@ class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IFromGroupingQu
 }
 class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
     {
@@ -494,9 +494,9 @@ class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : IFromGroupi
 }
 class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
     {
@@ -555,9 +555,9 @@ class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : IFromGr
 }
 class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
     {
@@ -616,9 +616,9 @@ class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : IF
 }
 class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
     {
@@ -677,9 +677,9 @@ class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>
 }
 class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> : IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
     {
@@ -738,9 +738,9 @@ class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrou
 }
 class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> : IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
     {
@@ -799,9 +799,9 @@ class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 }
 class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> : IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
     {
@@ -860,9 +860,9 @@ class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 }
 class FromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> : IFromGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromQuery<TGrouping> Select()
     {

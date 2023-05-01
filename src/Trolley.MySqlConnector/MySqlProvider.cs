@@ -1,6 +1,5 @@
 ﻿using MySqlConnector;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -10,8 +9,6 @@ namespace Trolley.MySqlConnector;
 
 public partial class MySqlProvider : BaseOrmProvider
 {
-    private static ConcurrentDictionary<int, MemberAccessSqlFormatter> memberAccessSqlFormatterCahe = new();
-    private static ConcurrentDictionary<int, MethodCallSqlFormatter> methodCallSqlFormatterCahe = new();
     private static Dictionary<object, Type> defaultMapTypes = new();
     private static Dictionary<Type, object> defaultDbTypes = new();
     private static Dictionary<Type, string> castTos = new();
@@ -156,134 +153,4 @@ public partial class MySqlProvider : BaseOrmProvider
     }
     public override string CastTo(Type type, object value)
        => $"CAST({value} AS {castTos[type]})";
-    public override bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
-    {
-        var memberInfo = memberExpr.Member;
-        var cacheKey = HashCode.Combine(memberInfo.DeclaringType, memberInfo);
-        if (!memberAccessSqlFormatterCahe.TryGetValue(cacheKey, out formatter))
-        {
-            bool result = false;
-            if (memberInfo.DeclaringType == typeof(DateTime) && this.TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out formatter))
-                return true;
-            if (memberInfo.DeclaringType == typeof(TimeSpan) && this.TryGetTimeSpanMemberAccessSqlFormatter(memberExpr, out formatter))
-                return true;
-            return result;
-        }
-        return true;
-    }
-    public override bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
-    {
-        var methodInfo = methodCallExpr.Method;
-        var parameterInfos = methodInfo.GetParameters();
-        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
-        if (!methodCallSqlFormatterCahe.TryGetValue(cacheKey, out formatter))
-        {
-            bool result = false;
-            if (methodInfo.DeclaringType == typeof(string) && this.TryGetStringMethodCallSqlFormatter(methodCallExpr, out formatter))
-                return true;
-            if (methodInfo.DeclaringType == typeof(DateTime) && this.TryGetDateTimeMethodCallSqlFormatter(methodCallExpr, out formatter))
-                return true;
-            if (methodInfo.DeclaringType == typeof(TimeSpan) && this.TryGetTimeSpanMethodCallSqlFormatter(methodCallExpr, out formatter))
-                return true;
-            if (methodInfo.DeclaringType == typeof(Convert) && this.TryGetConvertMethodCallSqlFormatter(methodCallExpr, out formatter))
-                return true; if (this.TryGetIEnumerableMethodCallSqlFormatter(methodCallExpr, out formatter))
-                return true;
-            if (methodInfo.DeclaringType == typeof(Math) && this.TryGetMathMethodCallSqlFormatter(methodCallExpr, out formatter))
-                return true;
-            switch (methodInfo.Name)
-            {
-                case "Equals":
-                    if (!methodInfo.IsStatic && parameterInfos.Length == 1)
-                    {
-                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
-                        {
-                            var targetSegment = visitor.VisitAndDeferred(target);
-                            var rightSegment = visitor.VisitAndDeferred(target);
-                            targetSegment.Merge(rightSegment);
-                            return targetSegment.Change($"{this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)}", false, true);
-                        });
-                        result = true;
-                    }
-                    break;
-                case "Compare":
-                    if (methodInfo.IsStatic && parameterInfos.Length == 2)
-                    {
-                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
-                        {
-                            var leftSegment = visitor.VisitAndDeferred(args[0]);
-                            var rightSegment = visitor.VisitAndDeferred(args[1]);
-
-                            leftSegment.Merge(rightSegment);
-                            return leftSegment.Change($"(CASE WHEN {this.GetQuotedValue(leftSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(leftSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END)", false, true);
-                        });
-                        result = true;
-                    }
-                    break;
-                case "CompareTo":
-                    if (!methodInfo.IsStatic && parameterInfos.Length == 1)
-                    {
-                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
-                        {
-                            var targetSegment = visitor.VisitAndDeferred(target);
-                            var rightSegment = visitor.VisitAndDeferred(args[0]);
-
-                            targetSegment.Merge(rightSegment);
-                            return targetSegment.Change($"(CASE WHEN {this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(targetSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END)", false, true);
-                        });
-                        result = true;
-                    }
-                    break;
-                case "ToString":
-                    if (!methodInfo.IsStatic && parameterInfos.Length == 0)
-                    {
-                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
-                        {
-                            var targetSegment = visitor.VisitAndDeferred(target);
-                            if (targetSegment.IsConstantValue)
-                                return targetSegment.Change(targetSegment.ToString());
-                            return targetSegment.Change(this.CastTo(typeof(string), this.GetQuotedValue(targetSegment)), false, true);
-                        });
-                        result = true;
-                    }
-                    break;
-                case "Parse":
-                case "TryParse":
-                    if (!methodInfo.IsStatic && parameterInfos.Length == 1)
-                    {
-                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
-                        {
-                            args[0] = visitor.VisitAndDeferred(args[0]);
-                            if (args[0].IsConstantValue)
-                                return args[0].Change(this.GetQuotedValue(methodInfo.DeclaringType, args[0]));
-                            return args[0].Change(this.CastTo(methodInfo.DeclaringType, this.GetQuotedValue(args[0])), false, true);
-                        });
-                        result = true;
-                    }
-                    break;
-                case "get_Item":
-                    if (!methodInfo.IsStatic && parameterInfos.Length > 0)
-                    {
-                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
-                        {
-                            var targetSegment = visitor.VisitAndDeferred(target);
-                            var isConstantValue = targetSegment.IsConstantValue;
-                            for (int i = 0; i < args.Length; i++)
-                            {
-                                args[i] = visitor.VisitAndDeferred(args[i]);
-                                isConstantValue = isConstantValue && args[i].IsConstantValue;
-                                targetSegment.Merge(args[i]);
-                            }
-                            if (isConstantValue)
-                                return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, args.Select(f => f.Value).ToArray()));
-
-                            throw new NotSupportedException($"不支持的方法调用,{methodInfo.DeclaringType.FullName}.{methodInfo.Name}");
-                        });
-                        result = true;
-                    }
-                    break;
-            }
-            return result;
-        }
-        return true;
-    }
 }

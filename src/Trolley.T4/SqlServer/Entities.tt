@@ -22,7 +22,7 @@
 <#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
 <#@ output encoding="utf-8" #>
 <#
-    var connectionString = "Server=.;Database=fengling;Uid=sa;password=Angangyur123456;TrustServerCertificate=true";
+    var connectionString = "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true";
 	var dbProvider = new SqlServerProvider(connectionString);
     var manager = Manager.Create(Host, GenerationEnvironment);
 

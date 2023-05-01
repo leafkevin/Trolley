@@ -388,7 +388,7 @@ public class MySqlUnitTest1 : UnitTestBase
             })
             .Where(f => f.Id == 1)
             .ToSql(out _);
-        Assert.True(sql == "INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT a.`Id`+1,CONCAT('PN_',a.`BrandNo`),CONCAT('PName_',a.`Name`),a.`Id`,@p0,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1");
+        Assert.True(sql == "INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT a.`Id`+1,CONCAT('PN_',a.`BrandNo`),CONCAT('PName_',a.`Name`),a.`Id`,@CategoryId,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1");
 
         var count = repository.Create<Product>()
            .From<Brand>(f => new
@@ -434,7 +434,7 @@ public class MySqlUnitTest1 : UnitTestBase
             })
             .Where((a, b) => a.Id == 3 && b.Id == 1)
             .ToSql(out var dbParameters);
-        Assert.True(sql == "INSERT INTO `sys_order_detail` (`Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT @p0,a.`Id`,b.`Id`,b.`Price`,@p1,b.`Price`*3,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_order` a,`sys_product` b WHERE a.`Id`=3 AND b.`Id`=1");
+        Assert.True(sql == "INSERT INTO `sys_order_detail` (`Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT @Id,a.`Id`,b.`Id`,b.`Price`,@Quantity,b.`Price`*3,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_order` a,`sys_product` b WHERE a.`Id`=3 AND b.`Id`=1");
         Assert.True(dbParameters.Count == 2);
         Assert.True((int)dbParameters[0].Value == 7);
         Assert.True((int)dbParameters[1].Value == 3);
@@ -463,7 +463,6 @@ public class MySqlUnitTest1 : UnitTestBase
         Assert.True(orderDetail.OrderId == 3);
         Assert.True(orderDetail.ProductId == 1);
         Assert.True(orderDetail.Amount == product.Price * 3);
-
     }
     [Fact]
     public void Insert_Null_Field()
@@ -545,8 +544,8 @@ public class MySqlUnitTest1 : UnitTestBase
             .ToSql(out var parameters1);
         Assert.True(sql1 == "INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
         Assert.True(parameters1[4].ParameterName == "@Gender");
-        Assert.True(parameters1[4].Value.GetType() == typeof(byte));
-        Assert.True((byte)parameters1[4].Value == (byte)Gender.Male);
+        Assert.True(parameters1[4].Value.GetType() == typeof(sbyte));
+        Assert.True((sbyte)parameters1[4].Value == (sbyte)Gender.Male);
 
         var sql2 = repository.Create<Company>()
              .WithBy(new Company
@@ -561,7 +560,7 @@ public class MySqlUnitTest1 : UnitTestBase
                  UpdatedBy = 1
              })
              .ToSql(out var parameters2);
-        Assert.True(sql2 == "INSERT INTO `sys_company` (`Id`,`Name`,`Nature`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) VALUES(@Id,@Name,@Nature,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
+        Assert.True(sql2 == "INSERT INTO `sys_company` (`Id`,`Name`,`Nature`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Nature,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
         Assert.True(parameters2[2].ParameterName == "@Nature");
         Assert.True(parameters2[2].Value.GetType() == typeof(string));
         Assert.True((string)parameters2[2].Value == CompanyNature.Internet.ToString());

@@ -55,6 +55,7 @@ class RepositoryHelper
         {
             //var dbParameter = ormProvider.CreateParameter("@Name", "kevin");
             methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object) });
+            valueExpr = Expression.Convert(valueExpr, typeof(object));
             dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, valueExpr);
         }
 
@@ -110,19 +111,16 @@ class RepositoryHelper
             var dbParameterExpr = DefineLocalParameter("dbParameter", typeof(IDbDataParameter), localParameters, blockParameters);
             if (nativeDbType != null)
             {
-                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.ToFieldValue), new Type[] { typeof(object), typeof(object) });
                 var nativeDbTypeExpr = Expression.Convert(Expression.Constant(nativeDbType), typeof(object));
-                valueExpr = Expression.Convert(valueExpr, typeof(object));
-                valueExpr = Expression.Call(ormProviderExpr, methodInfo, valueExpr, nativeDbTypeExpr);
-
                 methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });
-                var callExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, valueExpr, valueExpr);
-                blockBodies.Add(Expression.Assign(dbParameterExpr, callExpr));
+                var newParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, valueExpr);
+                blockBodies.Add(Expression.Assign(dbParameterExpr, newParameterExpr));
             }
             else
             {
                 //var dbParameter = ormProvider.CreateParameter("@Name", "kevin");
                 methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object) });
+                valueExpr = Expression.Convert(valueExpr, typeof(object));
                 var newParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, valueExpr);
                 blockBodies.Add(Expression.Assign(dbParameterExpr, newParameterExpr));
             }

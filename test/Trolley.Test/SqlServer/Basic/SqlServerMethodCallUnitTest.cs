@@ -17,7 +17,7 @@ public class SqlServerMethodCallUnitTest : UnitTestBase
             var builder = new OrmDbFactoryBuilder()
             .Register("fengling", true, f =>
             {
-                var connectionString = "Server=.;Database=fengling;Uid=sa;password=Angangyur123456;TrustServerCertificate=true";
+                var connectionString = "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true";
                 f.Add<SqlServerProvider>(connectionString, true);
             })
             .AddTypeHandler<JsonTypeHandler>()
@@ -54,9 +54,15 @@ public class SqlServerMethodCallUnitTest : UnitTestBase
         bool isMale = false;
         int count = 10;
         var sql = repository.From<User>()
+            .Where(f => f.Id == 1)
             .Select(f => string.Concat(f.Name + "_1_" + isMale, f.Age + 5, isMale) + "_2_" + f.Age + "_3_" + isMale + "_4_" + count)
             .ToSql(out _);
         Assert.True(sql == "SELECT ([Name]+'_1_False'+CAST([Age]+5 AS NVARCHAR(MAX))+'False_2_'+CAST([Age] AS NVARCHAR(MAX))+'_3_False_4_10') FROM [sys_user]");
+        var result = repository.From<User>()
+            .Select(f => string.Concat(f.Name + "_1_" + isMale, f.Age + 5, isMale) + "_2_" + f.Age + "_3_" + isMale + "_4_" + count)
+            .First();
+        Assert.NotNull(result);
+        Assert.True(result == "leafkevin_1_False25False_2_25_3_False_4_10");
     }
     [Fact]
     public void Format()
@@ -80,7 +86,7 @@ public class SqlServerMethodCallUnitTest : UnitTestBase
                 CreatedAtCompare = DateTime.Compare(f.CreatedAt, DateTime.Parse("2022-12-20"))
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (CASE WHEN [Name]='leafkevin' THEN 0 WHEN [Name]>'leafkevin' THEN 1 ELSE -1 END) AS NameCompare,(CASE WHEN DATEDIFF_BIG(MS,[CreatedAt],'2022-12-20 00:00:00')=0 THEN 0 WHEN DATEDIFF_BIG(MS,[CreatedAt],'2022-12-20 00:00:00')<0 THEN 1 ELSE -1 END) AS CreatedAtCompare FROM [sys_user]");
+        Assert.True(sql == "SELECT (CASE WHEN [Name]='leafkevin' THEN 0 WHEN [Name]>'leafkevin' THEN 1 ELSE -1 END) AS [NameCompare],(CASE WHEN DATEDIFF_BIG(MS,[CreatedAt],'2022-12-20 00:00:00.000')=0 THEN 0 WHEN DATEDIFF_BIG(MS,[CreatedAt],'2022-12-20 00:00:00.000')<0 THEN 1 ELSE -1 END) AS [CreatedAtCompare] FROM [sys_user]");
     }
     [Fact]
     public void CompareTo()
@@ -95,7 +101,7 @@ public class SqlServerMethodCallUnitTest : UnitTestBase
                 BooleanCompare = f.IsEnabled.CompareTo(false)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (CASE WHEN [Id]=1 THEN 0 WHEN [Id]>1 THEN 1 ELSE -1 END) AS IntCompare,(CASE WHEN [OrderNo]='ON-001' THEN 0 WHEN [OrderNo]>'ON-001' THEN 1 ELSE -1 END) AS StringCompare,(CASE WHEN DATEDIFF_BIG(MS,[CreatedAt],'2022-12-20 00:00:00')=0 THEN 0 WHEN DATEDIFF_BIG(MS,[CreatedAt],'2022-12-20 00:00:00')<0 THEN 1 ELSE -1 END) AS DateTimeCompare,(CASE WHEN [IsEnabled]=0 THEN 0 WHEN [IsEnabled]>0 THEN 1 ELSE -1 END) AS BooleanCompare FROM [sys_order]");
+        Assert.True(sql == "SELECT (CASE WHEN [Id]=1 THEN 0 WHEN [Id]>1 THEN 1 ELSE -1 END) AS [IntCompare],(CASE WHEN [OrderNo]='ON-001' THEN 0 WHEN [OrderNo]>'ON-001' THEN 1 ELSE -1 END) AS [StringCompare],(CASE WHEN DATEDIFF_BIG(MS,[CreatedAt],'2022-12-20 00:00:00.000')=0 THEN 0 WHEN DATEDIFF_BIG(MS,[CreatedAt],'2022-12-20 00:00:00.000')<0 THEN 1 ELSE -1 END) AS [DateTimeCompare],(CASE WHEN [IsEnabled]=0 THEN 0 WHEN [IsEnabled]>0 THEN 1 ELSE -1 END) AS [BooleanCompare] FROM [sys_order]");
     }
     [Fact]
     public void Trims()
@@ -109,7 +115,7 @@ public class SqlServerMethodCallUnitTest : UnitTestBase
                 TrimEnd = "Begin_" + f.OrderNo.TrimEnd() + "  123   ".TrimEnd() + "_End"
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT ('Begin_'+TRIM([OrderNo])+TRIM('  123   ')+'_End') AS Trim,('Begin_'+LTRIM([OrderNo])+LTRIM('  123   ')+'_End') AS TrimStart,('Begin_'+RTRIM([OrderNo])+RTRIM('  123   ')+'_End') AS TrimEnd FROM [sys_order]");
+        Assert.True(sql == "SELECT ('Begin_'+TRIM([OrderNo])+TRIM('  123   ')+'_End') AS [Trim],('Begin_'+LTRIM([OrderNo])+LTRIM('  123   ')+'_End') AS [TrimStart],('Begin_'+RTRIM([OrderNo])+RTRIM('  123   ')+'_End') AS [TrimEnd] FROM [sys_order]");
         repository.BeginTransaction();
         repository.Delete<Order>(new[] { 1, 2, 3 });
         var count = repository.Create<Order>(new[]
@@ -185,7 +191,7 @@ public class SqlServerMethodCallUnitTest : UnitTestBase
                 Col2 = f.OrderNo.ToUpper() + "_AbCd".ToLower()
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (LOWER([OrderNo])+UPPER('_AbCd')) AS Col1,(UPPER([OrderNo])+LOWER('_AbCd')) AS Col2 FROM [sys_order]");
+        Assert.True(sql == "SELECT (LOWER([OrderNo])+UPPER('_AbCd')) AS [Col1],(UPPER([OrderNo])+LOWER('_AbCd')) AS [Col2] FROM [sys_order]");
 
         repository.BeginTransaction();
         repository.Delete<Order>(1);

@@ -71,6 +71,12 @@ public class MySqlUnitTest4 : UnitTestBase
         count = await repository.DeleteAsync<User>(f => f.Id == 1);
         repository.Commit();
         Assert.Equal(1, count);
+
+        var sql = repository.Delete<User>()
+            .Where(f => f.Id == 1)
+            .ToSql(out var parameters);
+        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id`=1");
+        //Assert.True((int)parameters[0].Value == 1);
     }
     [Fact]
     public async void Delete_Multi()
@@ -111,6 +117,13 @@ public class MySqlUnitTest4 : UnitTestBase
         count = await repository.DeleteAsync<User>(new[] { new { Id = 1 }, new { Id = 2 } });
         repository.Commit();
         Assert.Equal(2, count);
+
+        var sql = repository.Delete<User>()
+            .Where(new[] { new { Id = 1 }, new { Id = 2 } })
+            .ToSql(out var parameters);
+        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id`=@Id0;DELETE FROM `sys_user` WHERE `Id`=@Id1");
+        Assert.True((int)parameters[0].Value == 1);
+        Assert.True((int)parameters[1].Value == 2);
     }
     [Fact]
     public async void Delete_Multi1()
@@ -151,6 +164,13 @@ public class MySqlUnitTest4 : UnitTestBase
         count = await repository.DeleteAsync<User>(new int[] { 1, 2 });
         repository.Commit();
         Assert.Equal(2, count);
+
+        var sql = repository.Delete<User>()
+            .Where(new int[] { 1, 2 })
+            .ToSql(out var parameters);
+        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id`=@Id0;DELETE FROM `sys_user` WHERE `Id`=@Id1");
+        Assert.True((int)parameters[0].Value == 1);
+        Assert.True((int)parameters[1].Value == 2);
     }
     [Fact]
     public async void Delete_Multi_Where()
@@ -191,6 +211,13 @@ public class MySqlUnitTest4 : UnitTestBase
         count = await repository.DeleteAsync<User>(f => new int[] { 1, 2 }.Contains(f.Id));
         repository.Commit();
         Assert.Equal(2, count);
+
+        var sql = repository.Delete<User>()
+           .Where(f => new int[] { 1, 2 }.Contains(f.Id))
+           .ToSql(out var parameters);
+        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id` IN (1,2)");
+        //Assert.True((int)parameters[0].Value == 1);
+        //Assert.True((int)parameters[1].Value == 2);
     }
     [Fact]
     public void Delete_Enum_Fields()
@@ -200,16 +227,16 @@ public class MySqlUnitTest4 : UnitTestBase
             .Where(f => f.Gender == Gender.Male)
             .ToSql(out var parameters1);
         Assert.True(sql1 == "DELETE FROM `sys_user` WHERE `Gender`=2");
-        Assert.True(parameters1[0].ParameterName == "@Gender");
-        Assert.True(parameters1[0].Value.GetType() == typeof(byte));
-        Assert.True((byte)parameters1[0].Value == (byte)Gender.Male);
+        //Assert.True(parameters1[0].ParameterName == "@p0");
+        //Assert.True(parameters1[0].Value.GetType() == typeof(sbyte));
+        //Assert.True((sbyte)parameters1[0].Value == (sbyte)Gender.Male);
 
         var sql2 = repository.Delete<Company>()
              .Where(f => f.Nature == CompanyNature.Internet)
              .ToSql(out var parameters2);
-        Assert.True(sql2 == "UPDATE `sys_company` SET `Nature`=@Nature WHERE `Id`=@kId");
-        Assert.True(parameters2[0].ParameterName == "@Nature");
-        Assert.True(parameters2[0].Value.GetType() == typeof(string));
-        Assert.True((string)parameters2[0].Value == CompanyNature.Internet.ToString());
+        Assert.True(sql2 == "DELETE FROM `sys_company` WHERE `Nature`='Internet'");
+        //Assert.True(parameters2[0].ParameterName == "@p0");
+        //Assert.True(parameters2[0].Value.GetType() == typeof(string));
+        //Assert.True((string)parameters2[0].Value == CompanyNature.Internet.ToString());
     }
 }

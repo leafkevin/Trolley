@@ -41,8 +41,8 @@ public class MySqlQueryVisitor : QueryVisitor, IQueryVisitor
         builder.Append(')');
         this.cteTableSql = builder.ToString();
 
-        var tableSegment = this.AddTable(entityType, string.Empty, TableType.MapTable, cteTableName, readerFields);
-        this.InitMapTableReaderFields(tableSegment, readerFields);
+        var tableSegment = this.AddTable(entityType, string.Empty, TableType.FromQuery, cteTableName, readerFields);
+        this.InitFromQueryReaderFields(tableSegment, readerFields);
         if (dbParameters != null)
         {
             if (this.dbParameters == null)

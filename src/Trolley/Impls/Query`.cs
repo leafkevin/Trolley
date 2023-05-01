@@ -13,9 +13,9 @@ class Query<T1, T2> : IQuery<T1, T2>
     protected int withIndex = 0;
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor, int withIndex = 0)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -433,9 +433,9 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
     protected int withIndex = 0;
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor, int withIndex = 0)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -853,9 +853,9 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     protected int withIndex = 0;
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor, int withIndex = 0)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -1273,9 +1273,9 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
     protected int withIndex = 0;
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor, int withIndex = 0)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -1693,9 +1693,9 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
     protected int withIndex = 0;
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor, int withIndex = 0)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -2113,9 +2113,9 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
     protected int withIndex = 0;
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor, int withIndex = 0)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -2533,9 +2533,9 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
     protected int withIndex = 0;
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor, int withIndex = 0)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -2953,9 +2953,9 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
     protected int withIndex = 0;
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor, int withIndex = 0)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -3373,9 +3373,9 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
     protected int withIndex = 0;
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor, int withIndex = 0)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -3793,9 +3793,9 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
     protected int withIndex = 0;
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor, int withIndex = 0)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -4213,9 +4213,9 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
     protected int withIndex = 0;
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor, int withIndex = 0)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -4633,9 +4633,9 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
     protected int withIndex = 0;
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor, int withIndex = 0)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -5053,9 +5053,9 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
     protected int withIndex = 0;
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor, int withIndex = 0)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -5467,9 +5467,9 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
 {
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;

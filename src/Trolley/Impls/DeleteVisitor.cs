@@ -25,7 +25,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
         var entityMapper = this.tableSegment.Mapper;
-        var entityTableName = this.ormProvider.GetTableName(entityMapper.TableName);
+        var entityTableName = this.OrmProvider.GetTableName(entityMapper.TableName);
         var builder = new StringBuilder($"DELETE FROM {entityTableName}");
 
         if (!string.IsNullOrEmpty(this.whereSql))
@@ -33,7 +33,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         dbParameters = this.dbParameters;
         return builder.ToString();
     }
-    public virtual DeleteVisitor Where(Expression whereExpr)
+    public virtual IDeleteVisitor Where(Expression whereExpr)
     {
         this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
@@ -41,13 +41,19 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         this.isWhere = false;
         return this;
     }
-    public virtual DeleteVisitor And(Expression whereExpr)
+    public virtual IDeleteVisitor And(Expression whereExpr)
     {
         this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.whereSql += " AND " + this.VisitConditionExpr(lambdaExpr.Body);
         this.isWhere = false;
         return this;
+    }
+    public override SqlSegment VisitConstant(SqlSegment sqlSegment)
+    {
+        if (this.isParameterized)
+            this.ToParameter(base.VisitConstant(sqlSegment));
+        return base.VisitConstant(sqlSegment);
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
@@ -73,7 +79,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             }
 
             //各种类型实例成员访问，如：DateTime,TimeSpan,String.Length,List.Count
-            if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
+            if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
             {
                 //Where(f=>... && f.OrderNo.Length==10 && ...)
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
@@ -104,12 +110,12 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
                 if (this.isWhere && memberMapper.MemberType.IsEnumType(out var expectType, out _))
                 {
-                    var targetType = this.ormProvider.MapDefaultType(memberMapper.NativeDbType);
+                    var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
                     sqlSegment.ExpectType = expectType;
                     sqlSegment.TargetType = targetType;
                 }
 
-                var fieldName = this.ormProvider.GetFieldName(memberMapper.FieldName);
+                var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                 sqlSegment.HasField = true;
                 sqlSegment.IsConstantValue = false;
                 sqlSegment.TableSegment = tableSegment;
@@ -123,7 +129,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             return SqlSegment.Null;
 
         //各种静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
-        if (this.ormProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
+        if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
             return formatter.Invoke(this, sqlSegment);
 
         //访问局部变量或是成员变量，当作常量处理,直接计算，如果是字符串变成参数@p
@@ -181,7 +187,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         var memberMapper = entityMapper.GetMemberMap(memberInfo.Name);
         if (builder.Length > 0)
             builder.Append(',');
-        builder.Append(this.ormProvider.GetFieldName(memberMapper.FieldName) + "=");
+        builder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName) + "=");
         if (sqlSegment == SqlSegment.Null)
             builder.Append("NULL");
         else
@@ -190,9 +196,9 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             {
                 this.dbParameters ??= new();
                 IDbDataParameter dbParameter = null;
-                var parameterName = this.ormProvider.ParameterPrefix + memberMapper.MemberName;
+                var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
                 if (this.dbParameters.Exists(f => f.ParameterName == parameterName))
-                    parameterName = this.ormProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
+                    parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
 
                 if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
                     sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
@@ -200,18 +206,18 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 if (memberMapper.TypeHandler != null)
                 {
                     if (memberMapper.NativeDbType != null)
-                        dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
-                    else dbParameter = this.ormProvider.CreateParameter(parameterName, sqlSegment.Value);
-                    memberMapper.TypeHandler.SetValue(this.ormProvider, dbParameter, sqlSegment.Value);
+                        dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
+                    else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
+                    memberMapper.TypeHandler.SetValue(this.OrmProvider, dbParameter, sqlSegment.Value);
                 }
                 else
                 {
                     if (memberMapper.NativeDbType != null)
                     {
-                        sqlSegment.Value = this.ormProvider.ToFieldValue(sqlSegment.Value, memberMapper.NativeDbType);
-                        dbParameter = this.ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
+                        sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.Value, memberMapper.NativeDbType);
+                        dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
                     }
-                    else dbParameter = this.ormProvider.CreateParameter(parameterName, sqlSegment.Value);
+                    else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
                 }
 
                 this.dbParameters.Add(dbParameter);

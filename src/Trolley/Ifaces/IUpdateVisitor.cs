@@ -8,12 +8,12 @@ namespace Trolley;
 public interface IUpdateVisitor
 {
     string BuildSql(out List<IDbDataParameter> dbParameters);
-    UpdateVisitor From(params Type[] entityTypes);
-    UpdateVisitor Join(string joinType, Type entityType, Expression joinOn);
-    UpdateVisitor Set(Expression fieldsExpr, object fieldValue = null);
-    SetField SetValue(MemberMap memberMapper, Expression valueExpr, out bool hasParameterFields);
-    SetField SetValue(Expression fieldsExpr, MemberMap memberMapper, Expression valueExpr, out bool hasParameterFields);
-    UpdateVisitor SetFromQuery(Expression fieldsExpr, Expression valueExpr = null);
-    UpdateVisitor Where(Expression whereExpr);
-    UpdateVisitor And(Expression whereExpr);
+    IUpdateVisitor From(params Type[] entityTypes);
+    IUpdateVisitor Join(string joinType, Type entityType, Expression joinOn);
+    IUpdateVisitor Set(Expression fieldsExpr, object fieldValue = null);
+    SetField SetValue(MemberMap memberMapper, Expression valueExpr );
+    SetField SetValue(Expression fieldsExpr, MemberMap memberMapper, Expression valueExpr );
+    IUpdateVisitor SetFromQuery(Expression fieldsExpr, Expression valueExpr = null);
+    IUpdateVisitor Where(Expression whereExpr);
+    IUpdateVisitor And(Expression whereExpr);
 }

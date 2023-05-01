@@ -14,6 +14,13 @@ public static class Sql
     {
         throw new NotImplementedException();
     }
+    /// <summary>
+    /// 当前字段或是表达式是否为NULL，只做条件解析，不实现
+    /// </summary>
+    /// <typeparam name="TField"></typeparam>
+    /// <param name="field">字段访问</param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
     public static bool IsNull<TField>(this TField field)
     {
         throw new NotImplementedException();
@@ -21,11 +28,10 @@ public static class Sql
     /// <summary>
     /// 把当前对象类型转换为TTarget类型，相同名字的成员直接赋值，不存在的成员不做处理，只做实体赋值解析，不实现
     /// </summary>
-    /// <typeparam name="TTarget">类型</typeparam>
-    /// <param name="source">原对象</param>
+    /// <typeparam name="TTarget"></typeparam>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    public static TTarget FlattenTo<TTarget>(this object source)
+    public static TTarget FlattenTo<TTarget>()
     {
         throw new NotImplementedException();
     }
@@ -33,15 +39,11 @@ public static class Sql
     /// 把当前对象类型转换为TTarget类型，除了specialMemberInitializer表达式中的成员做特殊处理外，其他相同的成员名字直接赋值，不存在的成员不做处理，只做实体赋值解析，不实现
     /// </summary>
     /// <typeparam name="TTarget">类型</typeparam>
-    /// <param name="source">原对象</param>
     /// <param name="specialMemberInitializer">做特殊处理的成员赋值表达式</param>
     /// <returns></returns>
-    /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="NotImplementedException"></exception>
-    public static TTarget FlattenTo<TTarget>(this object source, Expression<Func<TTarget>> specialMemberInitializer)
+    public static TTarget FlattenTo<TTarget>(Func<object> specialMemberInitializer)
     {
-        if (specialMemberInitializer == null)
-            throw new ArgumentNullException(nameof(specialMemberInitializer));
         throw new NotImplementedException();
     }
     /// <summary>
@@ -61,7 +63,7 @@ public static class Sql
         throw new NotImplementedException();
     }
     /// <summary>
-    /// 参数化当前值，当前值都将被参数化如：@p0,@p1等，本函数只用来解析，并不实现，用法：
+    /// 参数化当前变量，常量不做参数化，当前值都将被参数化如：@p0,@p1等，本函数只用来解析，并不实现，用法：
     /// string productNo="xxx";
     /// using var repository = dbFactory.Create();
     /// var result1 = await repository.QueryAsync&lt;Product&gt;(f =&gt; f.ProductNo.Contains(productNo.ToParameter()));

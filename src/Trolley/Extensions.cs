@@ -132,14 +132,14 @@ public static class Extensions
         }
         return ((Func<IDataReader, TEntity>)deserializer).Invoke(reader);
     }
-    internal static TEntity To<TEntity>(this IDataReader reader, string dbKey, IOrmProvider ormProvider, bool isTarget, List<ReaderField> readerFields)
+    internal static TEntity To<TEntity>(this IDataReader reader, string dbKey, IOrmProvider ormProvider, List<ReaderField> readerFields)
     {
         var entityType = typeof(TEntity);
         var ormProviderType = ormProvider.GetType();
         var cacheKey = GetTypeReaderKey(entityType, dbKey, ormProviderType, reader);
         if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
         {
-            deserializer = CreateReaderDeserializer(ormProvider, reader, entityType, isTarget, readerFields);
+            deserializer = CreateReaderDeserializer(ormProvider, reader, entityType, readerFields);
             queryReaderDeserializerCache.TryAdd(cacheKey, deserializer);
         }
         return ((Func<IDataReader, TEntity>)deserializer).Invoke(reader);
@@ -179,39 +179,53 @@ public static class Extensions
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
         return Expression.Lambda(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
     }
-    private static Delegate CreateReaderDeserializer(IOrmProvider ormProvider, IDataReader reader, Type entityType, bool isTarget, List<ReaderField> readerFields)
+    private static Delegate CreateReaderDeserializer(IOrmProvider ormProvider, IDataReader reader, Type entityType, List<ReaderField> readerFields)
     {
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
         var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
         var ormProviderExpr = Expression.Constant(ormProvider);
 
+        int? parentIndex = null;
         int index = 0, readerIndex = 0;
         var root = NewBuildInfo(entityType);
         var current = root;
+        var parent = root;
         var readerBuilders = new Dictionary<int, EntityBuildInfo>();
         var deferredBuilds = new Stack<EntityBuildInfo>();
+
         while (readerIndex < readerFields.Count)
         {
             var readerField = readerFields[readerIndex];
-            if (readerField.FieldType == ReaderFieldType.Entity || readerField.FieldType == ReaderFieldType.AnonymousObject)
+            if (readerField.FieldType == ReaderFieldType.Field)
             {
-                //第一个是实体，如果是entityType类型，则是Parameter类型表达式访问
-                //如果不是entityType类型，就是子类型，则是New或是MemeberInit类型表达式访问
-                EntityBuildInfo parent = null;
-                if (readerIndex > 0 || !isTarget)
+                var fieldType = reader.GetFieldType(index);
+                var readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
+                    readerField.FromMember.GetMemberType(), fieldType, null, blockParameters, blockBodies);
+                if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.FromMember, readerValueExpr));
+                else root.Arguments.Add(readerValueExpr);
+                index++;
+            }
+            else
+            {
+                //readerIndex变化，就要构建一个NewBuildInfo对象，每一个readerIndex是不同的实体对象
+                //根据ParentIndex的值，找到它的父亲NewBuildInfo对象               
+                if (readerField.ParentIndex != parentIndex)
                 {
                     if (readerField.ParentIndex.HasValue)
                         parent = readerBuilders[readerField.ParentIndex.Value];
                     else parent = root;
-                    current = NewBuildInfo(readerField.FromMember.GetMemberType(), readerField.FromMember, parent);
                 }
+                if (readerIndex == 0 && !IsTarget(readerFields))
+                    parent = root;
+                if (readerIndex == 0 && !IsTarget(readerFields) || readerIndex > 0)
+                    current = NewBuildInfo(readerField.FromMember.GetMemberType(), readerField.FromMember, parent);
+
                 readerBuilders.Add(readerField.Index, current);
                 int endIndex = index + readerField.ReaderFields.Count;
                 var childIndex = 0;
                 while (index < endIndex)
                 {
-                    var memberName = reader.GetName(index);
                     var fieldType = reader.GetFieldType(index);
                     var fieldMember = readerField.ReaderFields[childIndex].FromMember;
                     Expression readerValueExpr = null;
@@ -224,7 +238,7 @@ public static class Extensions
                     else
                     {
                         var entityMapper = readerField.TableSegment.Mapper;
-                        if (!entityMapper.TryGetMemberMap(memberName, out var memberMapper))
+                        if (!entityMapper.TryGetMemberMap(fieldMember.Name, out var memberMapper))
                             break;
                         readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
                             memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
@@ -235,7 +249,9 @@ public static class Extensions
                     childIndex++;
                     index++;
                 }
-                if (readerIndex > 0 || !isTarget)
+
+                //不是第一个实体字段，都要构建当前实体，如果没有后续实体类型子属性，就一直构建到顶层的下一层
+                if (readerIndex > 0 || readerIndex == 0 && !IsTarget(readerFields))
                 {
                     if (readerField.HasNextInclude)
                         deferredBuilds.Push(current);
@@ -256,15 +272,7 @@ public static class Extensions
                         while (deferredBuilds.TryPop(out current));
                     }
                 }
-            }
-            else
-            {
-                var fieldType = reader.GetFieldType(index);
-                var readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                    readerField.FromMember.GetMemberType(), fieldType, null, blockParameters, blockBodies);
-                if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.FromMember, readerValueExpr));
-                else root.Arguments.Add(readerValueExpr);
-                index++;
+                parentIndex = readerField.ParentIndex;
             }
             readerIndex++;
         }
@@ -324,13 +332,14 @@ public static class Extensions
         else if (underlyingType == typeof(TimeSpan) || underlyingType == typeof(TimeOnly))
         {
             if (fieldType == typeof(long))
-                typedValueExpr = Expression.New(typeof(TimeSpan).GetConstructor(new Type[] { fieldType }), Expression.Convert(objLocalExpr, fieldType));
-            if (fieldType == typeof(TimeSpan) && underlyingType == typeof(TimeOnly))
+                typedValueExpr = Expression.New(underlyingType.GetConstructor(new Type[] { fieldType }), Expression.Convert(objLocalExpr, fieldType));
+            else if (fieldType != underlyingType && (fieldType == typeof(TimeSpan) || fieldType == typeof(TimeOnly)))
             {
                 Expression fieldValueExpr = Expression.Convert(objLocalExpr, fieldType);
                 fieldValueExpr = Expression.Property(fieldValueExpr, nameof(TimeSpan.Ticks));
-                typedValueExpr = Expression.New(typeof(TimeOnly).GetConstructor(new Type[] { typeof(long) }), fieldValueExpr);
+                typedValueExpr = Expression.New(underlyingType.GetConstructor(new Type[] { typeof(long) }), fieldValueExpr);
             }
+            else throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
         }
         else if (targetType.FullName == "System.Data.Linq.Binary")
         {
@@ -469,7 +478,16 @@ public static class Extensions
             hashCode.Add(reader.GetFieldType(i));
         }
         return hashCode.ToHashCode();
-    }   
+    }
+    private static bool IsTarget(List<ReaderField> readerFields)
+    {
+        if (readerFields.Count == 1)
+            return true;
+        if (readerFields.Exists(f => f.FieldType == ReaderFieldType.Field
+             || (f.Index > 0 && f.TableSegment.FromTable == null)))
+            return false;
+        return true;
+    }
     class EntityBuildInfo
     {
         public bool IsDefault { get; set; }

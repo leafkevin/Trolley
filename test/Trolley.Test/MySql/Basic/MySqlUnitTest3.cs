@@ -21,8 +21,7 @@ public class MySqlUnitTest3 : UnitTestBase
                 f.Add<MySqlProvider>(connectionString, true);
             })
             .AddTypeHandler<JsonTypeHandler>()
-            .Configure<MySqlProvider, MySqlModelConfiguration>()
-            .With(f => f.IsParameterized = true);
+            .Configure<MySqlProvider, MySqlModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
@@ -128,7 +127,7 @@ public class MySqlUnitTest3 : UnitTestBase
         var sql = repository.Update<OrderDetail>()
             .WithBy(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5");
+        Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5");
     }
     [Fact]
     public async void Update_Parameters_WithBy()
@@ -172,7 +171,7 @@ public class MySqlUnitTest3 : UnitTestBase
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@p0,a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
     }
     [Fact]
     public void Update_Set_FromQuery_Fields()
@@ -186,7 +185,7 @@ public class MySqlUnitTest3 : UnitTestBase
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@p0,a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
     }
     [Fact]
     public void Update_InnerJoin_One()
@@ -202,7 +201,7 @@ public class MySqlUnitTest3 : UnitTestBase
             })
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=@p0,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
     }
     [Fact]
     public void Update_InnerJoin_Multi()

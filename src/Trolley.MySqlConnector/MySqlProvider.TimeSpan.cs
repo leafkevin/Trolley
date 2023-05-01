@@ -6,7 +6,7 @@ namespace Trolley.MySqlConnector;
 
 partial class MySqlProvider
 {
-    public virtual bool TryGetTimeSpanMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
+    public override bool TryGetTimeSpanMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
     {
         bool result = false;
         formatter = null;
@@ -18,15 +18,15 @@ partial class MySqlProvider
             {
                 //静态成员访问，理论上没有target对象，为了不再创建sqlSegment对象，外层直接把对象传了进来
                 case "MinValue":
-                    memberAccessSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target) => target.Change(TimeSpan.MinValue));
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change(TimeSpan.MinValue));
                     result = true;
                     break;
                 case "MaxValue":
-                    memberAccessSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target) => target.Change(TimeSpan.MaxValue));
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change(TimeSpan.MaxValue));
                     result = true;
                     break;
                 case "Zero":
-                    memberAccessSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target) => target.Change(TimeSpan.Zero));
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change(TimeSpan.Zero));
                     result = true;
                     break;
             }
@@ -36,7 +36,7 @@ partial class MySqlProvider
             switch (memberInfo.Name)
             {
                 case "Ticks":
-                    memberAccessSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target) =>
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstantValue)
@@ -48,67 +48,67 @@ partial class MySqlProvider
                         builder.Append($"+CAST(DATEPART(MI,{targetArgument}) AS BIGINT)*60*10000000");
                         builder.Append($"+CAST(DATEPART(SS,{targetArgument}) AS BIGINT)*10000000");
                         builder.Append($"+CAST(DATEPART(NS,{targetArgument}) AS BIGINT)/100");
-                        return targetSegment.Change($"({builder})", false, true);
+                        return targetSegment.Change($"{builder}", false, true, false);
                     });
                     result = true;
                     break;
                 case "Days":
-                    memberAccessSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target) =>
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstantValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Days);
 
-                        return targetSegment.Change($"DATEPART(DD,{this.GetQuotedValue(targetSegment)})", false, true);
+                        return targetSegment.Change($"DATEPART(DD,{this.GetQuotedValue(targetSegment)})", false, false, true);
                     });
                     result = true;
                     break;
                 case "Hours":
-                    memberAccessSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target) =>
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstantValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Hours);
 
-                        return targetSegment.Change($"DATEPART(HH,{this.GetQuotedValue(targetSegment)})", false, true);
+                        return targetSegment.Change($"DATEPART(HH,{this.GetQuotedValue(targetSegment)})", false, false, true);
                     });
                     result = true;
                     break;
                 case "Milliseconds":
-                    memberAccessSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target) =>
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstantValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Milliseconds);
 
-                        return targetSegment.Change($"DATEPART(MS,{this.GetQuotedValue(targetSegment)})");
+                        return targetSegment.Change($"DATEPART(MS,{this.GetQuotedValue(targetSegment)})", false, false, true);
                     });
                     result = true;
                     break;
                 case "Minutes":
-                    memberAccessSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target) =>
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstantValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Minutes);
 
-                        return targetSegment.Change($"DATEPART(MI,{this.GetQuotedValue(targetSegment)})", false, true);
+                        return targetSegment.Change($"DATEPART(MI,{this.GetQuotedValue(targetSegment)})", false, false, true);
                     });
                     result = true;
                     break;
                 case "Seconds":
-                    memberAccessSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target) =>
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstantValue)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Seconds);
 
-                        return targetSegment.Change($"DATEPART(SS,{this.GetQuotedValue(targetSegment)})", false, true);
+                        return targetSegment.Change($"DATEPART(SS,{this.GetQuotedValue(targetSegment)})", false, false, true);
                     });
                     result = true;
                     break;
                 case "TotalDays":
-                    memberAccessSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target) =>
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstantValue)
@@ -118,12 +118,12 @@ partial class MySqlProvider
                         builder.Append($"CAST(DATEPART(DD,{this.GetQuotedValue(targetSegment)}) AS REAL)");
                         builder.Append($"+CAST(CAST(DATEPART(HH,{this.GetQuotedValue(targetSegment)}) AS REAL)/24 AS REAL)");
                         builder.Append($"+CAST(CAST(DATEPART(MI,{this.GetQuotedValue(targetSegment)}) AS REAL)/24/60 AS REAL)");
-                        return targetSegment.Change($"({builder})", false, true);
+                        return targetSegment.Change($"({builder})", false, false, true);
                     });
                     result = true;
                     break;
                 case "TotalHours":
-                    memberAccessSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target) =>
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstantValue)
@@ -134,12 +134,12 @@ partial class MySqlProvider
                         builder.Append($"+CAST(DATEPART(HH,{this.GetQuotedValue(targetSegment)}) AS REAL)");
                         builder.Append($"+CAST(CAST(DATEPART(MI,{this.GetQuotedValue(targetSegment)}) AS REAL)/60 AS REAL)");
                         builder.Append($"+CAST(CAST(DATEPART(SS,{this.GetQuotedValue(targetSegment)}) AS REAL)/60/60 AS REAL)");
-                        return targetSegment.Change($"({builder})", false, true);
+                        return targetSegment.Change($"({builder})", false, false, true);
                     });
                     result = true;
                     break;
                 case "TotalMilliseconds":
-                    memberAccessSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target) =>
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstantValue)
@@ -153,12 +153,12 @@ partial class MySqlProvider
                         builder.Append($"+CAST(DATEPART(MS,{this.GetQuotedValue(targetSegment)}) AS REAL)");
                         builder.Append($"+CAST(CAST(DATEPART(MCS,{this.GetQuotedValue(targetSegment)}) AS REAL)/1000 AS REAL)");
                         builder.Append($"+CAST(CAST(DATEPART(NS,{this.GetQuotedValue(targetSegment)}) AS REAL)/1000/1000 AS REAL)");
-                        return targetSegment.Change($"({builder})", false, true);
+                        return targetSegment.Change($"({builder})", false, false, true);
                     });
                     result = true;
                     break;
                 case "TotalMinutes":
-                    memberAccessSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target) =>
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstantValue)
@@ -171,12 +171,12 @@ partial class MySqlProvider
                         builder.Append($"+CAST(CAST(DATEPART(SS,{this.GetQuotedValue(targetSegment)}) AS REAL)/60 AS REAL)");
                         builder.Append($"+CAST(CAST(DATEPART(MS,{this.GetQuotedValue(targetSegment)}) AS REAL)/1000 AS REAL)");
                         builder.Append($"+CAST(CAST(DATEPART(MCS,{this.GetQuotedValue(targetSegment)}) AS REAL)/1000/1000 AS REAL)");
-                        return targetSegment.Change($"({builder})", false, true);
+                        return targetSegment.Change($"({builder})", false, false, true);
                     });
                     result = true;
                     break;
                 case "TotalSeconds":
-                    memberAccessSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target) =>
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstantValue)
@@ -189,7 +189,7 @@ partial class MySqlProvider
                         builder.Append($"+CAST(DATEPART(SS,{this.GetQuotedValue(targetSegment)}) AS REAL)");
                         builder.Append($"+CAST(CAST(DATEPART(MS,{this.GetQuotedValue(targetSegment)}) AS REAL)/1000 AS REAL)");
                         builder.Append($"+CAST(CAST(DATEPART(MCS,{this.GetQuotedValue(targetSegment)}) AS REAL)/1000/1000 AS REAL)");
-                        return targetSegment.Change($"({builder})", false, true);
+                        return targetSegment.Change($"({builder})", false, false, true);
                     });
                     result = true;
                     break;
@@ -197,7 +197,7 @@ partial class MySqlProvider
         }
         return result;
     }
-    public virtual bool TryGetTimeSpanMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
+    public override bool TryGetTimeSpanMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
         var result = false;
         formatter = null;
@@ -209,7 +209,7 @@ partial class MySqlProvider
             switch (methodInfo.Name)
             {
                 case "Compare":
-                    methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         var leftSegment = visitor.VisitAndDeferred(args[0]);
                         var rightSegment = visitor.VisitAndDeferred(args[1]);
@@ -220,7 +220,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "Equals":
-                    methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         var leftSegment = visitor.VisitAndDeferred(args[0]);
                         var rightSegment = visitor.VisitAndDeferred(args[1]);
@@ -231,7 +231,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "FromDays":
-                    methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(args[0]);
                         return args[0].Change($"{valueSegment}*{(long)1000000 * 60 * 60 * 24}", false, true);
@@ -239,7 +239,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "FromHours":
-                    methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(args[0]);
                         return valueSegment.Change($"{valueSegment}*{(long)1000000 * 60 * 60}", false, true);
@@ -247,7 +247,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "FromMilliseconds":
-                    methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(args[0]);
                         return valueSegment.Change($"{valueSegment}*1000", false, true);
@@ -255,7 +255,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "FromMinutes":
-                    methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(args[0]);
                         return valueSegment.Change($"{valueSegment}*{(long)1000000 * 60}", false, true);
@@ -263,7 +263,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "FromSeconds":
-                    methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(args[0]);
                         return valueSegment.Change($"{valueSegment}*1000000", false, true);
@@ -271,7 +271,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "FromTicks":
-                    methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(args[0]);
                         return valueSegment.Change($"{valueSegment}/10", false, true);
@@ -280,7 +280,7 @@ partial class MySqlProvider
                     break;
                 case "Parse":
                 case "TryParse":
-                    methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(args[0]);
                         if (valueSegment.IsConstantValue)
@@ -292,7 +292,7 @@ partial class MySqlProvider
                     break;
                 case "ParseExact":
                 case "TryParseExact":
-                    methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(args[0]);
                         if (valueSegment.IsConstantValue)
@@ -309,7 +309,7 @@ partial class MySqlProvider
             switch (methodInfo.Name)
             {
                 case "CompareTo":
-                    methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         var rightSegment = visitor.VisitAndDeferred(args[0]);
@@ -320,7 +320,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "Equals":
-                    methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         var rightSegment = visitor.VisitAndDeferred(args[0]);
@@ -331,7 +331,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "Add":
-                    methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         var rightSegment = visitor.VisitAndDeferred(args[0]);
@@ -345,7 +345,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "Subtract":
-                    methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         var rightSegment = visitor.VisitAndDeferred(args[0]);
@@ -358,7 +358,7 @@ partial class MySqlProvider
                     result = true;
                     break;
                 case "Multiply":
-                    methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         var rightSegment = visitor.VisitAndDeferred(args[0]);
@@ -373,7 +373,7 @@ partial class MySqlProvider
                 case "Divide":
                     if (parameterInfos[0].ParameterType == typeof(double))
                     {
-                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
                             var targetSegment = visitor.VisitAndDeferred(target);
                             var rightSegment = visitor.VisitAndDeferred(args[0]);
@@ -387,7 +387,7 @@ partial class MySqlProvider
                     }
                     if (parameterInfos[0].ParameterType == typeof(TimeSpan))
                     {
-                        methodCallSqlFormatterCahe.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
                             var targetSegment = visitor.VisitAndDeferred(target);
                             var rightSegment = visitor.VisitAndDeferred(args[0]);

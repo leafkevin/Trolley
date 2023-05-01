@@ -17,7 +17,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             var builder = new OrmDbFactoryBuilder()
             .Register("fengling", true, f =>
             {
-                var connectionString = "Server=.;Database=fengling;Uid=sa;password=Angangyur123456;TrustServerCertificate=true";
+                var connectionString = "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true";
                 f.Add<SqlServerProvider>(connectionString, true);
             })
             .AddTypeHandler<JsonTypeHandler>()

@@ -35,14 +35,13 @@ public class SqlSegment
     /// </summary>
     public bool IsConstantValue { get; set; }
     /// <summary>
-    /// 是否是表达式，通常方法调用，二元表达式都为true
+    /// 是否是表达式，二元表达式、字符串拼接等
     /// </summary>
     public bool IsExpression { get; set; }
     /// <summary>
-    /// 是否需要在最外层添加括弧()，主要是在SELECT语句中，某个字段是表达式，用()包一下SQL看起来更优雅
-    /// 通常是在解析Defer语句或是解析表达式后设置此值
+    /// 是否方法调用
     /// </summary>
-    public bool IsNeedParentheses { get; set; }
+    public bool IsMethodCall { get; set; }
     /// <summary>
     /// 是否参数化当前值，本次解析有效
     /// </summary>
@@ -89,11 +88,12 @@ public class SqlSegment
         this.IsParameter = this.IsParameter || rightSegment.IsParameter;
         return this;
     }
-    public SqlSegment Change(object value, bool isConstantValue = true, bool isExpression = false)
+    public SqlSegment Change(object value, bool isConstantValue = true, bool isExpression = false, bool isMethodCall = false)
     {
         this.isFixValue = false;
         this.IsConstantValue = isConstantValue;
         this.IsExpression = isExpression;
+        this.IsMethodCall = isMethodCall;
         this.Value = value;
         return this;
     }

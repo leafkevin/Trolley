@@ -51,10 +51,28 @@ public class MySqlWhereUnitTest : UnitTestBase
     [Fact]
     public async void WhereStringEnum()
     {
-        this.Initialize();      
+        this.Initialize();
         using var repository = dbFactory.Create();
         var result1 = await repository.QueryAsync<Company>(f => f.Nature == CompanyNature.Internet);
         Assert.True(result1.Count >= 2);
+        var result2 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet);
+        Assert.True(result2.Count >= 2);
+        var localNature = CompanyNature.Internet;
+        var result3 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == localNature);
+        Assert.True(result2.Count >= 2);
+    }
+    [Fact]
+    public async void WhereIsNull()
+    {
+        this.Initialize();
+        using var repository = dbFactory.Create();
+        repository.BeginTransaction();
+        repository.Update<Order>(f => new { BuyerId = DBNull.Value }, new { Id = 1 });
+        var result1 = repository.From<Order>()
+            .Where(f => f.BuyerId.IsNull())
+            .First();
+        repository.Commit();
+        Assert.True(result1.Id == 1);
         var result2 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet);
         Assert.True(result2.Count >= 2);
         var localNature = CompanyNature.Internet;

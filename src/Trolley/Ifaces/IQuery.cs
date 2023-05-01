@@ -470,19 +470,10 @@ public interface IQuery<T>
 
     T First();
     Task<T> FirstAsync(CancellationToken cancellationToken = default);
-    TTarget First<TTarget>(Expression<Func<T, TTarget>> toTargetExpr);
-    Task<TTarget> FirstAsync<TTarget>(Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default);
-
     List<T> ToList();
     Task<List<T>> ToListAsync(CancellationToken cancellationToken = default);
-    List<TTarget> ToList<TTarget>(Expression<Func<T, TTarget>> toTargetExpr);
-    Task<List<TTarget>> ToListAsync<TTarget>(Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default(CancellationToken));
-
     IPagedList<T> ToPageList();
     Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default);
-    IPagedList<TTarget> ToPageList<TTarget>(Expression<Func<T, TTarget>> toTargetExpr);
-    Task<IPagedList<TTarget>> ToPageListAsync<TTarget>(Expression<Func<T, TTarget>> toTargetExpr, CancellationToken cancellationToken = default(CancellationToken));
-
     Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull;
     Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull;
 

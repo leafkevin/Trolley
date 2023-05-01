@@ -1,14 +1,14 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using Trolley.MySqlConnector;
+using Trolley.SqlServer;
 using Xunit;
 
-namespace Trolley.Test.MySql;
+namespace Trolley.Test.SqlServer;
 
-public class MySqlExpressionUnitTest : UnitTestBase
+public class SqlServerExpressionUnitTest : UnitTestBase
 {
-    public MySqlExpressionUnitTest()
+    public SqlServerExpressionUnitTest()
     {
         var services = new ServiceCollection();
         services.AddSingleton(f =>
@@ -16,11 +16,11 @@ public class MySqlExpressionUnitTest : UnitTestBase
             var builder = new OrmDbFactoryBuilder()
             .Register("fengling", true, f =>
             {
-                var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
-                f.Add<MySqlProvider>(connectionString, true);
+                var connectionString = "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true";
+                f.Add<SqlServerProvider>(connectionString, true);
             })
             .AddTypeHandler<JsonTypeHandler>()
-            .Configure<MySqlProvider, MySqlModelConfiguration>();
+            .Configure<SqlServerProvider, SqlServerModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
@@ -37,7 +37,7 @@ public class MySqlExpressionUnitTest : UnitTestBase
             .Where(f => f.Name.Contains(lastName ?? firstName))
             .Select(f => new { HasName = f.Name ?? "NoName" })
             .ToSql(out _);
-        Assert.True(sql == "SELECT COALESCE(`Name`,'NoName') AS `HasName` FROM `sys_user` WHERE `Name` LIKE '%kevin%'");
+        Assert.True(sql == "SELECT COALESCE([Name],'NoName') AS [HasName] FROM [sys_user] WHERE [Name] LIKE '%kevin%'");
     }
     [Fact]
     public void Conditional()
@@ -55,7 +55,7 @@ public class MySqlExpressionUnitTest : UnitTestBase
                 IsNeedParameter = f.Name.Contains("kevin") ? "Yes" : noParameter.ToParameter(),
             })
             .ToSql(out var parameters);
-        Assert.True(sql == "SELECT (CASE WHEN `IsEnabled`=1 THEN 'Enabled' ELSE 'Disabled' END) AS `IsEnabled`,(CASE WHEN `GuidField` IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END) AS `GuidField`,(CASE WHEN `Age`>35 THEN 1 ELSE 0 END) AS `IsOld`,(CASE WHEN `Name` LIKE '%kevin%' THEN 'Yes' ELSE @p0 END) AS `IsNeedParameter` FROM `sys_user` WHERE (CASE WHEN `IsEnabled`=1 THEN 'Enabled' ELSE 'Disabled' END)='Enabled'");
+        Assert.True(sql == "SELECT (CASE WHEN [IsEnabled]=1 THEN 'Enabled' ELSE 'Disabled' END) AS [IsEnabled],(CASE WHEN [GuidField] IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END) AS [GuidField],(CASE WHEN [Age]>35 THEN 1 ELSE 0 END) AS [IsOld],(CASE WHEN [Name] LIKE '%kevin%' THEN 'Yes' ELSE @p0 END) AS [IsNeedParameter] FROM [sys_user] WHERE (CASE WHEN [IsEnabled]=1 THEN 'Enabled' ELSE 'Disabled' END)='Enabled'");
         Assert.True((string)parameters[0].Value == noParameter);
     }
     [Fact]
@@ -80,7 +80,7 @@ public class MySqlExpressionUnitTest : UnitTestBase
                 MyLove = dict["2"] + " and " + dict["3"]
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT 'Unknown' AS `False`,'Unknown' AS `Unknown`,'cindy and xiyuan' AS `MyLove` FROM `sys_user` WHERE `Name` LIKE '%leafkevin%' OR CAST(`IsEnabled` AS CHAR)='True'");
+        Assert.True(sql == "SELECT 'Unknown' AS [False],'Unknown' AS [Unknown],'cindy and xiyuan' AS [MyLove] FROM [sys_user] WHERE [Name] LIKE '%leafkevin%' OR CAST([IsEnabled] AS NVARCHAR(MAX))='True'");
     }
 }
 
