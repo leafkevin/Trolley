@@ -861,13 +861,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //var orderId=10; Select(f=>new {OrderId=orderId,...}
         //Select(f=>new {OrderId=this.Order.Id, ...}
         sqlSegment = this.Evaluate(sqlSegment);
-        this.ConvertTo(sqlSegment);
 
         //只有变量做参数化
         if (sqlSegment.IsParameterized || this.isParameterized)
-            return this.ToParameter(sqlSegment);
+            return this.ToParameter(this.ConvertTo(sqlSegment));
 
-        return sqlSegment;
+        return this.ConvertTo(sqlSegment);
     }
     public virtual TableSegment InitTableAlias(LambdaExpression lambdaExpr)
     {

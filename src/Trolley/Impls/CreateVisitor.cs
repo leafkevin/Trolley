@@ -87,6 +87,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.isWhere = false;
         return this;
     }
+    public override SqlSegment VisitConstant(SqlSegment sqlSegment)
+    {
+        if (this.isParameterized || sqlSegment.IsParameterized)
+            return this.ToParameter(base.VisitConstant(sqlSegment));
+        return base.VisitConstant(sqlSegment);
+    }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
         var memberExpr = sqlSegment.Expression as MemberExpression;
@@ -174,13 +180,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         //var orderId=10; Select(f=>new {OrderId=orderId,...}
         //Select(f=>new {OrderId=this.Order.Id, ...}
         sqlSegment = this.Evaluate(sqlSegment);
-        this.ConvertTo(sqlSegment);
 
         //只有变量做参数化
         if (sqlSegment.IsParameterized || this.isParameterized)
-            return this.ToParameter(sqlSegment);
+            return this.ToParameter(this.ConvertTo(sqlSegment));
 
-        return sqlSegment;
+        return this.ConvertTo(sqlSegment);
     }
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
     {

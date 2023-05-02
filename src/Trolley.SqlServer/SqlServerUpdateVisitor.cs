@@ -92,7 +92,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     var argumentExpr = newExpr.Arguments[i];
                     var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
                     //只一个成员访问，没有设置语句，什么也不做，忽略
-                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberInfo.Name)
+                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberInfo.Name)
                         continue;
                     setFields.Add(this.AddMemberElement(sqlSegment, memberMapper));
                 }

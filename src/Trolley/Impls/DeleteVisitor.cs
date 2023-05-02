@@ -51,8 +51,8 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     }
     public override SqlSegment VisitConstant(SqlSegment sqlSegment)
     {
-        if (this.isParameterized)
-            this.ToParameter(base.VisitConstant(sqlSegment));
+        if (this.isParameterized || sqlSegment.IsParameterized)
+            return this.ToParameter(base.VisitConstant(sqlSegment));
         return base.VisitConstant(sqlSegment);
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)

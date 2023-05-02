@@ -488,7 +488,7 @@ partial class SqlServerProvider
                                 return targetSegment.Change(((DateTime)targetSegment.Value).ToString(rightSegment.ToString()));
 
                             if (rightSegment.IsConstantValue)
-                                return targetSegment.Change($"FORMAT({this.GetQuotedValue(targetSegment)},{rightSegment})", false, false, true);
+                                return targetSegment.Change($"FORMAT({this.GetQuotedValue(targetSegment)},{this.GetQuotedValue(rightSegment)})", false, false, true);
 
                             throw new NotSupportedException("DateTime类型暂时不支持非常量的格式化字符串");
                         });

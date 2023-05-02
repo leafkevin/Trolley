@@ -222,7 +222,7 @@ partial class MySqlProvider
                         if (valueSegment.IsConstantValue)
                             return valueSegment.Change(DateTime.IsLeapYear(Convert.ToInt32(valueSegment.Value)));
 
-                        return args[0].Change($"({valueSegment})%4=0 AND ({valueSegment})%100<>0 OR ({valueSegment})%400=0", false, true, false);
+                        return args[0].Change($"(({valueSegment})%4=0 AND ({valueSegment})%100<>0 OR ({valueSegment})%400=0)", false, false, true);
                     });
                     result = true;
                     break;

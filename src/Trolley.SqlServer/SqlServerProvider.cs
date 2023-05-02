@@ -144,10 +144,10 @@ public partial class SqlServerProvider : BaseOrmProvider
         }
         return builder.ToString();
     }
-    public override object GetNativeDbType(Type type)
+    public override object GetNativeDbType(Type fieldType)
     {
-        if (!defaultDbTypes.TryGetValue(type, out var dbType))
-            throw new Exception($"类型{type.FullName}没有对应的System.Data.SqlDbType映射类型");
+        if (!defaultDbTypes.TryGetValue(fieldType, out var dbType))
+            throw new Exception($"类型{fieldType.FullName}没有对应的System.Data.SqlDbType映射类型");
         return dbType;
     }
     public override Type MapDefaultType(object nativeDbType)

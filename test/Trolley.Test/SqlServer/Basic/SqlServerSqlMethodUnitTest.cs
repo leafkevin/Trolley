@@ -41,7 +41,7 @@ public class SqlServerSqlMethodCallUnitTest : UnitTestBase
            .Where(f => Sql.In(f.CreatedAt, new DateTime[] { DateTime.Parse("2023-03-03"), DateTime.Parse("2023-03-03 00:00:00"), DateTime.Parse("2023-03-03 06:06:06") }))
            .Select(f => f.Id)
            .ToSql(out _);
-        Assert.True(sql == "SELECT [Id] FROM [sys_user] WHERE [CreatedAt] IN ('2023-03-03 00:00:00','2023-03-03 00:00:00','2023-03-03 06:06:06')");
+        Assert.True(sql == "SELECT [Id] FROM [sys_user] WHERE [CreatedAt] IN ('2023-03-03 00:00:00.000','2023-03-03 00:00:00.000','2023-03-03 06:06:06.000')");
     }
     [Fact]
     public void ToFlatten()
@@ -54,7 +54,7 @@ public class SqlServerSqlMethodCallUnitTest : UnitTestBase
                 Col2 = f.OrderNo.ToUpper() + "_AbCd".ToLower()
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (LOWER([OrderNo])+UPPER('_AbCd')) AS Col1,(UPPER([OrderNo])+LOWER('_AbCd')) AS Col2 FROM [sys_order]");
+        Assert.True(sql == "SELECT (LOWER([OrderNo])+UPPER('_AbCd')) AS [Col1],(UPPER([OrderNo])+LOWER('_AbCd')) AS [Col2] FROM [sys_order]");
 
         repository.BeginTransaction();
         repository.Delete<Order>(8);

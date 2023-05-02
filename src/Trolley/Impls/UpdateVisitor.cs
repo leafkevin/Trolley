@@ -376,8 +376,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public override SqlSegment VisitConstant(SqlSegment sqlSegment)
     {
-        if (this.isParameterized)
-            this.ToParameter(base.VisitConstant(sqlSegment));
+        if (this.isParameterized || sqlSegment.IsParameterized)
+            return this.ToParameter(base.VisitConstant(sqlSegment));
         return base.VisitConstant(sqlSegment);
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
@@ -469,7 +469,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         //Select(f=>new {OrderId=this.Order.Id, ...}
         sqlSegment = this.Evaluate(sqlSegment);
 
-        //暂时不做参数化，只有WithBy场景还没有参数化，走RepositoryHelper的参数化处理
+        //只有WithBy场景在此参数化，暂时不做参数化，走parameters的参数化处理
         return this.ConvertTo(sqlSegment);
     }
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
