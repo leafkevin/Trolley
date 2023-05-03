@@ -54,11 +54,19 @@ public static class Sql
     /// <param name="separator">连接符</param>
     /// <returns>返回连接后的字符串表达式</returns>
     /// <exception cref="NotImplementedException"></exception>
-    public static string GroupConcat<TField>(this TField field, string separator)
+    //public static string GroupConcat<TField>(this TField field, string separator)
+    //{
+    //    throw new NotImplementedException();
+    //}
+    //public static List<TTable> GroupInto<TTable, TField>(this TTable table, Expression<Func<TTable, TField>> fieldSelector)
+    //{
+    //    throw new NotImplementedException();
+    //}
+    public static int RowNumber()
     {
         throw new NotImplementedException();
     }
-    public static List<TTable> GroupInto<TTable, TField>(this TTable table, Expression<Func<TTable, TField>> fieldSelector)
+    public static int RowNumberOver(Func<RowNumberOver, RowNumberOver> overExpr)
     {
         throw new NotImplementedException();
     }
@@ -150,6 +158,17 @@ public static class Sql
         throw new NotImplementedException();
     }
     public static TField Min<TField>(TField field)
+    {
+        throw new NotImplementedException();
+    }
+}
+public class RowNumberOver
+{
+    public RowNumberOver PartitionBy<Fields>(Func<Fields> fields)
+    {
+        throw new NotImplementedException();
+    }
+    public RowNumberOver OrderBy<Fields>(Func<Fields> fields)
     {
         throw new NotImplementedException();
     }
