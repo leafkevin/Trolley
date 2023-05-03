@@ -273,8 +273,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual IQueryVisitor WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null)
     {
         string withTable = cteTableName;
-        if (isRecursive && (this.OrmProvider.DatabaseType == DatabaseType.MySql
-            || this.OrmProvider.DatabaseType == DatabaseType.Postgresql))
+        if (isRecursive)
             withTable = "RECURSIVE " + cteTableName;
 
         var builder = new StringBuilder();

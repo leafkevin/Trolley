@@ -5,6 +5,12 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
+public class SetField
+{
+    public MemberMap MemberMapper { get; set; }
+    public string Value { get; set; }
+    public List<IDbDataParameter> DbParameters { get; set; }
+}
 public interface IUpdateVisitor
 {
     string BuildSql(out List<IDbDataParameter> dbParameters);
