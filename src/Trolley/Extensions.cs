@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
@@ -11,11 +12,81 @@ namespace Trolley;
 
 public static class Extensions
 {
+    private static Type[] valueTypes = new Type[] {typeof(byte),typeof(sbyte),typeof(short),typeof(ushort),
+        typeof(int),typeof(uint),typeof(long),typeof(ulong),typeof(float),typeof(double),typeof(decimal),
+        typeof(bool),typeof(string),typeof(char),typeof(Guid),typeof(DateTime),typeof(DateTimeOffset),
+        typeof(TimeSpan),typeof(TimeOnly),typeof(DateOnly),typeof(byte[]),typeof(byte?),typeof(sbyte?),
+        typeof(short?),typeof(ushort?),typeof(int?),typeof(uint?),typeof(long?),typeof(ulong?),typeof(float?),
+        typeof(double?),typeof(decimal?),typeof(bool?),typeof(char?),typeof(Guid?) ,typeof(DateTime?),
+        typeof(DateTimeOffset?),typeof(TimeSpan?),typeof(TimeOnly?),typeof(DateOnly?)};
     private static readonly ConcurrentDictionary<int, Delegate> typeReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> valueTupleReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
 
+    public static IOrmProvider GetOrmProvider(this IOrmDbFactory dbFactory, string dbKey, int? tenantId = null)
+    {
+        var dbProvider = dbFactory.GetDatabaseProvider(dbKey);
+        var database = dbProvider.GetDatabase(tenantId);
+        if (dbFactory.TryGetOrmProvider(database.OrmProviderType, out var ormProvider))
+            return ormProvider;
+        return null;
+    }
+    public static IEntityMapProvider GetEntityMapProvider(this IOrmDbFactory dbFactory, string dbKey, int? tenantId = null)
+    {
+        var dbProvider = dbFactory.GetDatabaseProvider(dbKey);
+        var database = dbProvider.GetDatabase(tenantId);
+        if (dbFactory.TryGetEntityMapProvider(database.OrmProviderType, out var entityMapProvider))
+            return entityMapProvider;
+        return null;
+    }
+    public static TenantDatabaseBuilder Add<TOrmProvider>(this TheaDatabaseBuilder builder, string connectionString, bool isDefault) where TOrmProvider : IOrmProvider, new()
+    {
+        return builder.Add(new TheaDatabase
+        {
+            ConnectionString = connectionString,
+            IsDefault = isDefault,
+            OrmProviderType = typeof(TOrmProvider)
+        });
+    }
+    public static OrmDbFactoryBuilder AddTypeHandler<TTypeHandler>(this OrmDbFactoryBuilder builder) where TTypeHandler : class, ITypeHandler, new()
+       => builder.AddTypeHandler(new TTypeHandler());
+    public static OrmDbFactoryBuilder Configure<TOrmProvider>(this OrmDbFactoryBuilder builder, IModelConfiguration configuration)
+    {
+        builder.Configure(typeof(TOrmProvider), configuration);
+        return builder;
+    }
+    public static OrmDbFactoryBuilder Configure<TOrmProvider, TModelConfiguration>(this OrmDbFactoryBuilder builder) where TModelConfiguration : class, IModelConfiguration, new()
+    {
+        builder.Configure(typeof(TOrmProvider), new TModelConfiguration());
+        return builder;
+    }
+    public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
+    {
+        if (value == null) return "NULL";
+        return ormProvider.GetQuotedValue(value.GetType(), value);
+    }
+    public static EntityMap GetEntityMap(this IEntityMapProvider mapProvider, Type entityType)
+    {
+        if (!mapProvider.TryGetEntityMap(entityType, out var mapper))
+        {
+            mapper = EntityMap.CreateDefaultMap(entityType);
+            mapProvider.AddEntityMap(entityType, mapper);
+        }
+        return mapper;
+    }
+    public static EntityMap GetEntityMap(this IEntityMapProvider mapProvider, Type entityType, Type mapToType)
+    {
+        if (!mapProvider.TryGetEntityMap(entityType, out var mapper))
+        {
+            var mapToMapper = mapProvider.GetEntityMap(mapToType);
+            mapper = EntityMap.CreateDefaultMap(entityType, mapToMapper);
+            mapProvider.AddEntityMap(entityType, mapper);
+        }
+        return mapper;
+    }
+    public static T Parse<T>(this ITypeHandler typeHandler, IOrmProvider ormProvider, object value)
+       => (T)typeHandler.Parse(ormProvider, typeof(T), value);
     public static bool IsNullableType(this Type type, out Type underlyingType)
     {
         if (type.IsValueType)
@@ -96,6 +167,50 @@ public static class Extensions
         if (!content.Contains(oldValue))
             return content;
         return content.Replace(oldValue, newValue);
+    }
+    public static bool IsEntityType(this Type type)
+    {
+        if (type.IsEnum || valueTypes.Contains(type)) return false;
+        if (type.FullName == "System.Data.Linq.Binary")
+            return false;
+        if (type.IsValueType)
+        {
+            var underlyingType = Nullable.GetUnderlyingType(type);
+            if (underlyingType != null && underlyingType.IsEnum)
+                return false;
+        }
+        if (type.IsArray)
+        {
+            var elementType = type.GetElementType();
+            if (valueTypes.Contains(elementType) || elementType.IsEnum) return false;
+            if (elementType.IsValueType)
+            {
+                var underlyingType = Nullable.GetUnderlyingType(elementType);
+                if (underlyingType != null && underlyingType.IsEnum)
+                    return false;
+            }
+        }
+        if (typeof(IEnumerable).IsAssignableFrom(type))
+        {
+            foreach (var elementType in type.GenericTypeArguments)
+            {
+                if (elementType.IsEnum || valueTypes.Contains(elementType))
+                    return false;
+                if (elementType.IsValueType)
+                {
+                    var underlyingType = Nullable.GetUnderlyingType(elementType);
+                    if (underlyingType != null && underlyingType.IsEnum)
+                        return false;
+                }
+            }
+        }
+        return true;
+    }
+    public static bool TryPop<T>(this Stack<T> stack, Func<T, bool> filter, out T element)
+    {
+        if (stack.TryPeek(out element) && filter.Invoke(element))
+            return stack.TryPop(out _);
+        return false;
     }
     internal static TValue To<TValue>(this IDataReader reader, int columnIndex = 0)
     {
