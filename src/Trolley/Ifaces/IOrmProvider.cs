@@ -7,16 +7,9 @@ namespace Trolley;
 
 public delegate SqlSegment MemberAccessSqlFormatter(ISqlVisitor visitor, SqlSegment target);
 public delegate SqlSegment MethodCallSqlFormatter(ISqlVisitor visitor, SqlSegment target, Stack<DeferredExpr> DeferredExprs, params SqlSegment[] arguments);
-public enum DatabaseType
-{
-    MySql = 1,
-    SqlServer = 2,
-    Oracle = 3,
-    Postgresql = 4
-}
+
 public interface IOrmProvider
 {
-    DatabaseType DatabaseType { get; }
     string ParameterPrefix { get; }
     string SelectIdentitySql { get; }
     Type NativeDbTypeType { get; }

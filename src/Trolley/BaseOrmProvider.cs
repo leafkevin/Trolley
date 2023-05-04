@@ -2,9 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 
 namespace Trolley;
@@ -15,7 +13,6 @@ public abstract class BaseOrmProvider : IOrmProvider
     protected static ConcurrentDictionary<int, MethodCallSqlFormatter> methodCallSqlFormatterCache = new();
     protected static ConcurrentDictionary<int, Func<object, object[], object>> indexMethodCallCache = new();
 
-    public abstract DatabaseType DatabaseType { get; }
     public virtual string ParameterPrefix => "@";
     public virtual string SelectIdentitySql => ";SELECT @@IDENTITY";
     public abstract Type NativeDbTypeType { get; }
@@ -40,13 +37,6 @@ public abstract class BaseOrmProvider : IOrmProvider
         if (skip.HasValue) builder.Append($" OFFSET {skip}");
         return builder.ToString();
     }
-    //public virtual string Take(int limit, string orderBy = null)
-    //{
-    //    string result = "";
-    //    if (!String.IsNullOrEmpty(orderBy)) result = orderBy;
-    //    result += $" LIMIT {limit}";
-    //    return result;
-    //}
     public abstract object GetNativeDbType(Type type);
     public abstract Type MapDefaultType(object nativeDbType);
     public abstract string CastTo(Type type, object value);
@@ -302,5 +292,4 @@ public abstract class BaseOrmProvider : IOrmProvider
     public abstract bool TryGetConvertMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
     public abstract bool TryGetIEnumerableMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
     public abstract bool TryGetMathMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
-    public override int GetHashCode() => HashCode.Combine(this.DatabaseType);
 }

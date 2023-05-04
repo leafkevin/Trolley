@@ -12,12 +12,6 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public class SetField
-{
-    public MemberMap MemberMapper { get; set; }
-    public string Value { get; set; }
-    public List<IDbDataParameter> DbParameters { get; set; }
-}
 /// <summary>
 /// PostgreSql:
 /// UPDATE sys_order a 
