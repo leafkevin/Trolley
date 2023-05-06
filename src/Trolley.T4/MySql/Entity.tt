@@ -37,27 +37,26 @@
 #>
 using System;
 
-namespace Thea.Services.Domain.Models
+namespace Thea.Services.Domain.Models;
+
+/// <summary>
+/// <#=tableInfo.Description#>
+/// </summary>
+public class <#=className#>
 {
-    /// <summary>
-    /// <#=tableInfo.Description#>
-    /// </summary>
-	public class <#=className#>
-    {
 <#foreach(ColumnInfo columnInfo in columnList){
 var propertyName = columnInfo.ColumnName;
 var propertyType = dbProvider.MapMemberType(columnInfo);
 if(!String.IsNullOrEmpty(columnInfo.Description))
 {#>
-        /// <summary>
-        /// <#=columnInfo.Description#>
-        /// </summary>
+    /// <summary>
+    /// <#=columnInfo.Description#>
+    /// </summary>
 <#}#>
 <#if(columnInfo.IsPrimaryKey){#>
 <#}#>
-        public <#=propertyType#> <#=propertyName#> { get; set; }
+    public <#=propertyType#> <#=propertyName#> { get; set; }
 <#}#>
-    }
 }
 <#
 manager.EndBlock();

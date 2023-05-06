@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -119,14 +118,23 @@ public class SqlSegment
         this.DeferredExprs ??= new();
         this.DeferredExprs.Push(deferredExpr);
     }
-    public bool TryPop(OperationType[] operationTypes, out DeferredExpr deferredExpr)
+    public bool TryPop(out DeferredExpr deferredExpr)
     {
         if (!this.HasDeferred)
         {
             deferredExpr = default;
             return false;
         }
-        return this.DeferredExprs.TryPop(f => operationTypes.Contains(f.OperationType), out deferredExpr);
+        return this.DeferredExprs.TryPop(out deferredExpr);
+    }
+    public bool TryPeek(out DeferredExpr deferredExpr)
+    {
+        if (!this.HasDeferred)
+        {
+            deferredExpr = default;
+            return false;
+        }
+        return this.DeferredExprs.TryPeek(out deferredExpr);
     }
     public override string ToString()
     {
