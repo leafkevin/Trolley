@@ -99,7 +99,7 @@ class MySqlProvider : DbHelper
             case "bit":
             case "bool": return "bool";
 
-          case "tinyint":   
+            case "tinyint":   
                 if(columnInfo.ColumnType == "tinyint(1)") return "bool";
                 return isUnsigned ? "byte" : "sbyte";
             case "smallint": return isUnsigned ? "ushort" : "short";
