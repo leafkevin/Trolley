@@ -2,27 +2,27 @@
 ========================================
 
 
-框架特点
+## 框架特点
 ------------------------------------------------------------
-强类型的DDD仓储操作,基本可以不用写SQL,支持多种数据库终端，目前是在.NET 6 基础上开发的。  
-目前支持：MySql,PostgreSql,Sql Sever,其他的provider会稍后慢慢提供。  
+强类型的DDD仓储操作,基本可以不用写SQL,支持多种数据库终端，目前是在.NET 6 基础上开发的。
+目前支持：`MySql`,`PostgreSql`,`SqlSever`,其他的provider会稍后慢慢提供。
 
-支持分页查询  
-支持Join, group by, order by等操作  
-支持各种聚合查询, Count,Max,Min,Avg,Sum 等操作  
-支持In,Exists操作  
-支持Insert Select From  
-支持Update From Join  
-支持条件插入，条件更新
-支持批量插入、更新、删除   
-支持模型导航属性，值对象导航属性，就是瘦身版模型  
+支持Page分页查询
+支持Join, GroupBy, OrderBy等操作
+支持Count, Max, Min, Avg, Sum等聚合操作
+支持In,Exists操作
+支持Insert Select From
+支持Update From Join
+支持条件Insert，条件Update
+支持批量Insert、Update、Delete   
+支持导航属性，值对象导航属性(瘦身版模型)
 支持模型映射，采用流畅API方式，目前不支持特性方式映射  
 支持多租户分库，不同租户不同的数据库。  
 
-引入Trolley对应数据库驱动的Nuget包，在系统中要注册IOrmDbFactory并注册映射  
+## 引入Trolley对应数据库驱动的Nuget包，在系统中要注册`IOrmDbFactory`并注册映射  
 ------------------------------------------------------------
 系统中每个连接串对应一个OrmProvider，每种类型的OrmProvider以单例形式存在，一个应用中可以存在多种类型的OrmProvider。
-引入Trolley对应数据库驱动的Nuget包，如：Trolley.MySqlConnector，Trolley.SqlServer...等   
+引入Trolley对应数据库驱动的Nuget包，如：`Trolley.MySqlConnector`，`Trolley.SqlServer`...等   
 在Trolley中，一个dbKey代表一个或是多个结构相同的数据库，可以是不同的OrmProvider。  
 常见的场景是：一些租户独立分库，数据库类型也不一定一样，但结构是一样的，那他们就可以是同一个dbKey。  
 如: A租户是MySql数据库，B租户是PostgreSql，他们的数据库的结构是相同的。  
@@ -45,8 +45,8 @@ var builder = new OrmDbFactoryBuilder()
 .Configure<MySqlProvider, MySqlModelConfiguration>();
 return builder.Build();
 ```
-多租户，不同租户，不同数据库的场景  
 
+多租户，不同租户，不同数据库的场景  
 ```csharp
 var connectionString1 = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
 var connectionString2 = "User id=postgres;Password=123456;Host=localhost;Port=5432;Database=fengling;Pooling=true;Min Pool Size=5;Max Pool Size=100;";
@@ -61,13 +61,14 @@ builder.Register("fengling", true, f =>
 var dbFactory = builder.Build();
 
 ```
-在注册IOrmDbFactory的时候，同时也要把数据库结构的模型映射配置起来。  
-模型映射采用的是Fluent Api方式，类似EF，通常是继承IModelConfiguration的子类。  
-Trolley, 目前只支持Fluent Api方式，这样能使模型更加纯净，不受ORM污染。  
 
-导航属性的设置，是单向的，只需要把本模型内的导航属性列出来就可以了。  
-对应的导航属性类，再设置它所引用的模型映射。 
-这里的ModelConfiguration类，就是模型映射类，内容如下： 
+在注册`IOrmDbFactory`的时候，同时也要把数据库结构的模型映射配置出来。
+模型映射采用的是Fluent Api方式，类似EF，通常是继承`IModelConfiguration`的子类。
+Trolley, 目前只支持Fluent Api方式，这样能使模型更加纯净，不受ORM污染。
+
+导航属性的设置，是单向的，只需要把本模型内的导航属性列出来就可以了。
+对应的导航属性类，再设置它所引用的模型映射。
+这里的`ModelConfiguration`类，就是模型映射类，内容如下：
 ```csharp
 class ModelConfiguration : IModelConfiguration
 {
@@ -159,57 +160,11 @@ class ModelConfiguration : IModelConfiguration
 }
 ```
 
-Trolley底层使用的DbType是各个数据库驱动的本地DbType，  
-如：MySqlProvider使用的DbType是MySqlConnector.MySqlDbType。  
-Trolley在配置各个数据库模型映射时可以使用无侵入的int类型，也可以使用本地DbType类型，如：SqlDbType，或是MySqlDbType...类型等  
-如果不设置NativeDbType类型映射，Trolley会根据类型自动完成默认映射。 
-在实际项目中，可会使用Trolley.T4中的各个驱动下的Entities.tt，Entity.tt，ModelConfiguration.tt模板，来生成。
-路径在：Trolley.T4\SqlServer\ModelConfiguration.tt, Trolley.T4\MySql\ModelConfiguration.tt
-
-示例：  
-```csharp
-class ModelConfiguration: IModelConfiguration
-{
-    public void OnModelCreating(ModelBuilder builder)
-    {
-        builder.Entity<Payment>(f =>
-        {
-			//主键要指定，如果是自增长也要指定
-            f.ToTable("pcs_payment").Key(t => t.PaymentId);
-			//8 是 System.Data.SqlDbType.Int
-            f.Member(t => t.PaymentId).Field("PaymentId").AutoIncrement(t => t.Id).NativeDbType(8);
-			//12 是 System.Data.SqlDbType.NVarChar
-            f.Member(t => t.OrderId).Field("OrderId").NativeDbType(12);
-			//20 是 System.Data.SqlDbType.TinyInt
-            f.Member(t => t.PaymentType).Field("PaymentType").NativeDbType(20);
-            f.Member(t => t.Currency).Field("Currency").NativeDbType(12);
-			//5 是 System.Data.SqlDbType.Decimal
-            f.Member(t => t.TotalAmount).Field("TotalAmount").NativeDbType(5);
-            f.Member(t => t.Fee).Field("Fee").NativeDbType(5);
-            f.Member(t => t.GatewayCode).Field("GatewayCode").NativeDbType(12);
-            f.Member(t => t.FromAccount).Field("FromAccount").NativeDbType(12);
-            f.Member(t => t.ToAccount).Field("ToAccount").NativeDbType(12);
-            f.Member(t => t.Status).Field("Status").NativeDbType(20);
-            f.Member(t => t.IsEnabled).Field("IsEnabled").NativeDbType(2);
-            f.Member(t => t.CreatedBy).Field("CreatedBy").NativeDbType(12);
-			//4 是 System.Data.SqlDbType.DateTime
-            f.Member(t => t.CreatedAt).Field("CreatedAt").NativeDbType(4);
-            f.Member(t => t.UpdatedBy).Field("UpdatedBy").NativeDbType(12);
-            f.Member(t => t.UpdatedAt).Field("UpdatedAt").NativeDbType(4);
-	    
-			//当然也可以指定特定类型，比如json类型，只需指定对应的int类型值即可。
-			如：245是MySqlConnector.MySqlDbType.JSON类型
-			f.Member(t => t.FromAccount).Field("FromAccount").NativeDbType(245);
-	    
-			//枚举类型Status,数据库字段也可以指定字符串，代码中是枚举类型，只需指定NativeDbType为12即可，ORM会自动把字符串转换为枚举
-			f.Member(t => t.Status).Field("Status").NativeDbType(12);
-			
-			如果不设置NativeDbType类型映射，Trolley会根据类型自动映射。	    
-        });
-    }
-}
-```
-
+Trolley底层使用的`DbType`是各个数据库驱动的本地DbType，如：`MySqlProvider`使用的DbType是`MySqlConnector.MySqlDbType`。  
+Trolley在配置各个数据库模型映射时，可以使用int类型，也可以使用本地DbType类型，如：`SqlDbType`，或是`MySqlDbType`...类型等  
+如果不设置`NativeDbType`类型映射，Trolley会按照默认的类型映射完成映射。 
+在实际项目中，可会使用`Trolley.T4`中的各个驱动下的`Entities.tt`，`Entity.tt`，`ModelConfiguration.tt`模板，来生成。
+路径在：`Trolley.T4\SqlServer\ModelConfiguration.tt`, `Trolley.T4\MySql\ModelConfiguration.tt`
 
 对应的模型结构如下：
 ```csharp
@@ -269,47 +224,57 @@ public class CompanyInfo
 
 
 
-创建IRepository对象，就可以做各种操作了  
+### 创建IRepository对象，就可以做各种操作了  
 ------------------------------------------------------------
-所有的操作都是从创建IRepository对象开始的，IRepository可以开启事务，设置command超时时间、设置参数化、各种查询、命令的执行。   
-不同模型的操作都是采用IRepository泛型方法来完成的。  
-所有的查询操作，都支持ToSql方法，可以查看生成SQL语句，方便诊断。  
+所有的操作都是从创建`IRepository`对象开始的，`IRepository`可以开启事务，设置`command`超时时间、设置参数化、各种查询、命令的执行。   
+不同模型的操作都是采用`IRepository`泛型方法来完成的。  
+所有的查询操作，都支持`ToSql`方法，可以查看生成SQL语句，方便诊断。  
 默认情况下，所有数据库操作，Trolley只对变量做了参数化处理。
-所有创建的IRepository都要使用using，连接使用完立即返回到连接池，以便适应更大的并发请求。
-也可以在使用完IRepository后，立即调用Close及时释放到连接池，下个数据库操作可以直接使用IRepository对象，连接自动会打开。
+所有创建的`IRepository`都要使用using，连接使用完立即返回到连接池，以便适应更大的并发请求。
+也可以在使用完`IRepository`后，立即调用`Close`/`CloseAsync`及时释放到连接池，下个数据库操作可以直接使用`IRepository`对象，连接自动会打开。
 
-#### 查询
+### 基本简单查询
 
 ```csharp
 using var repository = this.dbFactory.Create();
-//扩展的简化查询，不支持ToSql方法，是由From语句包装而来的，From语句支持ToSql查看SQL  
-//QueryFirst
+//扩展的简化查询，不支持ToSql方法，是由From语句包装而来的，From语句支持ToSql查看SQL
+
+//QueryFirst方法，查询单条
 var result = repository.QueryFirst<User>(f => f.Id == 1);
 var result = await repository.QueryFirstAsync<User>(f => f.Name == "leafkevin");
 //SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=1
 
-//Query
+//QueryFirst方法，原始SQL
+var result = await repository.QueryFirstAsync<Product>("SELECT * FROM sys_product where Id=@ProductId", new { ProductId = 1 });
+
+
+//Query方法，查询多条
 var result = repository.Query<Product>(f => f.ProductNo.Contains("PN-00"));
 var result = await repository.QueryAsync<Product>(f => f.ProductNo.Contains("PN-00"));
 //SELECT `Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_product` WHERE `ProductNo` LIKE '%PN-00%'
 
-//Get
-//Get方法是根据主键来查询，参数可以是匿名对象，也可以主键值
+//Query方法，原始SQL
+var result = await repository.QueryAsync<Product>("SELECT * FROM sys_product where BrandId=@BrandId", new { BrandId = 1 });
+
+
+//Get方法，根据主键来查询，参数可以是匿名对象，也可以主键值
 using var repository = dbFactory.Create();
 var result = repository.Get<Product>(1);
 //SELECT `Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_product` WHERE `Id`=1
+
 //也可以使用匿名对象
 using var repository = dbFactory.Create();
 var result = repository.Get<Product>(new { Id = 1 });
 
-//Dictionary
+
+//QueryDictionary，返回字典
 var result = await repository.QueryDictionaryAsync<Product, int, string>(f => f.ProductNo.Contains("PN-00"), f => f.Id, f => f.Name);
 //SELECT `Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_product` WHERE `ProductNo` LIKE '%PN-00%'
 //先把实体查询出来，再根据Key,Value的选取，生成Dictionary
 ```
 
 
-From支持各种复杂查询  
+### From查询，支持各种复杂查询
 
 
 简单表达式查询
@@ -322,7 +287,7 @@ var result = await repository.From<Product>()
 //SELECT `Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_product` WHERE `ProductNo` LIKE '%PN-00%'
 ```
 
-Page 分页查询
+`Page` 分页查询
 
 ```csharp
 var result = repository.From<OrderDetail>()
@@ -332,9 +297,9 @@ var result = repository.From<OrderDetail>()
 //SELECT COUNT(*) FROM `sys_order_detail` WHERE `ProductId`=1;SELECT `Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_order_detail` WHERE `ProductId`=1 ORDER BY `CreatedAt` DESC LIMIT 10 OFFSET 10
 ```
 
-Include查询
-1:1关系的联表查询，Include表数据和主表一起查出来。
-使用LEFT JOIN连接
+`Include`查询
+1:1关系的联表查询，`Include`表数据和主表一起查出来。
+子表使用LEFT JOIN连接
 
 ```csharp
 //One to One  Include
@@ -345,10 +310,10 @@ var result = await repository.From<Product>()
 //SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
 ```
 
-IncludeMany查询
+`IncludeMany`查询
 1:N关系的联表查询，分两次查询。
-第一次查询，会把主表和其他Join、Include表数据查询出来。
-第二次把所有IncludeMany的数据都查询出来，再设置到对应主表模型中。
+第一次查询，会把主表和其他`Join`、`Include`表数据查询出来。
+第二次把所有`IncludeMany`的数据都查询出来，再设置到对应主表模型中。
 
 ```csharp    
 //InnerJoin and IncludeMany    
@@ -367,7 +332,7 @@ var result = repository.From<Order>()
 //第二次查询，会根据第一次查询主表主键数据和Filter条件，再去查询IncludeMany表数据。
 ```
 
-IncludeMany查询 + Filter过滤条件
+`IncludeMany`查询 + `Filter`过滤条件
 
 ```csharp
 var result = repository.From<Order>()
@@ -382,8 +347,8 @@ var result = repository.From<Order>()
 //SELECT `Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_order_detail` WHERE OrderId IN (1,2) AND `ProductId`=1
 ```
 
-Include后ThenInclude查询，都是1:1关系联表
-使用LEFT JOIN连接
+`Include`后`ThenInclude`查询，都是1:1关系联表
+子表使用`LEFT JOIN`连接
 ```csharp    
 //Include and ThenInclude
 var result = await repository.From<Order>()
@@ -396,18 +361,25 @@ var result = await repository.From<Order>()
 //SELECT a.`Id`,a.`OrderNo`,a.`TotalAmount`,a.`BuyerId`,a.`SellerId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,c.`Id`,c.`Name`,c.`Gender`,c.`Age`,c.`CompanyId`,c.`IsEnabled`,c.`CreatedBy`,c.`CreatedAt`,c.`UpdatedBy`,c.`UpdatedAt`,d.`Id`,d.`Name`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`SellerId`=b.`Id` LEFT JOIN `sys_user` c ON a.`BuyerId`=c.`Id` LEFT JOIN `sys_company` d ON c.`CompanyId`=d.`Id` WHERE a.`TotalAmount`>300
 ```
 
-Page分页+Include
+`Page`分页+`Include`
+也是可以使用`Skip`、`Take`
 ```csharp
 var result = repository.From<OrderDetail>()
     .Include(f => f.Product)
     .Where(f => f.ProductId == 1)
-    .ToPageList(2, 10);
+    .Page(2, 10)
+    .ToPageList();
+var result = repository.From<OrderDetail>()
+    .Include(f => f.Product)
+    .Where(f => f.ProductId == 1)
+    .Skip(10)
+    .Take(10)
+    .ToPageList();
 //SELECT COUNT(*) FROM `sys_order_detail` a LEFT JOIN `sys_product` b ON a.`ProductId`=b.`Id` WHERE a.`ProductId`=1;SELECT a.`Id`,a.`OrderId`,a.`ProductId`,a.`Price`,a.`Quantity`,a.`Amount`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`ProductNo`,b.`Name`,b.`BrandId`,b.`CategoryId`,b.`CompanyId`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_order_detail` a LEFT JOIN `sys_product` b ON a.`ProductId`=b.`Id`  WHERE a.`ProductId`=1 LIMIT 10 OFFSET 10
 ```
 
-
+虽然有`Include`，但是没有查询对应模型，会忽略`Include`
 ```csharp
-//虽然有Include，但是没有查询对应模型，会忽略Include
 var sql = repository.From<User>()
     .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
     .IncludeMany((a, b) => a.Orders)
@@ -422,13 +394,14 @@ var sql = repository.From<User>()
     })
     .ToSql(out _);
 //生成的SQL如下：
-//SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME),COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) ORDER BY a.`Id`,b.`Id`
+//SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE),COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ORDER BY a.`Id`,b.`Id`
 ```
 
 分组查询
+`GroupBy`以后，可以使用`IGroupingAggregate`类型的`Grouping`属性
+`IGroupingAggregate`类型的`Grouping`属性，是`GroupBy`的所有字段，这里有3个字段：`Id`,`Name`,`Date`
+
 ```csharp
-//Group 使用IGroupingAggregate类型的Grouping属性，也可以不使用
-//IGroupingAggregate类型的Grouping属性，是group by字段选择后的对象，这里有3个字段：Id,Name,Date
 var result = repository.From<User>()
     .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
     .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
@@ -440,12 +413,9 @@ var result = repository.From<User>()
         TotalAmount = x.Sum(b.TotalAmount)
     })
     .ToList();
-//SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME),COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) ORDER BY a.`Id`,b.`Id`
-```
+//SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE),COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ORDER BY a.`Id`,b.`Id`
 
-```csharp
 //Group 打开Grouping，使用里面的字段
-//IGroupingAggregate类型的Grouping属性，是group by字段选择后的对象，这里有3个字段：Id,Name,Date
 var result = repository.From<User>()
    .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
    .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
@@ -459,10 +429,11 @@ var result = repository.From<User>()
        TotalAmount = x.Sum(b.TotalAmount)
    })
    .ToList();
- //SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) ORDER BY a.`Id`,b.`Id`
+ //SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ORDER BY a.`Id`,b.`Id`
  //打开Grouping属性，和不打开生成的SQL基本差不多，唯一不同的地方是：打开时有AS别名，如上面的Date字段，Id,Name与原字段相同就不用AS了
 ```
 
+`GroupBy`后，可使用`Having`、`OrderBy`
 ```csharp
 //Group and Having 、Exists
 var sql = repository.From<User>()
@@ -479,82 +450,107 @@ var sql = repository.From<User>()
        TotalAmount = x.Sum(b.TotalAmount)
    })
    .ToSql(out _);
-//SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) HAVING SUM(b.`TotalAmount`)>300 AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND COUNT(DISTINCT f.`ProductId`)>2) ORDER BY a.`Id`,b.`Id`
+//SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) HAVING SUM(b.`TotalAmount`)>300 AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND COUNT(DISTINCT f.`ProductId`)>2) ORDER BY a.`Id`,b.`Id`
 ```
 
+使用`In`、`Exists`
+`In`、`Exists`操作是通过静态`Sql`类来完成的，书写起来比较简单。
+
+`Sql.In`支持3种参数：
+bool In&lt;TElement&gt;(TElement value, params TElement[] list);
+bool In&lt;TElement&gt;(TElement value, IEnumerable&lt;TElement&gt; list);
+bool In&lt;TElement&gt;(TElement value, Func&lt;IFromQuery, IFromQuery&lt;TElement&gt;&gt; subQuery);
+
+`Sql.Exists`支持2种参数，多个表联合查询：
+bool Exists(Func&lt;IFromQuery, IQueryAnonymousObject&gt; subQuery);
+bool Exists&lt;T&gt;(Expression&lt;Func&lt;T, bool&gt;&gt; filter);
+bool Exists&lt;T1, T2&gt;(Expression&lt;Func&lt;T1, T2, bool&gt;&gt; filter);
+bool Exists&lt;T1, T2, T3&gt;(Expression&lt;Func&lt;T1, T2, T3, bool&gt;&gt; filter)
+bool Exists&lt;T1, T2, T3, T4&gt;(Expression&lt;Func&lt;T1, T2, T3, T4, bool&gt;&gt; filter);
+bool Exists&lt;T1, T2, T3, T4, T5&gt;(Expression&lt;Func&lt;T1, T2, T3, T4, T5, bool&gt;&gt; filter);
 
 ```csharp
-//In and Exists 
-//In、Exists操作是通过静态Sql类来完成的，书写起来比较简单。  
+//In and Exists
 var sql = repository.From<User>()
-    .Where(f => Sql.In(f.Id, new int[] { 1, 2, 3 }))
     .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+    .Where((a, b) => Sql.In(a.Id, new int[] { 1, 2, 3 }) && Sql.Exists<OrderDetail>(f => b.Id == f.OrderId && f.ProductId == 2))
     .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
-    .Having((x, a, b) => x.Sum(b.TotalAmount) > 300 && Sql.Exists<OrderDetail>(f => b.Id == f.OrderId && x.CountDistinct(f.ProductId) > 2))
-    .OrderBy((x, a, b) => new { UserId = a.Id, OrderId = b.Id })
+    .Having((x, a, b) => x.Sum(b.TotalAmount) > 300)
+    .OrderBy((x, a, b) => new { UserId = a.Id, b.CreatedAt.Date })
     .Select((x, a, b) => new
     {
-	x.Grouping,
-	OrderCount = x.Count(b.Id),
-	TotalAmount = x.Sum(b.TotalAmount)
+        x.Grouping,
+        OrderCount = x.Count(b.Id),
+        TotalAmount = x.Sum(b.TotalAmount)
     })
     .ToSql(out _);
-//SELECT a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME),COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE `Id` IN (@p0,@p1,@p2) GROUP BY a.`Id`,a.`Name`,CAST(DATE_FORMAT(b.`CreatedAt`,'%Y-%m-%d') AS DATETIME) HAVING SUM(b.`TotalAmount`)>300 AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND COUNT(DISTINCT f.`ProductId`)>2) ORDER BY a.`Id`,b.`Id`
-```
-```csharp
-//In、Exists 支持查询表数据，甚至更复杂的SQL
+//SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE a.`Id` IN (1,2,3) AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND f.`ProductId`=2) GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) HAVING SUM(b.`TotalAmount`)>300 ORDER BY a.`Id`,CONVERT(b.`CreatedAt`,DATE)");
+ 
+//子查询
 var sql = repository.From<User>()
-    .Include(f => f.Company)
-    .Where(f => Sql.In(f.Id, t => t.From<Order>().Select(p => p.BuyerId)))
+    .Where(f => Sql.Exists(t =>
+        t.From<OrderDetail>('b')
+         .GroupBy(a => a.OrderId)
+         .Having((x, a) => Sql.CountDistinct(a.ProductId) > 0)
+         .Select("*")))
+    .GroupBy(f => new { f.Gender, f.CompanyId })
+    .Select((t, a) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
     .ToSql(out _);
-//SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id` IN (SELECT a.`BuyerId` FROM `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` AND b.`ProductId`=1)
-
-//In 从Order,OrderDetail中关联查询条件中使用
-bool? isMale = true;
-var sql = repository.From<User>()
-    .Where(f => Sql.In(f.Id, t => t.From<OrderDetail, Order>('b').InnerJoin((a, b) => a.OrderId == b.Id && a.ProductId == 1).Select((x, y) => y.BuyerId)))
-    .And(isMale.HasValue, f => Sql.Exists<Company, Order>((x, y) => f.Id == y.SellerId && f.CompanyId == x.Id))
-    .GroupBy(f => new { f.Gender, f.Age })
-    .Select((t, a) => new { t.Grouping, CompanyCount = t.CountDistinct(a.CompanyId), UserCount = t.Count(a.Id) })
-    .ToSql(out _);
-//SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_user` a WHERE `Id` IN (SELECT b.`BuyerId` FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` AND c.`ProductId`=1) AND EXISTS(SELECT * FROM `sys_order` x,`sys_company` y WHERE a.`Id`=x.`SellerId` AND a.`CompanyId`=y.`Id`)
-//这里又使用And，带有条件
-//这里有个不够优雅的地方，第一个In条件的时候，是单表查询没有别名，到后面Exists语句必须带上别名，后面生成的所有SQL都带上了别名。
+//SELECT a.`Gender`,a.`CompanyId`,COUNT(DISTINCT a.`Id`) AS `UserTotal` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order_detail` b GROUP BY b.`OrderId` HAVING COUNT(DISTINCT b.`ProductId`)>0) GROUP BY a.`Gender`,a.`CompanyId`
 ```
 
+聚合查询,可以使用`SelectAggregate`可以聚合查询，也可以使用`Select`+`Sql`静态类
+两者生成的SQL完全一样的
 ```csharp
-//聚合查询
-使用SelectAggregate可以聚合查询，也可以使用Select+Sql静态类
+//SelectAggregate方法
+在没有GroupBy分组的情况，使用聚合查询，不同的数据库支持的场景都不一样。
+下面的语句在MySql中可以执行，在SqlServer中不能执行
 var sql = repository.From<User>()
     .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
     .IncludeMany((a, b) => a.Orders)
     .OrderBy((a, b) => new { UserId = a.Id, OrderId = b.Id })
     .SelectAggregate((x, a, b) => new
     {
-	UserId = a.Id,
-	OrderId = b.Id,
-	OrderCount = x.Count(b.Id),
-	TotalAmount = x.Sum(b.TotalAmount)
+	    UserId = a.Id,
+	    OrderId = b.Id,
+	    OrderCount = x.Count(b.Id),
+	    TotalAmount = x.Sum(b.TotalAmount)
     })
     .ToSql(out _);
 //SELECT a.`Id` AS UserId,b.`Id` AS OrderId,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId`ORDER BY a.`Id`,b.`Id`
 
-//使用Sql静态类
+//Sql静态类
 var sql = repository.From<User>()
     .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
     .IncludeMany((a, b) => a.Orders)
     .OrderBy((a, b) => new { UserId = a.Id, OrderId = b.Id })
     .Select((a, b) => new
     {
-	UserId = a.Id,
-	OrderId = b.Id,
-	OrderCount = Sql.Count(b.Id),
-	TotalAmount = Sql.Sum(b.TotalAmount)
+	    UserId = a.Id,
+	    OrderId = b.Id,
+	    OrderCount = Sql.Count(b.Id),
+	    TotalAmount = Sql.Sum(b.TotalAmount)
     })
     .ToSql(out _);
 //SELECT a.`Id` AS UserId,b.`Id` AS OrderId,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId`ORDER BY a.`Id`,b.`Id`
-//两者生成的SQL完全一样的。
 ```
+
+子查询，
+```csharp
+//可以多个表直接查询
+var sql = repository.From(f => f.From<Page, Menu>('o')
+        .Where((a, b) => a.Id == b.PageId)
+        .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
+    .InnerJoin<Menu>((a, b) => a.Id == b.Id)
+    .Where((a, b) => a.Id == b.Id)
+    .Select((a, b) => new { a.Id, b.Name, a.ParentId, a.Url })
+    .ToSql(out _);
+//SELECT a.`Id`,b.`Name`,a.`ParentId`,a.`Url` FROM (SELECT p.`Id`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) a INNER JOIN `sys_menu` b ON a.`Id`=b.`Id` WHERE a.`Id`=b.`Id`");
+
+//也可以一个表，一个表的Join关联
+
+```
+
 
 ```csharp
 //查询NULL Where Null
@@ -563,8 +559,8 @@ var sql = repository.From<Order>()
     .And(true, f => !f.ProductCount.HasValue)
     .Select(x => new
     {
-	NoOrderNo = x.OrderNo == null,
-	HasProduct = x.ProductCount.HasValue
+	    NoOrderNo = x.OrderNo == null,
+	    HasProduct = x.ProductCount.HasValue
     })
     .ToSql(out _);
 //SELECT (`OrderNo` IS NULL) AS NoOrderNo,(`ProductCount` IS NOT NULL) AS HasProduct FROM `sys_order` WHERE `ProductCount` IS NULL AND `ProductCount` IS NOT NULL

@@ -316,9 +316,16 @@ public static class Extensions
             if (readerField.FieldType == ReaderFieldType.Field)
             {
                 var fieldType = reader.GetFieldType(index);
+                ITypeHandler typeHandler = null;
+                if (readerField.IsOnlyField && readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.Entity)
+                {
+                    var entityMapper = readerField.TableSegment.Mapper;
+                    if (entityMapper.TryGetMemberMap(readerField.FromMember.Name, out var memberMapper))
+                        typeHandler = memberMapper.TypeHandler;
+                }
                 var readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                    readerField.FromMember.GetMemberType(), fieldType, null, blockParameters, blockBodies);
-                if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.FromMember, readerValueExpr));
+                    readerField.TargetMember.GetMemberType(), fieldType, typeHandler, blockParameters, blockBodies);
+                if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
                 else root.Arguments.Add(readerValueExpr);
                 index++;
             }
@@ -335,7 +342,7 @@ public static class Extensions
                 if (readerIndex == 0 && !IsTarget(readerFields))
                     parent = root;
                 if (readerIndex == 0 && !IsTarget(readerFields) || readerIndex > 0)
-                    current = NewBuildInfo(readerField.FromMember.GetMemberType(), readerField.FromMember, parent);
+                    current = NewBuildInfo(readerField.TargetMember.GetMemberType(), readerField.TargetMember, parent);
 
                 readerBuilders.Add(readerField.Index, current);
                 int endIndex = index + readerField.ReaderFields.Count;

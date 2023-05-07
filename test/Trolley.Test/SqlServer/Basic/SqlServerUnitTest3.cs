@@ -204,7 +204,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(b.[Amount]) FROM [sys_order_detail] b WHERE b.[OrderId]=[sys_order].[Id]),[OrderNo]=@p0,[BuyerId]=NULL WHERE [sys_order].[BuyerId]=1");
+        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(b.[Amount]) FROM [sys_order_detail] b WHERE b.[OrderId]=[sys_order].[Id]),[OrderNo]=@OrderNo,[BuyerId]=NULL WHERE [sys_order].[BuyerId]=1");
     }
     [Fact]
     public void Update_Set_FromQuery_One_Enum()
@@ -219,7 +219,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             })
             .Where(f => f.Nature == CompanyNature.Production)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE [sys_company] SET [Nature]=(SELECT b.[Nature] FROM [sys_company] b WHERE b.[Name] LIKE '%Internet%') WHERE CAST([sys_company].[Nature] AS NVARCHAR(MAX))='Production'");
+        Assert.True(sql == "UPDATE [sys_company] SET [Nature]=(SELECT b.[Nature] FROM [sys_company] b WHERE b.[Name] LIKE '%Internet%') WHERE [sys_company].[Nature]='Production'");
     }
     [Fact]
     public void Update_Set_FromQuery_Fields()
@@ -233,7 +233,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(b.[Amount]) FROM [sys_order_detail] b WHERE b.[OrderId]=[sys_order].[Id]),[OrderNo]=@p0,[BuyerId]=NULL WHERE [sys_order].[BuyerId]=1");
+        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(b.[Amount]) FROM [sys_order_detail] b WHERE b.[OrderId]=[sys_order].[Id]),[OrderNo]=@OrderNo,[BuyerId]=NULL WHERE [sys_order].[BuyerId]=1");
     }
     [Fact]
     public void Update_From_One()
@@ -249,7 +249,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             })
             .Where((x, y) => x.Id == y.OrderId && x.BuyerId == 1)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=@p0,[OrderNo]=([sys_order].[OrderNo]+'_111'),[BuyerId]=NULL FROM [sys_order_detail] b WHERE [sys_order].[Id]=b.[OrderId] AND [sys_order].[BuyerId]=1");
+        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=@TotalAmount,[OrderNo]=([sys_order].[OrderNo]+'_111'),[BuyerId]=NULL FROM [sys_order_detail] b WHERE [sys_order].[Id]=b.[OrderId] AND [sys_order].[BuyerId]=1");
     }
     [Fact]
     public void Update_From_Multi()

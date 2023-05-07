@@ -52,6 +52,10 @@ public class ReaderField
     /// </summary>
     public bool HasNextInclude { get; set; }
     /// <summary>
+    /// 是否是字段，有二元操作或是函数调用时，此值为false
+    /// </summary>
+    public bool IsOnlyField { get; set; }
+    /// <summary>
     /// 实体表(真实表)或是子查询表的所有字段，FieldType为Entity或是AnonymousObject时有值
     /// </summary>
     public List<ReaderField> ReaderFields { get; set; }

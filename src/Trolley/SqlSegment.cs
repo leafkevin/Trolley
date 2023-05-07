@@ -73,6 +73,7 @@ public class SqlSegment
     public MemberInfo FromMember { get; set; }
     public object Value { get; set; }
     public Expression Expression { get; set; }
+    public Expression OriginalExpression { get; set; }
     public bool HasDeferred => this.DeferredExprs != null && this.DeferredExprs.Count > 0;
 
     /// <summary>
