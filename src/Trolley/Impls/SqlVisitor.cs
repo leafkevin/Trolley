@@ -44,35 +44,7 @@ public class SqlVisitor : ISqlVisitor
             return sqlSegment;
 
         //处理HasValue !逻辑取反操作，这种情况下是一元操作
-        int notIndex = 0;
-        SqlSegment deferredSegment = null;
-        while (sqlSegment.TryPop(out var deferredExpr))
-        {
-            switch (deferredExpr.OperationType)
-            {
-                case OperationType.Equal:
-                    deferredSegment = deferredExpr.Value as SqlSegment;
-                    break;
-                case OperationType.Not:
-                    notIndex++;
-                    break;
-            }
-        }
-        if (deferredSegment == null)
-            deferredSegment = SqlSegment.True;
-
-        string strOperator = null;
-        if (notIndex % 2 > 0)
-            strOperator = deferredSegment == SqlSegment.Null ? "IS NOT" : "<>";
-        else strOperator = deferredSegment == SqlSegment.Null ? "IS" : "=";
-
-        if (this.isSelect)
-            sqlSegment.Change($"CASE WHEN {sqlSegment} {strOperator} {this.GetQuotedValue(deferredSegment)} THEN 1 ELSE 0 END", false, true, false);
-        if (this.isWhere)
-            sqlSegment.Change($"{sqlSegment} {strOperator} {this.GetQuotedValue(deferredSegment)}", false, true, false);
-        sqlSegment.IsExpression = true;
-
-        return sqlSegment;
+        return this.VisitDeferredBoolConditional(sqlSegment, this.OrmProvider.GetQuotedValue(true), this.OrmProvider.GetQuotedValue(false));
     }
     public virtual SqlSegment Visit(SqlSegment sqlSegment)
     {
@@ -388,15 +360,12 @@ public class SqlVisitor : ISqlVisitor
     public virtual SqlSegment VisitConditional(SqlSegment sqlSegment)
     {
         var conditionalExpr = sqlSegment.Expression as ConditionalExpression;
-        sqlSegment = this.VisitAndDeferred(sqlSegment.Next(conditionalExpr.Test));
-        if (conditionalExpr.Test.NodeType == ExpressionType.MemberAccess && sqlSegment.HasField && !sqlSegment.IsExpression)
-            sqlSegment.Value = $"{sqlSegment}={this.OrmProvider.GetQuotedValue(true)}";
-
+        sqlSegment = this.Visit(sqlSegment.Next(conditionalExpr.Test));
         var ifTrueSegment = this.Visit(new SqlSegment { Expression = conditionalExpr.IfTrue });
         var ifFalseSegment = this.Visit(new SqlSegment { Expression = conditionalExpr.IfFalse });
         sqlSegment.Merge(ifTrueSegment);
         sqlSegment.Merge(ifFalseSegment);
-        return sqlSegment.Change($"(CASE WHEN {sqlSegment} THEN {this.GetQuotedValue(ifTrueSegment)} ELSE {this.GetQuotedValue(ifFalseSegment)} END)", false, false, true);
+        return this.VisitDeferredBoolConditional(sqlSegment, this.GetQuotedValue(ifTrueSegment), this.GetQuotedValue(ifFalseSegment));
     }
     public virtual SqlSegment VisitListInit(SqlSegment sqlSegment)
     {
@@ -1090,6 +1059,40 @@ public class SqlVisitor : ISqlVisitor
         }
         isNeedAlias = queryVisitor.IsNeedAlias;
         return result;
+    }
+    public SqlSegment VisitDeferredBoolConditional(SqlSegment sqlSegment, string ifTrueValue, string ifFalseValue)
+    {
+        //处理HasValue !逻辑取反操作，这种情况下是一元操作
+        int notIndex = 0;
+        SqlSegment deferredSegment = null;
+        while (sqlSegment.TryPop(out var deferredExpr))
+        {
+            switch (deferredExpr.OperationType)
+            {
+                case OperationType.Equal:
+                    deferredSegment = deferredExpr.Value as SqlSegment;
+                    break;
+                case OperationType.Not:
+                    notIndex++;
+                    break;
+            }
+        }
+        if (deferredSegment == null)
+            deferredSegment = SqlSegment.True;
+
+        string strOperator = null;
+        if (notIndex % 2 > 0)
+            strOperator = deferredSegment == SqlSegment.Null ? "IS NOT" : "<>";
+        else strOperator = deferredSegment == SqlSegment.Null ? "IS" : "=";
+        //TODO:待处理
+        if (!sqlSegment.IsExpression)
+            sqlSegment.Value = $"{sqlSegment} {strOperator} {this.GetQuotedValue(deferredSegment)}";
+
+        if (this.isSelect)
+            sqlSegment.Change($"CASE WHEN {sqlSegment} THEN {ifTrueValue} ELSE {ifFalseValue} END", false, true, false);
+        if (this.isWhere)
+            sqlSegment.Change($"{sqlSegment}", false, true, false);
+        return sqlSegment;
     }
     public SqlSegment ConvertTo(SqlSegment sqlSegment)
     {

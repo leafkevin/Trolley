@@ -448,10 +448,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             if (memberMapper.TypeHandler != null)
             {
                 if (memberMapper.NativeDbType != null)
-                {
-                    fieldValue = this.OrmProvider.ToFieldValue(fieldValue, memberMapper.NativeDbType);
                     dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
-                }
                 else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
                 memberMapper.TypeHandler.SetValue(this.OrmProvider, dbParameter, fieldValue);
             }
