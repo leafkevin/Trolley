@@ -1,13 +1,13 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
-using Trolley.MySqlConnector;
+using Trolley.SqlServer;
 using Xunit;
 
-namespace Trolley.Test.MySql;
+namespace Trolley.Test.SqlServer.Basic;
 
-public class MySqlWhereUnitTest : UnitTestBase
+public class SqlServerWhereUnitTest : UnitTestBase
 {
-    public MySqlWhereUnitTest()
+    public SqlServerWhereUnitTest()
     {
         var services = new ServiceCollection();
         services.AddSingleton(f =>
@@ -15,11 +15,11 @@ public class MySqlWhereUnitTest : UnitTestBase
             var builder = new OrmDbFactoryBuilder()
             .Register("fengling", true, f =>
             {
-                var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
-                f.Add<MySqlProvider>(connectionString, true);
+                var connectionString = "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true";
+                f.Add<SqlServerProvider>(connectionString, true);
             })
             .AddTypeHandler<JsonTypeHandler>()
-            .Configure<MySqlProvider, MySqlModelConfiguration>();
+            .Configure<SqlServerProvider, SqlServerModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
@@ -28,7 +28,7 @@ public class MySqlWhereUnitTest : UnitTestBase
     [Fact]
     public async void WhereBoolean()
     {
-        this.Initialize();
+        Initialize();
         using var repository = dbFactory.Create();
         var result1 = await repository.QueryAsync<User>(f => f.IsEnabled);
         Assert.True(result1.Count > 0);
@@ -39,7 +39,7 @@ public class MySqlWhereUnitTest : UnitTestBase
     [Fact]
     public async void WhereMemberVisit()
     {
-        this.Initialize();
+        Initialize();
         using var repository = dbFactory.Create();
         var result1 = await repository.QueryAsync<User>(f => !(f.IsEnabled == false) && f.Id > 0);
         Assert.True(result1.Count > 0);
@@ -50,7 +50,7 @@ public class MySqlWhereUnitTest : UnitTestBase
     [Fact]
     public async void WhereStringEnum()
     {
-        this.Initialize();
+        Initialize();
         using var repository = dbFactory.Create();
         var result1 = await repository.QueryAsync<Company>(f => f.Nature == CompanyNature.Internet);
         Assert.True(result1.Count >= 2);
@@ -63,7 +63,7 @@ public class MySqlWhereUnitTest : UnitTestBase
     [Fact]
     public async void WhereIsNull()
     {
-        this.Initialize();
+        Initialize();
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
         repository.Update<Order>(f => new { BuyerId = DBNull.Value }, new { Id = 1 });
@@ -81,7 +81,7 @@ public class MySqlWhereUnitTest : UnitTestBase
     [Fact]
     public void WhereAndOr()
     {
-        this.Initialize();
+        Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.From<Order, User>()
             .Where((a, b) => a.BuyerId == b.Id)
@@ -89,6 +89,6 @@ public class MySqlWhereUnitTest : UnitTestBase
             .And(true, (a, b) => a.Products != null)
             .And(true, (a, b) => a.Products == null || a.Disputes == null)
             .ToSql(out _);
-        Assert.True(sql == "SELECT * FROM `sys_order` a,`sys_user` b WHERE a.`BuyerId`=b.`Id` AND (a.`SellerId` IS NULL OR a.`ProductCount` IS NULL) AND a.`Products` IS NOT NULL AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)");
+        Assert.True(sql == "SELECT * FROM [sys_order] a,[sys_user] b WHERE a.[BuyerId]=b.[Id] AND (a.[SellerId] IS NULL OR a.[ProductCount] IS NULL) AND a.[Products] IS NOT NULL AND (a.[Products] IS NULL OR a.[Disputes] IS NULL)");
     }
 }

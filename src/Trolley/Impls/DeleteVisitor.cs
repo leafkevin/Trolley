@@ -37,7 +37,8 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     {
         this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
-        this.whereSql = this.VisitConditionExpr(lambdaExpr.Body, out _);
+        this.lastWhereNodeType = OperationType.None;
+        this.whereSql = this.VisitConditionExpr(lambdaExpr.Body);
         this.isWhere = false;
         return this;
     }
@@ -45,14 +46,19 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     {
         this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
-        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var isNeedParentheses);
-        if (!string.IsNullOrEmpty(this.whereSql))
+        if (this.lastWhereNodeType == OperationType.Or)
         {
-            if (this.lastWhereNodeType == OperationType.Or)
-                this.whereSql = $"({this.whereSql})";
-            if (isNeedParentheses) conditionSql = $"({conditionSql})";
-            this.whereSql += " AND " + conditionSql;
+            this.whereSql = $"({this.whereSql})";
+            this.lastWhereNodeType = OperationType.And;
         }
+        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body);
+        if (this.lastWhereNodeType == OperationType.Or)
+        {
+            conditionSql = $"({conditionSql})";
+            this.lastWhereNodeType = OperationType.And;
+        }
+        if (!string.IsNullOrEmpty(this.whereSql))
+            this.whereSql += " AND " + conditionSql;
         else this.whereSql = conditionSql;
         this.isWhere = false;
         return this;

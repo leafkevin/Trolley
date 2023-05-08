@@ -569,7 +569,7 @@ public class SqlVisitor : ISqlVisitor
                         index++;
                     }
                     builder.Append(" WHERE ");
-                    builder.Append(this.VisitConditionExpr(lambdaExpr.Body, out _));
+                    builder.Append(this.VisitConditionExpr(lambdaExpr.Body));
                     removeIndices.Reverse();
                     removeIndices.ForEach(f => this.tables.RemoveAt(f));
                     existsSql = builder.ToString();
@@ -674,9 +674,8 @@ public class SqlVisitor : ISqlVisitor
         result = null;
         return false;
     }
-    public virtual string VisitConditionExpr(Expression conditionExpr, out bool isNeedParentheses)
+    public virtual string VisitConditionExpr(Expression conditionExpr)
     {
-        isNeedParentheses = false;
         if (conditionExpr.NodeType == ExpressionType.AndAlso || conditionExpr.NodeType == ExpressionType.OrElse)
         {
             int lastDeep = 0;
@@ -684,10 +683,7 @@ public class SqlVisitor : ISqlVisitor
             var sqlSegments = this.VisitLogicBinaryExpr(conditionExpr);
 
             if (conditionExpr.NodeType == ExpressionType.OrElse)
-            {
-                isNeedParentheses = true;
                 this.lastWhereNodeType = OperationType.Or;
-            }
             else this.lastWhereNodeType = OperationType.And;
 
             for (int i = 0; i < sqlSegments.Count; i++)
