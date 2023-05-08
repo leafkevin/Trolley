@@ -51,7 +51,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         builder.Append(this.setSql);
 
         if (!string.IsNullOrEmpty(this.whereSql))
-            builder.Append(this.whereSql);
+            builder.Append(" WHERE " + this.whereSql);
         dbParameters = this.dbParameters;
         return builder.ToString();
     }
@@ -83,7 +83,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         };
         this.tables.Add(joinTable);
         this.InitTableAlias(lambdaExpr);
-        joinTable.OnExpr = this.VisitConditionExpr(lambdaExpr.Body);
+        joinTable.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
         return this;
     }
     public virtual IUpdateVisitor Set(Expression fieldsExpr, object fieldValue = null)
@@ -163,7 +163,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
-        this.whereSql = " WHERE " + this.VisitConditionExpr(lambdaExpr.Body);
+        this.whereSql = this.VisitConditionExpr(lambdaExpr.Body, out _);
         this.isWhere = false;
         return this;
     }
@@ -172,7 +172,15 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
-        this.whereSql += " AND " + this.VisitConditionExpr(lambdaExpr.Body);
+        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var isNeedParentheses);
+        if (!string.IsNullOrEmpty(this.whereSql))
+        {
+            if (this.lastWhereNodeType == OperationType.Or)
+                this.whereSql = $"({this.whereSql})";
+            if (isNeedParentheses) conditionSql = $"({conditionSql})";
+            this.whereSql += " AND " + conditionSql;
+        }
+        else this.whereSql = conditionSql;
         this.isWhere = false;
         return this;
     }

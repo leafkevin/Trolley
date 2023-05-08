@@ -47,15 +47,15 @@ public class SqlServerExpressionUnitTest : UnitTestBase
         var sql = repository.From<User>()
             .Where(f => (f.IsEnabled ? "Enabled" : "Disabled") == "Enabled"
                 && (f.GuidField.HasValue ? "HasValue" : "NoValue") == "HasValue")
-            //.Select(f => new
-            //{
-            //    IsEnabled = f.IsEnabled ? "Enabled" : "Disabled",
-            //    GuidField = f.GuidField.HasValue ? "HasValue" : "NoValue",
-            //    IsOld = f.Age > 35 ? true : false,
-            //    IsNeedParameter = f.Name.Contains("kevin") ? "Yes" : "No",
-            //})
-            .ToSql(out var parameters);
-        Assert.True(sql == "SELECT (CASE WHEN [IsEnabled]=1 THEN 'Enabled' ELSE 'Disabled' END) AS [IsEnabled],(CASE WHEN [GuidField] IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END) AS [GuidField],(CASE WHEN [Age]>35 THEN 1 ELSE 0 END) AS [IsOld],(CASE WHEN [Name] LIKE '%kevin%' THEN 'Yes' ELSE @p0 END) AS [IsNeedParameter] FROM [sys_user] WHERE (CASE WHEN [IsEnabled]=1 THEN 'Enabled' ELSE 'Disabled' END)='Enabled'");
+            .Select(f => new
+            {
+                IsEnabled = f.IsEnabled ? "Enabled" : "Disabled",
+                GuidField = f.GuidField.HasValue ? "HasValue" : "NoValue",
+                IsOld = f.Age > 35 ? true : false,
+                IsNeedParameter = f.Name.Contains("kevin") ? "Yes" : "No",
+            })
+            .ToSql(out _);
+        Assert.True(sql == "SELECT (CASE WHEN [IsEnabled] = 1 THEN 'Enabled' ELSE 'Disabled' END) AS [IsEnabled],(CASE WHEN [GuidField] IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END) AS [GuidField],(CASE WHEN [Age]>35 THEN 1 ELSE 0 END) AS [IsOld],(CASE WHEN [Name] LIKE '%kevin%' THEN 'Yes' ELSE 'No' END) AS [IsNeedParameter] FROM [sys_user] WHERE (CASE WHEN [IsEnabled] = 1 THEN 'Enabled' ELSE 'Disabled' END)='Enabled' AND (CASE WHEN [GuidField] IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END)='HasValue'");
     }
     [Fact]
     public void Index()

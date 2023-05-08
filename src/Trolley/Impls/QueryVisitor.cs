@@ -102,7 +102,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         builder.Clear();
         if (!string.IsNullOrEmpty(this.whereSql))
+        {
+            this.whereSql = $" WHERE {this.whereSql}";
             builder.Append(this.whereSql);
+        }
         if (!string.IsNullOrEmpty(this.groupBySql))
             builder.Append($" GROUP BY {this.groupBySql}");
         if (!string.IsNullOrEmpty(this.havingSql))
@@ -386,7 +389,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         var joinTableSegment = this.InitTableAlias(lambdaExpr);
         joinTableSegment.JoinType = joinType;
-        joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body);
+        joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
         this.isWhere = false;
     }
     public virtual void Join(string joinType, Type newEntityType, Expression joinOn)
@@ -401,8 +404,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         var joinTableSegment = this.AddTable(newEntityType, joinType);
         this.InitTableAlias(lambdaExpr);
-        var joinOnExpr = this.VisitConditionExpr(lambdaExpr.Body);
-        joinTableSegment.OnExpr = joinOnExpr;
+        joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
         this.isWhere = false;
     }
     public virtual void Join(string joinType, TableSegment joinTableSegment, Expression joinOn)
@@ -417,8 +419,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         this.InitTableAlias(lambdaExpr);
         joinTableSegment.JoinType = joinType;
-        var joinOnExpr = this.VisitConditionExpr(lambdaExpr.Body);
-        joinTableSegment.OnExpr = joinOnExpr;
+        joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
         this.isWhere = false;
     }
     public virtual void Join(string joinType, Type newEntityType, string cteTableName, Expression joinOn)
@@ -435,7 +436,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var readerFields = this.FlattenTableFields(joinTableSegment);
         joinTableSegment.ReaderFields = readerFields;
         this.InitTableAlias(lambdaExpr);
-        joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body);
+        joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
         this.isWhere = false;
     }
     public virtual void Select(string sqlFormat, Expression selectExpr = null, bool isFromQuery = false)
@@ -520,7 +521,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.isWhere = true;
         var lambdaExpr = havingExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
-        this.havingSql = this.VisitConditionExpr(lambdaExpr.Body);
+        this.havingSql = this.VisitConditionExpr(lambdaExpr.Body, out _);
         this.isWhere = false;
     }
     public virtual IQueryVisitor Page(int pageIndex, int pageSize)
@@ -547,7 +548,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (isClearTableAlias)
             this.InitTableAlias(lambdaExpr);
         //在Update的Value子查询语句中，更新主表别名是a，引用表别名从b开始，无需别名替换
-        this.whereSql = " WHERE " + this.VisitConditionExpr(lambdaExpr.Body);
+        this.whereSql = this.VisitConditionExpr(lambdaExpr.Body, out _);
         this.isWhere = false;
         return this;
     }
@@ -556,10 +557,15 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.isWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
-        if (string.IsNullOrEmpty(this.whereSql))
-            this.whereSql = " WHERE ";
-        else this.whereSql += " AND ";
-        this.whereSql += this.VisitConditionExpr(lambdaExpr.Body);
+        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var isNeedParentheses);
+        if (!string.IsNullOrEmpty(this.whereSql))
+        {
+            if (this.lastWhereNodeType == OperationType.Or)
+                this.whereSql = $"({this.whereSql})";
+            if (isNeedParentheses) conditionSql = $"({conditionSql})";
+            this.whereSql += " AND " + conditionSql;
+        }
+        else this.whereSql = conditionSql;
         this.isWhere = false;
         return this;
     }

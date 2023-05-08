@@ -23,6 +23,7 @@ public class SqlVisitor : ISqlVisitor
     protected bool isSelect = false;
     protected bool isWhere = false;
     protected bool isFromQuery = false;
+    protected OperationType lastWhereNodeType = OperationType.None;
 
     public virtual char TableAsStart { get; set; }
     public virtual bool IsNeedAlias { get; set; }
@@ -44,7 +45,7 @@ public class SqlVisitor : ISqlVisitor
             return sqlSegment;
 
         //处理HasValue !逻辑取反操作，这种情况下是一元操作
-        return this.VisitDeferredBoolConditional(sqlSegment, this.OrmProvider.GetQuotedValue(true), this.OrmProvider.GetQuotedValue(false));
+        return this.VisitDeferredBoolConditional(sqlSegment, true, this.OrmProvider.GetQuotedValue(true), this.OrmProvider.GetQuotedValue(false));
     }
     public virtual SqlSegment Visit(SqlSegment sqlSegment)
     {
@@ -257,12 +258,22 @@ public class SqlVisitor : ISqlVisitor
                     }
                 }
 
-                leftSegment.Merge(rightSegment);
                 var operators = this.OrmProvider.GetBinaryOperator(binaryExpr.NodeType);
                 if (binaryExpr.NodeType == ExpressionType.Coalesce)
+                {
+                    leftSegment.Merge(rightSegment);
                     return leftSegment.Change($"{operators}({this.GetQuotedValue(leftSegment)},{this.GetQuotedValue(rightSegment)})", false, false, true);
+                }
 
-                return leftSegment.Change($"{this.GetQuotedValue(leftSegment)}{operators}{this.GetQuotedValue(rightSegment)}", false, true, false);
+                string strLeft = this.GetQuotedValue(leftSegment);
+                string strRight = this.GetQuotedValue(rightSegment);
+                if (leftSegment.IsExpression)
+                    strLeft = $"({strLeft})";
+                if (rightSegment.IsExpression)
+                    strRight = $"({strRight})";
+
+                leftSegment.Merge(rightSegment);
+                return leftSegment.Change($"{strLeft}{operators}{strRight}", false, true, false);
         }
         return sqlSegment;
     }
@@ -365,7 +376,7 @@ public class SqlVisitor : ISqlVisitor
         var ifFalseSegment = this.Visit(new SqlSegment { Expression = conditionalExpr.IfFalse });
         sqlSegment.Merge(ifTrueSegment);
         sqlSegment.Merge(ifFalseSegment);
-        return this.VisitDeferredBoolConditional(sqlSegment, this.GetQuotedValue(ifTrueSegment), this.GetQuotedValue(ifFalseSegment));
+        return this.VisitDeferredBoolConditional(sqlSegment, conditionalExpr.IfTrue.Type == typeof(bool), this.GetQuotedValue(ifTrueSegment), this.GetQuotedValue(ifFalseSegment));
     }
     public virtual SqlSegment VisitListInit(SqlSegment sqlSegment)
     {
@@ -558,7 +569,7 @@ public class SqlVisitor : ISqlVisitor
                         index++;
                     }
                     builder.Append(" WHERE ");
-                    builder.Append(this.VisitConditionExpr(lambdaExpr.Body));
+                    builder.Append(this.VisitConditionExpr(lambdaExpr.Body, out _));
                     removeIndices.Reverse();
                     removeIndices.ForEach(f => this.tables.RemoveAt(f));
                     existsSql = builder.ToString();
@@ -663,13 +674,21 @@ public class SqlVisitor : ISqlVisitor
         result = null;
         return false;
     }
-    public virtual string VisitConditionExpr(Expression conditionExpr)
+    public virtual string VisitConditionExpr(Expression conditionExpr, out bool isNeedParentheses)
     {
+        isNeedParentheses = false;
         if (conditionExpr.NodeType == ExpressionType.AndAlso || conditionExpr.NodeType == ExpressionType.OrElse)
         {
             int lastDeep = 0;
             var builder = new StringBuilder();
             var sqlSegments = this.VisitLogicBinaryExpr(conditionExpr);
+
+            if (conditionExpr.NodeType == ExpressionType.OrElse)
+            {
+                isNeedParentheses = true;
+                this.lastWhereNodeType = OperationType.Or;
+            }
+            else this.lastWhereNodeType = OperationType.And;
 
             for (int i = 0; i < sqlSegments.Count; i++)
             {
@@ -1060,7 +1079,7 @@ public class SqlVisitor : ISqlVisitor
         isNeedAlias = queryVisitor.IsNeedAlias;
         return result;
     }
-    public SqlSegment VisitDeferredBoolConditional(SqlSegment sqlSegment, string ifTrueValue, string ifFalseValue)
+    public SqlSegment VisitDeferredBoolConditional(SqlSegment sqlSegment, bool isExpectBooleanType, string ifTrueValue, string ifFalseValue)
     {
         //处理HasValue !逻辑取反操作，这种情况下是一元操作
         int notIndex = 0;
@@ -1084,14 +1103,16 @@ public class SqlVisitor : ISqlVisitor
         if (notIndex % 2 > 0)
             strOperator = deferredSegment == SqlSegment.Null ? "IS NOT" : "<>";
         else strOperator = deferredSegment == SqlSegment.Null ? "IS" : "=";
-        //TODO:待处理
-        if (!sqlSegment.IsExpression)
-            sqlSegment.Value = $"{sqlSegment} {strOperator} {this.GetQuotedValue(deferredSegment)}";
 
-        if (this.isSelect)
-            sqlSegment.Change($"CASE WHEN {sqlSegment} THEN {ifTrueValue} ELSE {ifFalseValue} END", false, true, false);
-        if (this.isWhere)
-            sqlSegment.Change($"{sqlSegment}", false, true, false);
+        string strExpression = null;
+        if ((this.isSelect && !sqlSegment.IsExpression)
+            || (this.isWhere && !sqlSegment.IsExpression))
+            strExpression = $"{sqlSegment} {strOperator} {this.GetQuotedValue(deferredSegment)}";
+        else strExpression = $"{sqlSegment}";
+
+        if (this.isSelect || (this.isWhere && !isExpectBooleanType))
+            sqlSegment.Change($"CASE WHEN {strExpression} THEN {ifTrueValue} ELSE {ifFalseValue} END", false, true, false);
+        else sqlSegment.Change($"{strExpression}", false, true, false);
         return sqlSegment;
     }
     public SqlSegment ConvertTo(SqlSegment sqlSegment)

@@ -37,7 +37,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
         }
 
         if (!string.IsNullOrEmpty(this.whereSql))
-            builder.Append(this.whereSql);
+            builder.Append(" WHERE " + this.whereSql);
         dbParameters = this.dbParameters;
         return builder.ToString();
     }

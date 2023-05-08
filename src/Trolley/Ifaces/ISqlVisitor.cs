@@ -25,7 +25,7 @@ public interface ISqlVisitor
     T Evaluate<T>(Expression expr);
     SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment);
     bool IsStringConcatOperator(SqlSegment sqlSegment, out SqlSegment result);
-    string VisitConditionExpr(Expression conditionExpr);
+    string VisitConditionExpr(Expression conditionExpr, out bool isNeedParentheses);
     List<SqlSegment> ConvertFormatToConcatList(SqlSegment[] argsSegments);
     List<SqlSegment> SplitConcatList(SqlSegment[] argsSegments);
     SqlSegment[] SplitConcatList(Expression concatExpr);

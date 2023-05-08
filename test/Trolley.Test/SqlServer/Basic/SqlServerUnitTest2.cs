@@ -925,7 +925,7 @@ public class SqlServerUnitTest2 : UnitTestBase
             .And(true, f => !f.ProductCount.HasValue)
             .Select(x => x.Id)
             .ToSql(out _);
-        Assert.True(sql == "SELECT [Id] FROM [sys_order] WHERE [ProductCount] IS NULL OR [BuyerId] IS NULL AND [ProductCount] IS NULL");
+        Assert.True(sql == "SELECT [Id] FROM [sys_order] WHERE ([ProductCount] IS NULL OR [BuyerId] IS NULL) AND [ProductCount] IS NULL");
     }
     [Fact]
     public async void Query_Union()

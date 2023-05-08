@@ -171,7 +171,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                             var targetSegment = visitor.VisitAndDeferred(target);
                             var rightSegment = visitor.VisitAndDeferred(target);
                             targetSegment.Merge(rightSegment);
-                            return targetSegment.Change($"{this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)}", false, true);
+                            return targetSegment.Change($"{this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)}", false, true, false);
                         });
                         result = true;
                     }
@@ -185,7 +185,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                             var rightSegment = visitor.VisitAndDeferred(args[1]);
 
                             leftSegment.Merge(rightSegment);
-                            return leftSegment.Change($"CASE WHEN {this.GetQuotedValue(leftSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(leftSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END", false, true);
+                            return leftSegment.Change($"CASE WHEN {this.GetQuotedValue(leftSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(leftSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END", false, true, false);
                         });
                         result = true;
                     }
@@ -199,7 +199,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                             var rightSegment = visitor.VisitAndDeferred(args[0]);
 
                             targetSegment.Merge(rightSegment);
-                            return targetSegment.Change($"CASE WHEN {this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(targetSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END", false, true);
+                            return targetSegment.Change($"CASE WHEN {this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(targetSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END", false, true, false);
                         });
                         result = true;
                     }
@@ -212,7 +212,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                             var targetSegment = visitor.VisitAndDeferred(target);
                             if (targetSegment.IsConstantValue)
                                 return targetSegment.Change(targetSegment.ToString());
-                            return targetSegment.Change(this.CastTo(typeof(string), this.GetQuotedValue(targetSegment)), false, true);
+                            return targetSegment.Change(this.CastTo(typeof(string), this.GetQuotedValue(targetSegment)), false, false, true);
                         });
                         result = true;
                     }
@@ -226,7 +226,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                             args[0] = visitor.VisitAndDeferred(args[0]);
                             if (args[0].IsConstantValue)
                                 return args[0].Change(this.GetQuotedValue(methodInfo.DeclaringType, args[0]));
-                            return args[0].Change(this.CastTo(methodInfo.DeclaringType, this.GetQuotedValue(args[0])), false, true);
+                            return args[0].Change(this.CastTo(methodInfo.DeclaringType, this.GetQuotedValue(args[0])), false, false, true);
                         });
                         result = true;
                     }
