@@ -42,9 +42,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
         return builder.ToString();
     }
     public override IUpdateVisitor Join(string joinType, Type entityType, Expression joinOn)
-    {
-        throw new NotSupportedException("SqlServer不支持Update Join语法，支持Update From语法");
-    }
+        => throw new NotSupportedException("SqlServer不支持Update Join语法，支持Update From语法");
     public override IUpdateVisitor Set(Expression fieldsExpr, object fieldValue = null)
     {
         var lambdaExpr = fieldsExpr as LambdaExpression;

@@ -94,5 +94,5 @@ public enum ReaderFieldType : byte
     /// <summary>
     /// 先从数据库中查询，连续的一个或多个字段，再执行函数调用返回一个字段
     /// </summary>
-    DeferFields = 4
+    DeferredFields = 4
 }

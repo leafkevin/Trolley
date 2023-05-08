@@ -207,12 +207,6 @@ public static class Extensions
         }
         return true;
     }
-    public static bool TryPop<T>(this Stack<T> stack, Func<T, bool> filter, out T element)
-    {
-        if (stack.TryPeek(out element) && filter.Invoke(element))
-            return stack.TryPop(out _);
-        return false;
-    }
     internal static TValue To<TValue>(this IDataReader reader, int columnIndex = 0)
     {
         var targetType = typeof(TValue);
@@ -341,7 +335,7 @@ public static class Extensions
                 }
                 if (readerIndex == 0 && !IsTarget(readerFields))
                     parent = root;
-                if (readerIndex == 0 && !IsTarget(readerFields) || readerIndex > 0)
+                if ((readerIndex == 0 && !IsTarget(readerFields) || readerIndex > 0) && readerField.FieldType != ReaderFieldType.DeferredFields)
                     current = NewBuildInfo(readerField.TargetMember.GetMemberType(), readerField.TargetMember, parent);
 
                 readerBuilders.Add(readerField.Index, current);
@@ -353,46 +347,76 @@ public static class Extensions
                     var fieldMember = readerField.ReaderFields[childIndex].FromMember;
                     Expression readerValueExpr = null;
 
-                    if (readerField.FieldType == ReaderFieldType.AnonymousObject)
+                    EntityMap entityMapper = null;
+                    MemberMap memberMapper = null;
+                    switch (readerField.FieldType)
                     {
-                        readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                            fieldMember.GetMemberType(), fieldType, null, blockParameters, blockBodies);
-                    }
-                    else
-                    {
-                        var entityMapper = readerField.TableSegment.Mapper;
-                        if (!entityMapper.TryGetMemberMap(fieldMember.Name, out var memberMapper))
+                        case ReaderFieldType.AnonymousObject:
+                            readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
+                                fieldMember.GetMemberType(), fieldType, null, blockParameters, blockBodies);
                             break;
-                        readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                            memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
+                        case ReaderFieldType.DeferredFields:
+                            entityMapper = readerField.ReaderFields[childIndex].TableSegment.Mapper;
+                            if (!entityMapper.TryGetMemberMap(fieldMember.Name, out memberMapper))
+                                break;
+                            readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
+                                memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
+                            var parameters = readerField.DeferCallMethod.GetParameters();
+                            var argsIndex = readerField.ReaderFields[childIndex].Index;
+                            if (memberMapper.MemberType != parameters[argsIndex].ParameterType)
+                                readerValueExpr = Expression.Convert(readerValueExpr, parameters[argsIndex].ParameterType);
+                            readerField.DeferCallArgs.Insert(argsIndex, readerValueExpr);
+                            break;
+                        case ReaderFieldType.Entity:
+                            entityMapper = readerField.TableSegment.Mapper;
+                            if (!entityMapper.TryGetMemberMap(fieldMember.Name, out memberMapper))
+                                break;
+                            readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
+                                memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
+                            break;
                     }
-
-                    if (current.IsDefault) current.Bindings.Add(Expression.Bind(fieldMember, readerValueExpr));
-                    else current.Arguments.Add(readerValueExpr);
+                    if (readerField.FieldType != ReaderFieldType.DeferredFields)
+                    {
+                        if (current.IsDefault) current.Bindings.Add(Expression.Bind(fieldMember, readerValueExpr));
+                        else current.Arguments.Add(readerValueExpr);
+                    }
                     childIndex++;
                     index++;
                 }
 
                 //不是第一个实体字段，都要构建当前实体，如果没有后续实体类型子属性，就一直构建到顶层的下一层
-                if (readerIndex > 0 || readerIndex == 0 && !IsTarget(readerFields))
+                if (readerField.FieldType == ReaderFieldType.DeferredFields)
                 {
-                    if (readerField.HasNextInclude)
-                        deferredBuilds.Push(current);
-                    else
+                    Expression callExpr = null;
+                    if (readerField.DeferCallTarget != null)
+                        callExpr = Expression.Call(readerField.DeferCallTarget, readerField.DeferCallMethod, readerField.DeferCallArgs);
+                    else callExpr = Expression.Call(readerField.DeferCallMethod, readerField.DeferCallArgs);
+                    if (current.IsDefault)
+                        current.Bindings.Add(Expression.Bind(readerField.FromMember, callExpr));
+                    else current.Arguments.Add(callExpr);
+                }
+                else
+                {
+                    if (readerIndex > 0 || readerIndex == 0 && !IsTarget(readerFields))
                     {
-                        do
+                        if (readerField.HasNextInclude)
+                            deferredBuilds.Push(current);
+                        else
                         {
-                            //创建子对象，并赋值给父对象的属性,直到Select语句
-                            Expression instanceExpr = null;
-                            if (current.IsDefault)
-                                instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
-                            else instanceExpr = Expression.New(current.Constructor, current.Arguments);
-                            //赋值给父对象的属性
-                            if (current.Parent.IsDefault)
-                                current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
-                            else current.Parent.Arguments.Add(instanceExpr);
+                            do
+                            {
+                                //创建子对象，并赋值给父对象的属性,直到Select语句
+                                Expression instanceExpr = null;
+                                if (current.IsDefault)
+                                    instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
+                                else instanceExpr = Expression.New(current.Constructor, current.Arguments);
+                                //赋值给父对象的属性
+                                if (current.Parent.IsDefault)
+                                    current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
+                                else current.Parent.Arguments.Add(instanceExpr);
+                            }
+                            while (deferredBuilds.TryPop(out current));
                         }
-                        while (deferredBuilds.TryPop(out current));
                     }
                 }
                 parentIndex = readerField.ParentIndex;
@@ -607,7 +631,9 @@ public static class Extensions
         if (readerFields.Count == 1)
             return true;
         if (readerFields.Exists(f => f.FieldType == ReaderFieldType.Field
-             || (f.Index > 0 && f.TableSegment.FromTable == null)))
+            || f.FieldType == ReaderFieldType.DeferredFields
+             //DeferFields类型，有函数调用，TableSegment为空
+             || (f.Index > 0 && f.TableSegment != null && f.TableSegment.FromTable == null)))
             return false;
         return true;
     }

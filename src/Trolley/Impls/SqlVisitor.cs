@@ -302,12 +302,13 @@ public class SqlVisitor : ISqlVisitor
             || typeof(IAggregateSelect).IsAssignableFrom(methodCallExpr.Method.DeclaringType))
             return this.VisitSqlMethodCall(sqlSegment);
 
-        if (!this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter))
-            throw new NotSupportedException($"不支持的方法访问，或是{this.OrmProvider.GetType().FullName}未实现此方法{methodCallExpr.Method.Name}");
-
         SqlSegment target = null;
         if (methodCallExpr.Object != null)
+        {
             target = new SqlSegment { Expression = methodCallExpr.Object };
+            if (methodCallExpr.Object.IsParameter(out _))
+                throw new NotSupportedException($"不支持target的方法调用解析,{sqlSegment.Expression}");
+        }
 
         SqlSegment[] arguments = null;
         if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
@@ -320,7 +321,51 @@ public class SqlVisitor : ISqlVisitor
             }
             arguments = argumentSegments.ToArray();
         }
-        return formatter.Invoke(this, target, sqlSegment.DeferredExprs, arguments);
+        if (this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter))
+            return formatter.Invoke(this, target, sqlSegment.DeferredExprs, arguments);
+
+        if (arguments != null && arguments.Length > 0)
+        {
+            var readerFields = new List<ReaderField>();
+            var constArgs = new List<Expression>();
+            var builder = new StringBuilder();
+            for (int i = 0; i < arguments.Length; i++)
+            {
+                arguments[i] = this.VisitAndDeferred(arguments[i]);
+                if (arguments[i].HasField)
+                {
+                    sqlSegment.Merge(arguments[i]);
+                    var fieldName = arguments[i].Value.ToString();
+                    readerFields.Add(new ReaderField
+                    {
+                        Index = i,
+                        FieldType = ReaderFieldType.Field,
+                        TableSegment = arguments[i].TableSegment,
+                        FromMember = arguments[i].FromMember,
+                        Body = fieldName
+                    });
+                    if (builder.Length > 0)
+                        builder.Append(',');
+                    builder.Append(fieldName);
+                }
+                else constArgs.Add(Expression.Constant(arguments[i].Value));
+            }
+            if (readerFields.Count > 0)
+            {
+                sqlSegment.Change(new ReaderField
+                {
+                    FieldType = ReaderFieldType.DeferredFields,
+                    Body = builder.ToString(),
+                    DeferCallTarget = methodCallExpr.Object,
+                    DeferCallMethod = methodCallExpr.Method,
+                    DeferCallArgs = constArgs,
+                    ReaderFields = readerFields
+                }, false); 
+                return sqlSegment;
+            }
+            else return this.Evaluate(sqlSegment);
+        }
+        return this.Evaluate(sqlSegment);
     }
     public virtual SqlSegment VisitParameter(SqlSegment sqlSegment)
     {

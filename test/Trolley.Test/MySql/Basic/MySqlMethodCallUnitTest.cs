@@ -384,6 +384,5 @@ public class MySqlMethodCallUnitTest : UnitTestBase
             .Where(f => f.Id == id)
             .Select(f => (short)f.Age)
             .First();
-        int fdsf = 0;
     }
 }
