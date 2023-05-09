@@ -41,7 +41,9 @@ class Query<T> : IQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone('a', $"p{this.unionIndex++}u");
+        this.unionIndex++;
+        var tableAsStar = (char)('a' + this.unionIndex);
+        var newVisitor = this.visitor.Clone(tableAsStar, $"p{this.unionIndex}u");
         subQuery.Invoke(new FromQuery(newVisitor));
         var sql = " UNION" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true);
         this.visitor.Union(sql, readerFields, dbParameters);
@@ -52,10 +54,13 @@ class Query<T> : IQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone('a', $"p{this.unionIndex++}u");
+        var tableAlias = (char)('a' + this.unionIndex);
+        this.unionIndex++;
+        var nextTableAlias = (char)('a' + this.unionIndex);
+        var newVisitor = this.visitor.Clone(nextTableAlias, $"p{this.unionIndex}u");
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true);
-        this.visitor.Union(sql, readerFields, dbParameters);
+        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true, nextTableAlias);
+        this.visitor.Union(sql, readerFields, dbParameters, tableAlias);
         return this;
     }
     #endregion
@@ -91,7 +96,9 @@ class Query<T> : IQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone('a', $"p{this.withIndex++}w");
+        this.withIndex++;
+        var tableAsStar = (char)('a' + this.withIndex);
+        var newVisitor = this.visitor.Clone(tableAsStar, $"p{this.withIndex}w");
         subQuery.Invoke(new FromQuery(newVisitor));
         var sql = newVisitor.BuildSql(out var dbDataParameters, out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters, readerFields);

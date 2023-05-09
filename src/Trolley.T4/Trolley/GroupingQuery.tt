@@ -14,9 +14,9 @@ class GroupingQuery<T, TGrouping> : IGroupingQuery<T, TGrouping>
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -81,9 +81,9 @@ class GroupingQuery<<#=tables#>, TGrouping> : IGroupingQuery<<#=tables#>, TGroup
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -144,9 +144,9 @@ class GroupingQuery<<#=tables#>, TGrouping> : IGroupingQuery<<#=tables#>, TGroup
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;

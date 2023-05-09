@@ -27,9 +27,9 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     protected int withIndex = 0;
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor, int withIndex = 0)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -247,11 +247,6 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
 
-    public IQuery<<#=tables#>> Distinct()
-    {
-        this.visitor.Distinct();
-        return this;
-    }
     public IQuery<<#=tables#>> Skip(int offset)
     {
         this.visitor.Skip(offset);
@@ -450,9 +445,9 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     protected int withIndex = 0;
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor, int withIndex = 0)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -867,9 +862,9 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
 {
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
-    protected readonly QueryVisitor visitor;
+    protected readonly IQueryVisitor visitor;
 
-    public Query(TheaConnection connection, IDbTransaction transaction, QueryVisitor visitor)
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;

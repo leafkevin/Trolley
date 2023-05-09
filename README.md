@@ -535,10 +535,30 @@ var sql = repository.From<User>()
 //SELECT a.`Id` AS UserId,b.`Id` AS OrderId,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId`ORDER BY a.`Id`,b.`Id`
 ```
 
-子查询，
+子查询，From和WithTable
+From，主要在开始完成子查询
+WithTable，适合From之后完成子查询，任意地方都可以
+From之后的子查询，完全可以由Join完成，Join本身就支持子查询
 ```csharp
+var sql = repository
+    .From(f => f.From<Order>()
+        .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
+        .GroupBy((a, b) => new { OrderId = a.Id, a.BuyerId })
+        .Select((x, a, b) => new { x.Grouping, ProductCount = x.CountDistinct(b.ProductId) }))
+    .InnerJoin<User>((x, y) => x.Grouping.BuyerId == y.Id)
+    .Where((a, b) => a.ProductCount > 1)
+    .Select((x, y) => new
+    {
+        x.Grouping,
+        Buyer = y,
+        x.ProductCount
+    })
+    .ToSql(out _);
+//SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT a.`Id` AS `OrderId`,a.`BuyerId`,COUNT(DISTINCT b.`ProductId`) AS `ProductCount` FROM `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` GROUP BY a.`Id`,a.`BuyerId`) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1
+
 //可以多个表直接查询
-var sql = repository.From(f => f.From<Page, Menu>('o')
+var sql = repository
+    .From(f => f.From<Page, Menu>('o')
         .Where((a, b) => a.Id == b.PageId)
         .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
     .InnerJoin<Menu>((a, b) => a.Id == b.Id)
@@ -547,31 +567,82 @@ var sql = repository.From(f => f.From<Page, Menu>('o')
     .ToSql(out _);
 //SELECT a.`Id`,b.`Name`,a.`ParentId`,a.`Url` FROM (SELECT p.`Id`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) a INNER JOIN `sys_menu` b ON a.`Id`=b.`Id` WHERE a.`Id`=b.`Id`");
 
-//也可以一个表，一个表的Join关联
+//WidthTable子查询
+var sql = repository.From<Menu>()
+    .WithTable(f => f.From<Page, Menu>('c')
+        .Where((a, b) => a.Id == b.PageId)
+        .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
+    .Where((a, b) => a.Id == b.Id)
+    .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+    .ToSql(out _);
+//SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `sys_menu` a,(SELECT d.`Id`,d.`ParentId`,c.`Url` FROM `sys_page` c,`sys_menu` d WHERE c.`Id`=d.`PageId`) b WHERE a.`Id`=b.`Id`
 
+var sql = repository
+    .From<Order, User>()
+    .WithTable(f => f.From<Order, OrderDetail, User>()
+        .Where((a, b, c) => a.Id == b.OrderId && a.BuyerId == c.Id && c.Age > 20)
+        .GroupBy((a, b, c) => new { OrderId = a.Id, a.BuyerId })
+        .Having((x, a, b, c) => x.Sum(b.Amount) > 500)
+        .Select((x, a, b, c) => new { x.Grouping.OrderId, TotalAmount = x.Sum(b.Amount) }))
+    .Where((a, b, c) => a.BuyerId == b.Id && a.Id == c.OrderId)
+    .Select((a, b, c) => new { Order = a, Buyer = b, OrderId = a.Id, a.BuyerId, c.TotalAmount })
+    .ToSql(out _);
+//SELECT a.`Id`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`Id` AS `OrderId`,a.`BuyerId`,c.`TotalAmount` FROM `sys_order` a,`sys_user` b,(SELECT a.`Id` AS `OrderId`,SUM(b.`Amount`) AS `TotalAmount` FROM `sys_order` a,`sys_order_detail` b,`sys_user` c WHERE a.`Id`=b.`OrderId` AND a.`BuyerId`=c.`Id` AND c.`Age`>20 GROUP BY a.`Id`,a.`BuyerId` HAVING SUM(b.`Amount`)>500) c WHERE a.`BuyerId`=b.`Id` AND a.`Id`=c.`OrderId`
 ```
+> 注意：
+> WithTable就相当于添加一张新表，后续可以Join关联，也可以在where中直接关联，类似于：SELECT * FROM Table1 a,(....) b WHERE ...
+> 如果使用Join关联的话，Join操作本身就可以直接关联子查询，无需使用WithTable了。
 
+
+
+
+Join表连接,Trolley支持三种Join表连接，InnerJoin、LeftJoin、RightJoin
+有两种方式Join关联表：
+1.一张表一张表的Join关联起来
+2.一次From多张表，挨个表Join关联起来
+子查询，也可以作为表参与连接，相当于先WithTable后再Join
 
 ```csharp
-//查询NULL Where Null
-var sql = repository.From<Order>()
-    .Where(x => x.ProductCount == null)
-    .And(true, f => !f.ProductCount.HasValue)
-    .Select(x => new
+//INNER JOIN
+//一张表一张表连接
+var sql = repository.From<User>()
+    .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+    .Where((a, b) => b.ProductCount > 1)
+    .Select((x, y) => new
     {
-	    NoOrderNo = x.OrderNo == null,
-	    HasProduct = x.ProductCount.HasValue
+        User = x,
+        Order = y
     })
     .ToSql(out _);
-//SELECT (`OrderNo` IS NULL) AS NoOrderNo,(`ProductCount` IS NOT NULL) AS HasProduct FROM `sys_order` WHERE `ProductCount` IS NULL AND `ProductCount` IS NOT NULL
-```
+//SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`OrderNo`,b.`ProductCount`,b.`TotalAmount`,b.`BuyerId`,b.`SellerId`,b.`Products`,b.`Disputes`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE b.`ProductCount`>1
+
+//直接From多张表，分别连接
+var sql = repository.From<User, Order, OrderDetail>()
+    .InnerJoin((a, b, c) => a.Id == b.BuyerId)
+    .LeftJoin((a, b, c) => b.Id == c.OrderId)
+    .Select((a, b, c) => new { OrderId = b.Id, b.OrderNo, b.Disputes, b.BuyerId, Buyer = a, TotalAmount = Sql.Sum(c.Amount) })
+    .ToSql(out _);
+//SELECT b.`Id` AS `OrderId`,b.`OrderNo`,b.`Disputes`,b.`BuyerId`,a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,SUM(c.`Amount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` LEFT JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId`
 
 
-```csharp
-//查询ValueTuple
-var sql = "SELECT Id,OrderNo,TotalAmount FROM sys_order";
-var result = repository.Query<(int OrderId, string OrderNo, double TotalAmount)>(sql);
+//Join子查询
+var sql = repository
+    .From(f => f.From<Order, OrderDetail>('a')
+        .Where((a, b) => a.Id == b.OrderId)
+        .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
+        .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
+        .Select((x, a, b) => new { x.Grouping, ProductTotal = Sql.CountDistinct(b.ProductId), BuyerId1 = x.Grouping.BuyerId }))
+    .InnerJoin<User>((x, y) => x.Grouping.BuyerId == y.Id)
+    .Select((x, y) => new { x.Grouping, x.Grouping.BuyerId, x.ProductTotal, BuyerName = y.Name, BuyerId2 = x.BuyerId1 })
+    .ToSql(out _);
+//SELECT a.`BuyerId`,a.`OrderId`,a.`BuyerId`,a.`ProductTotal`,b.`Name` AS `BuyerName`,a.`BuyerId1` AS `BuyerId2` FROM (SELECT a.`BuyerId`,a.`Id` AS `OrderId`,COUNT(DISTINCT b.`ProductId`) AS `ProductTotal`,a.`BuyerId` AS `BuyerId1` FROM `sys_order` a,`sys_order_detail` b WHERE a.`Id`=b.`OrderId` GROUP BY a.`BuyerId`,a.`Id` HAVING COUNT(DISTINCT b.`ProductId`)>0) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id`
 ```
+> 注意：
+> 使用Join<T>(f=>f.From...)的子查询，相当于WithTable+Join两个操作
+
+
+单表聚合操作
+使用Sql静态类和直接使用Count、CountDistinct、LongConunt、Max、Min、Sum、Avg方法，效果是一样的
 
 ```csharp
 //单表Count
@@ -594,44 +665,355 @@ var value1 = repository.From<Order>().Avg(f => f.TotalAmount);
 var value2 = repository.From<Order>().Select(f => Sql.Avg(f.TotalAmount)).First();
 var value3 = repository.QueryFirst<double>("SELECT AVG(TotalAmount) FROM sys_order");
 ```
- 
 
-	
-支持跨库查询，只要指定对应的dbKey就可以了
-------------------------------------------------------------
-使用Trolley.AspNetCore扩展后，可以使用json文件来配置数据库连接串信息  
-如果有多租户，代入对应的租户ID，就使用对应的数据库连接串了  
-appsetting.json中的数据库配置，如下
-```json
-{
-  "Database": {
-    "fengling": {
-      "IsDefault": true,
-      "ConnectionStrings": [
-        {
-          "ConnectionString": "Server=localhost;Port=3306;Database=fengling;User Id=root;Password=123456;Pooling=true;",
-          "IsDefault": true,
-	  //默认使用MySql数据库
-          "OrmProvider": "Trolley.MySqlProvider"
-        },
-        {
-          "ConnectionString": "Server=192.168.1.15;Port=5432;Database=fengling;User Id=postgres;Password=123456;Pooling=true;",
-          "IsDefault": false,
-	  //指定租户Id:1,2,3,4,5，使用PostgreSql数据库
-          "OrmProvider": "Trolley.NpgSqlProvider",
-          "TenantIds": [ 1, 2, 3, 4, 5 ]
-        }
-      ]
-    }
-  }
-}
-```
+Union和UnionAll查询
+
 ```csharp
-//按照上面的数据库配置文件
-using var repository = this.dbFactory.Create("fengling", 1);
-//使用fengling dbKey下租户ID:1 的PostgreSql数据库
+var sql = repository.From<Order>()
+    .Where(x => x.Id == 1)
+    .Select(x => new
+    {
+        x.Id,
+        x.OrderNo,
+        x.SellerId,
+        x.BuyerId
+    })
+    .UnionAll(f => f.From<Order>()
+        .Where(x => x.Id > 1)
+        .Select(x => new
+        {
+            x.Id,
+            x.OrderNo,
+            x.SellerId,
+            x.BuyerId
+        }))
+    .ToSql(out _);
+//生成的SQL:
+SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`=1 UNION ALL
+SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`>1");
+
+//带有OrderBy和Take的Union，会生成一个子查询，在里面完成OrderBy和Take操作
+var sql = repository
+    .From<Order>()
+        .Where(x => x.Id < 3)
+        .OrderBy(f => f.Id)
+        .Select(x => new
+        {
+            x.Id,
+            x.OrderNo,
+            x.SellerId,
+            x.BuyerId
+        })
+        .Take(1)
+    .UnionAll(f => f.From<Order>()
+        .Where(x => x.Id > 2)
+        .Select(x => new
+        {
+            x.Id,
+            x.OrderNo,
+            x.SellerId,
+            x.BuyerId
+        }).Take(1))
+    .ToSql(out _);
+//生成的SQL:
+SELECT * FROM (SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`<3 ORDER BY `Id` LIMIT 1) a UNION ALL
+SELECT * FROM (SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`>2 LIMIT 1) b"
+```
+> 注意：
+> 带有OrderBy和Take的Union，会生成一个子查询，在里面完成OrderBy和Take操作
+
+
+CTE支持
+
+FromWith：首个普通CTE子句
+NextWith：第二个以后的普通CTE子句
+FromWithRecursive：首个递归CTE子句
+NextWithRecursive 第二个以后的递归CTE子句
+
+> 注意：
+> 带有Recursive的递归CTE可以访问CTE自己
+> CTE需要指定CTE的名字
+> CTE本身就是一个子查询
+
+```csharp
+//一个普通CTE
+var sql = repository.FromWith(f => f.From<Menu>()
+        .Select(x => new { x.Id, x.Name, x.ParentId, x.PageId }), "MenuList")
+    .InnerJoin<Page>((a, b) => a.Id == b.Id)
+    .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+    .ToSql(out _);
+生成的SQL:
+WITH MenuList(Id,Name,ParentId,PageId) AS 
+(
+SELECT `Id`,`Name`,`ParentId`,`PageId` FROM `sys_menu`
+)
+SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN `sys_page` b ON a.`Id`=b.`Id`
+
+
+var sql = repository
+    .FromWithRecursive((f, cte) => f.From<Menu>()
+            .Where(x => x.Id == 1)
+            .Select(x => new { x.Id, x.Name, x.ParentId })
+        .UnionAllRecursive((x, y) => x.From<Menu>()
+            .InnerJoinRecursive(y, cte, (a, b) => a.ParentId == b.Id)
+            .Select((a, b) => new { a.Id, a.Name, a.ParentId })), "MenuList")
+    .NextWithRecursive((f, cte) => f.From<Page, Menu>()
+            .Where((a, b) => a.Id == b.PageId)
+            .Select((x, y) => new { y.Id, y.ParentId, x.Url })
+        .UnionAll(x => x.From<Menu>()
+            .LeftJoin<Page>((a, b) => a.PageId == b.Id)
+            .Where((a, b) => a.Id > 1)
+            .Select((x, y) => new { x.Id, x.ParentId, y.Url })), "MenuPageList")
+    .InnerJoin((a, b) => a.Id == b.Id)
+    .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+    .ToSql(out _);
+//生成的SQL:
+WITH RECURSIVE MenuList(Id,Name,ParentId) AS 
+(
+SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
+SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id`
+),
+MenuPageList(Id,ParentId,Url) AS 
+(
+SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b.`PageId` UNION ALL
+SELECT a.`Id`,a.`ParentId`,b.`Url` FROM `sys_menu` a LEFT JOIN `sys_page` b ON a.`PageId`=b.`Id` WHERE a.`Id`>1
+)
+SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageList b ON a.`Id`=b.`Id`
+
+
+var sql = repository
+    .FromWithRecursive((f, cte) => f.From<Menu>()
+            .Where(x => x.Id == 1)
+            .Select(x => new { x.Id, x.Name, x.ParentId })
+        .UnionAllRecursive((x, y) => x.From<Menu>()
+            .InnerJoinRecursive(y, cte, (a, b) => a.ParentId == b.Id)
+            .Select((a, b) => new { a.Id, a.Name, a.ParentId })), "MenuList")
+    .NextWithRecursive((f, cte) => f.From<Page>()
+            .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+            .Where((a, b) => a.Id == 1)
+            .Select((x, y) => new { y.Id, x.Url })
+        .UnionAll(x => x.From<Page>()
+            .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+            .Where((a, b) => a.Id > 1)
+            .Select((x, y) => new { y.Id, x.Url })), "MenuPageList")
+    .InnerJoin((a, b) => a.Id == b.Id)
+    .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+    .ToSql(out _);
+//生成的SQL:
+WITH RECURSIVE MenuList(Id,Name,ParentId) AS 
+(
+SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
+SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id`
+),
+MenuPageList(Id,Url) AS 
+(
+SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=1 UNION ALL
+SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`>1
+)
+SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageList b ON a.`Id`=b.`Id`
+
+```
+
+
+特殊用法：
+
+对NULL的支持
+Nullable<>字段，可以使用null进行判断，赋值
+```csharp
+var sql = repository.From<Order>()
+    .Where(x => x.ProductCount == null)
+    .And(true, f => !f.ProductCount.HasValue)
+    .Select(x => new
+    {
+	    NoOrderNo = x.OrderNo == null,
+	    HasProduct = x.ProductCount.HasValue
+    })
+    .ToSql(out _);
+//SELECT (`OrderNo` IS NULL) AS NoOrderNo,(`ProductCount` IS NOT NULL) AS HasProduct FROM `sys_order` WHERE `ProductCount` IS NULL AND `ProductCount` IS NOT NULL
+```
+
+对于非Nullable<>字段，也可以使用IsNull()扩展方法来进行判断
+```csharp
+var sql = repository.From<Order>()
+    .Where(x => x.ProductCount == null || x.BuyerId.IsNull())
+    .And(true, f => !f.ProductCount.HasValue)
+    .Select(x => x.Id)
+    .ToSql(out _);
+//SELECT `Id` FROM `sys_order` WHERE (`ProductCount` IS NULL OR `BuyerId` IS NULL) AND `ProductCount` IS NULL
+```
+
+`ITypeHandler`类型处理器
+对特殊类型进行处理，不是默认映射，就需要`TypeHandler`类型处理器类处理，完成模型与数据库之间的数据转换
+通常是Class类型或是特殊类型，比如：TimeOnly,DateOnly...等
+比如：模型的`SomeTime`属性是TimeOnly类型，数据库字段是`bitint`类型,并不是默认映射，就需要重写一个类型处理器，完成模型与数据库之间的数据转换。
+
+
+在要注册Trolley的时候，进行注册`ITypeHandler`类型处理器，在模型映射的需要指定这个`ITypeHandler`类型处理器
+Trolley提供了`JsonTypeHandler`类来支持Json处理。
+
+```csharp
+var services = new ServiceCollection();
+services.AddSingleton(f =>
+{
+    var builder = new OrmDbFactoryBuilder()
+    .Register("fengling", true, f =>
+    {
+        var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
+        f.Add<MySqlProvider>(connectionString, true);
+    })
+    .AddTypeHandler<JsonTypeHandler>()
+    .Configure<MySqlProvider, MySqlModelConfiguration>();
+    return builder.Build();
+});
+var serviceProvider = services.BuildServiceProvider();
+this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+
+//略 ... ...
+builder.Entity<Order>(f =>
+{
+    //略 ... ...
+    //特殊类型JSON
+    f.Member(t => t.Products).Field(nameof(Order.Products)).NativeDbType(MySqlDbType.JSON).TypeHandler<JsonTypeHandler>();
+    f.Member(t => t.Disputes).Field(nameof(Order.Disputes)).NativeDbType(MySqlDbType.JSON).TypeHandler<JsonTypeHandler>();
+    //略 ... ...
+});
+
+//Order模型的属性Products和Disputes，数据库中都是Json类型，Products类型是List<int>,Disputes类型是Dispute类
+var result = repository.Get<Order>(1);
+Assert.NotNull(result);
+Assert.NotNull(result.Products);
+Assert.NotNull(result.Disputes);
+```
+
+
+`Select`操作，可以使用`Sql.FlattenTo`方法，完成到目标类型的直接转换，通常是`DTO`
+`Sql.FlattenTo`方法，会先按照方法参数中指定的字段进行设置，其他字段会根据当前所有`Select`出来的字段，根据相同的名称进行设置目标属性。
+不是使用带参数的`Sql.FlattenTo`方法，将会按照`Select`出来的字段的先后顺序，根据相同的名称进行设置目标属性。
+
+```csharp
+public class ActivityQueryResponse
+{
+    public string Id { get; set; }
+    public string Title { get; set; }
+    //枚举类型
+    public ActivityType ActivityType { get; set; }
+    //枚举类型
+    public ActivityStatus Status { get; set; }
+    ... ...
+
+    public string ActivityTypeName { get; set; }
+    public string StatusName { get; set; }
+}
+private static ConcurrentDictionary<int, string> enumDescriptions = new();
+//扩展方法ToDescription，获取枚举的描述并缓存
+public static string ToDescription<TEnum>(this TEnum enumObj) where TEnum : struct, Enum
+{
+    var enumType = typeof(TEnum);
+    var hashCode = HashCode.Combine(enumType, enumObj);
+    if (!enumDescriptions.TryGetValue(hashCode, out var description))
+    {
+        var enumName = Enum.GetName(enumType, enumObj);
+        var fieldInfo = enumType.GetField(enumName);
+        if (fieldInfo == null) return enumName;
+        description = enumName;
+        var descAttr = fieldInfo.GetCustomAttribute<DescriptionAttribute>();
+        if (descAttr != null)
+            description = descAttr.Description;
+        enumDescriptions.TryAdd(hashCode, description);
+    }
+    return description;
+}
+
+var passport = this.User.ToPassport();
+var result = await repository.From<Activity>()
+    .Where(f => f.IsEnabled && f.TenantId == passport.TenantId)
+    .And(!string.IsNullOrEmpty(request.Title), f => f.Title == request.Title)
+    .Select(f => Sql.FlattenTo<ActivityQueryResponse>(() => new
+    {
+        ActivityTypeName = f.ActivityType.ToDescription(),
+        StatusName = f.Status.ToDescription()
+    }))
+    .Page(request.PageIndex, request.PageSize)
+    .ToPageListAsync();
+属性ActivityTypeName和StatusName做了特殊处理，其他的属性根据名称相同匹配原则，自动设置到ActivityQueryResponse中
+```
+
+使用`ValueTuple`
+
+```csharp
+//查询ValueTuple
+var sql = "SELECT Id,OrderNo,TotalAmount FROM sys_order";
+var result = repository.Query<(int OrderId, string OrderNo, double TotalAmount)>(sql);
+```
+> 注意：
+> 有`DTO`对象接收，有`Sql.FlattenTo`方法支持，无需使用`ValueTuple`
+
+
+
+跨库查询与多租户支持
+------------------------------------------------------------
+在实际项目，经常会有同时访问多个数据库，可能都是不同的`OrmProvider`，也就是不同种类的数据库。
+
+在Trolley中，一个dbKey代表一个或是多个结构相同的数据库，可以是不同的OrmProvider。  
+常见的场景是：一些租户独立分库，数据库类型也不一定一样，但结构是一样的，那他们就可以是同一个dbKey。  
+如: A租户是MySql数据库，B租户是PostgreSql，他们的数据库的结构是相同的。  
+在代入租户ID的时候，Trolley会根据租户ID自动找到对应的数据库，进行操作。  
+没有租户ID，就是默认的数据库，就是没有指定独立分库的其他所有租户的数据库。 
+
+`appsettin.json`中数据库连接的配置：
+```json
+"ConnectionString": {
+    "sqlServer": "Server=127.0.0.1;Database=fengling;Uid=sa;password=ABCwsx123456;TrustServerCertificate=true",
+    "mySql": "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;"
+  }
+```
+
+```csharp
+var services = new ServiceCollection();
+services.AddSingleton(f =>
+{
+    var builder = new OrmDbFactoryBuilder()
+    .Register("sqlServer", true, f =>
+    {
+        var connectionString = "Server=127.0.0.1;Database=fengling;Uid=sa;password=ABCwsx123456;TrustServerCertificate=true";
+        f.Add<SqlServerProvider>(connectionString, true);
+    })
+    .Register("mySql", true, f =>
+    {
+        var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
+        f.Add<MySqlProvider>(connectionString, true);
+    })
+    .Register("fengling", true, f =>
+    {
+        var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
+        var tenantConnectionString = "Server=localhost;Database=fengling1;Uid=root;password=123456;charset=utf8mb4;";
+        f.Add<MySqlProvider>(connectionString, true)
+        .Add<MySqlProvider>(connectionString, false, 1, 2, 3, 4)
+    })
+    .AddTypeHandler<JsonTypeHandler>()
+    .Configure<SqlServerProvider, SqlServerModelConfiguration>()
+    .Configure<MySqlProvider, MySqlModelConfiguration>();
+    return builder.Build();
+});
+var serviceProvider = services.BuildServiceProvider();
+dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+
+using var repository = this.dbFactory.Create("sqlServer");
+... ... 访问的就是SqlServer数据库
+
+using var repository = this.dbFactory.Create("mySql");
+... ... 访问的就是MySql数据库
+
+
 using var repository = this.dbFactory.Create("fengling");
-//使用的默认fengling dbkey下默认数据库
+... ... 访问的就是fengling业务的默认数据库
+
+using var repository = this.dbFactory.Create("fengling", 2);
+... ... 访问的就是fengling业务的租户ID = 2的数据库
+在实际项目中，通常与认证Token结合起来，无需写租户ID，直接认证信息中获取
+
+using var repository = this.dbFactory.Create("fengling", 100);
+... ... 访问的就是fengling业务的租户ID = 100的数据库,由于100租户没有配置，将使用fengling默认的数据库
 ```
 
 
@@ -662,7 +1044,6 @@ var result = await repository.CreateAsync<User>(new
 //使用字典参数,自增长列
 var result = repository.Create<Company>(new Dictionary<string, object>()
 {
-	//{ "Id", 1}, //可以带主键，插入的值就是代入的值，不代值，就是数据库自增长的值
 	{ "Name","微软11"},
 	{ "IsEnabled", true},
 	{ "CreatedAt", DateTime.Now},
@@ -680,42 +1061,42 @@ var count = repository.Create<Product>(new[]
 {
     new
     {
-	Id = 1,
-	ProductNo="PN-001",
-	Name = "波司登羽绒服",
-	BrandId = 1,
-	CategoryId = 1,
-	IsEnabled = true,
-	CreatedAt = DateTime.Now,
-	CreatedBy = 1,
-	UpdatedAt = DateTime.Now,
-	UpdatedBy = 1
+	    Id = 1,
+	    ProductNo="PN-001",
+	    Name = "波司登羽绒服",
+	    BrandId = 1,
+	    CategoryId = 1,
+	    IsEnabled = true,
+	    CreatedAt = DateTime.Now,
+	    CreatedBy = 1,
+	    UpdatedAt = DateTime.Now,
+	    UpdatedBy = 1
     },
     new
     {
-	Id = 2,
-	ProductNo="PN-002",
-	Name = "雪中飞羽绒裤",
-	BrandId = 2,
-	CategoryId = 2,
-	IsEnabled = true,
-	CreatedAt = DateTime.Now,
-	CreatedBy = 1,
-	UpdatedAt = DateTime.Now,
-	UpdatedBy = 1
+	    Id = 2,
+	    ProductNo="PN-002",
+	    Name = "雪中飞羽绒裤",
+	    BrandId = 2,
+	    CategoryId = 2,
+	    IsEnabled = true,
+	    CreatedAt = DateTime.Now,
+	    CreatedBy = 1,
+	    UpdatedAt = DateTime.Now,
+	    UpdatedBy = 1
     },
     new
     {
-	Id = 3,
-	ProductNo="PN-003",
-	Name = "优衣库保暖内衣",
-	BrandId = 3,
-	CategoryId = 3,
-	IsEnabled = true,
-	CreatedAt = DateTime.Now,
-	CreatedBy = 1,
-	UpdatedAt = DateTime.Now,
-	UpdatedBy = 1
+	    Id = 3,
+	    ProductNo="PN-003",
+	    Name = "优衣库保暖内衣",
+	    BrandId = 3,
+	    CategoryId = 3,
+	    IsEnabled = true,
+	    CreatedAt = DateTime.Now,
+	    CreatedBy = 1,
+	    UpdatedAt = DateTime.Now,
+	    UpdatedBy = 1
     }
 });
 //INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)
@@ -727,17 +1108,18 @@ var count = repository.Create<Product>(new[]
 var count = await repository.Create<User>()
     .WithBy(new
     {
-	Id = 1,
-	Name = "leafkevin",
-	Age = 25,
-	CompanyId = 1,
-	Gender = Gender.Male,
-	IsEnabled = true,
-	CreatedAt = DateTime.Now,
-	CreatedBy = 1,
-	UpdatedAt = DateTime.Now,
-	UpdatedBy = 1
-    }).ExecuteAsync();
+	    Id = 1,
+	    Name = "leafkevin",
+	    Age = 25,
+	    CompanyId = 1,
+	    Gender = Gender.Male,
+	    IsEnabled = true,
+	    CreatedAt = DateTime.Now,
+	    CreatedBy = 1,
+	    UpdatedAt = DateTime.Now,
+	    UpdatedBy = 1
+    })
+    .ExecuteAsync();
 //INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)
 ```
 
@@ -754,28 +1136,27 @@ var id = repository.Create<Company>()
     	{ "CreatedBy", 1},
     	{ "UpdatedAt", DateTime.Now},
     	{ "UpdatedBy", 1}
-    }).Execute();
+    })
+    .Execute();
 //INSERT INTO `sys_company` (`Id`,`Name`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING Id
 ```  
 
 ```csharp
-//可为null字段不赋值
-var count = repository.Create<Order>(new Order
+//未赋值的字段，进入数据库后，将是NULL值
+var count = repository.Create<Order>(new
 {
     Id = 1,
     OrderNo = "ON-001",
     BuyerId = 1,
     SellerId = 2,
     TotalAmount = 500,
-    //此字段可为空，但不赋值
-    //ProductCount = 3,
     IsEnabled = true,
     CreatedAt = DateTime.Now,
     CreatedBy = 1,
     UpdatedAt = DateTime.Now,
     UpdatedBy = 1
 });
-//进入到数据库中ProductCount字段值为null
+//属性Products、ProductCount、Disputes都没有赋值，进入到数据库后，这三个字段是NULL值
 ```  
 
 ```csharp
@@ -783,46 +1164,47 @@ var count = repository.Create<Order>(new Order
 var count = repository.Create<Product>()
     .WithBy(new[]
     {
-	new
-	{
-	    Id = 1,
-	    ProductNo="PN-001",
-	    Name = "波司登羽绒服",
-	    BrandId = 1,
-	    CategoryId = 1,
-	    IsEnabled = true,
-	    CreatedAt = DateTime.Now,
-	    CreatedBy = 1,
-	    UpdatedAt = DateTime.Now,
-	    UpdatedBy = 1
-	},
-	new
-	{
-	    Id = 2,
-	    ProductNo="PN-002",
-	    Name = "雪中飞羽绒裤",
-	    BrandId = 2,
-	    CategoryId = 2,
-	    IsEnabled = true,
-	    CreatedAt = DateTime.Now,
-	    CreatedBy = 1,
-	    UpdatedAt = DateTime.Now,
-	    UpdatedBy = 1
-	},
-	new
-	{
-	    Id = 3,
-	    ProductNo="PN-003",
-	    Name = "优衣库保暖内衣",
-	    BrandId = 3,
-	    CategoryId = 3,
-	    IsEnabled = true,
-	    CreatedAt = DateTime.Now,
-	    CreatedBy = 1,
-	    UpdatedAt = DateTime.Now,
-	    UpdatedBy = 1
-	}
-    }).Execute();
+	    new
+	    {
+	        Id = 1,
+	        ProductNo="PN-001",
+	        Name = "波司登羽绒服",
+	        BrandId = 1,
+	        CategoryId = 1,
+	        IsEnabled = true,
+	        CreatedAt = DateTime.Now,
+	        CreatedBy = 1,
+	        UpdatedAt = DateTime.Now,
+	        UpdatedBy = 1
+	    },
+	    new
+	    {
+	        Id = 2,
+	        ProductNo="PN-002",
+	        Name = "雪中飞羽绒裤",
+	        BrandId = 2,
+	        CategoryId = 2,
+	        IsEnabled = true,
+	        CreatedAt = DateTime.Now,
+	        CreatedBy = 1,
+	        UpdatedAt = DateTime.Now,
+	        UpdatedBy = 1
+	    },
+	    new
+	    {
+	        Id = 3,
+	        ProductNo="PN-003",
+	        Name = "优衣库保暖内衣",
+	        BrandId = 3,
+	        CategoryId = 3,
+	        IsEnabled = true,
+	        CreatedAt = DateTime.Now,
+	        CreatedBy = 1,
+	        UpdatedAt = DateTime.Now,
+	        UpdatedBy = 1
+	    }
+    })
+    .Execute();
 //INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)
 ```  
 
@@ -831,47 +1213,47 @@ var count = repository.Create<Product>()
 var count = repository.Create<Product>()
     .WithBy(new[]
     {
-	new Dictionary<string,object>
-	{
-	    { "Id",1 },
-	    { "ProductNo","PN-001"},
-	    { "Name","波司登羽绒服"},
-	    { "BrandId",1},
-	    { "CategoryId",1},
-	    { "IsEnabled",true},
-	    { "CreatedAt",DateTime.Now},
-	    { "CreatedBy",1},
-	    { "UpdatedAt",DateTime.Now},
-	    { "UpdatedBy",1}
-	},
-	new Dictionary<string,object>
-	{
-	    { "Id",2},
-	    { "ProductNo","PN-002"},
-	    { "Name","雪中飞羽绒裤"},
-	    { "BrandId",2},
-	    { "CategoryId",2},
-	    { "IsEnabled",true},
-	    { "CreatedAt",DateTime.Now},
-	    { "CreatedBy",1},
-	    { "UpdatedAt",DateTime.Now},
-	    { "UpdatedBy",1}
-	},
-	new Dictionary<string,object>
-	{
-	    { "Id",3},
-	    { "ProductNo","PN-003"},
-	    { "Name","优衣库保暖内衣"},
-	    { "BrandId",3},
-	    { "CategoryId",3},
-	    { "IsEnabled",true},
-	    { "CreatedAt",DateTime.Now},
-	    { "CreatedBy",1},
-	    { "UpdatedAt",DateTime.Now},
-	    { "UpdatedBy",1}
-	}
-    }).Execute();
-    
+	    new Dictionary<string,object>
+	    {
+	        { "Id",1 },
+	        { "ProductNo","PN-001"},
+	        { "Name","波司登羽绒服"},
+	        { "BrandId",1},
+	        { "CategoryId",1},
+	        { "IsEnabled",true},
+	        { "CreatedAt",DateTime.Now},
+	        { "CreatedBy",1},
+	        { "UpdatedAt",DateTime.Now},
+	        { "UpdatedBy",1}
+	    },
+	    new Dictionary<string,object>
+	    {
+	        { "Id",2},
+	        { "ProductNo","PN-002"},
+	        { "Name","雪中飞羽绒裤"},
+	        { "BrandId",2},
+	        { "CategoryId",2},
+	        { "IsEnabled",true},
+	        { "CreatedAt",DateTime.Now},
+	        { "CreatedBy",1},
+	        { "UpdatedAt",DateTime.Now},
+	        { "UpdatedBy",1}
+	    },
+	    new Dictionary<string,object>
+	    {
+	        { "Id",3},
+	        { "ProductNo","PN-003"},
+	        { "Name","优衣库保暖内衣"},
+	        { "BrandId",3},
+	        { "CategoryId",3},
+	        { "IsEnabled",true},
+	        { "CreatedAt",DateTime.Now},
+	        { "CreatedBy",1},
+	        { "UpdatedAt",DateTime.Now},
+	        { "UpdatedBy",1}
+	    }
+    })
+    .Execute();    
 //INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)
 ```  
 
@@ -880,17 +1262,17 @@ var count = repository.Create<Product>()
 var sql = repository.Create<Product>()
     .From<Brand>(f => new
     {
-	Id = f.Id + 1,
-	ProductNo = "PN_" + f.BrandNo,
-	Name = "PName_" + f.Name,
-	BrandId = f.Id,
-	CategoryId = 1,
-	f.CompanyId,
-	f.IsEnabled,
-	f.CreatedBy,
-	f.CreatedAt,
-	f.UpdatedBy,
-	f.UpdatedAt
+	    Id = f.Id + 1,
+	    ProductNo = "PN_" + f.BrandNo,
+	    Name = "PName_" + f.Name,
+	    BrandId = f.Id,
+	    CategoryId = 1,
+	    f.CompanyId,
+	    f.IsEnabled,
+	    f.CreatedBy,
+	    f.CreatedAt,
+	    f.UpdatedBy,
+	    f.UpdatedAt
     })
     .Where(f => f.Id == 1)
     .ToSql(out _);
@@ -903,17 +1285,17 @@ var sql = repository.Create<Product>()
 var sql = repository.Create<OrderDetail>()
     .From<Order, Product>((x, y) => new OrderDetail
     {
-	Id = 7,
-	OrderId = x.Id,
-	ProductId = y.Id,
-	Price = y.Price,
-	Quantity = 3,
-	Amount = y.Price * 3,
-	IsEnabled = x.IsEnabled,
-	CreatedBy = x.CreatedBy,
-	CreatedAt = x.CreatedAt,
-	UpdatedBy = x.UpdatedBy,
-	UpdatedAt = x.UpdatedAt
+	    Id = 7,
+	    OrderId = x.Id,
+	    ProductId = y.Id,
+	    Price = y.Price,
+	    Quantity = 3,
+	    Amount = y.Price * 3,
+	    IsEnabled = x.IsEnabled,
+	    CreatedBy = x.CreatedBy,
+	    CreatedAt = x.CreatedAt,
+	    UpdatedBy = x.UpdatedBy,
+	    UpdatedAt = x.UpdatedAt
     })
     .Where((a, b) => a.Id == 3 && b.Id == 1)
     .ToSql(out _);

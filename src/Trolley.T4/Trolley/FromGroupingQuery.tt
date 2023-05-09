@@ -12,9 +12,9 @@ namespace Trolley;
 
 class FromGroupingQuery<T, TGrouping> : IFromGroupingQuery<T, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromGroupingQuery<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
     {
@@ -48,11 +48,6 @@ class FromGroupingQuery<T, TGrouping> : IFromGroupingQuery<T, TGrouping>
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IFromGroupingQuery<T, TGrouping> Distinct()
-    {
-        this.visitor.Distinct();
-        return this;
-    }
     public IFromQuery<TGrouping> Select()
     {
         this.visitor.SelectGrouping(true);
@@ -81,9 +76,9 @@ class FromGroupingQuery<T, TGrouping> : IFromGroupingQuery<T, TGrouping>
 #>
 class FromGroupingQuery<<#=tables#>, TGrouping> : IFromGroupingQuery<<#=tables#>, TGrouping>
 {
-    private readonly QueryVisitor visitor;
+    private readonly IQueryVisitor visitor;
 
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
+    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
 
     public IFromGroupingQuery<<#=tables#>, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
     {

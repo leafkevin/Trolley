@@ -39,7 +39,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     /// <param name="dbParameters"></param>
     /// <param name="readerFields"></param>
     /// <returns></returns>
-    public virtual string BuildSql(out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields, bool isUnion = false)
+    public virtual string BuildSql(out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields, bool isUnion = false, char unionAlias = 'a')
     {
         if (!string.IsNullOrEmpty(this.sql))
         {
@@ -145,7 +145,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (isUnion && (!string.IsNullOrEmpty(this.orderBySql) || this.limit.HasValue))
         {
             builder.Insert(0, "SELECT * FROM (");
-            builder.Append($") {(char)('a' + this.tables.Count)}");
+            builder.Append($") {unionAlias}");
         }
         return builder.ToString();
     }
@@ -315,9 +315,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.sql = null;
         return this;
     }
-    public virtual void Union(string body, List<ReaderField> readerFields, List<IDbDataParameter> dbParameters = null)
+    public virtual void Union(string body, List<ReaderField> readerFields, List<IDbDataParameter> dbParameters = null, char tableAlias = 'a')
     {
-        var sql = this.BuildSql(out _, out _, true);
+        var sql = this.BuildSql(out _, out _, true, tableAlias);
         sql += body;
         this.readerFields = readerFields;
         readerFields.ForEach(f => f.TableSegment = this.tables[0]);

@@ -896,10 +896,12 @@ public class SqlServerUnitTest2 : UnitTestBase
     [Fact]
     public void Query_Json()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
-        var result = repository.From<Order>().First();
+        var result = repository.Get<Order>(1);
         Assert.NotNull(result);
         Assert.NotNull(result.Products);
+        Assert.NotNull(result.Disputes);
     }
     [Fact]
     public void Query_SelectNull_WhereNull()

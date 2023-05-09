@@ -16,7 +16,7 @@ public interface IQueryVisitor
     /// <param name="dbParameters"></param>
     /// <param name="readerFields"></param>
     /// <returns></returns>
-    string BuildSql(out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields, bool isUnion = false);
+    string BuildSql(out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields, bool isUnion = false, char unionAlias = 'a');
     bool BuildIncludeSql(object parameter, out string sql);
     void SetIncludeValues(object parameter, IDataReader reader);
     IQueryVisitor From(params Type[] entityTypes);
@@ -24,7 +24,7 @@ public interface IQueryVisitor
     IQueryVisitor From(char tableAsStart, Type entityType, string suffixRawSql);
     TableSegment WithTable(Type entityType, string body, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null, string joinType = "");
     IQueryVisitor WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null);
-    void Union(string body, List<ReaderField> readerFields, List<IDbDataParameter> dbParameters = null);
+    void Union(string body, List<ReaderField> readerFields, List<IDbDataParameter> dbParameters = null, char tableAlias = 'a');
     void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null);
     void ThenInclude(Expression memberSelector, bool isIncludeMany = false, Expression filter = null);
     void Join(string joinType, Expression joinOn);

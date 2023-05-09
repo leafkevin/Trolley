@@ -233,11 +233,6 @@ class Query<T1, T2> : IQuery<T1, T2>
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
 
-    public IQuery<T1, T2> Distinct()
-    {
-        this.visitor.Distinct();
-        return this;
-    }
     public IQuery<T1, T2> Skip(int offset)
     {
         this.visitor.Skip(offset);
@@ -653,11 +648,6 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
 
-    public IQuery<T1, T2, T3> Distinct()
-    {
-        this.visitor.Distinct();
-        return this;
-    }
     public IQuery<T1, T2, T3> Skip(int offset)
     {
         this.visitor.Skip(offset);
@@ -1073,11 +1063,6 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
 
-    public IQuery<T1, T2, T3, T4> Distinct()
-    {
-        this.visitor.Distinct();
-        return this;
-    }
     public IQuery<T1, T2, T3, T4> Skip(int offset)
     {
         this.visitor.Skip(offset);
@@ -1493,11 +1478,6 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
 
-    public IQuery<T1, T2, T3, T4, T5> Distinct()
-    {
-        this.visitor.Distinct();
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5> Skip(int offset)
     {
         this.visitor.Skip(offset);
@@ -1913,11 +1893,6 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
 
-    public IQuery<T1, T2, T3, T4, T5, T6> Distinct()
-    {
-        this.visitor.Distinct();
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6> Skip(int offset)
     {
         this.visitor.Skip(offset);
@@ -2333,11 +2308,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
 
-    public IQuery<T1, T2, T3, T4, T5, T6, T7> Distinct()
-    {
-        this.visitor.Distinct();
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> Skip(int offset)
     {
         this.visitor.Skip(offset);
@@ -2753,11 +2723,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
 
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Distinct()
-    {
-        this.visitor.Distinct();
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Skip(int offset)
     {
         this.visitor.Skip(offset);
@@ -3173,11 +3138,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
 
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Distinct()
-    {
-        this.visitor.Distinct();
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Skip(int offset)
     {
         this.visitor.Skip(offset);
@@ -3593,11 +3553,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
 
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Distinct()
-    {
-        this.visitor.Distinct();
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Skip(int offset)
     {
         this.visitor.Skip(offset);
@@ -4013,11 +3968,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
 
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Distinct()
-    {
-        this.visitor.Distinct();
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Skip(int offset)
     {
         this.visitor.Skip(offset);
@@ -4433,11 +4383,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
 
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Distinct()
-    {
-        this.visitor.Distinct();
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Skip(int offset)
     {
         this.visitor.Skip(offset);
@@ -4853,11 +4798,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
 
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Distinct()
-    {
-        this.visitor.Distinct();
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Skip(int offset)
     {
         this.visitor.Skip(offset);

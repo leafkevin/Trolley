@@ -58,7 +58,7 @@ public class Repository : IRepository
         var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart, "p1w");
         subQuery.Invoke(new FromQuery(visitor));
         var sql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
-        var newVisitor = visitor.Clone();
+        var newVisitor = visitor.Clone(tableAsStart);
         newVisitor.WithTable(typeof(T), sql, dbDataParameters, readerFields);
         return new Query<T>(this.connection, this.Transaction, newVisitor);
     }
@@ -67,7 +67,7 @@ public class Repository : IRepository
         var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart, "p1w");
         cteSubQuery.Invoke(new FromQuery(visitor));
         var rawSql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
-        var newVisitor = visitor.Clone();
+        var newVisitor = visitor.Clone(tableAsStart);
         newVisitor.WithCteTable(typeof(T), cteTableName, false, rawSql, dbDataParameters, readerFields);
         return new Query<T>(this.connection, this.Transaction, newVisitor);
     }
@@ -76,7 +76,7 @@ public class Repository : IRepository
         var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart, "p1w");
         cteSubQuery.Invoke(new FromQuery(visitor), cteTableName);
         var rawSql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
-        var newVisitor = visitor.Clone();
+        var newVisitor = visitor.Clone(tableAsStart);
         newVisitor.WithCteTable(typeof(T), cteTableName, true, rawSql, dbDataParameters, readerFields);
         return new Query<T>(this.connection, this.Transaction, newVisitor);
     }

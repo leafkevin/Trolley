@@ -41,11 +41,6 @@ class FromGroupingQuery<T, TGrouping> : IFromGroupingQuery<T, TGrouping>
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IFromGroupingQuery<T, TGrouping> Distinct()
-    {
-        this.visitor.Distinct();
-        return this;
-    }
     public IFromQuery<TGrouping> Select()
     {
         this.visitor.SelectGrouping(true);
