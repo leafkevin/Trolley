@@ -45,6 +45,10 @@ public static class OrmExtensions
     public static async Task<int> CreateAsync<TEntity>(this IRepository repository, IEnumerable entities, int bulkCount = 500, CancellationToken cancellationToken = default)
         => await repository.Create<TEntity>().WithByBulk(entities, bulkCount).ExecuteAsync(cancellationToken);
 
+    public static int Update<TEntity>(this IRepository repository, object entity)
+        => repository.Update<TEntity>().WithBy(entity).Execute();
+    public static async Task<int> UpdateAsync<TEntity>(this IRepository repository, object entity, CancellationToken cancellationToken = default)
+        => await repository.Update<TEntity>().WithBy(entity).ExecuteAsync(cancellationToken);
     public static int Update<TEntity>(this IRepository repository, Expression<Func<TEntity, object>> fieldsExpr, Expression<Func<TEntity, bool>> predicate)
         => repository.Update<TEntity>().Set(fieldsExpr).Where(predicate).Execute();
     public static async Task<int> UpdateAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, object>> fieldsExpr, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)

@@ -31,15 +31,17 @@ class SqlServerProvider : DbHelper
     {
         var sql = @"SELECT A.name,LOWER(C.name),								
 					       (CASE WHEN C.name IN ('NVARCHAR','NCHAR','NTEXT') THEN C.length/2 ELSE C.length END),
-					       A.xprec,A.xscale,D.value,F.text,E.keyno,A.isnullable,
-							COLUMNPROPERTY(A.id,A.name,'IsIdentity')
-					  FROM SYS.syscolumns A 
-				INNER JOIN SYS.sysobjects B ON A.id=B.id
-				INNER JOIN SYS.systypes C ON A.xusertype = C.xusertype 
-				 LEFT JOIN SYS.extended_properties D ON D.major_id  = A.ID AND D.minor_id = A.colid AND D.name = 'MS_Description'
-				 LEFT JOIN SYS.sysindexkeys E ON B.id=E.id AND A.colid=E.colid
-				 LEFT JOIN SYS.syscomments F ON A.cdefault=F.id
-					 WHERE B.xtype='U' AND B.name='{0}' ORDER BY A.COLID";
+					       A.xprec,A.xscale,D.value,F.text,kc.keyno,A.isnullable,
+						   COLUMNPROPERTY(A.id,A.name,'IsIdentity')
+					FROM SYS.syscolumns A 
+              INNER JOIN SYS.sysobjects B ON A.id=B.id
+              INNER JOIN SYS.systypes C ON A.xusertype = C.xusertype 
+               LEFT JOIN SYS.extended_properties D ON D.major_id = A.ID AND D.minor_id = A.colid AND D.name = 'MS_Description'
+               LEFT JOIN sysobjects ko ON ko.xtype = 'PK' and ko.parent_obj=OBJECT_ID('{0}')
+               LEFT JOIN sysindexes ki ON ki.name=ko.name AND B.id=ki.id
+               LEFT JOIN sysindexkeys  kc On kc.indid=ki.indid and A.colid=kc.colid and kc.id=OBJECT_ID('{0}')
+               LEFT JOIN SYS.syscomments F ON A.cdefault=F.id
+                   WHERE B.xtype='U' AND B.name='{0}' ORDER BY A.COLID";
 
         sql = string.Format(sql, tableName);
         var result = new List<ColumnInfo>();
