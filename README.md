@@ -5,28 +5,28 @@
 ## 框架特点
 ------------------------------------------------------------
 强类型的DDD仓储操作,基本可以不用写SQL,支持多种数据库终端，目前是在.NET 6 基础上开发的。
-目前支持：`MySql`,`PostgreSql`,`SqlSever`,其他的provider会稍后慢慢提供。
+目前支持：`MySql`,`PostgreSql`,`SqlSever`,其他的`OrmProvider`会稍后慢慢提供。
 
-支持Page分页查询
-支持Join, GroupBy, OrderBy等操作
-支持Count, Max, Min, Avg, Sum等聚合操作
-支持In,Exists操作
-支持Insert Select From
-支持Update From Join
-支持条件Insert，条件Update
-支持批量Insert、Update、Delete   
+支持`Page`分页查询
+支持`Join`, `GroupBy`, `OrderBy`等操作
+支持`Count`, `Max`, `Min`, `Avg`, `Sum`等聚合操作
+支持`In`,`Exists`操作
+支持`Insert Select From`
+支持`Update From Join`
+支持条件`Insert`，条件`Update`
+支持批量`Insert`、`Update`、`Delete`   
 支持导航属性，值对象导航属性(瘦身版模型)
 支持模型映射，采用流畅API方式，目前不支持特性方式映射  
 支持多租户分库，不同租户不同的数据库。  
 
-## 引入Trolley对应数据库驱动的Nuget包，在系统中要注册`IOrmDbFactory`并注册映射  
+## 引入`Trolley`对应数据库驱动的Nuget包，在系统中要注册`IOrmDbFactory`并注册映射  
 ------------------------------------------------------------
-系统中每个连接串对应一个OrmProvider，每种类型的OrmProvider以单例形式存在，一个应用中可以存在多种类型的OrmProvider。
-引入Trolley对应数据库驱动的Nuget包，如：`Trolley.MySqlConnector`，`Trolley.SqlServer`...等   
-在Trolley中，一个dbKey代表一个或是多个结构相同的数据库，可以是不同的OrmProvider。  
-常见的场景是：一些租户独立分库，数据库类型也不一定一样，但结构是一样的，那他们就可以是同一个dbKey。  
-如: A租户是MySql数据库，B租户是PostgreSql，他们的数据库的结构是相同的。  
-在代入租户ID的时候，Trolley会根据租户ID自动找到对应的数据库，进行操作。  
+系统中每个连接串对应一个`OrmProvider`，每种类型的`OrmProvider`以单例形式存在，一个应用中可以存在多种类型的`OrmProvider`。
+引入`Trolley`对应数据库驱动的Nuget包，如：`Trolley.MySqlConnector`，`Trolley.SqlServer`...等   
+在`Trolley`中，一个`dbKey`代表一个或是多个结构相同的数据库，可以是不同的`OrmProvider`。  
+常见的场景是：一些租户独立分库，数据库类型也不一定一样，但结构是一样的，那他们就可以是同一个`dbKey`。  
+如: A租户是`MySql`数据库，B租户是`PostgreSql`，他们的数据库的结构是相同的。  
+在代入租户ID的时候，`Trolley`会根据租户ID自动找到对应的数据库，进行操作。  
 没有租户ID，就是默认的数据库，就是没有指定独立分库的其他所有租户的数据库。  
 
 
@@ -77,7 +77,7 @@ class ModelConfiguration : IModelConfiguration
         builder.Entity<User>(f =>
         {
             //设置列映射，可以只设置特殊列，如：主键列、自增列、枚举字符串列等等，在Trolley Build的时候，会自动根据模型结构按照默认映射添加进来的。
-			//也可以全部列出来。映射的NativeDbType可以是整形数也可以是对应的数据库驱动中的本地DbType，如：SqlDbType，或是MySqlDbType...类型等。
+            //也可以全部列出来。映射的NativeDbType可以是整形数也可以是对应的数据库驱动中的本地DbType，如：SqlDbType，或是MySqlDbType...类型等。
             f.ToTable("sys_user").Key(t => t.Id);//表，主键
             f.Member(t => t.Id).Field(nameof(User.Id)).NativeDbType(MySqlDbType.Int32);
             f.Member(t => t.Name).Field(nameof(User.Name)).NativeDbType(MySqlDbType.VarChar);
@@ -92,16 +92,16 @@ class ModelConfiguration : IModelConfiguration
             f.Member(t => t.UpdatedAt).Field(nameof(User.UpdatedAt)).NativeDbType(MySqlDbType.DateTime);
             f.Member(t => t.UpdatedBy).Field(nameof(User.UpdatedBy)).NativeDbType(MySqlDbType.Int32);
 	    
-			//导航属性的设置，是单向的，只需要把本模型内的导航属性列出来就可以了。  
-			//对应的导航属性类，在应设置再设置它所引用的类型映射。  
+            //导航属性的设置，是单向的，只需要把本模型内的导航属性列出来就可以了。  
+            //对应的导航属性类，在应设置再设置它所引用的类型映射。  
             f.HasOne(t => t.Company).HasForeignKey(t => t.CompanyId).MapTo<Company>();//导航属性，这里是值对象，不是真正的模型，是模型Company的瘦身版，使用MapTo指定对应的模型Company
             f.HasMany(t => t.Orders).HasForeignKey(t => t.BuyerId);
         });
         builder.Entity<Company>(f =>
         {
             f.ToTable("sys_company").Key(t => t.Id);//表，主键
-			//自动增长列
-			f.Member(t => t.Id).Field(nameof(Company.Id)).AutoIncrement(t => t.Id).NativeDbType(MySqlDbType.Int32);
+            //自动增长列
+            f.Member(t => t.Id).Field(nameof(Company.Id)).AutoIncrement(t => t.Id).NativeDbType(MySqlDbType.Int32);
             f.Member(t => t.Name).Field(nameof(Company.Name)).NativeDbType(MySqlDbType.VarChar);
             f.Member(t => t.Nature).Field(nameof(Company.Nature)).NativeDbType(MySqlDbType.VarChar);
             f.Member(t => t.IsEnabled).Field(nameof(Company.IsEnabled)).NativeDbType(MySqlDbType.Bool);
@@ -124,7 +124,7 @@ class ModelConfiguration : IModelConfiguration
             f.Member(t => t.SellerId).Field(nameof(Order.SellerId)).NativeDbType(MySqlDbType.Int32);
 			
             //特殊类型JSON，Trolley预置了对json的处理，直接引用JsonTypeHandler，也可以自定义类型处理，只需要实现ITypeHandler就可以
-			//如果列是Class类型，没有设置导航属性，也没有设置ITypeHandler，也没有设置Ignore将会报错
+            //如果列是Class类型，没有设置导航属性，也没有设置ITypeHandler，也没有设置Ignore将会报错
             f.Member(t => t.Products).Field(nameof(Order.Products)).NativeDbType(MySqlDbType.JSON).TypeHandler<JsonTypeHandler>();
             f.Member(t => t.Disputes).Field(nameof(Order.Disputes)).NativeDbType(MySqlDbType.JSON).TypeHandler<JsonTypeHandler>();
 			
@@ -160,9 +160,9 @@ class ModelConfiguration : IModelConfiguration
 }
 ```
 
-Trolley底层使用的`DbType`是各个数据库驱动的本地DbType，如：`MySqlProvider`使用的DbType是`MySqlConnector.MySqlDbType`。  
-Trolley在配置各个数据库模型映射时，可以使用int类型，也可以使用本地DbType类型，如：`SqlDbType`，或是`MySqlDbType`...类型等  
-如果不设置`NativeDbType`类型映射，Trolley会按照默认的类型映射完成映射。 
+`Trolley`底层使用的`DbType`是各个数据库驱动的本地DbType，如：`MySqlProvider`使用的DbType是`MySqlConnector.MySqlDbType`。  
+`Trolley`在配置各个数据库模型映射时，可以使用`int`类型，也可以使用本地`DbType`类型，如：`SqlDbType`，或是`MySqlDbType`...类型等  
+如果不设置`NativeDbType`类型映射，`Trolley`会按照默认的类型映射完成映射。 
 在实际项目中，可会使用`Trolley.T4`中的各个驱动下的`Entities.tt`，`Entity.tt`，`ModelConfiguration.tt`模板，来生成。
 路径在：`Trolley.T4\SqlServer\ModelConfiguration.tt`, `Trolley.T4\MySql\ModelConfiguration.tt`
 
@@ -274,7 +274,7 @@ var result = await repository.QueryDictionaryAsync<Product, int, string>(f => f.
 ```
 
 
-### From查询，支持各种复杂查询
+### `From`查询，支持各种复杂查询
 
 
 简单表达式查询
@@ -596,11 +596,11 @@ var sql = repository
 
 
 
-Join表连接,Trolley支持三种Join表连接，InnerJoin、LeftJoin、RightJoin
-有两种方式Join关联表：
-1.一张表一张表的Join关联起来
-2.一次From多张表，挨个表Join关联起来
-子查询，也可以作为表参与连接，相当于先WithTable后再Join
+`Join`表连接,`Trolley`支持三种`Join`表连接，`InnerJoin`、`LeftJoin`、`RightJoin`
+有两种方式`Join`关联表：
+1.一张表一张表的`Join`关联起来
+2.一次`From`多张表，挨个表`Join`关联起来
+子查询，也可以作为表参与连接，相当于先`WithTable`后再`Join`
 
 ```csharp
 //INNER JOIN
@@ -636,13 +636,20 @@ var sql = repository
     .Select((x, y) => new { x.Grouping, x.Grouping.BuyerId, x.ProductTotal, BuyerName = y.Name, BuyerId2 = x.BuyerId1 })
     .ToSql(out _);
 //SELECT a.`BuyerId`,a.`OrderId`,a.`BuyerId`,a.`ProductTotal`,b.`Name` AS `BuyerName`,a.`BuyerId1` AS `BuyerId2` FROM (SELECT a.`BuyerId`,a.`Id` AS `OrderId`,COUNT(DISTINCT b.`ProductId`) AS `ProductTotal`,a.`BuyerId` AS `BuyerId1` FROM `sys_order` a,`sys_order_detail` b WHERE a.`Id`=b.`OrderId` GROUP BY a.`BuyerId`,a.`Id` HAVING COUNT(DISTINCT b.`ProductId`)>0) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id`
+
+//LeftJoin查询，三个Join写法一样，只是方法名字不同
+var sql = repository.From<Product>()
+    .LeftJoin<Brand>((a, b) => a.BrandId = b.Id)
+    .Where((a, b) => a.ProductNo.Contains("PN-00"))
+    .ToSql(out _);
+//SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`Price`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
 ```
 > 注意：
 > 使用Join<T>(f=>f.From...)的子查询，相当于WithTable+Join两个操作
 
 
 单表聚合操作
-使用Sql静态类和直接使用Count、CountDistinct、LongConunt、Max、Min、Sum、Avg方法，效果是一样的
+使用`Sql`静态类和直接使用`Count`、`CountDistinct`、`LongConunt`、`Max`、`Min`、`Sum`、`Avg`方法，效果是一样的
 
 ```csharp
 //单表Count
@@ -723,12 +730,12 @@ SELECT * FROM (SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE
 > 带有OrderBy和Take的Union，会生成一个子查询，在里面完成OrderBy和Take操作
 
 
-CTE支持
+`CTE`支持
 
-FromWith：首个普通CTE子句
-NextWith：第二个以后的普通CTE子句
-FromWithRecursive：首个递归CTE子句
-NextWithRecursive 第二个以后的递归CTE子句
+`FromWith`：首个普通CTE子句
+`NextWith`：第二个以后的普通CTE子句
+`FromWithRecursive`：首个递归CTE子句
+`NextWithRecursive` 第二个以后的递归CTE子句
 
 > 注意：
 > 带有Recursive的递归CTE可以访问CTE自己
@@ -749,7 +756,7 @@ SELECT `Id`,`Name`,`ParentId`,`PageId` FROM `sys_menu`
 )
 SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN `sys_page` b ON a.`Id`=b.`Id`
 
-
+//带有递归查询的CTE，有2次递归
 var sql = repository
     .FromWithRecursive((f, cte) => f.From<Menu>()
             .Where(x => x.Id == 1)
@@ -780,7 +787,7 @@ SELECT a.`Id`,a.`ParentId`,b.`Url` FROM `sys_menu` a LEFT JOIN `sys_page` b ON a
 )
 SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageList b ON a.`Id`=b.`Id`
 
-
+//带有递归查询的CTE，有2次递归
 var sql = repository
     .FromWithRecursive((f, cte) => f.From<Menu>()
             .Where(x => x.Id == 1)
@@ -812,13 +819,35 @@ SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`Pag
 )
 SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageList b ON a.`Id`=b.`Id`
 
+一般CTE常用来处理树形结构递归操作，比如：根据当前角色获取菜单列表
+var passport = this.User.ToPassport();
+using var repository = this.dbFactory.Create();
+var menuList = await repository
+    .FromWithRecursive((f, cte) => f
+	    .From<RoleMenu, Menu>()
+	    .Where((a, b) => a.RoleId == passport.RoleId && a.MenuId == b.MenuId && b.IsEnabled)
+	    .Select((a, b) => new { b.MenuId, b.MenuName, b.ParentId, b.MenuType, b.PageUrl, b.Icon, b.OrderBy })
+	.UnionAllRecursive((x, y) => x
+	    .From<Menu>()
+	    .InnerJoinRecursive(y, cte, (a, b) => a.ParentId == b.MenuId)
+	    .Select((a, b) => new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.PageUrl, a.Icon, b.OrderBy })),
+	"MenuPageList", 'a')
+    .Select(f => Sql.FlattenTo<MenuResponse>())
+    .ToListAsync();
+//生成的SQL:
+WITH RECURSIVE MenuPageList(MenuId,MenuName,ParentId,MenuType,PageUrl,Icon,OrderBy) AS 
+(
+SELECT b.`MenuId`,b.`MenuName`,b.`ParentId`,b.`MenuType`,b.`PageUrl`,b.`Icon`,b.`OrderBy` FROM `SysRoleMenu` a,`SysMenu` b WHERE a.`RoleId`=@p1w0 AND a.`MenuId`=b.`MenuId` AND b.`IsEnabled` = 1 UNION ALL
+SELECT a.`MenuId`,a.`MenuName`,a.`ParentId`,a.`MenuType`,a.`PageUrl`,a.`Icon`,b.`OrderBy` FROM `SysMenu` a INNER JOIN MenuPageList b ON a.`ParentId`=b.`MenuId`
+)
+SELECT a.`MenuId`,a.`MenuName`,a.`MenuType`,a.`ParentId`,a.`Icon`,a.`PageUrl`,a.`OrderBy` FROM MenuPageList a
 ```
 
 
 特殊用法：
 
-对NULL的支持
-Nullable<>字段，可以使用null进行判断，赋值
+对`NULL`的支持
+`Nullable<>`字段，可以使用`null`进行判断，赋值
 ```csharp
 var sql = repository.From<Order>()
     .Where(x => x.ProductCount == null)
@@ -832,7 +861,7 @@ var sql = repository.From<Order>()
 //SELECT (`OrderNo` IS NULL) AS NoOrderNo,(`ProductCount` IS NOT NULL) AS HasProduct FROM `sys_order` WHERE `ProductCount` IS NULL AND `ProductCount` IS NOT NULL
 ```
 
-对于非Nullable<>字段，也可以使用IsNull()扩展方法来进行判断
+对于非`Nullable<>`字段，也可以使用`IsNull()`扩展方法来进行判断
 ```csharp
 var sql = repository.From<Order>()
     .Where(x => x.ProductCount == null || x.BuyerId.IsNull())
@@ -844,12 +873,12 @@ var sql = repository.From<Order>()
 
 `ITypeHandler`类型处理器
 对特殊类型进行处理，不是默认映射，就需要`TypeHandler`类型处理器类处理，完成模型与数据库之间的数据转换
-通常是Class类型或是特殊类型，比如：TimeOnly,DateOnly...等
-比如：模型的`SomeTime`属性是TimeOnly类型，数据库字段是`bitint`类型,并不是默认映射，就需要重写一个类型处理器，完成模型与数据库之间的数据转换。
+通常是Class类型或是特殊类型，比如：`TimeOnly`,`DateOnly`...等
+比如：模型的`SomeTime`属性是`TimeOnly`类型，数据库字段是`bitint`类型,并不是默认映射，就需要重写一个类型处理器，完成模型与数据库之间的数据转换。
 
 
-在要注册Trolley的时候，进行注册`ITypeHandler`类型处理器，在模型映射的需要指定这个`ITypeHandler`类型处理器
-Trolley提供了`JsonTypeHandler`类来支持Json处理。
+在要注册`Trolley`的时候，进行注册`ITypeHandler`类型处理器，在模型映射的需要指定这个`ITypeHandler`类型处理器
+`Trolley`提供了`JsonTypeHandler`类来支持`Json`处理。
 
 ```csharp
 var services = new ServiceCollection();
@@ -935,7 +964,7 @@ var result = await repository.From<Activity>()
     }))
     .Page(request.PageIndex, request.PageSize)
     .ToPageListAsync();
-属性ActivityTypeName和StatusName做了特殊处理，其他的属性根据名称相同匹配原则，自动设置到ActivityQueryResponse中
+//属性ActivityTypeName和StatusName做了特殊处理，其他的属性根据名称相同匹配原则，自动设置到ActivityQueryResponse中
 ```
 
 使用`ValueTuple`
@@ -954,10 +983,10 @@ var result = repository.Query<(int OrderId, string OrderNo, double TotalAmount)>
 ------------------------------------------------------------
 在实际项目，经常会有同时访问多个数据库，可能都是不同的`OrmProvider`，也就是不同种类的数据库。
 
-在Trolley中，一个dbKey代表一个或是多个结构相同的数据库，可以是不同的OrmProvider。  
-常见的场景是：一些租户独立分库，数据库类型也不一定一样，但结构是一样的，那他们就可以是同一个dbKey。  
-如: A租户是MySql数据库，B租户是PostgreSql，他们的数据库的结构是相同的。  
-在代入租户ID的时候，Trolley会根据租户ID自动找到对应的数据库，进行操作。  
+在`Trolley`中，一个`dbKey`代表一个或是多个结构相同的数据库，可以是不同的`OrmProvider`。  
+常见的场景是：一些租户独立分库，数据库类型也不一定一样，但结构是一样的，那他们就可以是同一个`dbKey`。  
+如: A租户是MySql数据库，B租户是`PostgreSql`，他们的数据库的结构是相同的。  
+在代入租户ID的时候，`Trolley`会根据租户ID自动找到对应的数据库，进行操作。  
 没有租户ID，就是默认的数据库，就是没有指定独立分库的其他所有租户的数据库。 
 
 `appsettin.json`中数据库连接的配置：
@@ -1019,8 +1048,19 @@ using var repository = this.dbFactory.Create("fengling", 100);
 
 各种操作命令
 ------------------------------------------------------------
+`Trolley`的所有插入、更新操作，都可以使用匿名对象类型、字典类型(Dictionary<string, object>)等参数完成
+插入和更新接口支持得比较丰富，基本大多数场景都支持，对`enum`,`null`都做了支持
+所有插入、更新、删除操作都支持批量操作
+
+
 
 #### 新增
+支持匿名对象、实体对象、字典参数插入
+支持`enum`,`null`做了特殊支持
+支持批量插入，支持匿名对象、实体对象、字典参数插入
+实体对象，原值插入，字段值是`0`，插入数据库后也是`0`，字段值是`null`，插入数据库后也是`NULL`
+如果不想插入类型默认值，可以使用匿名对象不插入字段，或是把字段设置为可为null类型，带`?`类型
+
 ```csharp
 using var repository = this.dbFactory.Create();
 //扩展简化操作
@@ -1040,108 +1080,72 @@ var result = await repository.CreateAsync<User>(new
 //INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)
 ```
 
+自增长列，无需为自增长列赋值，并返回增长的ID值。在字段映射的时候需要设置为自增长列`AutoIncrement()`。
 ```csharp
-//使用字典参数,自增长列
+builder.Entity<Company>(f =>
+{
+    f.ToTable("sys_company").Key(t => t.Id);
+    f.Member(t => t.Id).Field(nameof(Company.Id)).NativeDbType(MySqlDbType.Int32).AutoIncrement();
+    f.Member(t => t.Name).Field(nameof(Company.Name)).NativeDbType(MySqlDbType.VarChar);
+    f.Member(t => t.Nature).Field(nameof(Company.Nature)).NativeDbType(MySqlDbType.VarChar);
+    f.Member(t => t.IsEnabled).Field(nameof(Company.IsEnabled)).NativeDbType(MySqlDbType.Bool);
+    f.Member(t => t.CreatedAt).Field(nameof(Company.CreatedAt)).NativeDbType(MySqlDbType.DateTime);
+    f.Member(t => t.CreatedBy).Field(nameof(Company.CreatedBy)).NativeDbType(MySqlDbType.Int32);
+    f.Member(t => t.UpdatedAt).Field(nameof(Company.UpdatedAt)).NativeDbType(MySqlDbType.DateTime);
+    f.Member(t => t.UpdatedBy).Field(nameof(Company.UpdatedBy)).NativeDbType(MySqlDbType.Int32);
+});
+var result = repository.Create<Company>(new 
+{
+    Name = "微软11",
+    IsEnabled = true,
+    CreatedAt = DateTime.Now,
+    CreatedBy = 1,
+    UpdatedAt = DateTime.Now,
+    UpdatedBy = 1
+});
+//INSERT INTO `sys_company` (`Name`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING Id
+//自增长列会返回插入的主键列值，使用RETURNING语句返回值，这样可以返回代入的主键值
+	
+//使用字典参数, 自增长列
 var result = repository.Create<Company>(new Dictionary<string, object>()
 {
-	{ "Name","微软11"},
-	{ "IsEnabled", true},
-	{ "CreatedAt", DateTime.Now},
-	{ "CreatedBy", 1},
-	{ "UpdatedAt", DateTime.Now},
-	{ "UpdatedBy", 1}
+    { "Name","微软11"},
+    { "IsEnabled", true},
+    { "CreatedAt", DateTime.Now},
+    { "CreatedBy", 1},
+    { "UpdatedAt", DateTime.Now},
+    { "UpdatedBy", 1}
 });
-//INSERT INTO `sys_company` (`Id`,`Name`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING Id
+//INSERT INTO `sys_company` (`Name`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING Id
 //自增长列会返回插入的主键列值，使用RETURNING语句返回值，这样可以返回代入的主键值
-```
+```	
+	
+带条件的插入字段数据
+这样可避免字符串列，插入空字符串数据
+或者插入的列数据赋值`null`或不赋值，也不会插入空字符串数据
 
 ```csharp
-//批量新增
-var count = repository.Create<Product>(new[]
-{
-    new
-    {
-	    Id = 1,
-	    ProductNo="PN-001",
-	    Name = "波司登羽绒服",
-	    BrandId = 1,
-	    CategoryId = 1,
-	    IsEnabled = true,
-	    CreatedAt = DateTime.Now,
-	    CreatedBy = 1,
-	    UpdatedAt = DateTime.Now,
-	    UpdatedBy = 1
-    },
-    new
-    {
-	    Id = 2,
-	    ProductNo="PN-002",
-	    Name = "雪中飞羽绒裤",
-	    BrandId = 2,
-	    CategoryId = 2,
-	    IsEnabled = true,
-	    CreatedAt = DateTime.Now,
-	    CreatedBy = 1,
-	    UpdatedAt = DateTime.Now,
-	    UpdatedBy = 1
-    },
-    new
-    {
-	    Id = 3,
-	    ProductNo="PN-003",
-	    Name = "优衣库保暖内衣",
-	    BrandId = 3,
-	    CategoryId = 3,
-	    IsEnabled = true,
-	    CreatedAt = DateTime.Now,
-	    CreatedBy = 1,
-	    UpdatedAt = DateTime.Now,
-	    UpdatedBy = 1
-    }
-});
-//INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)
-
-```
-
-```csharp
-//使用Create<User>() WithBy
-var count = await repository.Create<User>()
-    .WithBy(new
-    {
-	    Id = 1,
-	    Name = "leafkevin",
-	    Age = 25,
-	    CompanyId = 1,
-	    Gender = Gender.Male,
-	    IsEnabled = true,
-	    CreatedAt = DateTime.Now,
-	    CreatedBy = 1,
-	    UpdatedAt = DateTime.Now,
-	    UpdatedBy = 1
-    })
-    .ExecuteAsync();
-//INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)
-```
-
-
-```csharp
-//WithBy  字典
-var id = repository.Create<Company>()
-    .WithBy(new Dictionary<string, object>()
-    {
-    	{ "Id", 1},
-    	{ "Name","微软11"},
-    	{ "IsEnabled", true},
-    	{ "CreatedAt", DateTime.Now},
-    	{ "CreatedBy", 1},
-    	{ "UpdatedAt", DateTime.Now},
-    	{ "UpdatedBy", 1}
-    })
-    .Execute();
-//INSERT INTO `sys_company` (`Id`,`Name`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING Id
-```  
-
-```csharp
+ var sql = repository.Create<User>()
+     .WithBy(new
+     {
+	 Id = 1,
+	 Name = "leafkevin",
+	 Age = 25,
+	 CompanyId = 1,
+	 Gender = Gender.Male,
+	 IsEnabled = true,
+	 CreatedAt = DateTime.Now,
+	 CreatedBy = 1,
+	 UpdatedAt = DateTime.Now,
+	 UpdatedBy = 1
+     })
+    .WithBy(user.SomeTimes.HasValue, new { user.SomeTimes })
+    .WithBy(guidField.HasValue, new { GuidField = guidField })
+    .ToSql(out _);
+repository.Commit();
+//user.SomeTimes栏位没有值，guidField有值，得到如下SQL:
+//INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`,`GuidField`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@GuidField)
+	
 //未赋值的字段，进入数据库后，将是NULL值
 var count = repository.Create<Order>(new
 {
@@ -1157,167 +1161,334 @@ var count = repository.Create<Order>(new
     UpdatedBy = 1
 });
 //属性Products、ProductCount、Disputes都没有赋值，进入到数据库后，这三个字段是NULL值
-```  
+```
+
+对`json`的支持
+入库的时候，`Trolley`会调用`JsonTypeHandler`的`SetValue`方法将参数值序列化为字符串
+```csharp
+var sql = repository.Create<Order>()
+    .WithBy(new Order
+    {
+	Id = 4,
+	OrderNo = "ON-001",
+	BuyerId = 1,
+	SellerId = 2,
+	TotalAmount = 500,
+	Products = new List<int> { 1, 2 },
+	Disputes = new Dispute
+	{
+	    Id = 2,
+	    Content = "无良商家",
+	    Result = "同意退款",
+	    Users = "Buyer2,Seller2",
+	    CreatedAt = DateTime.Parse("2023-03-05")
+	},
+	IsEnabled = true,
+	CreatedAt = DateTime.Now,
+	CreatedBy = 1,
+	UpdatedAt = DateTime.Now,
+	UpdatedBy = 1
+    })
+    .ToSql(out var parameters);
+//INSERT INTO `sys_order` (`Id`,`OrderNo`,`ProductCount`,`TotalAmount`,`BuyerId`,`SellerId`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@OrderNo,@ProductCount,@TotalAmount,@BuyerId,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)
+
+//两个JSON参数的值：
+Assert.True(parameters[6].ParameterName == "@Products");
+Assert.True((string)parameters[6].Value == "[1,2]");
+Assert.True(parameters[7].ParameterName == "@Disputes");
+Assert.True((string)parameters[7].Value == "{\"Id\":2,\"Users\":\"Buyer2,Seller2\",\"Content\":\"\\u65E0\\u826F\\u5546\\u5BB6\",\"Result\":\"\\u540C\\u610F\\u9000\\u6B3E\",\"CreatedAt\":\"2023-03-05T00:00:00\"}");
+```
+	
+批量新增
+`Trolley`的所有批量新增采用的是多表值方式，就是`INSERT TABLE(...) VALUES(..),(...),(...)...`
+这种方式相对于普通插入方式性能要高
+```csharp
+var count = repository.Create<Product>(new[]
+{
+    new
+    {
+        Id = 1,
+        ProductNo="PN-001",
+        Name = "波司登羽绒服",
+        BrandId = 1,
+        CategoryId = 1,
+        IsEnabled = true,
+        CreatedAt = DateTime.Now,
+        CreatedBy = 1,
+        UpdatedAt = DateTime.Now,
+        UpdatedBy = 1
+    },
+    new
+    {
+         Id = 2,
+         ProductNo="PN-002",
+         Name = "雪中飞羽绒裤",
+         BrandId = 2,
+         CategoryId = 2,
+         IsEnabled = true,
+         CreatedAt = DateTime.Now,
+         CreatedBy = 1,
+         UpdatedAt = DateTime.Now,
+         UpdatedBy = 1
+    },
+    new
+    {
+        Id = 3,
+        ProductNo="PN-003",
+        Name = "优衣库保暖内衣",
+        BrandId = 3,
+        CategoryId = 3,
+        IsEnabled = true,
+        CreatedAt = DateTime.Now,
+        CreatedBy = 1,
+        UpdatedAt = DateTime.Now,
+        UpdatedBy = 1
+    }
+});
+//INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)
+```
+
+对枚举`enum`的支持
+`Trolley`允许在代码中使用`enum`类型方便开发，在数据库端可以是数字类型或是字符串类型
+只需要在映射的时候设置为对应的`DbType`或是对应的`Int`类型值即可
+在实际项目中，通常会在项目中使用`enum`类型，数据库端使用字符串类型字段，这样可读性比较强
 
 ```csharp
-//WithBy 批量插入
-var count = repository.Create<Product>()
-    .WithBy(new[]
+builder.Entity<User>(f =>
+{
+    f.ToTable("sys_user").Key(t => t.Id);
+    ... ...
+    //设置数字类型，MySqlDbType.Byte,Int16,Int32,UByte,UInt16,UInt32,.. 等数字类型都可以，不要设置为浮点数
+    f.Member(t => t.Gender).Field(nameof(User.Gender)).NativeDbType(MySqlDbType.Byte);
+    ... ...
+});
+var sql1 = repository.Create<User>()
+    .WithBy(new
     {
-	    new
-	    {
-	        Id = 1,
-	        ProductNo="PN-001",
-	        Name = "波司登羽绒服",
-	        BrandId = 1,
-	        CategoryId = 1,
-	        IsEnabled = true,
-	        CreatedAt = DateTime.Now,
-	        CreatedBy = 1,
-	        UpdatedAt = DateTime.Now,
-	        UpdatedBy = 1
-	    },
-	    new
-	    {
-	        Id = 2,
-	        ProductNo="PN-002",
-	        Name = "雪中飞羽绒裤",
-	        BrandId = 2,
-	        CategoryId = 2,
-	        IsEnabled = true,
-	        CreatedAt = DateTime.Now,
-	        CreatedBy = 1,
-	        UpdatedAt = DateTime.Now,
-	        UpdatedBy = 1
-	    },
-	    new
-	    {
-	        Id = 3,
-	        ProductNo="PN-003",
-	        Name = "优衣库保暖内衣",
-	        BrandId = 3,
-	        CategoryId = 3,
-	        IsEnabled = true,
-	        CreatedAt = DateTime.Now,
-	        CreatedBy = 1,
-	        UpdatedAt = DateTime.Now,
-	        UpdatedBy = 1
-	    }
+	Id = 1,
+	Name = "leafkevin",
+	Age = 25,
+	CompanyId = 1,
+	Gender = Gender.Male,
+	IsEnabled = true,
+	CreatedAt = DateTime.Now,
+	CreatedBy = 1,
+	UpdatedAt = DateTime.Now,
+	UpdatedBy = 1
+    })
+    .ToSql(out var parameters1);
+Assert.True(sql1 == "INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+Assert.True(parameters1[4].ParameterName == "@Gender");
+Assert.True(parameters1[4].Value.GetType() == typeof(sbyte));
+Assert.True((sbyte)parameters1[4].Value == (sbyte)Gender.Male);
+
+builder.Entity<Company>(f =>
+{
+    f.ToTable("sys_company").Key(t => t.Id);
+    ... ...
+    f.Member(t => t.Nature).Field(nameof(Company.Nature)).NativeDbType(MySqlDbType.VarChar);
+    ... ...
+});
+var sql2 = repository.Create<Company>()
+     .WithBy(new Company
+     {
+	 Id = 1,
+	 Name = "leafkevin",
+	 Nature = CompanyNature.Internet,
+	 IsEnabled = true,
+	 CreatedAt = DateTime.Now,
+	 CreatedBy = 1,
+	 UpdatedAt = DateTime.Now,
+	 UpdatedBy = 1
+     })
+     .ToSql(out var parameters2);
+Assert.True(sql2 == "INSERT INTO `sys_company` (`Id`,`Name`,`Nature`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Nature,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+Assert.True(parameters2[2].ParameterName == "@Nature");
+Assert.True(parameters2[2].Value.GetType() == typeof(string));
+Assert.True((string)parameters2[2].Value == CompanyNature.Internet.ToString());
+```
+	
+	
+使用`WithByBulk`批量新增
+可设置单次入库的数据条数，可根据表插入字段个数和条数，设置一个性能最高的条数
+通常会有一个插入性能最高的阈值，高于或低于这个阈值，批量插入的性能都会有所下降
+这个阈值和数据库类型、插入字段的个数，两者都有关系。
+```csharp
+//使用Create<User>() WithBy
+var sql = repository.Create<Product>()
+    .WithByBulk(new[]
+    {
+	new
+	{
+	    Id = 1,
+	    ProductNo="PN-001",
+	    Name = "波司登羽绒服",
+	    BrandId = 1,
+	    CategoryId = 1,
+	    IsEnabled = true,
+	    CreatedAt = DateTime.Now,
+	    CreatedBy = 1,
+	    UpdatedAt = DateTime.Now,
+	    UpdatedBy = 1
+	},
+	new
+	{
+	    Id = 2,
+	    ProductNo="PN-002",
+	    Name = "雪中飞羽绒裤",
+	    BrandId = 2,
+	    CategoryId = 2,
+	    IsEnabled = true,
+	    CreatedAt = DateTime.Now,
+	    CreatedBy = 1,
+	    UpdatedAt = DateTime.Now,
+	    UpdatedBy = 1
+	},
+	new
+	{
+	    Id = 3,
+	    ProductNo="PN-003",
+	    Name = "优衣库保暖内衣",
+	    BrandId = 3,
+	    CategoryId = 3,
+	    IsEnabled = true,
+	    CreatedAt = DateTime.Now,
+	    CreatedBy = 1,
+	    UpdatedAt = DateTime.Now,
+	    UpdatedBy = 1
+	}
+    }, 50)
+    .ToSql(out _);
+//INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)
+
+`WithByBulk`使用字典
+var count = repository.Create<Product>()
+    .WithByBulk(new[]
+    {
+	new Dictionary<string,object>
+	{
+	    { "Id", 1 },
+	    { "ProductNo", "PN-001"},
+	    { "Name", "波司登羽绒服"},
+	    { "BrandId", 1},
+	    { "CategoryId", 1},
+	    { "IsEnabled", true},
+	    { "CreatedAt", DateTime.Now},
+	    { "CreatedBy", 1},
+	    { "UpdatedAt", DateTime.Now},
+	    { "UpdatedBy", 1}
+	},
+	new Dictionary<string,object>
+	{
+	    { "Id", 2},
+	    { "ProductNo", "PN-002"},
+	    { "Name", "雪中飞羽绒裤"},
+	    { "BrandId", 2},
+	    { "CategoryId", 2},
+	    { "IsEnabled", true},
+	    { "CreatedAt", DateTime.Now},
+	    { "CreatedBy", 1},
+	    { "UpdatedAt", DateTime.Now},
+	    { "UpdatedBy", 1}
+	},
+	new Dictionary<string,object>
+	{
+	    { "Id", 3},
+	    { "ProductNo", "PN-003"},
+	    { "Name", "优衣库保暖内衣"},
+	    { "BrandId", 3},
+	    { "CategoryId", 3},
+	    { "IsEnabled", true},
+	    { "CreatedAt", DateTime.Now},
+	    { "CreatedBy", 1},
+	    { "UpdatedAt", DateTime.Now},
+	    { "UpdatedBy", 1}
+    	}
     })
     .Execute();
 //INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)
 ```  
+ 
+`Insert From`联表插入
+`Trolley`支持联表1-5个表，最多5个
 
 ```csharp
-//WithBy 批量字典
-var count = repository.Create<Product>()
-    .WithBy(new[]
-    {
-	    new Dictionary<string,object>
-	    {
-	        { "Id",1 },
-	        { "ProductNo","PN-001"},
-	        { "Name","波司登羽绒服"},
-	        { "BrandId",1},
-	        { "CategoryId",1},
-	        { "IsEnabled",true},
-	        { "CreatedAt",DateTime.Now},
-	        { "CreatedBy",1},
-	        { "UpdatedAt",DateTime.Now},
-	        { "UpdatedBy",1}
-	    },
-	    new Dictionary<string,object>
-	    {
-	        { "Id",2},
-	        { "ProductNo","PN-002"},
-	        { "Name","雪中飞羽绒裤"},
-	        { "BrandId",2},
-	        { "CategoryId",2},
-	        { "IsEnabled",true},
-	        { "CreatedAt",DateTime.Now},
-	        { "CreatedBy",1},
-	        { "UpdatedAt",DateTime.Now},
-	        { "UpdatedBy",1}
-	    },
-	    new Dictionary<string,object>
-	    {
-	        { "Id",3},
-	        { "ProductNo","PN-003"},
-	        { "Name","优衣库保暖内衣"},
-	        { "BrandId",3},
-	        { "CategoryId",3},
-	        { "IsEnabled",true},
-	        { "CreatedAt",DateTime.Now},
-	        { "CreatedBy",1},
-	        { "UpdatedAt",DateTime.Now},
-	        { "UpdatedBy",1}
-	    }
-    })
-    .Execute();    
-//INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)
-```  
-
-```csharp
-//Insert From 单表
 var sql = repository.Create<Product>()
     .From<Brand>(f => new
     {
-	    Id = f.Id + 1,
-	    ProductNo = "PN_" + f.BrandNo,
-	    Name = "PName_" + f.Name,
-	    BrandId = f.Id,
-	    CategoryId = 1,
-	    f.CompanyId,
-	    f.IsEnabled,
-	    f.CreatedBy,
-	    f.CreatedAt,
-	    f.UpdatedBy,
-	    f.UpdatedAt
+	Id = f.Id + 1,
+	ProductNo = "PN_" + f.BrandNo,
+	Name = "PName_" + f.Name,
+	BrandId = f.Id,
+	CategoryId = 1,
+	f.CompanyId,
+	f.IsEnabled,
+	f.CreatedBy,
+	f.CreatedAt,
+	f.UpdatedBy,
+	f.UpdatedAt
     })
     .Where(f => f.Id == 1)
-    .ToSql(out _);
-//INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT a.`Id`+1,@ProductNo,@Name,a.`Id`,@CategoryId,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1
-//使用常量的地方，变成了参数
-```  
-
+    .ToSql(out var parameters);
+//INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT a.`Id`+1,CONCAT('PN_',a.`BrandNo`),CONCAT('PName_',a.`Name`),a.`Id`,@CategoryId,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1
+```
+	
+`Insert From`联多表插入
 ```csharp
 //Insert From 多表
 var sql = repository.Create<OrderDetail>()
     .From<Order, Product>((x, y) => new OrderDetail
     {
-	    Id = 7,
-	    OrderId = x.Id,
-	    ProductId = y.Id,
-	    Price = y.Price,
-	    Quantity = 3,
-	    Amount = y.Price * 3,
-	    IsEnabled = x.IsEnabled,
-	    CreatedBy = x.CreatedBy,
-	    CreatedAt = x.CreatedAt,
-	    UpdatedBy = x.UpdatedBy,
-	    UpdatedAt = x.UpdatedAt
+	Id = 7,
+	OrderId = x.Id,
+	ProductId = y.Id,
+	Price = y.Price,
+	Quantity = 3,
+	Amount = y.Price * 3,
+	IsEnabled = x.IsEnabled,
+	CreatedBy = x.CreatedBy,
+	CreatedAt = x.CreatedAt,
+	UpdatedBy = x.UpdatedBy,
+	UpdatedAt = x.UpdatedAt
     })
     .Where((a, b) => a.Id == 3 && b.Id == 1)
-    .ToSql(out _);
+    .ToSql(out var parameters);
 //INSERT INTO `sys_order_detail` (`Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT @Id,a.`Id`,b.`Id`,b.`Price`,@Quantity,b.`Price`*3,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_order` a,`sys_product` b WHERE a.`Id`=3 AND b.`Id`=1
-//使用常量的地方，变成了参数
-```  
-
+```
 
 
 #### 更新
+支持匿名对象、字典参数插入
+支持`enum`,`null`做了特殊支持
+支持批量更新，支持匿名对象、字典参数插入，是`By`主键更新
 
+
+简化操作
 ```csharp
-//简化操作
+var result = repository.Update<User>(new { Id = 1, Name = "leafkevin11" });
+//UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@kId
+var result = repository.Update<User>(f => f.Name, new { Id = 1, Name = "leafkevin11" });
+//UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@kId
+var result = repository.Update<User>(f => new { Name = f.Name + "_1", Gender = Gender.Female }, t => t.Id == 1);
+//UPDATE `sys_user` SET `Name`=CONCAT(`Name`,'_1'),`Gender`=@Gender WHERE `Id`=1
+
+```
+
+部分字段更新
+直接使用匿名对象参数
+带有明确更新字段的表达式+对象参数，对象参数可以是匿名也可以是实体对象
+```csharp
+var result = repository.Update<User>(new { Id = 1, Name = "leafkevin11" });
+//UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@kId
+var result = repository.Update<User>(f => f.Name, new { Id = 1, Name = "leafkevin11" });
+//UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@kId
 var result = repository.Update<User>(f => new { Name = f.Name + "_1", Gender = Gender.Female }, t => t.Id == 1);
 //UPDATE `sys_user` SET `Name`=CONCAT(`Name`,'_1'),`Gender`=@Gender WHERE `Id`=1
 ```
 
-```csharp
-//带有参数，局部更新
-var result = repository.Update<User>(f => f.Name, new { Id = 1, Name = "leafkevin11" });
-//UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@kId
-```
+对`null`的支持
+直接使用匿名对象，对应字段设置为DBNull.Value
+或是使用`From Set`直接设置`null`
 
 ```csharp
 //部分表达式更新，部分参数更新，更新的字段由前面的表达式指定，Where条件是主键
