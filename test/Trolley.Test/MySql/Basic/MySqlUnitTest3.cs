@@ -28,6 +28,18 @@ public class MySqlUnitTest3 : UnitTestBase
         dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
     [Fact]
+    public void Update_AnonymousObject()
+    {
+        Initialize();
+        using var repository = dbFactory.Create();
+        var result = repository.Update<User>(new { Id = 1, Name = "leafkevin11" });
+        var result1 = repository.Get<User>(1);
+        Assert.True(result > 0);
+        Assert.NotNull(result1);
+        Assert.True(result1.Name == result1.Name);
+        Assert.True(result1.Name == "leafkevin11");
+    }
+    [Fact]
     public void Update_Fields_Where()
     {
         Initialize();
