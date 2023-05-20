@@ -304,11 +304,7 @@ public class SqlVisitor : ISqlVisitor
 
         SqlSegment target = null;
         if (methodCallExpr.Object != null)
-        {
             target = new SqlSegment { Expression = methodCallExpr.Object };
-            if (methodCallExpr.Object.IsParameter(out _))
-                throw new NotSupportedException($"不支持target的方法调用解析,{sqlSegment.Expression}");
-        }
 
         SqlSegment[] arguments = null;
         if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
@@ -360,7 +356,7 @@ public class SqlVisitor : ISqlVisitor
                     DeferCallMethod = methodCallExpr.Method,
                     DeferCallArgs = constArgs,
                     ReaderFields = readerFields
-                }, false); 
+                }, false);
                 return sqlSegment;
             }
             else return this.Evaluate(sqlSegment);
