@@ -203,12 +203,7 @@ public class SqlVisitor : ISqlVisitor
                     return operatorSegment;
 
                 var leftSegment = this.Visit(sqlSegment.Next(binaryExpr.Left));
-                var rightSegment = this.Visit(new SqlSegment
-                {
-                    Expression = binaryExpr.Right,
-                    ExpectType = leftSegment.ExpectType,
-                    TargetType = leftSegment.TargetType
-                });
+                var rightSegment = this.Visit(leftSegment.Clone(binaryExpr.Right));
 
                 //计算数组访问，a??bb
                 if (leftSegment.IsConstantValue && rightSegment.IsConstantValue)
@@ -219,12 +214,7 @@ public class SqlVisitor : ISqlVisitor
                     this.Swap(ref leftSegment, ref rightSegment);
                     if (leftSegment.ExpectType != null && leftSegment.ExpectType.IsEnum && leftSegment.TargetType != null)
                     {
-                        rightSegment = this.Visit(new SqlSegment
-                        {
-                            Expression = binaryExpr.Right,
-                            ExpectType = leftSegment.ExpectType,
-                            TargetType = leftSegment.TargetType
-                        });
+                        rightSegment = this.Visit(leftSegment.Clone(binaryExpr.Right));
                     }
                 }
 
@@ -394,7 +384,7 @@ public class SqlVisitor : ISqlVisitor
         bool isConstantValue = true;
         foreach (var elementExpr in newArrayExpr.Expressions)
         {
-            var elementSegment = new SqlSegment { Expression = elementExpr };
+            var elementSegment = sqlSegment.Clone(elementExpr);
             elementSegment = this.VisitAndDeferred(elementSegment);
             if (!elementSegment.IsConstantValue)
                 isConstantValue = false;
@@ -413,8 +403,8 @@ public class SqlVisitor : ISqlVisitor
     {
         var conditionalExpr = sqlSegment.Expression as ConditionalExpression;
         sqlSegment = this.Visit(sqlSegment.Next(conditionalExpr.Test));
-        var ifTrueSegment = this.Visit(new SqlSegment { Expression = conditionalExpr.IfTrue });
-        var ifFalseSegment = this.Visit(new SqlSegment { Expression = conditionalExpr.IfFalse });
+        var ifTrueSegment = this.Visit(sqlSegment.Clone(conditionalExpr.IfTrue));
+        var ifFalseSegment = this.Visit(sqlSegment.Clone(conditionalExpr.IfFalse));
         sqlSegment.Merge(ifTrueSegment);
         sqlSegment.Merge(ifFalseSegment);
         return this.VisitDeferredBoolConditional(sqlSegment, conditionalExpr.IfTrue.Type == typeof(bool), this.GetQuotedValue(ifTrueSegment), this.GetQuotedValue(ifFalseSegment));
@@ -429,7 +419,7 @@ public class SqlVisitor : ISqlVisitor
         {
             if (elementInit.Arguments.Count == 0)
                 continue;
-            var elementSegment = new SqlSegment { Expression = elementInit.Arguments[0] };
+            var elementSegment = sqlSegment.Clone(elementInit.Arguments[0]);
             elementSegment = this.VisitAndDeferred(elementSegment);
             if (!elementSegment.IsConstantValue)
                 isConstantValue = false;
@@ -562,12 +552,13 @@ public class SqlVisitor : ISqlVisitor
             case "In":
                 var elementType = methodCallExpr.Method.GetGenericArguments()[0];
                 var type = methodCallExpr.Arguments[1].Type;
+                var fieldSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                 if (type.IsArray || typeof(IEnumerable<>).MakeGenericType(elementType).IsAssignableFrom(type))
                 {
-                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[1]));
-                    if (sqlSegment == SqlSegment.Null)
+                    var rightSegment = this.VisitAndDeferred(fieldSegment.Clone(methodCallExpr.Arguments[1]));
+                    if (rightSegment == SqlSegment.Null)
                         return sqlSegment.Change("1=0", false, true, false);
-                    var sqlSegments = sqlSegment.Value as List<SqlSegment>;
+                    var sqlSegments = rightSegment.Value as List<SqlSegment>;
                     sqlSegments.ForEach(f => f.Value = this.OrmProvider.GetQuotedValue(f));
                     sqlSegment.ChangeValue(string.Join(',', sqlSegments));
                 }
@@ -575,10 +566,17 @@ public class SqlVisitor : ISqlVisitor
                 {
                     lambdaExpr = methodCallExpr.Arguments[1] as LambdaExpression;
                     var sql = this.VisitFromQuery(lambdaExpr, out var isNeedAlias);
-                    sqlSegment.Change(sql, false);
-                    if (isNeedAlias) this.IsNeedAlias = true;
+                    sqlSegment.ChangeValue(sql);
+                    if (isNeedAlias)
+                    {
+                        //重新解析一下，增加别名
+                        if (!this.IsNeedAlias)
+                        {
+                            this.IsNeedAlias = true;
+                            fieldSegment = this.Visit(fieldSegment.Next(methodCallExpr.Arguments[0]));
+                        }
+                    }
                 }
-                var fieldSegment = this.Visit(new SqlSegment { Expression = methodCallExpr.Arguments[0] });
                 sqlSegment.Change($"{fieldSegment} IN ({sqlSegment})", false, true, false);
                 break;
             case "Exists":

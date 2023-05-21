@@ -114,6 +114,15 @@ public class SqlSegment
         this.Value = value;
         return this;
     }
+    public SqlSegment Clone(Expression nextExpr)
+    {
+        return new SqlSegment
+        {
+            Expression = nextExpr,
+            ExpectType = this.ExpectType,
+            TargetType = this.TargetType
+        };
+    }
     public void Push(DeferredExpr deferredExpr)
     {
         this.DeferredExprs ??= new();
