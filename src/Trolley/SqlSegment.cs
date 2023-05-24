@@ -42,6 +42,10 @@ public class SqlSegment
     /// </summary>
     public bool IsMethodCall { get; set; }
     /// <summary>
+    /// 是否DeferredFields,延迟方法调用
+    /// </summary>
+    public bool IsDeferredFields { get; set; }
+    /// <summary>
     /// 是否参数化当前值，本次解析有效
     /// </summary>
     public bool IsParameterized { get; set; }

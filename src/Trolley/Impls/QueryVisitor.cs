@@ -1168,6 +1168,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     //.First()               
                     methodCallField.Index = readerFields.Count;
                     methodCallField.FromMember = memberInfo;
+                    methodCallField.TargetMember = memberInfo;
                     readerFields.Add(methodCallField);
                     break;
                 }

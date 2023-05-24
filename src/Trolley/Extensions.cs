@@ -339,12 +339,12 @@ public static class Extensions
                     current = NewBuildInfo(readerField.TargetMember.GetMemberType(), readerField.TargetMember, parent);
 
                 readerBuilders.Add(readerField.Index, current);
-                int endIndex = index + readerField.ReaderFields.Count;
+                var endIndex = index + readerField.ReaderFields?.Count ?? 1;
                 var childIndex = 0;
                 while (index < endIndex)
                 {
                     var fieldType = reader.GetFieldType(index);
-                    var fieldMember = readerField.ReaderFields[childIndex].FromMember;
+                    MemberInfo fieldMember = null;
                     Expression readerValueExpr = null;
 
                     EntityMap entityMapper = null;
@@ -352,23 +352,28 @@ public static class Extensions
                     switch (readerField.FieldType)
                     {
                         case ReaderFieldType.AnonymousObject:
+                            fieldMember = readerField.ReaderFields[childIndex].FromMember;
                             readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
                                 fieldMember.GetMemberType(), fieldType, null, blockParameters, blockBodies);
                             break;
                         case ReaderFieldType.DeferredFields:
-                            entityMapper = readerField.ReaderFields[childIndex].TableSegment.Mapper;
-                            if (!entityMapper.TryGetMemberMap(fieldMember.Name, out memberMapper))
-                                break;
-                            readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                                memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
-                            var parameters = readerField.DeferCallMethod.GetParameters();
-                            var argsIndex = readerField.ReaderFields[childIndex].Index;
-                            if (memberMapper.MemberType != parameters[argsIndex].ParameterType)
-                                readerValueExpr = Expression.Convert(readerValueExpr, parameters[argsIndex].ParameterType);
-                            readerField.DeferCallArgs.Insert(argsIndex, readerValueExpr);
+                            if (readerField.ReaderFields != null)
+                            {
+                                entityMapper = readerField.ReaderFields[childIndex].TableSegment.Mapper;
+                                if (!entityMapper.TryGetMemberMap(fieldMember.Name, out memberMapper))
+                                    break;
+                                readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
+                                    memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
+                                var parameters = readerField.DeferCallMethod.GetParameters();
+                                var argsIndex = readerField.ReaderFields[childIndex].Index;
+                                if (memberMapper.MemberType != parameters[argsIndex].ParameterType)
+                                    readerValueExpr = Expression.Convert(readerValueExpr, parameters[argsIndex].ParameterType);
+                                readerField.DeferCallArgs.Insert(argsIndex, readerValueExpr);
+                            }
                             break;
                         case ReaderFieldType.Entity:
                             entityMapper = readerField.TableSegment.Mapper;
+                            fieldMember = readerField.ReaderFields[childIndex].FromMember;
                             if (!entityMapper.TryGetMemberMap(fieldMember.Name, out memberMapper))
                                 break;
                             readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
@@ -392,7 +397,7 @@ public static class Extensions
                         callExpr = Expression.Call(readerField.DeferCallTarget, readerField.DeferCallMethod, readerField.DeferCallArgs);
                     else callExpr = Expression.Call(readerField.DeferCallMethod, readerField.DeferCallArgs);
                     if (current.IsDefault)
-                        current.Bindings.Add(Expression.Bind(readerField.FromMember, callExpr));
+                        current.Bindings.Add(Expression.Bind(readerField.TargetMember, callExpr));
                     else current.Arguments.Add(callExpr);
                 }
                 else

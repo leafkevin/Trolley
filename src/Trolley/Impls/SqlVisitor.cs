@@ -307,13 +307,16 @@ public class SqlVisitor : ISqlVisitor
             }
             arguments = argumentSegments.ToArray();
         }
-        if (this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter))
+        if (!sqlSegment.IsDeferredFields && this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter))
             return formatter.Invoke(this, target, sqlSegment.DeferredExprs, arguments);
 
+        string fields = null;
+        List<ReaderField> readerFields = null;
+        List<Expression> constArgs = null;
         if (arguments != null && arguments.Length > 0)
         {
-            var readerFields = new List<ReaderField>();
-            var constArgs = new List<Expression>();
+            readerFields = new List<ReaderField>();
+            constArgs = new List<Expression>();
             var builder = new StringBuilder();
             for (int i = 0; i < arguments.Length; i++)
             {
@@ -337,19 +340,22 @@ public class SqlVisitor : ISqlVisitor
                 else constArgs.Add(Expression.Constant(arguments[i].Value));
             }
             if (readerFields.Count > 0)
+                fields = builder.ToString();
+        }
+
+        if (sqlSegment.IsDeferredFields || !string.IsNullOrEmpty(fields))
+        {
+            if (readerFields == null)
+                fields = "NULL";
+            return sqlSegment.Change(new ReaderField
             {
-                sqlSegment.Change(new ReaderField
-                {
-                    FieldType = ReaderFieldType.DeferredFields,
-                    Body = builder.ToString(),
-                    DeferCallTarget = methodCallExpr.Object,
-                    DeferCallMethod = methodCallExpr.Method,
-                    DeferCallArgs = constArgs,
-                    ReaderFields = readerFields
-                }, false);
-                return sqlSegment;
-            }
-            else return this.Evaluate(sqlSegment);
+                FieldType = ReaderFieldType.DeferredFields,
+                Body = fields,
+                DeferCallTarget = methodCallExpr.Object,
+                DeferCallMethod = methodCallExpr.Method,
+                DeferCallArgs = constArgs,
+                ReaderFields = readerFields
+            }, false, false, true);
         }
         return this.Evaluate(sqlSegment);
     }
@@ -536,6 +542,10 @@ public class SqlVisitor : ISqlVisitor
                 }
                 var readerFields = this.FlattenFieldsTo(targetType, lambdaExpr);
                 sqlSegment.ChangeValue(readerFields);
+                break;
+            case "Deferred":
+                sqlSegment.IsDeferredFields = true;
+                sqlSegment = this.VisitMethodCall(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 break;
             case "IsNull":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
@@ -1186,7 +1196,7 @@ public class SqlVisitor : ISqlVisitor
 
         for (int i = targetFields.Count - 1; i >= 0; i--)
         {
-            var memberInfo = targetFields[i].TargetMember ?? targetFields[i].FromMember;
+            var memberInfo = targetFields[i].TargetMember;
             if (!targetMembers.Exists(t => t.Name == memberInfo.Name))
                 targetFields.RemoveAt(i);
         }

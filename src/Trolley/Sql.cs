@@ -10,7 +10,14 @@ public static class Sql
     {
         throw new NotImplementedException();
     }
-    public static T ToField<T>(this string rawSql)
+    /// <summary>
+    /// Select语句从数据库执行后，进行方法调用并把返回值赋值到对应的字段上，只做实体赋值解析，不实现
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="obj"></param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public static T Deferred<T>(this T obj)
     {
         throw new NotImplementedException();
     }

@@ -361,17 +361,30 @@ public class MySqlMethodCallUnitTest : UnitTestBase
         Assert.Null(result[0].Description);
 
         result = repository.From<Order>()
-        .Where(f => Sql.In(f.Id, new[] { 8 }))
-        .Select(f => Sql.FlattenTo<OrderInfo>(() => new
-        {
-            Description = "TotalAmount:" + f.TotalAmount
-        }))
-        .ToList();
+            .Where(f => Sql.In(f.Id, new[] { 8 }))
+            .Select(f => Sql.FlattenTo<OrderInfo>(() => new
+            {
+                Description = "TotalAmount:" + f.TotalAmount
+            }))
+            .ToList();
         Assert.True(result[0].Id == 8);
         Assert.True(result[0].BuyerId == 1);
         Assert.True(result[0].OrderNo == "On-ZwYx");
         Assert.NotNull(result[0].Description);
         Assert.True(result[0].Description == "TotalAmount:500");
+
+        result = repository.From<Order>()
+           .Where(f => Sql.In(f.Id, new[] { 8 }))
+           .Select(f => Sql.FlattenTo<OrderInfo>(() => new
+           {
+               Description = this.DeferInvoke().Deferred()
+           }))
+           .ToList();
+        Assert.True(result[0].Id == 8);
+        Assert.True(result[0].BuyerId == 1);
+        Assert.True(result[0].OrderNo == "On-ZwYx");
+        Assert.NotNull(result[0].Description);
+        Assert.True(result[0].Description == this.DeferInvoke());
     }
 
     [Fact]
@@ -385,4 +398,5 @@ public class MySqlMethodCallUnitTest : UnitTestBase
             .Select(f => (short)f.Age)
             .First();
     }
+    private string DeferInvoke() => "DeferInvoke";
 }
