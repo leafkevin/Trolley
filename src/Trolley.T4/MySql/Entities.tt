@@ -13,7 +13,7 @@
 <#@ import namespace="System.Collections.Generic" #>
 <#@ import namespace="System.Data"#>
 <#@ import namespace="System.Data.Linq"#>
-<#@ import namespace="System.Data.Linq.Mapping"#> 
+<#@ import namespace="System.Data.Linq.Mapping"#>
 <#@ import namespace="System.IO"#>
 <#@ import namespace="System.Linq"#>
 <#@ import namespace="System.Reflection"#>
@@ -66,5 +66,5 @@ manager.EndBlock();
 manager.Process(true);
 #>
 <#@ include file="$(ProjectDir)\Manager.ttinclude" once="true"#>
-<#@ include file="$(ProjectDir)\DbEntitries.ttinclude" once="true" #>
-<#@ include file="MySqlProvider.ttinclude" once="true" #>
+<#@ include file="$(ProjectDir)\DbEntitries.ttinclude" once="true"#>
+<#@ include file="MySqlProvider.ttinclude" once="true"#>

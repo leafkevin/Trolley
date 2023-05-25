@@ -90,9 +90,9 @@ class SqlServerProvider : DbHelper
         connection.Close();
         return result;
     }
-    public string MapMemberType(string dataType)
+    public string MapMemberType(ColumnInfo columnInfo)
     {
-        switch (dataType)
+        switch (columnInfo.DataType)
         {
             case "bit": return "bool";
             case "char":
@@ -125,9 +125,9 @@ class SqlServerProvider : DbHelper
         }
         return "string";
     }
-    public string MapNativeDbType(string dataType)
+    public string MapNativeDbType(ColumnInfo columnInfo)
     {
-        switch (dataType)
+        switch (columnInfo.DataType)
         {
             case "bit": return "SqlDbType.Bit";
             case "tinyint": return "SqlDbType.TinyInt";

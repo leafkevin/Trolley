@@ -33,10 +33,10 @@
 	var tableInfo = dbProvider.GetTableInfo(databaseName, tableName);
 	var columnList = dbProvider.GetColumnList(databaseName, tableInfo.TableName);
 #>
-using PaymentCenter.Domain.Models;
+using Thea.Domain.Models;
 using Thea.Orm;
 
-namespace PaymentCenter;
+namespace Thea;
 
 class ModelConfiguration : IModelConfiguration
 {
