@@ -90,7 +90,7 @@ class MySqlProvider : DbHelper
         reader.Close();
         connection.Close();
         return result;
-    }    
+    }
     public string MapMemberType(ColumnInfo columnInfo)
     {
         bool isUnsigned = columnInfo.ColumnType.Contains("unsigned");

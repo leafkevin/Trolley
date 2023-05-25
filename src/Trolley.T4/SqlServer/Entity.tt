@@ -36,7 +36,7 @@
 #>
 using System;
 
-namespace Thea.Services.Domain.Models;
+namespace Thea.Domain.Models;
 
 /// <summary>
 /// <#=tableInfo.Description#>
@@ -45,7 +45,7 @@ public class <#=className#>
 {
 <#foreach(ColumnInfo columnInfo in columnList){
 var propertyName = columnInfo.ColumnName;
-var propertyType = dbProvider.MapMemberType(columnInfo.DataType);
+var propertyType = dbProvider.MapMemberType(columnInfo);
 if(!String.IsNullOrEmpty(columnInfo.Description))
 {#>
     /// <summary>
