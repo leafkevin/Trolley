@@ -118,8 +118,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberMapper.MemberName)
             return new SetField { MemberMapper = memberMapper };
 
-        if (this.isParameterized)
-            sqlSegment.ParameterName = memberMapper.MemberName;
         var result = this.AddMemberElement(sqlSegment, memberMapper);
         if (this.dbParameters.Count > 0)
         {
@@ -189,12 +187,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         else this.whereSql = conditionSql;
         this.isWhere = false;
         return this;
-    }
-    public override SqlSegment VisitConstant(SqlSegment sqlSegment)
-    {
-        if (this.isParameterized || sqlSegment.IsParameterized)
-            return this.ToParameter(base.VisitConstant(sqlSegment));
-        return base.VisitConstant(sqlSegment);
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
@@ -487,7 +479,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         {
             if (sqlSegment.IsConstantValue)
             {
-                this.dbParameters ??= new();
+                if (this.dbParameters == null)
+                    this.dbParameters = new();
+                else this.dbParameters.Clear();
                 IDbDataParameter dbParameter = null;
                 var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
                 if (this.dbParameters.Exists(f => f.ParameterName == parameterName))
