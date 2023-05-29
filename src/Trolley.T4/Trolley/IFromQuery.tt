@@ -388,14 +388,14 @@ public interface IFromQuery<T>
 
     #region Where/And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，当表达式predicate为null时，将不生成Where条件
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate为null时，将不生成Where条件</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
-    IFromQuery<T> Where(Expression<Func<T, bool>> predicate = null);
+    IFromQuery<T> Where(Expression<Func<T, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
-    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
+    /// 表达式elsePredicate值可以为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
@@ -403,11 +403,11 @@ public interface IFromQuery<T>
     /// <returns>返回查询对象</returns>
     IFromQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，当表达式predicate为null时，将不生成追加的Where条件
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate为null时，将不生成Where条件</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
-    IFromQuery<T> And(Expression<Func<T, bool>> predicate = null);
+    IFromQuery<T> And(Expression<Func<T, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -730,11 +730,11 @@ public interface IFromQuery<<#=tables#>>
 
     #region Where/And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，当表达式predicate为null时，将不生成Where条件
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate为null时，将不生成Where条件</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
-    IFromQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate = null);
+    IFromQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -745,11 +745,11 @@ public interface IFromQuery<<#=tables#>>
     /// <returns>返回查询对象</returns>
     IFromQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，当表达式predicate为null时，将不生成追加的Where条件
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，当表达式predicate为null时，将不生成Where条件</param>
     /// <returns>返回查询对象</returns>
-    IFromQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate = null);
+    IFromQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -912,11 +912,11 @@ public interface IFromQuery<<#=tables#>>
 
     #region Where/And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate为null时，将不生成Where条件
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate为null时，将不生成Where条件</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
-    IFromQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate = null);
+    IFromQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -927,11 +927,11 @@ public interface IFromQuery<<#=tables#>>
     /// <returns>返回查询对象</returns>
     IFromQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate为null时，将不生成追加的Where条件
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate为null时，将不生成Where条件</param>
     /// <returns>返回查询对象</returns>
-    IFromQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate = null);
+    IFromQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件

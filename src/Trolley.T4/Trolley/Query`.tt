@@ -37,7 +37,7 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         this.withIndex = withIndex;
     }
 
-    #region WithCte
+    #region CTE NextWith/NextWithRecursive
     public IQuery<<#=tables#>, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
     {
         if (cteSubQuery == null)
@@ -182,23 +182,41 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     }
     #endregion
 
-    #region Where
-    public IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate = null)
+    #region Where/And
+    public IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
     {
-        if (predicate != null)
-            this.visitor.Where(predicate);
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null)
+    public IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
-        if (condition && predicate != null)
-            this.visitor.Where(predicate);
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
         return this;
     }
-    public IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null)
+    public IQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
     {
-        if (condition && predicate != null)
-            this.visitor.And(predicate);
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.visitor.And(predicate);
+        return this;
+    }
+    public IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    {
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -220,6 +238,15 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         this.visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
+    public IQuery<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        if (condition)
+            this.visitor.OrderBy("ASC", fieldsExpr);
+        return this;
+    }
     public IQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -228,8 +255,18 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
+    public IQuery<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        if (condition)
+            this.visitor.OrderBy("DESC", fieldsExpr);
+        return this;
+    }
     #endregion
 
+    #region Select 
     public IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
     {
     	if (fieldsExpr == null)
@@ -246,6 +283,7 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
+    #endregion
 
     public IQuery<<#=tables#>> Skip(int offset)
     {
@@ -257,11 +295,9 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         this.visitor.Take(limit);
         return this;
     }
-    public IQuery<<#=tables#>> ToChunk(int size)
-    {
-        throw new NotImplementedException();
-    }    
 
+    #region Aggregate
+    #region Count
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
     public async Task<int> CountAsync(CancellationToken cancellationToken = default)
         => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
@@ -325,6 +361,7 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
 
         return await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
     }
+    #endregion
 
     public TField Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
     {
@@ -382,10 +419,12 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
 
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
+    #endregion
 
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(out dbParameters, out _);
 
+    #region QueryFirstValue
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -436,6 +475,7 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         if (result is DBNull) return default;
         return (TTarget)result;
     }
+    #endregion
 }
 <#  }
     tables += $", T{count}";
@@ -455,7 +495,7 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         this.withIndex = withIndex;
     }
 
-    #region WithCte
+    #region CTE NextWith/NextWithRecursive
     public IQuery<<#=tables#>, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
     {
         if (cteSubQuery == null)
@@ -600,23 +640,41 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     }
     #endregion
 
-    #region Where
-    public IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate = null)
+    #region Where/And
+    public IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
     {
-        if (predicate != null) 
-            this.visitor.Where(predicate);
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null)
+    public IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
-        if (condition && predicate != null)
-            this.visitor.Where(predicate);
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
         return this;
     }
-    public IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null)
+    public IQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
     {
-        if (condition && predicate != null)
-            this.visitor.And(predicate);
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.visitor.And(predicate);
+        return this;
+    }
+    public IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    {
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -638,6 +696,15 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         this.visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
+    public IQuery<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        if (condition)
+            this.visitor.OrderBy("ASC", fieldsExpr);
+        return this;
+    }
     public IQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -646,8 +713,18 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
+    public IQuery<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        if (condition)
+            this.visitor.OrderBy("DESC", fieldsExpr);
+        return this;
+    }
     #endregion
 
+    #region Select
     public IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
     {
     	if (fieldsExpr == null)
@@ -664,6 +741,7 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
+    #endregion
 
     public IQuery<<#=tables#>> Skip(int offset)
     {
@@ -675,11 +753,9 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         this.visitor.Take(limit);
         return this;
     }
-    public IQuery<<#=tables#>> ToChunk(int size)
-    {
-        throw new NotImplementedException();
-    }
 
+    #region Aggregate
+    #region Count
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
     public async Task<int> CountAsync(CancellationToken cancellationToken = default)
         => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
@@ -743,6 +819,7 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
 
         return await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
     }
+    #endregion
 
     public TField Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
     {
@@ -800,10 +877,12 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
 
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
+    #endregion
 
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(out dbParameters, out _);
 
+    #region QueryFirstValue
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -854,6 +933,7 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         if (result is DBNull) return default;
         return (TTarget)result;
     }
+    #endregion
 }
 <#
     tables += $", T{count+1}";
@@ -918,23 +998,41 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
     }
     #endregion
 
-    #region Where
-    public IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate = null)
+    #region Where/And
+    public IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
     {
-        if (predicate != null) 
-            this.visitor.Where(predicate);
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null)
+    public IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
-        if (condition && predicate != null)
-            this.visitor.Where(predicate);
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
         return this;
     }
-    public IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> predicate = null)
+    public IQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
     {
-        if (condition && predicate != null)
-            this.visitor.And(predicate);
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.visitor.And(predicate);
+        return this;
+    }
+    public IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    {
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -956,6 +1054,15 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         this.visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
+    public IQuery<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        if (condition)
+            this.visitor.OrderBy("ASC", fieldsExpr);
+        return this;
+    }
     public IQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -964,8 +1071,18 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
+    public IQuery<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        if (condition)
+            this.visitor.OrderBy("DESC", fieldsExpr);
+        return this;
+    }
     #endregion
 
+    #region Select
     public IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
     {
     	if (fieldsExpr == null)
@@ -974,6 +1091,7 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
+    #endregion
 
     public IQuery<<#=tables#>> Skip(int offset)
     {
@@ -990,6 +1108,8 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         throw new NotImplementedException();
     }
 
+    #region Aggregate
+    #region Count
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
     public async Task<int> CountAsync(CancellationToken cancellationToken = default)
         => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
@@ -1053,6 +1173,7 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
 
         return await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
     }
+    #endregion
 
     public TField Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
     {
@@ -1110,10 +1231,12 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
 
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
+    #endregion
 
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(out dbParameters, out _);
 
+    #region QueryFirstValue
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -1164,4 +1287,5 @@ class Query<<#=tables#>> : IQuery<<#=tables#>>
         if (result is DBNull) return default;
         return (TTarget)result;
     }
+    #endregion
 }

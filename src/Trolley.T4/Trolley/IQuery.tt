@@ -425,11 +425,11 @@ public interface IQuery<T>
 
     #region Where/And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，当表达式predicate为null时，将不生成Where条件
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate为null时，将不生成Where条件</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> Where(Expression<Func<T, bool>> predicate = null);
+    IQuery<T> Where(Expression<Func<T, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -440,11 +440,11 @@ public interface IQuery<T>
     /// <returns>返回查询对象</returns>
     IQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，当表达式predicate为null时，将不生成追加的Where条件
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate为null时，将不生成Where条件</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> And(Expression<Func<T, bool>> predicate = null);
+    IQuery<T> And(Expression<Func<T, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -492,7 +492,7 @@ public interface IQuery<T>
     /// <returns>返回查询对象</returns>
     IQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition的布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b) => new { a.Id, b.Id }) 或是 OrderBy(true, x => x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -509,7 +509,7 @@ public interface IQuery<T>
     /// <returns>返回查询对象</returns>
     IQuery<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断condition的布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b) => new { a.Id, b.Id }) 或是 OrderByDescending(true, x => x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -578,6 +578,7 @@ public interface IQuery<T>
     IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr);
     #endregion
 
+    #region Aggregate
     #region Count
     /// <summary>
     /// 返回数据条数
@@ -732,7 +733,9 @@ public interface IQuery<T>
     /// <param name="cancellationToken"></param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    #endregion
 
+    #region First/ToList/ToPageList/ToDictionary
     /// <summary>
     /// 执行SQL查询，返回 T 实体所有字段的第一条记录，记录不存在时返回 T 类型的默认值
     /// </summary>
@@ -785,6 +788,7 @@ public interface IQuery<T>
     /// <param name="cancellationToken"></param>
     /// <returns>返回Dictionary&lt;TKey, TValue&gt;字典或没有任何元素的空Dictionary&lt;TKey, TValue&gt;字典</returns>
     Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull;
+    #endregion
 
     // <summary>
     /// 返回当前查询的SQL和参数列表
@@ -1133,11 +1137,11 @@ public interface IQuery<<#=tables#>>
 
     #region Where/And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，当表达式predicate为null时，将不生成Where条件
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate为null时，将不生成Where条件</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
-    IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate = null);
+    IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -1148,11 +1152,11 @@ public interface IQuery<<#=tables#>>
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，当表达式predicate为null时，将不生成追加的Where条件
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，当表达式predicate为null时，将不生成Where条件</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
-    IQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate = null);
+    IQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -1200,7 +1204,7 @@ public interface IQuery<<#=tables#>>
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断条件condition的值，当condition值为true时生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b) => new { a.Id, b.Id }) 或是 OrderBy(true, x => x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1217,7 +1221,7 @@ public interface IQuery<<#=tables#>>
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断条件condition的值，当condition值为true时生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b) => new { a.Id, b.Id }) 或是 OrderByDescending(true, x => x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1270,6 +1274,7 @@ public interface IQuery<<#=tables#>>
     IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, <#=tables#>, TTarget>> fieldsExpr);
     #endregion
 
+    #region Aggregate
     #region Count
     /// <summary>
     /// 返回数据条数
@@ -1431,6 +1436,7 @@ public interface IQuery<<#=tables#>>
     /// <param name="cancellationToken"></param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    #endregion
 
     /// <summary>
     /// 返回当前查询的SQL和参数列表
@@ -1493,11 +1499,11 @@ public interface IQuery<<#=tables#>>
 
     #region Where/And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，当表达式predicate为null时，将不生成Where条件
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate为null时，将不生成Where条件</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
-    IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate = null);
+    IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -1508,11 +1514,11 @@ public interface IQuery<<#=tables#>>
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，当表达式predicate为null时，将不生成追加的Where条件
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，当表达式predicate为null时，将不生成Where条件</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
-    IQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate = null);
+    IQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -1560,7 +1566,7 @@ public interface IQuery<<#=tables#>>
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断条件condition的值，当condition值为true时生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b) => new { a.Id, b.Id }) 或是 OrderBy(true, x => x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1577,7 +1583,7 @@ public interface IQuery<<#=tables#>>
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     /// <summary>
-    /// 判断条件condition的值，当condition值为true时生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b) => new { a.Id, b.Id }) 或是 OrderByDescending(true, x => x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
@@ -1600,6 +1606,7 @@ public interface IQuery<<#=tables#>>
     /// <returns>返回查询对象</returns>    
     IQuery<<#=tables#>> Take(int limit);
 
+    #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
     /// Select((<#=tableAlias#>) => new { f.Id, f.Name }) 或是 Select((<#=tableAlias#>) => x.CreatedAt.Date)
@@ -1607,8 +1614,10 @@ public interface IQuery<<#=tables#>>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
-    IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);    
+    IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);
+    #endregion
 
+    #region Aggregate
     #region Count
     /// <summary>
     /// 返回数据条数
@@ -1770,6 +1779,7 @@ public interface IQuery<<#=tables#>>
     /// <param name="cancellationToken"></param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    #endregion
 
     /// <summary>
     /// 返回当前查询的SQL和参数列表

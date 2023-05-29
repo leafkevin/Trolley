@@ -10,17 +10,47 @@ namespace Trolley;
 public static class OrmExtensions
 {
     public static TEntity QueryFirst<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate = null)
-        => repository.From<TEntity>().Where(predicate).First();
+    {
+        var query = repository.From<TEntity>();
+        if (predicate != null)
+            query.Where(predicate);
+        return query.First();
+    }
     public static async Task<TEntity> QueryFirstAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default)
-        => await repository.From<TEntity>().Where(predicate).FirstAsync(cancellationToken);
+    {
+        var query = repository.From<TEntity>();
+        if (predicate != null)
+            query.Where(predicate);
+        return await query.FirstAsync(cancellationToken);
+    }
     public static List<TEntity> Query<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate = null)
-        => repository.From<TEntity>().Where(predicate).ToList();
+    {
+        var query = repository.From<TEntity>();
+        if (predicate != null)
+            query.Where(predicate);
+        return query.ToList();
+    }
     public static async Task<List<TEntity>> QueryAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default)
-        => await repository.From<TEntity>().Where(predicate).ToListAsync(cancellationToken);
+    {
+        var query = repository.From<TEntity>();
+        if (predicate != null)
+            query.Where(predicate);
+        return await query.ToListAsync(cancellationToken);
+    }
     public static Dictionary<TKey, TValue> QueryDictionary<TEntity, TKey, TValue>(this IRepository repository, Expression<Func<TEntity, bool>> predicate, Func<TEntity, TKey> keySelector, Func<TEntity, TValue> valueSelector) where TKey : notnull
-        => repository.From<TEntity>().Where(predicate).ToDictionary(keySelector, valueSelector);
+    {
+        var query = repository.From<TEntity>();
+        if (predicate != null)
+            query.Where(predicate);
+        return query.ToDictionary(keySelector, valueSelector);
+    }
     public static async Task<Dictionary<TKey, TValue>> QueryDictionaryAsync<TEntity, TKey, TValue>(this IRepository repository, Expression<Func<TEntity, bool>> predicate, Func<TEntity, TKey> keySelector, Func<TEntity, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull
-        => await repository.From<TEntity>().Where(predicate).ToDictionaryAsync(keySelector, valueSelector, cancellationToken);
+    {
+        var query = repository.From<TEntity>();
+        if (predicate != null)
+            query.Where(predicate);
+        return await query.ToDictionaryAsync(keySelector, valueSelector, cancellationToken);
+    }
 
     public static int Create<TEntity>(this IRepository repository, object parameter)
         => repository.Create<TEntity>().WithBy(parameter).Execute();

@@ -35,7 +35,7 @@ class Query<T> : IQuery<T>
         this.withIndex = withIndex;
     }
 
-    #region Union
+    #region Union/UnionAll
     public IQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery)
     {
         if (subQuery == null)
@@ -65,7 +65,7 @@ class Query<T> : IQuery<T>
     }
     #endregion
 
-    #region WithCte
+    #region CTE NextWith/NextWithRecursive
     public IQuery<T, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
     {
         if (cteSubQuery == null)
@@ -188,23 +188,41 @@ class Query<T> : IQuery<T>
     }
     #endregion
 
-    #region Where
-    public IQuery<T> Where(Expression<Func<T, bool>> predicate = null)
+    #region Where/And
+    public IQuery<T> Where(Expression<Func<T, bool>> predicate)
     {
-        if (predicate != null)
-            this.visitor.Where(predicate);
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.visitor.Where(predicate);
         return this;
     }
-    public IQuery<T> Where(bool condition, Expression<Func<T, bool>> predicate = null)
+    public IQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
     {
-        if (condition && predicate != null)
-            this.visitor.Where(predicate);
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
         return this;
     }
-    public IQuery<T> And(bool condition, Expression<Func<T, bool>> predicate = null)
+    public IQuery<T> And(Expression<Func<T, bool>> predicate)
     {
-        if (condition && predicate != null)
-            this.visitor.And(predicate);
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.visitor.And(predicate);
+        return this;
+    }
+    public IQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+    {
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -218,20 +236,21 @@ class Query<T> : IQuery<T>
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T, TGrouping>(this.connection, this.transaction, this.visitor);
     }
-    public IQuery<T> OrderBy(string rawSql)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        this.visitor.OrderBy(rawSql);
-        return this;
-    }
     public IQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.OrderBy("ASC", fieldsExpr);
+        return this;
+    }
+    public IQuery<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        if (condition)
+            this.visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IQuery<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr)
@@ -242,8 +261,18 @@ class Query<T> : IQuery<T>
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
+    public IQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        if (condition)
+            this.visitor.OrderBy("DESC", fieldsExpr);
+        return this;
+    }
     #endregion
 
+    #region Select
     public IQuery<T> Select()
     {
         Expression<Func<T, T>> defaultExpr = f => f;
@@ -266,6 +295,8 @@ class Query<T> : IQuery<T>
         this.visitor.Select(null, fieldsExpr);
         return new Query<TTarget>(this.connection, this.transaction, this.visitor);
     }
+    #endregion
+
     public IQuery<T> Distinct()
     {
         this.visitor.Distinct();
@@ -286,11 +317,9 @@ class Query<T> : IQuery<T>
         this.visitor.Page(pageIndex, pageSize);
         return this;
     }
-    public IQuery<T> ToChunk(int size)
-    {
-        throw new NotImplementedException();
-    }
 
+    #region Aggregate
+    #region Count
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
     public async Task<int> CountAsync(CancellationToken cancellationToken = default)
         => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
@@ -353,6 +382,7 @@ class Query<T> : IQuery<T>
 
         return await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
     }
+    #endregion
 
     public TField Sum<TField>(Expression<Func<T, TField>> fieldExpr)
     {
@@ -410,7 +440,9 @@ class Query<T> : IQuery<T>
 
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
+    #endregion
 
+    #region First/ToList/ToPageList/ToDictionary
     public T First()
     {
         Expression<Func<T, T>> defaultExpr = f => f;
@@ -691,6 +723,8 @@ class Query<T> : IQuery<T>
         var list = await this.ToListAsync(cancellationToken);
         return list.ToDictionary(keySelector, valueSelector);
     }
+    #endregion
+
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
         Expression<Func<T, T>> defaultExpr = f => f;
@@ -698,6 +732,7 @@ class Query<T> : IQuery<T>
         return this.visitor.BuildSql(out dbParameters, out _);
     }
 
+    #region QueryFirstValue
     private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
@@ -746,4 +781,5 @@ class Query<T> : IQuery<T>
         await command.DisposeAsync();
         return result;
     }
+    #endregion
 }
