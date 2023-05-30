@@ -173,13 +173,11 @@ public class MySqlUnitTest3 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
-            .Set((a, b) => new
-            {
-                TotalAmount = a.From<OrderDetail>('b')
-                    .Where(f => f.OrderId == b.Id)
-                    .Select(t => Sql.Sum(t.Amount))
-            })
-            .Set(x => x.OrderNo, "ON_111")
+            .Set(x => x.TotalAmount, (a, b) => a.From<OrderDetail>('b')
+                .Where(f => f.OrderId == b.Id)
+                .Select(t => Sql.Sum(t.Amount))
+             )
+            .SetValue(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
@@ -190,10 +188,13 @@ public class MySqlUnitTest3 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
-            .Set(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('b')
+            .Set((x, y) => new
+            {
+                TotalAmount = x.From<OrderDetail>('b')
                 .Where(f => f.OrderId == y.Id)
-                .Select(t => Sql.Sum(t.Amount)))
-            .Set(x => x.OrderNo, "ON_111")
+                .Select(t => Sql.Sum(t.Amount))
+            })
+            .SetValue(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
@@ -205,7 +206,7 @@ public class MySqlUnitTest3 : UnitTestBase
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-            .Set(x => x.TotalAmount, 200.56)
+            .SetValue(x => x.TotalAmount, 200.56)
             .Set((a, b) => new
             {
                 OrderNo = a.OrderNo + "_111",
@@ -237,10 +238,12 @@ public class MySqlUnitTest3 : UnitTestBase
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-            .Set(f => f.TotalAmount, (x, y) => x
-                .From<OrderDetail>('c')
-                .Where(f => f.OrderId == y.Id)
-                .Select(t => Sql.Sum(t.Amount)))
+            .Set((x, y, z) => new
+            {
+                TotalAmount = x.From<OrderDetail>('c')
+                    .Where(f => f.OrderId == y.Id)
+                    .Select(t => Sql.Sum(t.Amount))
+            })
             .Set((a, b) => new { OrderNo = a.OrderNo + b.ProductId.ToString() })
             .Set((x, y) => new { BuyerId = DBNull.Value })
             .Where((a, b) => a.BuyerId == 1)
@@ -381,19 +384,19 @@ public class MySqlUnitTest3 : UnitTestBase
         var sql3 = repository.Update<User>()
             .WithBy(f => new { f.Age, user.Gender }, new { Id = 1, Age = 20 })
             .ToSql(out var parameters3);
-        Assert.True(sql3 == "UPDATE `sys_user` SET `Gender`=@Gender,`Age`=@Age WHERE `Id`=@kId");
-        Assert.True(parameters3[0].ParameterName == "@Gender");
-        Assert.True(parameters3[0].Value.GetType() == typeof(sbyte));
-        Assert.True((sbyte)parameters3[0].Value == (sbyte)Gender.Female);
+        Assert.True(sql3 == "UPDATE `sys_user` SET `Age`=@Age,`Gender`=@Gender WHERE `Id`=@kId");
+        Assert.True(parameters3[1].ParameterName == "@Gender");
+        Assert.True(parameters3[1].Value.GetType() == typeof(sbyte));
+        Assert.True((sbyte)parameters3[1].Value == (sbyte)Gender.Female);
 
         int age = 20;
         var sql7 = repository.Update<User>()
             .WithBy(f => new { f.Gender, Age = age }, new { Id = 1, Gender = Gender.Male })
             .ToSql(out var parameters7);
-        Assert.True(sql7 == "UPDATE `sys_user` SET `Age`=@Age,`Gender`=@Gender WHERE `Id`=@kId");
-        Assert.True(parameters7[1].ParameterName == "@Gender");
-        Assert.True(parameters7[1].Value.GetType() == typeof(sbyte));
-        Assert.True((sbyte)parameters7[1].Value == (sbyte)Gender.Male);
+        Assert.True(sql7 == "UPDATE `sys_user` SET `Gender`=@Gender,`Age`=@Age WHERE `Id`=@kId");
+        Assert.True(parameters7[0].ParameterName == "@Gender");
+        Assert.True(parameters7[0].Value.GetType() == typeof(sbyte));
+        Assert.True((sbyte)parameters7[0].Value == (sbyte)Gender.Male);
 
         var sql4 = repository.Update<Company>()
              .WithBy(new
@@ -434,25 +437,25 @@ public class MySqlUnitTest3 : UnitTestBase
         Assert.True(parameters8[0].Value.GetType() == typeof(string));
         Assert.True((string)parameters8[0].Value == CompanyNature.Internet.ToString());
 
+        //批量表达式部分栏位更新
+        //var sql9 = repository.Update<Company>()
+        // .WithBy(f => new { f.Name, company.Nature }, new[] { new { Id = 1, Name = "google" }, new { Id = 2, Name = "facebook" } })
+        // .ToSql(out var parameters9);
+        //Assert.True(sql9 == "UPDATE `sys_company` SET `Nature`=@Nature,`Name`=@Name0 WHERE `Id`=@kId0;UPDATE `sys_company` SET `Nature`=@Nature,`Name`=@Name1 WHERE `Id`=@kId1");
+        //Assert.True(parameters9[0].ParameterName == "@Nature");
+        //Assert.True(parameters9[0].Value.GetType() == typeof(string));
+        //Assert.True((string)parameters9[0].Value == CompanyNature.Internet.ToString());
 
-        var sql9 = repository.Update<Company>()
-         .WithBy(f => new { f.Name, company.Nature }, new[] { new { Id = 1, Name = "google" }, new { Id = 2, Name = "facebook" } })
-         .ToSql(out var parameters9);
-        Assert.True(sql9 == "UPDATE `sys_company` SET `Nature`=@Nature,`Name`=@Name0 WHERE `Id`=@kId0;UPDATE `sys_company` SET `Nature`=@Nature,`Name`=@Name1 WHERE `Id`=@kId1");
-        Assert.True(parameters9[0].ParameterName == "@Nature");
-        Assert.True(parameters9[0].Value.GetType() == typeof(string));
-        Assert.True((string)parameters9[0].Value == CompanyNature.Internet.ToString());
-
-        CompanyNature? nature = CompanyNature.Production;
-        var sql10 = repository.Update<Company>()
-            .WithBy(f => new { f.Nature, company.Name }, new[] { new { Id = 1, company.Nature }, new { Id = 2, Nature = nature } })
-            .ToSql(out var parameters10);
-        Assert.True(sql10 == "UPDATE `sys_company` SET `Name`=@Name,`Nature`=@Nature0 WHERE `Id`=@kId0;UPDATE `sys_company` SET `Name`=@Name,`Nature`=@Nature1 WHERE `Id`=@kId1");
-        Assert.True(parameters10[1].ParameterName == "@Nature0");
-        Assert.True(parameters10[1].Value.GetType() == typeof(string));
-        Assert.True((string)parameters10[1].Value == company.Nature.ToString());
-        Assert.True(parameters10[3].ParameterName == "@Nature1");
-        Assert.True(parameters10[3].Value.GetType() == typeof(string));
-        Assert.True((string)parameters10[3].Value == CompanyNature.Production.ToString());
+        //CompanyNature? nature = CompanyNature.Production;
+        //var sql10 = repository.Update<Company>()
+        //    .WithBy(f => new { f.Nature, company.Name }, new[] { new { Id = 1, company.Nature }, new { Id = 2, Nature = nature } })
+        //    .ToSql(out var parameters10);
+        //Assert.True(sql10 == "UPDATE `sys_company` SET `Name`=@Name,`Nature`=@Nature0 WHERE `Id`=@kId0;UPDATE `sys_company` SET `Name`=@Name,`Nature`=@Nature1 WHERE `Id`=@kId1");
+        //Assert.True(parameters10[1].ParameterName == "@Nature0");
+        //Assert.True(parameters10[1].Value.GetType() == typeof(string));
+        //Assert.True((string)parameters10[1].Value == company.Nature.ToString());
+        //Assert.True(parameters10[3].ParameterName == "@Nature1");
+        //Assert.True(parameters10[3].Value.GetType() == typeof(string));
+        //Assert.True((string)parameters10[3].Value == CompanyNature.Production.ToString());
     }
 }

@@ -6,10 +6,6 @@ namespace Trolley;
 
 public static class Sql
 {
-    public static T RawSql<T>(string rawSql)
-    {
-        throw new NotImplementedException();
-    }
     /// <summary>
     /// Select语句从数据库执行后，进行方法调用并把返回值赋值到对应的字段上，只做实体赋值解析，不实现
     /// </summary>

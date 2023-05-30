@@ -94,6 +94,13 @@ public interface ICreate<TEntity>
     /// <param name="fieldSelector">插入的字段赋值表达式</param>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector);
+    /// <summary>
+    /// 从<paramref>T1</paramref>、<paramref>T2</paramref>表查询数据，并插入当前表中,用法：
+    /// </summary>
+    /// <typeparam name="T1">实体类型，数据来源表</typeparam>
+    /// <typeparam name="T2">实体类型，数据来源表</typeparam>
+    /// <param name="fieldSelector">插入的字段赋值表达式</param>
+    /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity, T1, T2> From<T1, T2>(Expression<Func<T1, T2, object>> fieldSelector);
     IContinuedCreate<TEntity, T1, T2, T3> From<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> fieldSelector);
     IContinuedCreate<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, object>> fieldSelector);

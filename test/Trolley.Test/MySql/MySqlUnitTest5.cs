@@ -83,13 +83,5 @@ public class MySqlUnitTest5
             .Where(p => p.Age == 27)
             .ToSql(out _);
         Assert.True(sql == "DELETE FROM `Person` WHERE (`Age` = @0)");
-
-
-        repository.From<Person>()
-            .Where(x => x.Age > 40)
-            .OrderBy(x => x.Id)
-            .GroupBy(f => f.LastName)
-            .Select((x, f) => x.GroupConcat(f.Age.ToString() + "-" + f.FirstName, ","))
-            .ToSql(out _);
     }
 }

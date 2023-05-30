@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Trolley;
+﻿namespace Trolley;
 
 /// <summary>
 /// 聚合查询，如：Count,Sum,Avg,Max,Min等
@@ -26,12 +24,12 @@ public interface IAggregateSelect
     /// <param name="field">字段名称</param>
     /// <param name="separator">连接符</param>
     /// <returns>返回连接后的字符串表达式</returns>
-    string GroupConcat<TField>(TField field, string separator = ",");
+    //string GroupConcat<TField>(TField field, string separator = ",");
     /// <summary>
     /// 
     /// </summary>
     /// <typeparam name="TTable"></typeparam>
     /// <param name="table"></param>
     /// <returns></returns>
-    List<TTable> GroupInto<TTable>(TTable table);
+    //List<TTable> GroupInto<TTable>(TTable table);
 }

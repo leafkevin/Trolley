@@ -188,7 +188,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
         Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(b.[Amount]) FROM [sys_order_detail] b WHERE b.[OrderId]=[sys_order].[Id]),[OrderNo]=([sys_order].[OrderNo]+'_111'),[BuyerId]=NULL WHERE [sys_order].[BuyerId]=1");
-    }   
+    }
     [Fact]
     public void Update_Set_FromQuery_One()
     {
@@ -200,7 +200,7 @@ public class SqlServerUnitTest3 : UnitTestBase
                     .Where(f => f.OrderId == b.Id)
                     .Select(t => Sql.Sum(t.Amount))
             })
-            .Set(x => x.OrderNo, "ON_111")
+            .SetValue(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
@@ -229,7 +229,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             .Set(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('b')
                 .Where(f => f.OrderId == y.Id)
                 .Select(t => Sql.Sum(t.Amount)))
-            .Set(x => x.OrderNo, "ON_111")
+            .SetValue(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
@@ -241,7 +241,7 @@ public class SqlServerUnitTest3 : UnitTestBase
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
             .From<OrderDetail>()
-            .Set(x => x.TotalAmount, 200.56)
+            .SetValue(x => x.TotalAmount, 200.56)
             .Set((a, b) => new
             {
                 OrderNo = a.OrderNo + "_111",
@@ -302,7 +302,7 @@ public class SqlServerUnitTest3 : UnitTestBase
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
         var result = repository.Update<Order>()
-            .Set(f => f.Products, new List<int> { 1, 2, 3 })
+            .SetValue(f => f.Products, new List<int> { 1, 2, 3 })
             .Where(x => x.Id == 1)
             .Execute();
         var order = repository.Get<Order>(1);

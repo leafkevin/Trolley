@@ -65,26 +65,26 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
         this.setSql = builder.ToString();
         return this;
     }
-    public override IUpdateVisitor SetFromQuery(Expression fieldsExpr, Expression valueExpr = null)
-    {
-        var lambdaExpr = fieldsExpr as LambdaExpression;
-        var entityMapper = this.tables[0].Mapper;
-        var builder = new StringBuilder();
-        if (!string.IsNullOrEmpty(this.setSql))
-        {
-            builder.Append(this.setSql);
-            builder.Append(',');
-        }
-        var setFields = this.SetFromQuery(entityMapper, lambdaExpr, valueExpr);
-        if (setFields != null && setFields.Count > 0)
-        {
-            for (int i = 0; i < setFields.Count; i++)
-            {
-                if (i > 0) builder.Append(',');
-                builder.Append($"{OrmProvider.GetFieldName(setFields[i].MemberMapper.FieldName)}={setFields[i].Value}");
-            }
-        }
-        this.setSql = builder.ToString();
-        return this;
-    }
+    //public override IUpdateVisitor SetFromQuery(Expression fieldsExpr, Expression valueExpr = null)
+    //{
+    //    var lambdaExpr = fieldsExpr as LambdaExpression;
+    //    var entityMapper = this.tables[0].Mapper;
+    //    var builder = new StringBuilder();
+    //    if (!string.IsNullOrEmpty(this.setSql))
+    //    {
+    //        builder.Append(this.setSql);
+    //        builder.Append(',');
+    //    }
+    //    var setFields = this.SetFromQuery(entityMapper, lambdaExpr, valueExpr);
+    //    if (setFields != null && setFields.Count > 0)
+    //    {
+    //        for (int i = 0; i < setFields.Count; i++)
+    //        {
+    //            if (i > 0) builder.Append(',');
+    //            builder.Append($"{OrmProvider.GetFieldName(setFields[i].MemberMapper.FieldName)}={setFields[i].Value}");
+    //        }
+    //    }
+    //    this.setSql = builder.ToString();
+    //    return this;
+    //}
 }
