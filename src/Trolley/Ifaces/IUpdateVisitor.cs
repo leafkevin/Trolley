@@ -16,7 +16,7 @@ public interface IUpdateVisitor
     IUpdateVisitor From(params Type[] entityTypes);
     IUpdateVisitor Join(string joinType, Type entityType, Expression joinOn);
     IUpdateVisitor Set(Expression fieldsExpr);
-    IUpdateVisitor Set(Expression fieldsExpr, object fieldValue);
+    IUpdateVisitor SetValue(Expression fieldsExpr, object fieldValue);
     string WithBy(Expression fieldsExpr, object parameters, out List<IDbDataParameter> dbParameters);
     IUpdateVisitor Where(Expression whereExpr);
     IUpdateVisitor And(Expression whereExpr);

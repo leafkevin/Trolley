@@ -151,7 +151,7 @@ class Update<TEntity> : IUpdate<TEntity>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
-        return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor.Set(fieldExpr, fieldValueExpr));
+        return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor.SetValue(fieldExpr, fieldValueExpr));
     }
     public IUpdateSetting<TEntity> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr)
     {
@@ -163,7 +163,7 @@ class Update<TEntity> : IUpdate<TEntity>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
-        if (condition) visitor.Set(fieldExpr, fieldValueExpr);
+        if (condition) visitor.SetValue(fieldExpr, fieldValueExpr);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
     public IUpdateSetting<TEntity> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -176,7 +176,7 @@ class Update<TEntity> : IUpdate<TEntity>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
-        return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor.Set(fieldExpr, fieldValue));
+        return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor.SetValue(fieldExpr, fieldValue));
     }
     public IUpdateSetting<TEntity> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
@@ -188,7 +188,7 @@ class Update<TEntity> : IUpdate<TEntity>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
-        if (condition) visitor.Set(fieldExpr, fieldValue);
+        if (condition) visitor.SetValue(fieldExpr, fieldValue);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
 
@@ -866,7 +866,7 @@ class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        return new UpdateSetting<TEntity>(this.connection, this.transaction, this.visitor.Set(fieldExpr, fieldValueExpr));
+        return new UpdateSetting<TEntity>(this.connection, this.transaction, this.visitor.SetValue(fieldExpr, fieldValueExpr));
     }
     public IUpdateSetting<TEntity> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr)
     {
@@ -877,7 +877,7 @@ class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        if (condition) this.visitor.Set(fieldExpr, fieldValueExpr);
+        if (condition) this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, this.visitor);
     }
     public IUpdateSetting<TEntity> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -889,7 +889,7 @@ class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        return new UpdateSetting<TEntity>(this.connection, this.transaction, this.visitor.Set(fieldExpr, fieldValue));
+        return new UpdateSetting<TEntity>(this.connection, this.transaction, this.visitor.SetValue(fieldExpr, fieldValue));
     }
     public IUpdateSetting<TEntity> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
     {
@@ -900,7 +900,7 @@ class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        if (condition) this.visitor.Set(fieldExpr, fieldValue);
+        if (condition) this.visitor.SetValue(fieldExpr, fieldValue);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, this.visitor);
     }
 
@@ -999,7 +999,7 @@ class UpdateFrom<TEntity, T1> : UpdateBase, IUpdateFrom<TEntity, T1>
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValueExpr);
+        this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateFrom<TEntity, T1> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr)
@@ -1012,7 +1012,7 @@ class UpdateFrom<TEntity, T1> : UpdateBase, IUpdateFrom<TEntity, T1>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValueExpr);
+            this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateFrom<TEntity, T1> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1024,7 +1024,7 @@ class UpdateFrom<TEntity, T1> : UpdateBase, IUpdateFrom<TEntity, T1>
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValue);
+        this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
     public IUpdateFrom<TEntity, T1> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1037,7 +1037,7 @@ class UpdateFrom<TEntity, T1> : UpdateBase, IUpdateFrom<TEntity, T1>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValue);
+            this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
 
@@ -1153,7 +1153,7 @@ class UpdateJoin<TEntity, T1> : UpdateBase, IUpdateJoin<TEntity, T1>
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValueExpr);
+        this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateJoin<TEntity, T1> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr)
@@ -1166,7 +1166,7 @@ class UpdateJoin<TEntity, T1> : UpdateBase, IUpdateJoin<TEntity, T1>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValueExpr);
+            this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateJoin<TEntity, T1> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1178,7 +1178,7 @@ class UpdateJoin<TEntity, T1> : UpdateBase, IUpdateJoin<TEntity, T1>
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValue);
+        this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
     public IUpdateJoin<TEntity, T1> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1191,7 +1191,7 @@ class UpdateJoin<TEntity, T1> : UpdateBase, IUpdateJoin<TEntity, T1>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValue);
+            this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
 
@@ -1290,7 +1290,7 @@ class UpdateFrom<TEntity, T1, T2> : UpdateBase, IUpdateFrom<TEntity, T1, T2>
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValueExpr);
+        this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr)
@@ -1303,7 +1303,7 @@ class UpdateFrom<TEntity, T1, T2> : UpdateBase, IUpdateFrom<TEntity, T1, T2>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValueExpr);
+            this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1315,7 +1315,7 @@ class UpdateFrom<TEntity, T1, T2> : UpdateBase, IUpdateFrom<TEntity, T1, T2>
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValue);
+        this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1328,7 +1328,7 @@ class UpdateFrom<TEntity, T1, T2> : UpdateBase, IUpdateFrom<TEntity, T1, T2>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValue);
+            this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
 
@@ -1444,7 +1444,7 @@ class UpdateJoin<TEntity, T1, T2> : UpdateBase, IUpdateJoin<TEntity, T1, T2>
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValueExpr);
+        this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr)
@@ -1457,7 +1457,7 @@ class UpdateJoin<TEntity, T1, T2> : UpdateBase, IUpdateJoin<TEntity, T1, T2>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValueExpr);
+            this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1469,7 +1469,7 @@ class UpdateJoin<TEntity, T1, T2> : UpdateBase, IUpdateJoin<TEntity, T1, T2>
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValue);
+        this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1482,7 +1482,7 @@ class UpdateJoin<TEntity, T1, T2> : UpdateBase, IUpdateJoin<TEntity, T1, T2>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValue);
+            this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
 
@@ -1581,7 +1581,7 @@ class UpdateFrom<TEntity, T1, T2, T3> : UpdateBase, IUpdateFrom<TEntity, T1, T2,
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValueExpr);
+        this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2, T3> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr)
@@ -1594,7 +1594,7 @@ class UpdateFrom<TEntity, T1, T2, T3> : UpdateBase, IUpdateFrom<TEntity, T1, T2,
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValueExpr);
+            this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2, T3> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1606,7 +1606,7 @@ class UpdateFrom<TEntity, T1, T2, T3> : UpdateBase, IUpdateFrom<TEntity, T1, T2,
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValue);
+        this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2, T3> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1619,7 +1619,7 @@ class UpdateFrom<TEntity, T1, T2, T3> : UpdateBase, IUpdateFrom<TEntity, T1, T2,
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValue);
+            this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
 
@@ -1735,7 +1735,7 @@ class UpdateJoin<TEntity, T1, T2, T3> : UpdateBase, IUpdateJoin<TEntity, T1, T2,
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValueExpr);
+        this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2, T3> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr)
@@ -1748,7 +1748,7 @@ class UpdateJoin<TEntity, T1, T2, T3> : UpdateBase, IUpdateJoin<TEntity, T1, T2,
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValueExpr);
+            this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2, T3> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1760,7 +1760,7 @@ class UpdateJoin<TEntity, T1, T2, T3> : UpdateBase, IUpdateJoin<TEntity, T1, T2,
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValue);
+        this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2, T3> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1773,7 +1773,7 @@ class UpdateJoin<TEntity, T1, T2, T3> : UpdateBase, IUpdateJoin<TEntity, T1, T2,
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValue);
+            this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
 
@@ -1872,7 +1872,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateFrom<TEntity, T1,
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValueExpr);
+        this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2, T3, T4> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr)
@@ -1885,7 +1885,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateFrom<TEntity, T1,
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValueExpr);
+            this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2, T3, T4> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1897,7 +1897,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateFrom<TEntity, T1,
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValue);
+        this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2, T3, T4> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -1910,7 +1910,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateFrom<TEntity, T1,
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValue);
+            this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
 
@@ -2026,7 +2026,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateJoin<TEntity, T1,
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValueExpr);
+        this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2, T3, T4> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr)
@@ -2039,7 +2039,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateJoin<TEntity, T1,
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValueExpr);
+            this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2, T3, T4> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -2051,7 +2051,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateJoin<TEntity, T1,
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValue);
+        this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2, T3, T4> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -2064,7 +2064,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateJoin<TEntity, T1,
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValue);
+            this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
 
@@ -2163,7 +2163,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateFrom<TEntity,
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValueExpr);
+        this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr)
@@ -2176,7 +2176,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateFrom<TEntity,
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValueExpr);
+            this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -2188,7 +2188,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateFrom<TEntity,
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValue);
+        this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -2201,7 +2201,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateFrom<TEntity,
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValue);
+            this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
 
@@ -2300,7 +2300,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateJoin<TEntity,
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValueExpr);
+        this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr)
@@ -2313,7 +2313,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateJoin<TEntity,
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValueExpr);
+            this.visitor.SetValue(fieldExpr, fieldValueExpr);
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -2325,7 +2325,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateJoin<TEntity,
         if (fieldExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
-        this.visitor.Set(fieldExpr, fieldValue);
+        this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue)
@@ -2338,7 +2338,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateJoin<TEntity,
             throw new NotSupportedException($"不支持的表达式{nameof(fieldExpr)},只支持MemberAccess类型表达式");
 
         if (condition)
-            this.visitor.Set(fieldExpr, fieldValue);
+            this.visitor.SetValue(fieldExpr, fieldValue);
         return this;
     }
 

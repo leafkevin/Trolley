@@ -171,7 +171,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.setSql = builder.ToString();
         return this;
     }
-    public virtual IUpdateVisitor Set(Expression fieldsExpr, object fieldValue)
+    public virtual IUpdateVisitor SetValue(Expression fieldsExpr, object fieldValue)
     {
         var lambdaExpr = fieldsExpr as LambdaExpression;
         var entityMapper = this.tables[0].Mapper;
@@ -189,7 +189,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             if (fromQueryExpr.Body.GetParameters(out var argumentParameters)
                 && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
             {
-                var newLambdaExpr = Expression.Lambda(fromQueryExpr.Body, lambdaExpr.Parameters.ToList());
+                this.InitTableAlias(fromQueryExpr);
+                var newLambdaExpr = Expression.Lambda(fromQueryExpr.Body, fromQueryExpr.Parameters.ToList());
                 var sql = this.VisitFromQuery(newLambdaExpr, out var isNeedAlias);
                 if (isNeedAlias) this.IsNeedAlias = true;
                 setField = new SetField { MemberMapper = memberMapper, Value = $"({sql})" };
@@ -464,54 +465,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
         //把方法返回值当作常量处理
         return sqlSegment.Change(objValue, true, false, false);
-    }
-    protected virtual List<SetField> Set(EntityMap entityMapper, LambdaExpression lambdaExpr, object fieldValue = null)
-    {
-        var setFields = new List<SetField>();
-        switch (lambdaExpr.Body.NodeType)
-        {
-            //单个字段设置
-            case ExpressionType.MemberAccess:
-                var memberExpr = lambdaExpr.Body as MemberExpression;
-                var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
-                setFields.Add(this.AddMemberElement(memberMapper, fieldValue));
-                break;
-            case ExpressionType.New:
-                this.InitTableAlias(lambdaExpr);
-                var newExpr = lambdaExpr.Body as NewExpression;
-                for (int i = 0; i < newExpr.Arguments.Count; i++)
-                {
-                    var memberInfo = newExpr.Members[i];
-                    if (!entityMapper.TryGetMemberMap(memberInfo.Name, out memberMapper))
-                        continue;
-
-                    var argumentExpr = newExpr.Arguments[i];
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
-                    //只一个成员访问，没有设置语句，什么也不做，忽略
-                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberInfo.Name)
-                        continue;
-                    setFields.Add(this.AddMemberElement(sqlSegment, memberMapper));
-                }
-                break;
-            case ExpressionType.MemberInit:
-                this.InitTableAlias(lambdaExpr);
-                var memberInitExpr = lambdaExpr.Body as MemberInitExpression;
-                for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
-                {
-                    var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                    if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out memberMapper))
-                        continue;
-
-                    var argumentExpr = memberAssignment.Expression;
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
-                    //只一个成员访问，没有设置语句，什么也不做，忽略
-                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
-                        continue;
-                    setFields.Add(this.AddMemberElement(sqlSegment, memberMapper));
-                }
-                break;
-        }
-        return setFields;
     }
     protected void InitTableAlias(LambdaExpression lambdaExpr)
     {

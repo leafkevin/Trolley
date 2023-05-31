@@ -1156,6 +1156,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 sqlSegment = this.VisitAndDeferred(sqlSegment);
                 //使用GetQuotedValue方法把常量都变成对应的字符串格式
                 //String和DateTime类型变成'...'数据,数字类型变成数字字符串
+                //DeferredFields场景
                 if (sqlSegment.Value is ReaderField methodCallField)
                 {
                     //函数调用，参数引用多个字段
