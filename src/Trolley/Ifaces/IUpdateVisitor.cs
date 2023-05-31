@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
+using System.Text;
 
 namespace Trolley;
 
@@ -18,6 +19,7 @@ public interface IUpdateVisitor
     IUpdateVisitor Set(Expression fieldsExpr);
     IUpdateVisitor SetValue(Expression fieldsExpr, object fieldValue);
     string WithBy(Expression fieldsExpr, object parameters, out List<IDbDataParameter> dbParameters);
+    List<IDbDataParameter> WithBulkBy(Expression fieldsExpr, StringBuilder builder, object parameters, int index, out List<IDbDataParameter> fixedDbParameters);
     IUpdateVisitor Where(Expression whereExpr);
     IUpdateVisitor And(Expression whereExpr);
 }

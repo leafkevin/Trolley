@@ -1,9 +1,14 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Reflection.Metadata;
 using System.Text;
 
 namespace Trolley;
@@ -15,6 +20,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     protected bool isJoin = false;
     protected string whereSql = string.Empty;
     protected string setSql = string.Empty;
+    protected bool isFirst = true;
+    protected List<SetField> setFields = null;
+    protected List<IDbDataParameter> fixedDbParameters = null;
 
     public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix)
@@ -206,18 +214,17 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public virtual string WithBy(Expression fieldsExpr, object parameters, out List<IDbDataParameter> dbParameters)
     {
         //暂时不支持批量
+        var parameterType = parameters.GetType();
         var lambdaExpr = fieldsExpr as LambdaExpression;
         var entityMapper = this.tables[0].Mapper;
-        var parameterType = parameters.GetType();
         var setFields = new List<SetField>();
-        this.dbParameters ??= new();
         switch (lambdaExpr.Body.NodeType)
         {
             case ExpressionType.MemberAccess:
                 {
                     var memberExpr = lambdaExpr.Body as MemberExpression;
                     var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
-                    var fieldValue = this.EvaluateAndCache(memberMapper, parameterType, parameters);
+                    var fieldValue = this.EvaluateAndCache(this.OrmProvider, memberMapper, parameterType, parameters);
                     setFields.Add(this.AddMemberElement(memberMapper, fieldValue));
                 }
                 break;
@@ -234,10 +241,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
                     if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberMapper.MemberName)
                     {
-                        var fieldValue = this.EvaluateAndCache(memberMapper, parameterType, parameters);
+                        var fieldValue = this.EvaluateAndCache(this.OrmProvider, memberMapper, parameterType, parameters);
                         setFields.Add(this.AddMemberElement(memberMapper, fieldValue));
                     }
-                    //有变量会产生参数
                     else setFields.Add(this.AddMemberElement(sqlSegment, memberMapper));
                 }
                 break;
@@ -254,21 +260,23 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
                     if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberMapper.MemberName)
                     {
-                        var fieldValue = this.EvaluateAndCache(memberMapper, parameterType, parameters);
+                        var fieldValue = this.EvaluateAndCache(this.OrmProvider, memberMapper, parameterType, parameters);
                         setFields.Add(this.AddMemberElement(memberMapper, fieldValue));
                     }
-                    //有变量会产生参数
                     else setFields.Add(this.AddMemberElement(sqlSegment, memberMapper));
                 }
                 break;
         }
-        var builder = new StringBuilder($"UPDATE {this.OrmProvider.GetTableName(entityMapper.TableName)} SET ");
+
+        var builder = new StringBuilder();
+        builder.Append($"UPDATE {this.OrmProvider.GetTableName(entityMapper.TableName)} SET ");
         if (setFields != null && setFields.Count > 0)
         {
             for (int i = 0; i < setFields.Count; i++)
             {
+                var setField = setFields[i];
                 if (i > 0) builder.Append(',');
-                builder.Append($"{this.OrmProvider.GetFieldName(setFields[i].MemberMapper.FieldName)}={setFields[i].Value}");
+                builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={setField.Value}");
             }
         }
         if (entityMapper.KeyMembers == null || entityMapper.KeyMembers.Count == 0)
@@ -281,7 +289,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             if (i > 0) builder.Append(" AND ");
             var parameterName = $"{this.OrmProvider.ParameterPrefix}k{keyMember.MemberName}";
             builder.Append($"{this.OrmProvider.GetFieldName(keyMember.FieldName)}={parameterName}");
-            var keyValue = this.EvaluateAndCache(keyMember, parameterType, parameters);
+            var keyValue = this.EvaluateAndCache(this.OrmProvider, keyMember, parameterType, parameters);
             if (keyMember.NativeDbType != null)
                 this.dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, keyMember.NativeDbType, keyValue));
             else this.dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, keyValue));
@@ -289,6 +297,95 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var sql = builder.ToString();
         dbParameters = this.dbParameters;
         return sql;
+    }
+    public virtual List<IDbDataParameter> WithBulkBy(Expression fieldsExpr, StringBuilder builder, object parameters, int index, out List<IDbDataParameter> fixedDbParameters)
+    {
+        var lambdaExpr = fieldsExpr as LambdaExpression;
+        var entityMapper = this.tables[0].Mapper;
+        Type parameterType = null;
+        if (this.isFirst)
+        {
+            parameterType = parameters.GetType();
+            this.dbParameters ??= new();
+            this.setFields = new List<SetField>();
+            this.fixedDbParameters = new List<IDbDataParameter>();
+            switch (lambdaExpr.Body.NodeType)
+            {
+                case ExpressionType.MemberAccess:
+                    {
+                        var memberExpr = lambdaExpr.Body as MemberExpression;
+                        var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
+                        setFields.Add(new SetField { MemberMapper = memberMapper });
+                    }
+                    break;
+                case ExpressionType.New:
+                    this.InitTableAlias(lambdaExpr);
+                    var newExpr = lambdaExpr.Body as NewExpression;
+                    for (int i = 0; i < newExpr.Arguments.Count; i++)
+                    {
+                        var memberInfo = newExpr.Members[i];
+                        if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
+                            continue;
+
+                        var argumentExpr = newExpr.Arguments[i];
+                        var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
+                        if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberMapper.MemberName)
+                            setFields.Add(new SetField { MemberMapper = memberMapper });
+                        //有变量会产生参数
+                        else setFields.Add(this.AddMemberElement(sqlSegment, memberMapper, this.fixedDbParameters));
+                    }
+                    break;
+                case ExpressionType.MemberInit:
+                    this.InitTableAlias(lambdaExpr);
+                    var memberInitExpr = lambdaExpr.Body as MemberInitExpression;
+                    for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
+                    {
+                        var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
+                        if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
+                            continue;
+
+                        var argumentExpr = memberAssignment.Expression;
+                        var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
+                        if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberMapper.MemberName)
+                            setFields.Add(new SetField { MemberMapper = memberMapper });
+                        //有变量会产生参数
+                        else setFields.Add(this.AddMemberElement(sqlSegment, memberMapper, this.fixedDbParameters));
+                    }
+                    break;
+            }
+            this.isFirst = false;
+        }
+        else this.dbParameters.Clear();
+        builder.Append($"UPDATE {this.OrmProvider.GetTableName(entityMapper.TableName)} SET ");
+        for (int i = 0; i < setFields.Count; i++)
+        {
+            var setField = setFields[i];
+            string parameterName = null;
+            if (string.IsNullOrEmpty(setField.Value))
+            {
+                var fieldValue = this.EvaluateAndCache(this.OrmProvider, setField.MemberMapper, parameterType, parameters);
+                parameterName = this.OrmProvider.ParameterPrefix + setField.MemberMapper.MemberName + index.ToString();
+                var dbParameter = this.CreateParameter(setField.MemberMapper, parameterName, fieldValue);
+                this.dbParameters.Add(dbParameter);
+            }
+            else parameterName = setField.Value + index.ToString();
+            if (i > 0) builder.Append(',');
+            builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={parameterName}");
+        }
+        builder.Append(" WHERE ");
+        for (int i = 0; i < entityMapper.KeyMembers.Count; i++)
+        {
+            var keyMember = entityMapper.KeyMembers[i];
+            if (i > 0) builder.Append(" AND ");
+            var parameterName = $"{this.OrmProvider.ParameterPrefix}k{keyMember.MemberName}{index}";
+            builder.Append($"{this.OrmProvider.GetFieldName(keyMember.FieldName)}={parameterName}");
+            var keyValue = this.EvaluateAndCache(this.OrmProvider, keyMember, parameterType, parameters);
+            if (keyMember.NativeDbType != null)
+                this.dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, keyMember.NativeDbType, keyValue));
+            else this.dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, keyValue));
+        }
+        fixedDbParameters = this.fixedDbParameters;
+        return this.dbParameters;
     }
     public virtual IUpdateVisitor Where(Expression whereExpr)
     {
@@ -411,9 +508,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         //Select(f=>new {OrderId=this.Order.Id, ...}
         sqlSegment = this.Evaluate(sqlSegment);
 
-        //只有WithBy场景在此参数化，暂时不做参数化，当作常量处理，方便后面走参数化处理
+        //只有WithBy场景会走此参数化
         this.ConvertTo(sqlSegment);
-        //变量当作常量处理
         sqlSegment.IsConstantValue = true;
         sqlSegment.IsExpression = false;
         sqlSegment.IsMethodCall = false;
@@ -529,30 +625,13 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             if (sqlSegment.IsConstantValue)
             {
                 this.dbParameters ??= new();
-                IDbDataParameter dbParameter = null;
                 var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
                 if (this.dbParameters.Exists(f => f.ParameterName == parameterName))
                     parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
 
                 if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
                     sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
-
-                if (memberMapper.TypeHandler != null)
-                {
-                    if (memberMapper.NativeDbType != null)
-                        dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
-                    else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
-                    memberMapper.TypeHandler.SetValue(this.OrmProvider, dbParameter, sqlSegment.Value);
-                }
-                else
-                {
-                    if (memberMapper.NativeDbType != null)
-                    {
-                        sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.Value, memberMapper.NativeDbType);
-                        dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
-                    }
-                    else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
-                }
+                var dbParameter = this.CreateParameter(memberMapper, parameterName, sqlSegment.Value);
                 this.dbParameters.Add(dbParameter);
                 sqlSegment.Value = parameterName;
                 sqlSegment.IsParameter = true;
@@ -562,111 +641,70 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             return new SetField { MemberMapper = memberMapper, Value = sqlSegment.ToString() };
         }
     }
-    protected object EvaluateAndCache(MemberMap memberMapper, Type type, object parameters)
+    protected SetField AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper, List<IDbDataParameter> dbParameters)
+    {
+        if (sqlSegment == SqlSegment.Null)
+            return new SetField { MemberMapper = memberMapper, Value = "NULL" };
+        else
+        {
+            if (sqlSegment.IsConstantValue)
+            {
+                var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
+                if (dbParameters.Exists(f => f.ParameterName == parameterName))
+                    parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + dbParameters.Count.ToString();
+
+                if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
+                    sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
+
+                var dbParameter = this.CreateParameter(memberMapper, parameterName, sqlSegment.Value);
+                dbParameters.Add(dbParameter);
+                sqlSegment.Value = parameterName;
+                sqlSegment.IsParameter = true;
+                sqlSegment.IsConstantValue = false;
+                return new SetField { MemberMapper = memberMapper, Value = sqlSegment.Value.ToString() };
+            }
+            return new SetField { MemberMapper = memberMapper, Value = sqlSegment.ToString() };
+        }
+    }
+    protected IDbDataParameter CreateParameter(MemberMap memberMapper, string parameterName, object fieldValue)
+    {
+        IDbDataParameter dbParameter = null;
+        if (memberMapper.TypeHandler != null)
+        {
+            if (memberMapper.NativeDbType != null)
+                dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
+            else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
+            memberMapper.TypeHandler.SetValue(this.OrmProvider, dbParameter, fieldValue);
+        }
+        else
+        {
+            if (memberMapper.NativeDbType != null)
+            {
+                var parameters = this.OrmProvider.ToFieldValue(fieldValue, memberMapper.NativeDbType);
+                dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, parameters);
+            }
+            else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
+        }
+        return dbParameter;
+    }
+    protected object EvaluateAndCache(IOrmProvider ormProvider, MemberMap memberMapper, Type type, object parameters)
     {
         var cacheKey = HashCode.Combine(type, memberMapper.MemberName);
         if (!getterCache.TryGetValue(cacheKey, out var getter))
         {
             var objExpr = Expression.Parameter(typeof(object), "obj");
-            var valueExpr = Expression.PropertyOrField(Expression.Convert(objExpr, type), memberMapper.MemberName);
+            Expression valueExpr = Expression.PropertyOrField(Expression.Convert(objExpr, type), memberMapper.MemberName);
+            if (memberMapper.NativeDbType != null)
+            {
+                var ormProviderExpr = Expression.Constant(ormProvider);
+                var methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.ToFieldValue));
+                var fieldValueExpr = Expression.Convert(valueExpr, typeof(object));
+                var nativeDbTypeExpr = Expression.Constant(memberMapper.NativeDbType, typeof(object));
+                valueExpr = Expression.Call(ormProviderExpr, methodInfo, fieldValueExpr, nativeDbTypeExpr);
+            }
             getter = Expression.Lambda<Func<object, object>>(Expression.Convert(valueExpr, typeof(object)), objExpr).Compile();
             getterCache.TryAdd(cacheKey, getter);
         }
         return getter.Invoke(parameters);
     }
-    //protected void AddMemberElements(Type entityType, object parameters, List<MemberMap> memberMappers)
-    //{
-    //    var parameterType = parameters.GetType();
-    //    var returnType = typeof(List<IDbDataParameter>);
-    //    var cacheKey = HashCode.Combine(entityType, parameterType);
-    //    if (!parametersInitializerCache.TryGetValue(cacheKey, out var parametersInitializerDelegate))
-    //    {
-    //        var objExpr = Expression.Parameter(typeof(object), "obj");
-    //        var dbParametersExpr = Expression.Parameter(returnType, "dbParameters");
-    //        var memberMappersExpr = Expression.Parameter(typeof(List<MemberMap>), "memberMappers");
-    //        var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-    //        var parametersExpr = Expression.Variable(parameterType, "parameters");
-
-    //        var blockParameters = new List<ParameterExpression>();
-    //        var blockBodies = new List<Expression>();
-    //        blockParameters.Add(parametersExpr);
-    //        blockBodies.Add(Expression.Assign(parametersExpr, Expression.Convert(objExpr, parameterType)));
-
-    //        var indexExpr = Expression.Variable(typeof(int), "index");
-    //        var countExpr = Expression.Variable(typeof(int), "count");
-
-    //        blockBodies.Add(Expression.Assign(countExpr, Expression.Property(memberMappersExpr, "Count")));
-    //        blockBodies.Add(Expression.Assign(indexExpr, Expression.Constant(0)));
-
-    //        var readBreakLabel = Expression.Label();
-    //        var ifTrueExpr = Expression.GreaterThanOrEqual(indexExpr, countExpr);
-    //        var breakExpr = Expression.IfThen(ifTrueExpr, Expression.Break(readBreakLabel));
-
-    //        var parameterValueExpr = Expression.Variable(typeof(object), "parameterValue");
-    //        blockParameters.Add(parameterValueExpr);
-    //        var dbParameterExpr = Expression.Variable(typeof(IDbDataParameter), "dbParameter");
-    //        blockParameters.Add(dbParameterExpr);
-
-    //        var itemPropertyInfo = typeof(List<MemberMap>).GetProperty("Item", typeof(MemberMap), new Type[] { typeof(int) });
-    //        var memberMapperExpr = Expression.MakeIndex(memberMappersExpr, itemPropertyInfo, new[] { indexExpr });
-    //        //var memberNameExpr = Expression.PropertyOrField(memberMapperExpr, "MemberName");    
-    //        var memberExpr = Expression.Call(parametersExpr, typeof(MemberMap).GetProperty("MemberName").GetGetMethod());
-    //        var assignMemberExpr = Expression.Assign(parameterValueExpr, Expression.Convert(memberExpr, typeof(object)));
-
-    //        var methodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
-    //        var parameterPrefixExpr = Expression.Call(ormProviderExpr, typeof(IOrmProvider).GetProperty("ParameterPrefix").GetGetMethod());
-    //        var memberNameExpr = Expression.Call(memberMapperExpr, typeof(MemberMap).GetProperty("MemberName").GetGetMethod());
-    //        var parameterNameExpr = Expression.Call(methodInfo, parameterPrefixExpr, memberNameExpr);
-
-    //        var typeHandlerExpr = Expression.Call(memberMapperExpr, typeof(MemberMap).GetProperty("TypeHandler").GetGetMethod());
-    //        var nativeDbTypeExpr = Expression.Call(memberMapperExpr, typeof(MemberMap).GetProperty("NativeDbType").GetGetMethod());
-    //        var isNullTypeHandlerExpr = Expression.Equal(typeHandlerExpr, Expression.Constant(null));
-    //        var isNullNativeDbTypeExpr = Expression.Equal(nativeDbTypeExpr, Expression.Constant(null));
-
-    //        //typeHandler!=null
-    //        methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object) });
-    //        var dbParameter1Expr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, parameterValueExpr);
-    //        var dbParameter1AssignExpr = Expression.Assign(dbParameterExpr, dbParameter1Expr);
-
-    //        methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });
-    //        var dbParameter2Expr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, parameterValueExpr);
-    //        var dbParameter2AssignExpr = Expression.Assign(dbParameterExpr, dbParameter2Expr);
-
-    //        methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.SetValue));
-    //        var typeHandlerBody = Expression.Block(Expression.IfThenElse(isNullNativeDbTypeExpr, dbParameter1AssignExpr, dbParameter2AssignExpr),
-    //            Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, dbParameterExpr, parameterValueExpr));
-
-    //        //typeHandler == null
-    //        methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object) });
-    //        //dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
-    //        var dbParameter3Expr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, parameterValueExpr);
-    //        var dbParameter3AssignExpr = Expression.Assign(dbParameterExpr, dbParameter3Expr);
-
-    //        //fieldValue = ormProvider.ToFieldValue(fieldValue, nativeDbType);
-    //        methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.ToFieldValue));
-    //        var nativeDbTypeValueExpr = Expression.Call(ormProviderExpr, methodInfo, parameterValueExpr, nativeDbTypeExpr);
-    //        methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });
-    //        //dbParameter = this.OrmProvider.CreateParameter(parameterName, nativeDbType, fieldValue);
-    //        var dbParameter4Expr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, nativeDbTypeValueExpr);
-    //        var dbParameter4AssignExpr = Expression.Assign(dbParameterExpr, dbParameter4Expr);
-
-    //        var typeHandlerNullBody = Expression.IfThenElse(isNullNativeDbTypeExpr, dbParameter3AssignExpr, dbParameter4AssignExpr);
-    //        var setDbParameterExpr = Expression.IfThenElse(isNullTypeHandlerExpr, typeHandlerNullBody, typeHandlerBody);
-
-    //        methodInfo = typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod();
-    //        var nullExpr = Expression.Convert(Expression.Constant(DBNull.Value), typeof(object));
-    //        var setNullDbParameterExpr = Expression.Call(dbParameterExpr, methodInfo, nullExpr);
-
-    //        var isNullExpr = Expression.Equal(parameterValueExpr, Expression.Constant(null));
-    //        var setParameterExpr = Expression.IfThenElse(isNullExpr, setNullDbParameterExpr, setDbParameterExpr);
-    //        var indexIncrement = Expression.AddAssign(indexExpr, Expression.Constant(1));
-    //        blockBodies.Add(Expression.Loop(Expression.Block(breakExpr, assignMemberExpr, setParameterExpr, indexIncrement), readBreakLabel));
-
-    //        parametersInitializerDelegate = Expression.Lambda<Action<object, List<IDbDataParameter>, IOrmProvider, List<MemberMap>>>(
-    //            Expression.Block(blockParameters, blockBodies), objExpr, dbParametersExpr, ormProviderExpr, memberMappersExpr).Compile();
-    //        parametersInitializerCache.TryAdd(cacheKey, parametersInitializerDelegate);
-    //    }
-    //    var parametersInitializer = parametersInitializerDelegate as Action<object, List<IDbDataParameter>, IOrmProvider, List<MemberMap>>;
-    //    parametersInitializer.Invoke(parameters, this.dbParameters, this.OrmProvider, memberMappers);
-    //}
 }

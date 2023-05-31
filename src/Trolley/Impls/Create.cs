@@ -479,6 +479,7 @@ class Created<TEntity> : ICreated<TEntity>
                     command.CommandType = CommandType.Text;
                     this.connection.Open();
                     result += command.ExecuteNonQuery();
+                    command.Parameters.Clear();
                     sqlBuilder.Clear();
                     index = 0;
                     continue;
@@ -569,6 +570,7 @@ class Created<TEntity> : ICreated<TEntity>
                     command.CommandType = CommandType.Text;
                     await this.connection.OpenAsync(cancellationToken);
                     result += await command.ExecuteNonQueryAsync(cancellationToken);
+                    command.Parameters.Clear();
                     sqlBuilder.Clear();
                     index = 0;
                     continue;
