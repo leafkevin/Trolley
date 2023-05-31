@@ -302,10 +302,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         var lambdaExpr = fieldsExpr as LambdaExpression;
         var entityMapper = this.tables[0].Mapper;
-        Type parameterType = null;
+        var parameterType = parameters.GetType(); ;
         if (this.isFirst)
         {
-            parameterType = parameters.GetType();
             this.dbParameters ??= new();
             this.setFields = new List<SetField>();
             this.fixedDbParameters = new List<IDbDataParameter>();
@@ -368,7 +367,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 var dbParameter = this.CreateParameter(setField.MemberMapper, parameterName, fieldValue);
                 this.dbParameters.Add(dbParameter);
             }
-            else parameterName = setField.Value + index.ToString();
+            else parameterName = setField.Value;
             if (i > 0) builder.Append(',');
             builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={parameterName}");
         }

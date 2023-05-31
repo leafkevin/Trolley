@@ -521,26 +521,38 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
             }
             var sqlBuilder = new StringBuilder();
             if (this.fieldsExpr != null) dbParameters = new();
+            List<IDbDataParameter> fixedDbParameters = null;
             foreach (var entity in entities)
             {
                 if (index > 0) sqlBuilder.Append(';');
                 if (this.fieldsExpr != null)
                 {
-                    visitor.WithBulkBy(fieldsExpr, sqlBuilder, entity, index, out var dbDataParameters);
+                    var dbDataParameters = visitor.WithBulkBy(fieldsExpr, sqlBuilder, entity, index, out fixedDbParameters);
                     if (dbDataParameters != null && dbDataParameters.Count > 0)
                         dbParameters.AddRange(dbDataParameters);
                 }
                 else commandInitializer.Invoke(command, this.ormProvider, sqlBuilder, index, entity);
 
                 if (index >= this.bulkCount)
+                {
+                    sql = sqlBuilder.ToString();
+                    if (fixedDbParameters != null && fixedDbParameters.Count > 0)
+                        dbParameters.AddRange(fixedDbParameters);
+                    if (command.Parameters != null && command.Parameters.Count > 0)
+                        dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+                    index = 0;
                     break;
+                }
                 index++;
             }
             if (index > 0)
+            {
                 sql = sqlBuilder.ToString();
-
-            if (this.fieldsExpr == null && command.Parameters != null && command.Parameters.Count > 0)
-                dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+                if (fixedDbParameters != null && fixedDbParameters.Count > 0)
+                    dbParameters.AddRange(fixedDbParameters);
+                if (command.Parameters != null && command.Parameters.Count > 0)
+                    dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+            }
             command.Dispose();
             return sql;
         }

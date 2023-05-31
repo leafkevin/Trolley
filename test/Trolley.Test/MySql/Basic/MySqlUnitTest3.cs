@@ -85,7 +85,7 @@ public class MySqlUnitTest3 : UnitTestBase
         var orderDetails = await repository.From<OrderDetail>().ToListAsync();
         var parameters = orderDetails.Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 1, Amount = f.Amount + 50 }).ToList();
         repository.BeginTransaction();
-        var result = repository.Update<OrderDetail>(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters);
+        var result = repository.UpdateBulk<OrderDetail>(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters);
         var updatedDetails = await repository.QueryAsync<OrderDetail>();
         repository.Commit();
 
@@ -125,7 +125,7 @@ public class MySqlUnitTest3 : UnitTestBase
             .Where(f => new int[] { 1, 2, 3, 4, 5, 6 }.Contains(f.Id))
             .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
             .ToListAsync();
-        var sql = repository.Update<OrderDetail>().WithBy(parameters).ToSql(out _);
+        var sql = repository.Update<OrderDetail>().WithBulkBy(parameters).ToSql(out _);
         Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price5,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5");
     }
     [Fact]
@@ -137,9 +137,9 @@ public class MySqlUnitTest3 : UnitTestBase
             .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
             .ToListAsync();
         var sql = repository.Update<OrderDetail>()
-            .WithBy(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters)
+            .WithBulkBy(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5");
+        Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity0,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount0,`ProductId`=NULL WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity1,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount1,`ProductId`=NULL WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity2,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount2,`ProductId`=NULL WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity3,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount3,`ProductId`=NULL WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity4,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount4,`ProductId`=NULL WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity5,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount5,`ProductId`=NULL WHERE `Id`=@kId5");
     }
     [Fact]
     public async void Update_Parameters_WithBy()
@@ -148,7 +148,7 @@ public class MySqlUnitTest3 : UnitTestBase
         var orders = await repository.From<Order>()
             .Where(f => new int[] { 1, 2, 3 }.Contains(f.Id))
             .ToListAsync();
-        var sql = repository.Update<Order>().WithBy(f => new { BuyerId = DBNull.Value, OrderNo = "ON_" + f.OrderNo, f.TotalAmount }, orders).ToSql(out _);
+        var sql = repository.Update<Order>().WithBulkBy(f => new { BuyerId = DBNull.Value, OrderNo = "ON_" + f.OrderNo, f.TotalAmount }, orders).ToSql(out _);
         Assert.True(sql == "UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount0 WHERE `Id`=@kId0;UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount1 WHERE `Id`=@kId1;UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount2 WHERE `Id`=@kId2");
     }
     [Fact]
@@ -441,22 +441,25 @@ public class MySqlUnitTest3 : UnitTestBase
         var sql9 = repository.Update<Company>()
             .WithBulkBy(f => new { f.Name, company.Nature }, new[] { new { Id = 1, Name = "google" }, new { Id = 2, Name = "facebook" } })
             .ToSql(out var parameters9);
-        Assert.True(sql9 == "UPDATE `sys_company` SET `Name`=@Name0,`Nature`=@Nature0 WHERE `Id`=@kId0;UPDATE `sys_company` SET `Name`=@Name1,`Nature`=@Nature1 WHERE `Id`=@kId1");
-        Assert.True(parameters9[3].ParameterName == "@Nature");
-        Assert.True(parameters9[3].Value.GetType() == typeof(string));
-        Assert.True((string)parameters9[0].Value == CompanyNature.Internet.ToString());
+        Assert.True(sql9 == "UPDATE `sys_company` SET `Name`=@Name0,`Nature`=@Nature WHERE `Id`=@kId0;UPDATE `sys_company` SET `Name`=@Name1,`Nature`=@Nature WHERE `Id`=@kId1");
+        Assert.True(parameters9[parameters9.Count - 1].ParameterName == "@Nature");
+        Assert.True(parameters9[parameters9.Count - 1].Value.GetType() == typeof(string));
+        Assert.True((string)parameters9[parameters9.Count - 1].Value == CompanyNature.Internet.ToString());
 
         CompanyNature? nature = CompanyNature.Production;
         var sql10 = repository.Update<Company>()
-            .WithBy(f => new { f.Nature, company.Name }, new[] { new { Id = 1, company.Nature }, new { Id = 2, Nature = nature } })
+            .WithBulkBy(f => new { f.Nature, company.Name }, new[] { new { Id = 1, company.Nature }, new { Id = 2, Nature = nature } })
             .ToSql(out var parameters10);
-        Assert.True(sql10 == "UPDATE `sys_company` SET `Name`=@Name,`Nature`=@Nature0 WHERE `Id`=@kId0;UPDATE `sys_company` SET `Name`=@Name,`Nature`=@Nature1 WHERE `Id`=@kId1");
-        Assert.True(parameters10[1].ParameterName == "@Nature0");
-        Assert.True(parameters10[1].Value.GetType() == typeof(string));
-        Assert.True((string)parameters10[1].Value == company.Nature.ToString());
-        Assert.True(parameters10[3].ParameterName == "@Nature1");
-        Assert.True(parameters10[3].Value.GetType() == typeof(string));
-        Assert.True((string)parameters10[3].Value == CompanyNature.Production.ToString());
+        Assert.True(sql10 == "UPDATE `sys_company` SET `Nature`=@Nature0,`Name`=@Name WHERE `Id`=@kId0;UPDATE `sys_company` SET `Nature`=@Nature1,`Name`=@Name WHERE `Id`=@kId1");
+        Assert.True(parameters10[0].ParameterName == "@Nature0");
+        Assert.True(parameters10[0].Value.GetType() == typeof(string));
+        Assert.True((string)parameters10[0].Value == company.Nature.ToString());
+        Assert.True(parameters10[2].ParameterName == "@Nature1");
+        Assert.True(parameters10[2].Value.GetType() == typeof(string));
+        Assert.True((string)parameters10[2].Value == CompanyNature.Production.ToString());
+        Assert.True(parameters10[parameters10.Count - 1].ParameterName == "@Name");
+        Assert.True(parameters10[parameters10.Count - 1].Value.GetType() == typeof(string));
+        Assert.True((string)parameters10[parameters10.Count - 1].Value == company.Name);
     }
     [Fact]
     public void Update_Set_MethodCall()
