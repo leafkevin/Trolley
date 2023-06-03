@@ -8,6 +8,7 @@ namespace Trolley;
 
 public class EntityMap
 {
+    private bool isBuild = false;
     private readonly ConcurrentDictionary<string, MemberMap> memberMaps = new();
     private List<MemberMap> memberMappers = new();
 
@@ -72,8 +73,9 @@ public class EntityMap
         if (this.memberMaps.TryAdd(memberName, mapper))
             this.memberMappers.Add(mapper);
     }
-    public void Build(IOrmProvider ormProvider, ITypeHandlerProvider typeHandlerProvider)
+    public void Build(IOrmProvider ormProvider)
     {
+        if (this.isBuild) return;
         if (string.IsNullOrEmpty(this.TableName))
             this.TableName = this.EntityType.Name;
 
@@ -125,6 +127,7 @@ public class EntityMap
                 }
             }
         }
+        this.isBuild = true;
     }
     public static EntityMap CreateDefaultMap(Type entityType)
     {

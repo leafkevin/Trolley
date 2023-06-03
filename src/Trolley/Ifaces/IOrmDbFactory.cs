@@ -22,6 +22,7 @@ public interface IOrmDbFactory
     void AddTypeHandler(ITypeHandler typeHandler);
     bool TryGetTypeHandler(Type handlerType, out ITypeHandler typeHandler);
     void Configure(Type ormProviderType, IModelConfiguration configuration);
+    void Build(Type ormProviderType);
     TheaDatabaseProvider GetDatabaseProvider(string dbKey = null);
     IRepository Create(string dbKey = null, int? tenantId = null);
 }

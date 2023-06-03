@@ -60,7 +60,7 @@ public class OrmDbFactoryBuilder
             }
             foreach (var entityMapper in mapProvider.EntityMaps)
             {
-                entityMapper.Build(ormProvider, this.dbFactory.TypeHandlerProvider);
+                entityMapper.Build(ormProvider );
             }
         }
         return this.dbFactory;

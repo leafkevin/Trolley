@@ -111,4 +111,13 @@ class OrmDbFactory : IOrmDbFactory
         return new Repository(connection, ormProvider, entityMapProvider).With(this.options);
     }
     public void With(OrmDbFactoryOptions options) => this.options = options;
+    public void Build(Type ormProviderType)
+    {
+        if (!this.TryGetOrmProvider(ormProviderType, out var ormProvider))
+            throw new Exception($"未注册类型为{ormProviderType.FullName}的OrmProvider");
+        if (!this.TryGetEntityMapProvider(ormProviderType, out var mapProvider))
+            throw new Exception($"请调用IOrmDbFactory.Configure(Type ormProviderType, IModelConfiguration configuration)后，再Build实体映射");
+        foreach (var entityMapper in mapProvider.EntityMaps)
+            entityMapper.Build(ormProvider);
+    }
 }
