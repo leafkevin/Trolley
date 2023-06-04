@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Text;
@@ -229,8 +230,18 @@ partial class SqlServerProvider
                             var separatorSegment = visitor.VisitAndDeferred(args[0]);
                             var valuesSegment = visitor.VisitAndDeferred(args[1]);
 
+                            var builder = new StringBuilder();
                             if (separatorSegment.IsConstantValue && valuesSegment.IsConstantValue)
-                                return valuesSegment.Change(string.Join(separatorSegment.ToString(), valuesSegment.Value as List<SqlSegment>));
+                            {
+                                var enumerable = valuesSegment.Value as IEnumerable;
+                                foreach (var item in enumerable)
+                                {
+                                    if (builder.Length > 0)
+                                        builder.Append(separatorSegment.ToString());
+                                    builder.Append(this.GetQuotedValue(item));
+                                }
+                                return valuesSegment.Change(builder.ToString(), true, false, false);
+                            }
 
                             string separatorAugment = null;
                             if (separatorSegment.IsConstantValue)
@@ -238,7 +249,6 @@ partial class SqlServerProvider
                             else separatorAugment = separatorSegment.ToString();
 
                             var sqlSegments = valuesSegment.Value as List<SqlSegment>;
-                            var builder = new StringBuilder();
                             var constBuilder = new StringBuilder();
                             foreach (var sqlSegment in sqlSegments)
                             {
@@ -295,8 +305,22 @@ partial class SqlServerProvider
                             var index = visitor.Evaluate<int>(args[2].Expression);
                             var length = visitor.Evaluate<int>(args[3].Expression);
 
+                            var builder = new StringBuilder();
                             if (separatorSegment.IsConstantValue && valuesSegment.IsConstantValue)
-                                return valuesSegment.Change(string.Join(separatorSegment.ToString(), valuesSegment.Value as List<SqlSegment>, index, length));
+                            {
+                                var enumerable = valuesSegment.Value as IEnumerable;
+                                int i = 0;
+                                foreach (var item in enumerable)
+                                {
+                                    if (i < index) continue;
+                                    if (i >= index + length) break;
+                                    if (builder.Length > 0)
+                                        builder.Append(separatorSegment.ToString());
+                                    builder.Append(this.GetQuotedValue(item));
+                                    i++;
+                                }
+                                return valuesSegment.Change(builder.ToString(), true, false, false);
+                            }
 
                             string separatorAugment = null;
                             if (separatorSegment.IsConstantValue)
@@ -304,7 +328,7 @@ partial class SqlServerProvider
                             else separatorAugment = separatorSegment.ToString();
 
                             var sqlSegments = valuesSegment.Value as List<SqlSegment>;
-                            var builder = new StringBuilder();
+
                             var constBuilder = new StringBuilder();
                             int count = Math.Min(sqlSegments.Count, index + length);
                             for (int i = index; i < count; i++)

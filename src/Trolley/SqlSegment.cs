@@ -75,6 +75,10 @@ public class SqlSegment
     public TableSegment TableSegment { get; set; }
     public ReaderFieldType MemberType { get; set; }
     public MemberInfo FromMember { get; set; }
+    /// <summary>
+    /// 当前是成员访问时，才有值，和FromMember是同一个栏位，是Mapper
+    /// </summary>
+    public MemberMap MemberMapper { get; set; }
     public object Value { get; set; }
     public Expression Expression { get; set; }
     public Expression OriginalExpression { get; set; }

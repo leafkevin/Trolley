@@ -30,6 +30,10 @@ public class ReaderField
     /// </summary>
     public MemberInfo FromMember { get; set; }
     /// <summary>
+    /// 当前是成员访问时，才有值，和FromMember是同一个栏位，是Mapper
+    /// </summary>
+    public MemberMap MemberMapper { get; set; }
+    /// <summary>
     /// 最外层返回实体要设置的成员
     /// </summary>
     public MemberInfo TargetMember { get; set; }

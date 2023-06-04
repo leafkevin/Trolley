@@ -781,8 +781,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                                 }
                                 //类似Json的实体类型字段
                                 var fieldName = this.GetFieldName(fromSegment, memberMapper.FieldName);
-                                var memberInfo = memberMapper.Member;
-
                                 if (this.isSelect || this.isWhere)
                                     fromSegment.IsUsed = true;
 
@@ -790,7 +788,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                                 sqlSegment.IsConstantValue = false;
                                 sqlSegment.TableSegment = fromSegment;
                                 sqlSegment.MemberType = ReaderFieldType.Field;
-                                sqlSegment.FromMember = memberInfo;
+                                sqlSegment.FromMember = memberMapper.Member;
+                                sqlSegment.MemberMapper = memberMapper;
                                 sqlSegment.Value = fieldName;
                                 return sqlSegment;
                             }
@@ -817,6 +816,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
                     string fieldName = null;
                     MemberInfo memberInfo = null;
+                    MemberMap memberMapper = null;
                     var rootTableSegment = this.tableAlias[parameterName];
 
                     if (rootTableSegment.TableType == TableType.FromQuery)
@@ -836,7 +836,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             throw new Exception($"使用导航属性前，要先使用Include方法包含进来，访问路径:{path}");
 
                         tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
-                        var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
+                        memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
 
                         if (memberMapper.IsIgnore)
                             throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
@@ -862,6 +862,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     sqlSegment.TableSegment = tableSegment;
                     sqlSegment.MemberType = ReaderFieldType.Field;
                     sqlSegment.FromMember = memberInfo;
+                    sqlSegment.MemberMapper = memberMapper;
                     sqlSegment.Value = fieldName;
                     return sqlSegment;
                 }

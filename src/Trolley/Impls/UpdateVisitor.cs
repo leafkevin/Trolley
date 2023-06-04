@@ -483,6 +483,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 sqlSegment.IsConstantValue = false;
                 sqlSegment.TableSegment = tableSegment;
                 sqlSegment.FromMember = memberMapper.Member;
+                sqlSegment.MemberMapper = memberMapper;
                 sqlSegment.Value = fieldName;
                 return sqlSegment;
             }
