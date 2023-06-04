@@ -303,6 +303,7 @@ public static class Extensions
         var parent = root;
         var readerBuilders = new Dictionary<int, EntityBuildInfo>();
         var deferredBuilds = new Stack<EntityBuildInfo>();
+        ITypeHandler typeHandler = null;
 
         while (readerIndex < readerFields.Count)
         {
@@ -310,12 +311,15 @@ public static class Extensions
             if (readerField.FieldType == ReaderFieldType.Field)
             {
                 var fieldType = reader.GetFieldType(index);
-                ITypeHandler typeHandler = null;
                 if (readerField.IsOnlyField && readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.Entity)
                 {
-                    var entityMapper = readerField.TableSegment.Mapper;
-                    if (entityMapper.TryGetMemberMap(readerField.FromMember.Name, out var memberMapper))
-                        typeHandler = memberMapper.TypeHandler;
+                    if (readerField.MemberMapper == null)
+                    {
+                        var entityMapper = readerField.TableSegment.Mapper;
+                        if (entityMapper.TryGetMemberMap(readerField.FromMember.Name, out var memberMapper))
+                            typeHandler = memberMapper.TypeHandler;
+                    }
+                    else typeHandler = readerField.MemberMapper.TypeHandler;
                 }
                 var readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
                     readerField.TargetMember.GetMemberType(), fieldType, typeHandler, blockParameters, blockBodies);
@@ -349,6 +353,7 @@ public static class Extensions
 
                     EntityMap entityMapper = null;
                     MemberMap memberMapper = null;
+                    ReaderField childReaderField = null;
                     switch (readerField.FieldType)
                     {
                         case ReaderFieldType.AnonymousObject:
@@ -357,13 +362,20 @@ public static class Extensions
                                 fieldMember.GetMemberType(), fieldType, null, blockParameters, blockBodies);
                             break;
                         case ReaderFieldType.DeferredFields:
+                            //延迟的方法调用，有字段值作为方法参数就读取，没有什么也不做
                             if (readerField.ReaderFields != null)
                             {
-                                entityMapper = readerField.ReaderFields[childIndex].TableSegment.Mapper;
-                                if (!entityMapper.TryGetMemberMap(fieldMember.Name, out memberMapper))
-                                    break;
+                                childReaderField = readerField.ReaderFields[childIndex]; 
+                                if (childReaderField.MemberMapper == null)
+                                {
+                                    entityMapper = childReaderField.TableSegment.Mapper;
+                                    if (entityMapper.TryGetMemberMap(childReaderField.FromMember.Name, out memberMapper))
+                                        typeHandler = memberMapper.TypeHandler;
+                                }
+                                else typeHandler = childReaderField.MemberMapper.TypeHandler;
+
                                 readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                                    memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
+                                    memberMapper.MemberType, fieldType, typeHandler, blockParameters, blockBodies);
                                 var parameters = readerField.DeferCallMethod.GetParameters();
                                 var argsIndex = readerField.ReaderFields[childIndex].Index;
                                 if (memberMapper.MemberType != parameters[argsIndex].ParameterType)
@@ -372,12 +384,17 @@ public static class Extensions
                             }
                             break;
                         case ReaderFieldType.Entity:
-                            entityMapper = readerField.TableSegment.Mapper;
-                            fieldMember = readerField.ReaderFields[childIndex].FromMember;
-                            if (!entityMapper.TryGetMemberMap(fieldMember.Name, out memberMapper))
-                                break;
+                            childReaderField = readerField.ReaderFields[childIndex];
+                            fieldMember = childReaderField.FromMember;
+                            if (childReaderField.MemberMapper == null)
+                            {
+                                entityMapper = childReaderField.TableSegment.Mapper;
+                                if (entityMapper.TryGetMemberMap(childReaderField.FromMember.Name, out memberMapper))
+                                    typeHandler = memberMapper.TypeHandler;
+                            }
+                            else typeHandler = childReaderField.MemberMapper.TypeHandler;
                             readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                                memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
+                                memberMapper.MemberType, fieldType, typeHandler, blockParameters, blockBodies);
                             break;
                     }
                     if (readerField.FieldType != ReaderFieldType.DeferredFields)
