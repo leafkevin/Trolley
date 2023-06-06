@@ -32,4 +32,5 @@ public interface ISqlVisitor
     List<ReaderField> AddTableRecursiveReaderFields(int readerIndex, TableSegment fromSegment);
     SqlSegment ToParameter(SqlSegment sqlSegment);
     string VisitFromQuery(LambdaExpression lambdaExpr, out bool isNeedAlias);
+    string GetQuotedValue(object fieldValue, bool? isVariable = null, int? index = null);
 }

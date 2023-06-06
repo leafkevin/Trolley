@@ -505,7 +505,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
         //只有WithBy场景会走此参数化
         this.ConvertTo(sqlSegment);
-        sqlSegment.IsConstantValue = true;
+        sqlSegment.IsConstantValue = false;
+        sqlSegment.IsVariable = true;
         sqlSegment.IsExpression = false;
         sqlSegment.IsMethodCall = false;
         return sqlSegment;
