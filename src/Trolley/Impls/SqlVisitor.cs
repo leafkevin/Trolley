@@ -1186,93 +1186,93 @@ public class SqlVisitor : ISqlVisitor
         }
         return sqlSegment;
     }
-    //public string GetQuotedValue(MemberMap memberMapper, object fieldValue, int? suffix, string parameterName)
-    //{
-    //    if (fieldValue is DBNull || fieldValue == null)
-    //        return "NULL";
-
-    //    if (this.isParameterized)
-    //    {
-    //        this.dbParameters ??= new();
-    //        IDbDataParameter dbParameter = null;
-    //        if (string.IsNullOrEmpty(parameterName))
-    //            parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-    //        if (this.dbParameters.Exists(f => f.ParameterName == parameterName))
-    //            parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
-
-    //        if (memberMapper.TypeHandler != null)
-    //        {
-    //            if (memberMapper.NativeDbType != null)
-    //                dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
-    //            else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
-    //            memberMapper.TypeHandler.SetValue(this.OrmProvider, dbParameter, fieldValue);
-    //        }
-    //        else
-    //        {
-    //            if (memberMapper.NativeDbType != null)
-    //            {
-    //                fieldValue = this.OrmProvider.ToFieldValue(fieldValue, memberMapper.NativeDbType);
-    //                dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
-    //            }
-    //            else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
-    //        }
-    //        this.dbParameters.Add(dbParameter);
-    //        return parameterName;
-    //    }
-    //    fieldValue = this.OrmProvider.GetQuotedValue(   fieldValue );
-    //    return new SetField { MemberMapper = memberMapper, Value = parameterName };
-}
-public List<ReaderField> FlattenFieldsTo(Type targetType, Expression toTargetExpr = null)
-{
-    List<ReaderField> targetFields = null;
-    if (targetType == null)
-        throw new ArgumentNullException(nameof(targetType));
-
-    //通过表达式设置的字段
-    if (toTargetExpr != null)
-        targetFields = this.ConstructorFieldsTo(toTargetExpr as LambdaExpression);
-
-    targetFields ??= new List<ReaderField>();
-    var targetMembers = targetType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-        .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
-
-    for (int i = targetFields.Count - 1; i >= 0; i--)
+    public string GetQuotedValue(MemberMap memberMapper, object fieldValue, int? suffix, string parameterName)
     {
-        var memberInfo = targetFields[i].TargetMember;
-        if (!targetMembers.Exists(t => t.Name == memberInfo.Name))
-            targetFields.RemoveAt(i);
-    }
-    foreach (var memberInfo in targetMembers)
-    {
-        var targetField = targetFields.Find(f => f.TargetMember.Name == memberInfo.Name);
-        if (targetField != null)
+        if (fieldValue is DBNull || fieldValue == null)
+            return "NULL";
+
+        if (this.isParameterized)
         {
-            targetField.TargetMember = memberInfo;
-            continue;
-        }
-        if (this.FindReaderField(memberInfo, targetFields.Count, out var readerField))
-            targetFields.Add(readerField);
-    }
-    return targetFields;
-}
-public List<ReaderField> ConstructorFieldsTo(LambdaExpression toTargetExpr)
-{
-    List<ReaderField> result = null;
-    if (toTargetExpr != null)
-    {
-        var sqlSegment = new SqlSegment { Expression = toTargetExpr.Body };
-        switch (toTargetExpr.Body.NodeType)
-        {
-            case ExpressionType.MemberAccess:
-                sqlSegment = this.VisitMemberAccess(sqlSegment);
-                //成员访问，最多是Include子表访问或是临时表访问，如：x.Grouping分组，
-                //可能会有多个子表或是临时表
-                if (sqlSegment.MemberType == ReaderFieldType.Entity
-                    || sqlSegment.MemberType == ReaderFieldType.AnonymousObject)
-                    result = sqlSegment.Value as List<ReaderField>;
-                else
+            this.dbParameters ??= new();
+            IDbDataParameter dbParameter = null;
+            if (string.IsNullOrEmpty(parameterName))
+                parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
+            if (this.dbParameters.Exists(f => f.ParameterName == parameterName))
+                parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
+
+            if (memberMapper.TypeHandler != null)
+            {
+                if (memberMapper.NativeDbType != null)
+                    dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
+                else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
+                memberMapper.TypeHandler.SetValue(this.OrmProvider, dbParameter, fieldValue);
+            }
+            else
+            {
+                if (memberMapper.NativeDbType != null)
                 {
-                    result = new List<ReaderField>
+                    fieldValue = this.OrmProvider.ToFieldValue(fieldValue, memberMapper.NativeDbType);
+                    dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
+                }
+                else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
+            }
+            this.dbParameters.Add(dbParameter);
+            return parameterName;
+        }
+        fieldValue = this.OrmProvider.GetQuotedValue(fieldValue);
+        return new SetField { MemberMapper = memberMapper, Value = parameterName };
+    }
+    public List<ReaderField> FlattenFieldsTo(Type targetType, Expression toTargetExpr = null)
+    {
+        List<ReaderField> targetFields = null;
+        if (targetType == null)
+            throw new ArgumentNullException(nameof(targetType));
+
+        //通过表达式设置的字段
+        if (toTargetExpr != null)
+            targetFields = this.ConstructorFieldsTo(toTargetExpr as LambdaExpression);
+
+        targetFields ??= new List<ReaderField>();
+        var targetMembers = targetType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+
+        for (int i = targetFields.Count - 1; i >= 0; i--)
+        {
+            var memberInfo = targetFields[i].TargetMember;
+            if (!targetMembers.Exists(t => t.Name == memberInfo.Name))
+                targetFields.RemoveAt(i);
+        }
+        foreach (var memberInfo in targetMembers)
+        {
+            var targetField = targetFields.Find(f => f.TargetMember.Name == memberInfo.Name);
+            if (targetField != null)
+            {
+                targetField.TargetMember = memberInfo;
+                continue;
+            }
+            if (this.FindReaderField(memberInfo, targetFields.Count, out var readerField))
+                targetFields.Add(readerField);
+        }
+        return targetFields;
+    }
+    public List<ReaderField> ConstructorFieldsTo(LambdaExpression toTargetExpr)
+    {
+        List<ReaderField> result = null;
+        if (toTargetExpr != null)
+        {
+            var sqlSegment = new SqlSegment { Expression = toTargetExpr.Body };
+            switch (toTargetExpr.Body.NodeType)
+            {
+                case ExpressionType.MemberAccess:
+                    sqlSegment = this.VisitMemberAccess(sqlSegment);
+                    //成员访问，最多是Include子表访问或是临时表访问，如：x.Grouping分组，
+                    //可能会有多个子表或是临时表
+                    if (sqlSegment.MemberType == ReaderFieldType.Entity
+                        || sqlSegment.MemberType == ReaderFieldType.AnonymousObject)
+                        result = sqlSegment.Value as List<ReaderField>;
+                    else
+                    {
+                        result = new List<ReaderField>
                         {
                             new ReaderField
                             {
@@ -1283,30 +1283,30 @@ public List<ReaderField> ConstructorFieldsTo(LambdaExpression toTargetExpr)
                                 Body = sqlSegment.Value.ToString()
                             }
                         };
-                }
-                break;
-            case ExpressionType.New:
-                sqlSegment = this.VisitNew(sqlSegment);
-                result = sqlSegment.Value as List<ReaderField>;
-                break;
-            case ExpressionType.MemberInit:
-                sqlSegment = this.VisitMemberInit(sqlSegment);
-                result = sqlSegment.Value as List<ReaderField>;
-                break;
-            case ExpressionType.Parameter:
-                sqlSegment = this.VisitParameter(sqlSegment);
-                result = sqlSegment.Value as List<ReaderField>;
-                break;
-            default:
-                //单个字段或是方法调用
-                if (toTargetExpr.Body.NodeType == ExpressionType.Call)
-                    sqlSegment.OriginalExpression = toTargetExpr;
-                sqlSegment = this.VisitAndDeferred(sqlSegment);
-                if (sqlSegment.Value is List<ReaderField> readerFields)
-                    result = readerFields;
-                else
-                {
-                    result = new List<ReaderField>
+                    }
+                    break;
+                case ExpressionType.New:
+                    sqlSegment = this.VisitNew(sqlSegment);
+                    result = sqlSegment.Value as List<ReaderField>;
+                    break;
+                case ExpressionType.MemberInit:
+                    sqlSegment = this.VisitMemberInit(sqlSegment);
+                    result = sqlSegment.Value as List<ReaderField>;
+                    break;
+                case ExpressionType.Parameter:
+                    sqlSegment = this.VisitParameter(sqlSegment);
+                    result = sqlSegment.Value as List<ReaderField>;
+                    break;
+                default:
+                    //单个字段或是方法调用
+                    if (toTargetExpr.Body.NodeType == ExpressionType.Call)
+                        sqlSegment.OriginalExpression = toTargetExpr;
+                    sqlSegment = this.VisitAndDeferred(sqlSegment);
+                    if (sqlSegment.Value is List<ReaderField> readerFields)
+                        result = readerFields;
+                    else
+                    {
+                        result = new List<ReaderField>
                         {
                             new ReaderField
                             {
@@ -1315,232 +1315,232 @@ public List<ReaderField> ConstructorFieldsTo(LambdaExpression toTargetExpr)
                                 Body = sqlSegment.Value.ToString()
                             }
                         };
-                }
-                break;
+                    }
+                    break;
+            }
         }
+        return result;
     }
-    return result;
-}
-/// <summary>
-/// 展开当前表tableSegment的所有字段，tableSegment是实体表(主表或Include表)
-/// repository.From(f => f.From<Order, OrderDetail, User>()
-///         .Where((a, b, c) => a.Id == b.OrderId && a.BuyerId == c.Id)
-///         .GroupBy((a, b, c) => new { OrderId = a.Id, a.BuyerId })
-///         .Having((x, a, b, c) => c.Age > 20 && x.Sum(b.Amount) > 500)
-///         .Select((x, a, b, c) => new { x.Grouping.OrderId, x.Grouping.BuyerId, TotalAmount = x.Sum(b.Amount) }))
-///     .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-///     .InnerJoin<Order>((a, b, c) => a.OrderId == c.Id)
-///     .Select((a, b, c) => new { a.OrderId, a.BuyerId, Buyer = b, Order = c, a.TotalAmount })
-///     .ToSql(out _);
-/// </summary>
-/// <param name="tableSegment"></param>
-/// <returns></returns>
-public List<ReaderField> FlattenTableFields(TableSegment tableSegment)
-{
-    var targetFields = new List<ReaderField>();
-    tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
-    foreach (var memberMapper in tableSegment.Mapper.MemberMaps)
+    /// <summary>
+    /// 展开当前表tableSegment的所有字段，tableSegment是实体表(主表或Include表)
+    /// repository.From(f => f.From<Order, OrderDetail, User>()
+    ///         .Where((a, b, c) => a.Id == b.OrderId && a.BuyerId == c.Id)
+    ///         .GroupBy((a, b, c) => new { OrderId = a.Id, a.BuyerId })
+    ///         .Having((x, a, b, c) => c.Age > 20 && x.Sum(b.Amount) > 500)
+    ///         .Select((x, a, b, c) => new { x.Grouping.OrderId, x.Grouping.BuyerId, TotalAmount = x.Sum(b.Amount) }))
+    ///     .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+    ///     .InnerJoin<Order>((a, b, c) => a.OrderId == c.Id)
+    ///     .Select((a, b, c) => new { a.OrderId, a.BuyerId, Buyer = b, Order = c, a.TotalAmount })
+    ///     .ToSql(out _);
+    /// </summary>
+    /// <param name="tableSegment"></param>
+    /// <returns></returns>
+    public List<ReaderField> FlattenTableFields(TableSegment tableSegment)
     {
-        if (memberMapper.IsIgnore || memberMapper.IsNavigation
-            || (memberMapper.MemberType.IsEntityType() && memberMapper.TypeHandler == null))
-            continue;
-        targetFields.Add(new ReaderField
+        var targetFields = new List<ReaderField>();
+        tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
+        foreach (var memberMapper in tableSegment.Mapper.MemberMaps)
         {
-            TableSegment = tableSegment,
-            FromMember = memberMapper.Member,
-            TargetMember = memberMapper.Member,
-            FieldType = ReaderFieldType.Field,
-            Body = this.GetFieldName(tableSegment, memberMapper.FieldName)
-        });
-    }
-    return targetFields;
-}
-/// <summary>
-/// 根据表、字段获取Field表达式,SELECT和WHERE语句都可以使用
-/// 有表且有别名，将生成a.Field，常量访问没有表则就是字段访问Field
-/// </summary>
-/// <param name="tableSegment">表</param> 
-/// <param name="fieldName">字段名称或是表达式</param>
-/// <returns></returns>
-public string GetFieldName(TableSegment tableSegment, string fieldName)
-{
-    fieldName = this.OrmProvider.GetFieldName(fieldName);
-    if (tableSegment != null && !string.IsNullOrEmpty(tableSegment.AliasName) && (this.IsNeedAlias || tableSegment.IsNeedAlais))
-        fieldName = tableSegment.AliasName + "." + fieldName;
-    return fieldName;
-}
-
-private bool FindReaderField(MemberInfo memberInfo, int index, out ReaderField readerField)
-{
-    foreach (var tableSegment in this.tables)
-    {
-        if (this.FindReaderField(tableSegment, memberInfo, index, out readerField))
-            return true;
-    }
-    readerField = null;
-    return false;
-}
-private bool FindReaderField(TableSegment tableSegment, MemberInfo memberInfo, int index, out ReaderField readerField)
-{
-    switch (tableSegment.TableType)
-    {
-        case TableType.FromQuery:
-            if (tableSegment.ReaderFields == null || tableSegment.ReaderFields.Count == 0)
+            if (memberMapper.IsIgnore || memberMapper.IsNavigation
+                || (memberMapper.MemberType.IsEntityType() && memberMapper.TypeHandler == null))
+                continue;
+            targetFields.Add(new ReaderField
             {
-                readerField = null;
-                return false;
-            }
-            readerField = tableSegment.ReaderFields.Find(f => f.FromMember.Name == memberInfo.Name);
-            if (readerField != null)
-            {
-                readerField.Index = index;
-                readerField.TargetMember = memberInfo;
-                tableSegment.IsUsed = true;
-            }
-            return readerField != null;
-        default:
-            tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
-            if (!tableSegment.Mapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
-            {
-                readerField = null;
-                return false;
-            }
-            readerField = new ReaderField
-            {
-                Index = index,
-                FieldType = ReaderFieldType.Field,
-                FromMember = memberMapper.Member,
-                TargetMember = memberInfo,
                 TableSegment = tableSegment,
+                FromMember = memberMapper.Member,
+                TargetMember = memberMapper.Member,
+                FieldType = ReaderFieldType.Field,
                 Body = this.GetFieldName(tableSegment, memberMapper.FieldName)
-            };
-            tableSegment.IsUsed = true;
-            return true;
+            });
+        }
+        return targetFields;
     }
-}
-private string GetQuotedValue(SqlSegment sqlSegment)
-    => this.OrmProvider.GetQuotedValue(sqlSegment);
-private bool IsDateTimeOperator(SqlSegment sqlSegment, out SqlSegment result)
-{
-    var binaryExpr = sqlSegment.Expression as BinaryExpression;
-    if (binaryExpr.Left.Type == typeof(DateTime) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Add)
+    /// <summary>
+    /// 根据表、字段获取Field表达式,SELECT和WHERE语句都可以使用
+    /// 有表且有别名，将生成a.Field，常量访问没有表则就是字段访问Field
+    /// </summary>
+    /// <param name="tableSegment">表</param> 
+    /// <param name="fieldName">字段名称或是表达式</param>
+    /// <returns></returns>
+    public string GetFieldName(TableSegment tableSegment, string fieldName)
     {
-        var methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.Add), new Type[] { binaryExpr.Right.Type });
-        var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
-        result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
-        return true;
+        fieldName = this.OrmProvider.GetFieldName(fieldName);
+        if (tableSegment != null && !string.IsNullOrEmpty(tableSegment.AliasName) && (this.IsNeedAlias || tableSegment.IsNeedAlais))
+            fieldName = tableSegment.AliasName + "." + fieldName;
+        return fieldName;
     }
-    if (binaryExpr.Left.Type == typeof(DateTime) && (binaryExpr.Right.Type == typeof(DateTime) || binaryExpr.Right.Type == typeof(TimeSpan)) && binaryExpr.NodeType == ExpressionType.Subtract)
+
+    private bool FindReaderField(MemberInfo memberInfo, int index, out ReaderField readerField)
     {
-        var methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.Subtract), new Type[] { binaryExpr.Right.Type });
-        var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
-        result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
-        return true;
-    }
-    result = null;
-    return false;
-}
-private bool IsTimeSpanOperator(SqlSegment sqlSegment, out SqlSegment result)
-{
-    var binaryExpr = sqlSegment.Expression as BinaryExpression;
-    if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Add)
-    {
-        var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Add), new Type[] { binaryExpr.Right.Type });
-        var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
-        result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
-        return true;
-    }
-    if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Subtract)
-    {
-        var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Subtract), new Type[] { binaryExpr.Right.Type });
-        var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
-        result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
-        return true;
-    }
-    if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Multiply)
-    {
-        var rightExpr = binaryExpr.Right;
-        if (binaryExpr.Right.Type != typeof(double))
-            rightExpr = Expression.Convert(rightExpr, typeof(double));
-        var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Multiply), new Type[] { typeof(double) });
-        var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, rightExpr);
-        result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
-        return true;
-    }
-    if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Divide)
-    {
-        Type divideType = null;
-        if (binaryExpr.Right.Type == typeof(TimeSpan))
-            divideType = typeof(TimeSpan);
-        else divideType = typeof(double);
-        var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Divide), new Type[] { divideType });
-        var rightExpr = binaryExpr.Right;
-        if (divideType == typeof(double) && binaryExpr.Right.Type != typeof(double))
-            rightExpr = Expression.Convert(rightExpr, typeof(double));
-        var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, rightExpr);
-        result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
-        return true;
-    }
-    result = null;
-    return false;
-}
-private SqlSegment CreateConditionSegment(Expression conditionExpr)
-{
-    var sqlSegment = new SqlSegment { Expression = conditionExpr };
-    if (conditionExpr.NodeType == ExpressionType.MemberAccess && conditionExpr.Type == typeof(bool))
-    {
-        sqlSegment.DeferredExprs ??= new();
-        sqlSegment.DeferredExprs.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.True });
-    }
-    return sqlSegment;
-}
-private void Swap<T>(ref T left, ref T right)
-{
-    var temp = right;
-    right = left;
-    left = temp;
-}
-private void AddIncludeTables(ReaderField lastReaderField, List<ReaderField> readerFields)
-{
-    var includedSegments = this.tables.FindAll(f => !f.IsMaster && f.FromTable == lastReaderField.TableSegment);
-    if (includedSegments != null && includedSegments.Count > 0)
-    {
-        lastReaderField.HasNextInclude = true;
-        int index = lastReaderField.Index;
-        foreach (var includedSegment in includedSegments)
+        foreach (var tableSegment in this.tables)
         {
-            index++;
-            var readerField = new ReaderField
-            {
-                Index = index,
-                FieldType = ReaderFieldType.Entity,
-                TableSegment = includedSegment,
-                FromMember = includedSegment.FromMember.Member,
-                TargetMember = includedSegment.FromMember.Member,
-                ParentIndex = lastReaderField.Index,
-                ReaderFields = this.FlattenTableFields(includedSegment)
-            };
-            //主表使用，include子表也将使用
-            includedSegment.IsUsed = lastReaderField.TableSegment.IsUsed;
-            readerFields.Add(readerField);
-            if (this.tables.Exists(f => !f.IsMaster && f.FromTable == includedSegment))
-                this.AddIncludeTables(readerField, readerFields);
+            if (this.FindReaderField(tableSegment, memberInfo, index, out readerField))
+                return true;
+        }
+        readerField = null;
+        return false;
+    }
+    private bool FindReaderField(TableSegment tableSegment, MemberInfo memberInfo, int index, out ReaderField readerField)
+    {
+        switch (tableSegment.TableType)
+        {
+            case TableType.FromQuery:
+                if (tableSegment.ReaderFields == null || tableSegment.ReaderFields.Count == 0)
+                {
+                    readerField = null;
+                    return false;
+                }
+                readerField = tableSegment.ReaderFields.Find(f => f.FromMember.Name == memberInfo.Name);
+                if (readerField != null)
+                {
+                    readerField.Index = index;
+                    readerField.TargetMember = memberInfo;
+                    tableSegment.IsUsed = true;
+                }
+                return readerField != null;
+            default:
+                tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
+                if (!tableSegment.Mapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
+                {
+                    readerField = null;
+                    return false;
+                }
+                readerField = new ReaderField
+                {
+                    Index = index,
+                    FieldType = ReaderFieldType.Field,
+                    FromMember = memberMapper.Member,
+                    TargetMember = memberInfo,
+                    TableSegment = tableSegment,
+                    Body = this.GetFieldName(tableSegment, memberMapper.FieldName)
+                };
+                tableSegment.IsUsed = true;
+                return true;
         }
     }
-}
-private LambdaExpression EnsureLambda(Expression expr)
-{
-    if (expr.NodeType == ExpressionType.Lambda)
-        return expr as LambdaExpression;
-    var currentExpr = expr;
-    while (true)
+    private string GetQuotedValue(SqlSegment sqlSegment)
+        => this.OrmProvider.GetQuotedValue(sqlSegment);
+    private bool IsDateTimeOperator(SqlSegment sqlSegment, out SqlSegment result)
     {
-        if (currentExpr.NodeType == ExpressionType.Lambda)
-            break;
-
-        if (currentExpr is UnaryExpression unaryExpr)
-            currentExpr = unaryExpr.Operand;
+        var binaryExpr = sqlSegment.Expression as BinaryExpression;
+        if (binaryExpr.Left.Type == typeof(DateTime) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Add)
+        {
+            var methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.Add), new Type[] { binaryExpr.Right.Type });
+            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
+            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
+            return true;
+        }
+        if (binaryExpr.Left.Type == typeof(DateTime) && (binaryExpr.Right.Type == typeof(DateTime) || binaryExpr.Right.Type == typeof(TimeSpan)) && binaryExpr.NodeType == ExpressionType.Subtract)
+        {
+            var methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.Subtract), new Type[] { binaryExpr.Right.Type });
+            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
+            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
+            return true;
+        }
+        result = null;
+        return false;
     }
-    return currentExpr as LambdaExpression;
-}
+    private bool IsTimeSpanOperator(SqlSegment sqlSegment, out SqlSegment result)
+    {
+        var binaryExpr = sqlSegment.Expression as BinaryExpression;
+        if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Add)
+        {
+            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Add), new Type[] { binaryExpr.Right.Type });
+            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
+            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
+            return true;
+        }
+        if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Subtract)
+        {
+            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Subtract), new Type[] { binaryExpr.Right.Type });
+            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
+            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
+            return true;
+        }
+        if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Multiply)
+        {
+            var rightExpr = binaryExpr.Right;
+            if (binaryExpr.Right.Type != typeof(double))
+                rightExpr = Expression.Convert(rightExpr, typeof(double));
+            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Multiply), new Type[] { typeof(double) });
+            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, rightExpr);
+            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
+            return true;
+        }
+        if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Divide)
+        {
+            Type divideType = null;
+            if (binaryExpr.Right.Type == typeof(TimeSpan))
+                divideType = typeof(TimeSpan);
+            else divideType = typeof(double);
+            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Divide), new Type[] { divideType });
+            var rightExpr = binaryExpr.Right;
+            if (divideType == typeof(double) && binaryExpr.Right.Type != typeof(double))
+                rightExpr = Expression.Convert(rightExpr, typeof(double));
+            var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, rightExpr);
+            result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
+            return true;
+        }
+        result = null;
+        return false;
+    }
+    private SqlSegment CreateConditionSegment(Expression conditionExpr)
+    {
+        var sqlSegment = new SqlSegment { Expression = conditionExpr };
+        if (conditionExpr.NodeType == ExpressionType.MemberAccess && conditionExpr.Type == typeof(bool))
+        {
+            sqlSegment.DeferredExprs ??= new();
+            sqlSegment.DeferredExprs.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.True });
+        }
+        return sqlSegment;
+    }
+    private void Swap<T>(ref T left, ref T right)
+    {
+        var temp = right;
+        right = left;
+        left = temp;
+    }
+    private void AddIncludeTables(ReaderField lastReaderField, List<ReaderField> readerFields)
+    {
+        var includedSegments = this.tables.FindAll(f => !f.IsMaster && f.FromTable == lastReaderField.TableSegment);
+        if (includedSegments != null && includedSegments.Count > 0)
+        {
+            lastReaderField.HasNextInclude = true;
+            int index = lastReaderField.Index;
+            foreach (var includedSegment in includedSegments)
+            {
+                index++;
+                var readerField = new ReaderField
+                {
+                    Index = index,
+                    FieldType = ReaderFieldType.Entity,
+                    TableSegment = includedSegment,
+                    FromMember = includedSegment.FromMember.Member,
+                    TargetMember = includedSegment.FromMember.Member,
+                    ParentIndex = lastReaderField.Index,
+                    ReaderFields = this.FlattenTableFields(includedSegment)
+                };
+                //主表使用，include子表也将使用
+                includedSegment.IsUsed = lastReaderField.TableSegment.IsUsed;
+                readerFields.Add(readerField);
+                if (this.tables.Exists(f => !f.IsMaster && f.FromTable == includedSegment))
+                    this.AddIncludeTables(readerField, readerFields);
+            }
+        }
+    }
+    private LambdaExpression EnsureLambda(Expression expr)
+    {
+        if (expr.NodeType == ExpressionType.Lambda)
+            return expr as LambdaExpression;
+        var currentExpr = expr;
+        while (true)
+        {
+            if (currentExpr.NodeType == ExpressionType.Lambda)
+                break;
+
+            if (currentExpr is UnaryExpression unaryExpr)
+                currentExpr = unaryExpr.Operand;
+        }
+        return currentExpr as LambdaExpression;
+    }
 }
