@@ -398,5 +398,18 @@ public class MySqlMethodCallUnitTest : UnitTestBase
             .Select(f => (short)f.Age)
             .First();
     }
+    [Fact]
+    public void Update_Call()
+    {
+        this.Initialize();
+        using var repository = dbFactory.Create();
+        int id = 1;
+        var orderNos = new string[] { "ON_001", "ON_002", "ON_003" };
+        var sql = repository.Update<Order>()
+            .Set(f => new { TotalAmount = 100 })
+            .Where(f => f.BuyerId == id && orderNos.Contains(f.OrderNo))
+            .ToSql(out _);
+        int sdfsdf = 0;
+    }
     private string DeferInvoke() => "DeferInvoke";
 }

@@ -430,7 +430,7 @@ partial class MySqlProvider
                             string rightArgument = null;
                             if (rightSegment.IsConstantValue)
                                 rightArgument = $"'%{rightSegment}%'";
-                            else rightArgument = $"CONCAT('%',REPLACE({rightSegment},'%','\\%'),'%')";
+                            else rightArgument = $"CONCAT('%',{rightSegment},'%')";
 
                             int notIndex = 0;
                             if (deferExprs != null && deferExprs.Count > 0)
