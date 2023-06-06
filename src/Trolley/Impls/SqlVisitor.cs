@@ -1150,7 +1150,7 @@ public class SqlVisitor : ISqlVisitor
                     parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
                 if (index.HasValue)
                     parameterName += index.ToString();
-                //TODO:
+
                 var memberMapper = sqlSegment.MemberMapper;
                 IDbDataParameter dbParameter = null;
                 if (memberMapper.TypeHandler != null)
@@ -1246,42 +1246,6 @@ public class SqlVisitor : ISqlVisitor
             sqlSegment.Type = sqlSegment.TargetType;
         }
         return sqlSegment;
-    }
-    public string GetQuotedValue(MemberMap memberMapper, object fieldValue, int? suffix, string parameterName)
-    {
-        if (fieldValue is DBNull || fieldValue == null)
-            return "NULL";
-
-        if (this.isParameterized)
-        {
-            this.dbParameters ??= new();
-            IDbDataParameter dbParameter = null;
-            if (string.IsNullOrEmpty(parameterName))
-                parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-            if (this.dbParameters.Exists(f => f.ParameterName == parameterName))
-                parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
-
-            if (memberMapper.TypeHandler != null)
-            {
-                if (memberMapper.NativeDbType != null)
-                    dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
-                else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
-                memberMapper.TypeHandler.SetValue(this.OrmProvider, dbParameter, fieldValue);
-            }
-            else
-            {
-                if (memberMapper.NativeDbType != null)
-                {
-                    fieldValue = this.OrmProvider.ToFieldValue(fieldValue, memberMapper.NativeDbType);
-                    dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
-                }
-                else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
-            }
-            this.dbParameters.Add(dbParameter);
-            return parameterName;
-        }
-        fieldValue = this.OrmProvider.GetQuotedValue(fieldValue);
-        return new SetField { MemberMapper = memberMapper, Value = parameterName };
     }
     public List<ReaderField> FlattenFieldsTo(Type targetType, Expression toTargetExpr = null)
     {
