@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
@@ -12,8 +13,8 @@ public interface IUpdate<TEntity>
     IUpdateSet<TEntity> WithBy<TFields>(TFields parameters);
     IUpdateSet<TEntity> WithBy<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr, object parameters);
 
-    IUpdateSet<TEntity> WithBulkBy<TFields>(TFields parameters, int bulkCount = 500);
-    IUpdateSet<TEntity> WithBulkBy<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr, object parameters, int bulkCount = 500);
+    IUpdateSet<TEntity> WithBulkBy<TFields>(IEnumerable<TFields> parameters, int bulkCount = 500);
+    IUpdateSet<TEntity> WithBulkBy<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr, IEnumerable parameters, int bulkCount = 500);
 
     IUpdateSetting<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr);
     IUpdateSetting<TEntity> SetIf<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsExpr);

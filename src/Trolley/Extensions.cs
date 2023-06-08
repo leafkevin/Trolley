@@ -365,7 +365,7 @@ public static class Extensions
                             //延迟的方法调用，有字段值作为方法参数就读取，没有什么也不做
                             if (readerField.ReaderFields != null)
                             {
-                                childReaderField = readerField.ReaderFields[childIndex]; 
+                                childReaderField = readerField.ReaderFields[childIndex];
                                 if (childReaderField.MemberMapper == null)
                                 {
                                     entityMapper = childReaderField.TableSegment.Mapper;

@@ -85,7 +85,7 @@ public class MySqlUnitTest3 : UnitTestBase
         var orderDetails = await repository.From<OrderDetail>().ToListAsync();
         var parameters = orderDetails.Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 1, Amount = f.Amount + 50 }).ToList();
         repository.BeginTransaction();
-        var result = repository.UpdateBulk<OrderDetail>(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters);
+        var result = repository.Update<OrderDetail>(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters);
         var updatedDetails = await repository.QueryAsync<OrderDetail>();
         repository.Commit();
 

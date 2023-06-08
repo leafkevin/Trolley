@@ -85,14 +85,14 @@ class Update<TEntity> : IUpdate<TEntity>
 
         return new UpdateSet<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider, false, parameters, fieldsExpr);
     }
-    public IUpdateSet<TEntity> WithBulkBy<TFields>(TFields parameters, int bulkCount = 500)
+    public IUpdateSet<TEntity> WithBulkBy<TFields>(IEnumerable<TFields> parameters, int bulkCount = 500)
     {
         if (parameters == null)
             throw new ArgumentNullException(nameof(parameters));
 
         return new UpdateSet<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider, true, parameters, null, bulkCount);
     }
-    public IUpdateSet<TEntity> WithBulkBy<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr, object parameters, int bulkCount = 500)
+    public IUpdateSet<TEntity> WithBulkBy<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr, IEnumerable parameters, int bulkCount = 500)
     {
         if (parameters == null)
             throw new ArgumentNullException(nameof(parameters));
