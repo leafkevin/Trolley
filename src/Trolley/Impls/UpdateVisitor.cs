@@ -503,8 +503,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         //Select(f=>new {OrderId=this.Order.Id, ...}
         sqlSegment = this.Evaluate(sqlSegment);
 
-        //只有WithBy场景会走此参数化
+        //只有WithBy场景在此参数化，暂时不做参数化，当作常量处理，方便后面走参数化处理
         this.ConvertTo(sqlSegment);
+		//变量当作常量处理
         sqlSegment.IsConstantValue = false;
         sqlSegment.IsVariable = true;
         sqlSegment.IsExpression = false;
