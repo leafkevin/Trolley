@@ -64,7 +64,7 @@ public interface ICreate<TEntity>
     /// <param name="insertObjs">插入的对象集合</param>
     /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值</param>
     /// <returns></returns>
-    ICreated<TEntity> WithByBulk(IEnumerable insertObjs, int bulkCount = 500);
+    ICreated<TEntity> WithBulkBy(IEnumerable insertObjs, int bulkCount = 500);
     /// <summary>
     /// 从<paramref>TSource</paramref>表查询数据，并插入当前表中,用法：
     /// <code>

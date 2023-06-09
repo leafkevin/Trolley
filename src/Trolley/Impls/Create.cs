@@ -52,7 +52,7 @@ class Create<TEntity> : ICreate<TEntity>
 
         return new ContinuedCreate<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider).WithBy(insertObj);
     }
-    public ICreated<TEntity> WithByBulk(IEnumerable insertObjs, int bulkCount = 500)
+    public ICreated<TEntity> WithBulkBy(IEnumerable insertObjs, int bulkCount = 500)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
