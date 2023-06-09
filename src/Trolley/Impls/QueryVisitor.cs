@@ -881,10 +881,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //Select(f=>new {OrderId=this.Order.Id, ...}
         sqlSegment = this.Evaluate(sqlSegment);
 
-        //只有变量做参数化
-        if (sqlSegment.IsParameterized || this.isParameterized)
-            return this.ToParameter(this.ConvertTo(sqlSegment));
-
+        //变量为数组或是IEnumerable时，变为参数，方法Sql.In，Contains无法继续解析，需要去掉参数化，在最后SQL执行前，变为参数
+        //if (sqlSegment.IsParameterized || this.isParameterized)
+        //    return this.ToParameter(this.ConvertTo(sqlSegment));
+        sqlSegment.IsConstantValue = false;
+        sqlSegment.IsVariable = true;
+        sqlSegment.IsExpression = false;
+        sqlSegment.IsMethodCall = false;
         return this.ConvertTo(sqlSegment);
     }
     public virtual TableSegment InitTableAlias(LambdaExpression lambdaExpr)
