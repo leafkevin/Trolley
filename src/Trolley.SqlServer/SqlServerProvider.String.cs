@@ -32,7 +32,7 @@ partial class SqlServerProvider
                 memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                 {
                     var targetSegment = visitor.VisitAndDeferred(target);
-                    if (targetSegment.IsConstantValue)
+                    if (targetSegment.IsConstant)
                         return targetSegment.Change(((string)targetSegment.Value).Length);
 
                     return targetSegment.Change($"LEN({this.GetQuotedValue(targetSegment)})", false, false, true);
@@ -78,7 +78,7 @@ partial class SqlServerProvider
                                 if (i == 0) resultSegment = sqlSegment;
                                 else resultSegment.Merge(sqlSegment);
 
-                                if (sqlSegment.IsConstantValue)
+                                if (sqlSegment.IsConstant)
                                     constBuilder.Append(sqlSegment.ToString());
                                 else
                                 {
@@ -136,7 +136,7 @@ partial class SqlServerProvider
                                 if (i == 0) resultSegment = sqlSegment;
                                 else resultSegment.Merge(sqlSegment);
 
-                                if (sqlSegment.IsConstantValue)
+                                if (sqlSegment.IsConstant)
                                 {
                                     constBuilder.Append(sqlSegment.ToString());
                                     continue;
@@ -199,7 +199,7 @@ partial class SqlServerProvider
                         {
                             var valueSegment = visitor.VisitAndDeferred(args[0]);
                             string targetAugment = null;
-                            if (valueSegment.IsConstantValue)
+                            if (valueSegment.IsConstant)
                                 targetAugment = this.GetQuotedValue(valueSegment.ToString());
                             else targetAugment = valueSegment.ToString();
                             return valueSegment.Change($"({targetAugment} IS NULL OR {targetAugment}='')", false, false, true);
@@ -214,7 +214,7 @@ partial class SqlServerProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(args[0]);
                             string targetAugment = null;
-                            if (targetSegment.IsConstantValue)
+                            if (targetSegment.IsConstant)
                                 targetAugment = this.GetQuotedValue(targetSegment.ToString());
                             else targetAugment = targetSegment.ToString();
                             return targetSegment.Change($"({targetAugment} IS NULL OR {targetAugment}='' OR TRIM({targetAugment})='')", false, false, true);
@@ -230,38 +230,29 @@ partial class SqlServerProvider
                             var separatorSegment = visitor.VisitAndDeferred(args[0]);
                             var valuesSegment = visitor.VisitAndDeferred(args[1]);
 
-                            var builder = new StringBuilder();
-                            if (separatorSegment.IsConstantValue && valuesSegment.IsConstantValue)
-                            {
-                                var enumerable = valuesSegment.Value as IEnumerable;
-                                foreach (var item in enumerable)
-                                {
-                                    if (builder.Length > 0)
-                                        builder.Append(separatorSegment.ToString());
-                                    builder.Append(this.GetQuotedValue(item));
-                                }
-                                return valuesSegment.Change(builder.ToString(), true, false, false);
-                            }
+                            if (separatorSegment.IsConstant && valuesSegment.IsConstant)
+                                return valuesSegment.Change(string.Join(separatorSegment.ToString(), valuesSegment.Value as List<SqlSegment>));
 
                             string separatorAugment = null;
-                            if (separatorSegment.IsConstantValue)
+                            if (separatorSegment.IsConstant)
                                 separatorAugment = this.GetQuotedValue(separatorSegment.ToString());
                             else separatorAugment = separatorSegment.ToString();
 
                             var sqlSegments = valuesSegment.Value as List<SqlSegment>;
+                            var builder = new StringBuilder();
                             var constBuilder = new StringBuilder();
                             foreach (var sqlSegment in sqlSegments)
                             {
                                 var strValue = sqlSegment.ToString();
 
-                                if (separatorSegment.IsConstantValue && constBuilder.Length > 0)
+                                if (separatorSegment.IsConstant && constBuilder.Length > 0)
                                     constBuilder.Append(separatorAugment);
-                                if (!separatorSegment.IsConstantValue && builder.Length > 0)
+                                if (!separatorSegment.IsConstant && builder.Length > 0)
                                     builder.Append(separatorAugment);
 
-                                if (sqlSegment.IsConstantValue)
+                                if (sqlSegment.IsConstant)
                                 {
-                                    if (separatorSegment.IsConstantValue && constBuilder.Length > 0)
+                                    if (separatorSegment.IsConstant && constBuilder.Length > 0)
                                         constBuilder.Append(separatorAugment);
                                     constBuilder.Append(strValue);
                                 }
@@ -305,44 +296,30 @@ partial class SqlServerProvider
                             var index = visitor.Evaluate<int>(args[2].Expression);
                             var length = visitor.Evaluate<int>(args[3].Expression);
 
-                            var builder = new StringBuilder();
-                            if (separatorSegment.IsConstantValue && valuesSegment.IsConstantValue)
-                            {
-                                var enumerable = valuesSegment.Value as IEnumerable;
-                                int i = 0;
-                                foreach (var item in enumerable)
-                                {
-                                    if (i < index) continue;
-                                    if (i >= index + length) break;
-                                    if (builder.Length > 0)
-                                        builder.Append(separatorSegment.ToString());
-                                    builder.Append(this.GetQuotedValue(item));
-                                    i++;
-                                }
-                                return valuesSegment.Change(builder.ToString(), true, false, false);
-                            }
+                            if (separatorSegment.IsConstant && valuesSegment.IsConstant)
+                                return valuesSegment.Change(string.Join(separatorSegment.ToString(), valuesSegment.Value as List<SqlSegment>, index, length));
 
                             string separatorAugment = null;
-                            if (separatorSegment.IsConstantValue)
+                            if (separatorSegment.IsConstant)
                                 separatorAugment = this.GetQuotedValue(separatorSegment.ToString());
                             else separatorAugment = separatorSegment.ToString();
 
                             var sqlSegments = valuesSegment.Value as List<SqlSegment>;
-
+                            var builder = new StringBuilder();
                             var constBuilder = new StringBuilder();
                             int count = Math.Min(sqlSegments.Count, index + length);
                             for (int i = index; i < count; i++)
                             {
                                 var strValue = sqlSegments[i].ToString();
 
-                                if (separatorSegment.IsConstantValue && constBuilder.Length > 0)
+                                if (separatorSegment.IsConstant && constBuilder.Length > 0)
                                     constBuilder.Append(separatorAugment);
-                                if (!separatorSegment.IsConstantValue && builder.Length > 0)
+                                if (!separatorSegment.IsConstant && builder.Length > 0)
                                     builder.Append(separatorAugment);
 
-                                if (sqlSegments[i].IsConstantValue)
+                                if (sqlSegments[i].IsConstant)
                                 {
-                                    if (separatorSegment.IsConstantValue && constBuilder.Length > 0)
+                                    if (separatorSegment.IsConstant && constBuilder.Length > 0)
                                         constBuilder.Append(separatorAugment);
                                     constBuilder.Append(strValue);
                                 }
@@ -428,7 +405,7 @@ partial class SqlServerProvider
                             var rightSegment = visitor.VisitAndDeferred(args[0]);
 
                             string rightArgument = null;
-                            if (rightSegment.IsConstantValue)
+                            if (rightSegment.IsConstant)
                                 rightArgument = $"'%{rightSegment}%'";
                             else rightArgument = $"'%'+{rightSegment}+'%'";
 
@@ -582,7 +559,7 @@ partial class SqlServerProvider
                             var rightSegment = visitor.VisitAndDeferred(args[0]);
 
                             string rightArgument = null;
-                            if (rightSegment.IsConstantValue)
+                            if (rightSegment.IsConstant)
                                 rightArgument = $"'{rightSegment}%'";
                             else rightArgument = $"{rightSegment}+'%'";
                             int notIndex = 0;
@@ -617,7 +594,7 @@ partial class SqlServerProvider
                             var rightSegment = visitor.VisitAndDeferred(args[0]);
 
                             string rightArgument = null;
-                            if (rightSegment.IsConstantValue)
+                            if (rightSegment.IsConstant)
                                 rightArgument = $"'%{rightSegment}'";
                             else rightArgument = $"'%'+{rightSegment}";
                             int notIndex = 0;
@@ -654,7 +631,7 @@ partial class SqlServerProvider
                                 var indexSegment = visitor.VisitAndDeferred(args[0]);
                                 var lengthSegment = visitor.VisitAndDeferred(args[1]);
 
-                                if (targetSegment.IsConstantValue && indexSegment.IsConstantValue && lengthSegment.IsConstantValue)
+                                if (targetSegment.IsConstant && indexSegment.IsConstant && lengthSegment.IsConstant)
                                     return targetSegment.Change(targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value), Convert.ToInt32(lengthSegment.Value)));
 
                                 targetSegment.Merge(indexSegment);
@@ -670,7 +647,7 @@ partial class SqlServerProvider
                                 var targetSegment = visitor.VisitAndDeferred(target);
                                 var indexSegment = visitor.VisitAndDeferred(args[0]);
 
-                                if (targetSegment.IsConstantValue && indexSegment.IsConstantValue)
+                                if (targetSegment.IsConstant && indexSegment.IsConstant)
                                     return targetSegment.Change(targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value)));
 
                                 targetSegment.Merge(indexSegment);
@@ -693,7 +670,7 @@ partial class SqlServerProvider
                             methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                             {
                                 var targetSegment = visitor.VisitAndDeferred(target);
-                                if (targetSegment.IsConstantValue)
+                                if (targetSegment.IsConstant)
                                     return targetSegment.Change(this.GetQuotedValue(targetSegment));
                                 return targetSegment.Change(this.CastTo(typeof(string), this.GetQuotedValue(targetSegment)), false, false, true);
                             });
@@ -725,7 +702,7 @@ partial class SqlServerProvider
                             var valueSegment = visitor.VisitAndDeferred(args[0]);
                             var startIndexSegment = visitor.VisitAndDeferred(args[1]);
                             string startIndex = null;
-                            if (startIndexSegment.IsConstantValue)
+                            if (startIndexSegment.IsConstant)
                                 startIndex = $"{(int)startIndexSegment.Value + 1}";
                             else startIndex = $"{startIndexSegment}+1";
                             targetSegment.Merge(valueSegment);

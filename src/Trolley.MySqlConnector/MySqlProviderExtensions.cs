@@ -1,6 +1,6 @@
 ﻿using MySqlConnector;
 
-namespace Trolley.SqlServer;
+namespace Trolley.MySqlConnector;
 
 public static class MySqlProviderExtensions
 {

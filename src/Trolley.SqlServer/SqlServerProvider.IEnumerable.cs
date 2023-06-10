@@ -26,15 +26,15 @@ partial class SqlServerProvider
                     //数组调用
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
-                        var arraySegment = visitor.VisitAndDeferred(args[0]);
-                        var enumerable = arraySegment.Value as IEnumerable;
-
                         var builder = new StringBuilder();
-                        foreach (var item in enumerable)
+                        var arraySegment = visitor.VisitAndDeferred(args[0]);
+                        var sqlSegments = arraySegment.Value as List<SqlSegment>;
+
+                        foreach (var eleSegment in sqlSegments)
                         {
                             if (builder.Length > 0)
                                 builder.Append(',');
-                            builder.Append(this.GetQuotedValue(item));
+                            builder.Append(this.GetQuotedValue(eleSegment));
                         }
 
                         var elementSegment = visitor.VisitAndDeferred(args[1]);
@@ -71,16 +71,16 @@ partial class SqlServerProvider
                 {
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
+                        var builder = new StringBuilder();
                         var targetSegment = visitor.VisitAndDeferred(target);
                         var elementSegment = visitor.VisitAndDeferred(args[0]);
-                        var enumerable = targetSegment.Value as IEnumerable;
+                        var sqlSegments = targetSegment.Value as List<SqlSegment>;
 
-                        var builder = new StringBuilder();
-                        foreach (var item in enumerable)
+                        foreach (var eleSegment in sqlSegments)
                         {
                             if (builder.Length > 0)
                                 builder.Append(',');
-                            builder.Append(this.GetQuotedValue(item));
+                            builder.Append(this.GetQuotedValue(eleSegment));
                         }
                         string element = this.GetQuotedValue(elementSegment);
 

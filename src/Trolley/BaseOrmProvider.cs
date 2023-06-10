@@ -51,7 +51,7 @@ public abstract class BaseOrmProvider : IOrmProvider
             return "'" + Convert.ToDateTime(value).ToString("yyyy-MM-dd HH:mm:ss.fff") + "'";
         if (value is SqlSegment sqlSegment)
         {
-            if (sqlSegment == SqlSegment.Null || !sqlSegment.IsConstantValue)
+            if (sqlSegment == SqlSegment.Null || !sqlSegment.IsConstant)
                 return sqlSegment.ToString();
             return this.GetQuotedValue(sqlSegment.Value);
         }
@@ -210,7 +210,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                         methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
                             var targetSegment = visitor.VisitAndDeferred(target);
-                            if (targetSegment.IsConstantValue)
+                            if (targetSegment.IsConstant)
                                 return targetSegment.Change(targetSegment.ToString());
                             return targetSegment.Change(this.CastTo(typeof(string), this.GetQuotedValue(targetSegment)), false, false, true);
                         });
@@ -224,7 +224,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                         methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
                             args[0] = visitor.VisitAndDeferred(args[0]);
-                            if (args[0].IsConstantValue)
+                            if (args[0].IsConstant)
                                 return args[0].Change(this.GetQuotedValue(methodInfo.DeclaringType, args[0]));
                             return args[0].Change(this.CastTo(methodInfo.DeclaringType, this.GetQuotedValue(args[0])), false, false, true);
                         });
@@ -237,13 +237,13 @@ public abstract class BaseOrmProvider : IOrmProvider
                         methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                         {
                             var targetSegment = visitor.VisitAndDeferred(target);
-                            var isConstantValue = targetSegment.IsConstantValue;
+                            var isConstantValue = targetSegment.IsConstant;
                             var targetType = targetSegment.Value.GetType();
                             var arguments = new List<object>();
                             for (int i = 0; i < args.Length; i++)
                             {
                                 var argumentSegment = visitor.VisitAndDeferred(args[i]);
-                                isConstantValue = isConstantValue && argumentSegment.IsConstantValue;
+                                isConstantValue = isConstantValue && argumentSegment.IsConstant;
                                 targetSegment.Merge(argumentSegment);
                                 arguments.Add(argumentSegment.Value);
                             }

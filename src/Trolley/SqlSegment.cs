@@ -9,13 +9,13 @@ namespace Trolley;
 [DebuggerDisplay("Value: {Value,nq}     Expression: {Expression,nq}")]
 public class SqlSegment
 {
-    public static SqlSegment True = new SqlSegment { isFixValue = true, OperationType = OperationType.None, IsConstantValue = true, Value = true };
-    public static SqlSegment Null = new SqlSegment { isFixValue = true, OperationType = OperationType.None, IsConstantValue = true, Value = "NULL" };
+    public static readonly SqlSegment True = new SqlSegment { isFixValue = true, OperationType = OperationType.None, IsConstant = true, Value = true };
+    public static readonly SqlSegment Null = new SqlSegment { isFixValue = true, OperationType = OperationType.None, IsConstant = true, Value = "NULL" };
     private bool isFixValue = false;
     private Type currentType = null;
 
     /// <summary>
-    /// 操作符:And/Or/Concat/Equals/NotEquals/Convert/,
+    /// 操作符:None,Equal,Not,And,Or
     /// </summary>
     public OperationType OperationType { get; set; } = OperationType.None;
     public Stack<DeferredExpr> DeferredExprs { get; set; }
@@ -32,7 +32,7 @@ public class SqlSegment
     /// <summary>
     /// 是否是常量值
     /// </summary>
-    public bool IsConstantValue { get; set; }
+    public bool IsConstant { get; set; }
     /// <summary>
     /// 是否是变量
     /// </summary>
@@ -100,10 +100,10 @@ public class SqlSegment
         this.IsParameter = this.IsParameter || rightSegment.IsParameter;
         return this;
     }
-    public SqlSegment Change(object value, bool isConstantValue = true, bool isExpression = false, bool isMethodCall = false)
+    public SqlSegment Change(object value, bool isConstant = true, bool isExpression = false, bool isMethodCall = false)
     {
         this.isFixValue = false;
-        this.IsConstantValue = isConstantValue;
+        this.IsConstant = isConstant;
         this.IsExpression = isExpression;
         this.IsMethodCall = isMethodCall;
         this.Value = value;
@@ -180,8 +180,8 @@ public class SqlSegment
         if (obj.GetType() != GetType()) return false;
         return Equals((SqlSegment)obj);
     }
-    public override int GetHashCode() => HashCode.Combine(this.isFixValue, this.OperationType, this.IsConstantValue, this.Value);
+    public override int GetHashCode() => HashCode.Combine(this.isFixValue, this.OperationType, this.IsConstant, this.Value);
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-    private string DebugDisplayText => $"Value: {this.Value} \r\nExpression: {this.Expression}";
+    private string DebugDisplayText => $"Value: {this.Value} Expression: {this.Expression}";
 }

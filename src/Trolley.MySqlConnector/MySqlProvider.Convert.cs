@@ -28,17 +28,31 @@ partial class MySqlProvider
             case "ToUInt32":
             case "ToUInt64":
             case "ToDecimal":
+                if (parameterInfos.Length == 1)
+                {
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    {
+                        args[0] = visitor.VisitAndDeferred(args[0]);
+                        if (args[0].IsConstant || args[0].IsVariable)
+                            return args[0].Change(this.GetQuotedValue(methodCallExpr.Type, args[0]));
+
+                        target.Merge(args[0]);
+                        return target.Change(this.CastTo(methodCallExpr.Type, visitor.GetQuotedValue(args[0])), false, false, true);
+                    });
+                    result = true;
+                }
+                break;
             case "ToString":
                 if (parameterInfos.Length == 1)
                 {
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
                     {
                         args[0] = visitor.VisitAndDeferred(args[0]);
-                        if (args[0].IsConstantValue)
+                        if (args[0].IsConstant)
                             return args[0].Change(this.GetQuotedValue(methodCallExpr.Type, args[0]));
 
                         target.Merge(args[0]);
-                        return target.Change(this.CastTo(methodCallExpr.Type, this.GetQuotedValue(args[0])), false, false, true);
+                        return target.Change(this.CastTo(methodCallExpr.Type, visitor.GetQuotedValue(args[0])), false, false, true);
                     });
                     result = true;
                 }

@@ -63,12 +63,6 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         this.isWhere = false;
         return this;
     }
-    public override SqlSegment VisitConstant(SqlSegment sqlSegment)
-    {
-        if (this.isParameterized || sqlSegment.IsParameterized)
-            return this.ToParameter(base.VisitConstant(sqlSegment));
-        return base.VisitConstant(sqlSegment);
-    }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
         var memberExpr = sqlSegment.Expression as MemberExpression;
@@ -131,7 +125,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 
                 var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                 sqlSegment.HasField = true;
-                sqlSegment.IsConstantValue = false;
+                sqlSegment.IsConstant = false;
                 sqlSegment.TableSegment = tableSegment;
                 sqlSegment.FromMember = memberMapper.Member;
                 sqlSegment.MemberMapper = memberMapper;
@@ -152,13 +146,10 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
         //var orderId=10; Select(f=>new {OrderId=orderId,...}
         //Select(f=>new {OrderId=this.Order.Id, ...}
-        sqlSegment = this.Evaluate(sqlSegment);
-        this.ConvertTo(sqlSegment);
+        this.Evaluate(sqlSegment);
 
-        //只有变量做参数化
-        //if (sqlSegment.IsParameterized || this.isParameterized)
-        //    return this.ToParameter(sqlSegment);
-        sqlSegment.IsConstantValue = false;
+        //这里不做参数化，后面统一走参数化处理
+        sqlSegment.IsConstant = false;
         sqlSegment.IsVariable = true;
         sqlSegment.IsExpression = false;
         sqlSegment.IsMethodCall = false;
@@ -210,38 +201,21 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             builder.Append("NULL");
         else
         {
-            if (sqlSegment.IsConstantValue)
+            if (sqlSegment.IsConstant || sqlSegment.IsVariable)
             {
                 this.dbParameters ??= new();
-                IDbDataParameter dbParameter = null;
                 var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
                 if (this.dbParameters.Exists(f => f.ParameterName == parameterName))
                     parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
 
                 if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
                     sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
-
-                if (memberMapper.TypeHandler != null)
-                {
-                    if (memberMapper.NativeDbType != null)
-                        dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
-                    else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
-                    memberMapper.TypeHandler.SetValue(this.OrmProvider, dbParameter, sqlSegment.Value);
-                }
-                else
-                {
-                    if (memberMapper.NativeDbType != null)
-                    {
-                        sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.Value, memberMapper.NativeDbType);
-                        dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
-                    }
-                    else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
-                }
-
+                var dbParameter = this.CreateParameter(memberMapper, parameterName, sqlSegment.Value);
                 this.dbParameters.Add(dbParameter);
                 sqlSegment.Value = parameterName;
                 sqlSegment.IsParameter = true;
-                sqlSegment.IsConstantValue = false;
+                sqlSegment.IsVariable = false;
+                sqlSegment.IsConstant = false;
                 builder.Append(sqlSegment.Value.ToString());
             }
             else builder.Append(sqlSegment.ToString());

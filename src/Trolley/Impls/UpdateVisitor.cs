@@ -480,7 +480,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     fieldName = tableSegment.AliasName + "." + fieldName;
 
                 sqlSegment.HasField = true;
-                sqlSegment.IsConstantValue = false;
+                sqlSegment.IsConstant = false;
                 sqlSegment.TableSegment = tableSegment;
                 sqlSegment.FromMember = memberMapper.Member;
                 sqlSegment.MemberMapper = memberMapper;
@@ -501,12 +501,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
         //var orderId=10; Select(f=>new {OrderId=orderId,...}
         //Select(f=>new {OrderId=this.Order.Id, ...}
-        sqlSegment = this.Evaluate(sqlSegment);
+        this.Evaluate(sqlSegment);
 
-        //只有WithBy场景在此参数化，暂时不做参数化，当作常量处理，方便后面走参数化处理
-        this.ConvertTo(sqlSegment);
-		//变量当作常量处理
-        sqlSegment.IsConstantValue = false;
+        //只有WithBy场景做参数化处理，这里不做参数化，后面统一走参数化处理 
+        sqlSegment.IsConstant = false;
         sqlSegment.IsVariable = true;
         sqlSegment.IsExpression = false;
         sqlSegment.IsMethodCall = false;
@@ -588,27 +586,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         else
         {
             this.dbParameters ??= new();
-            IDbDataParameter dbParameter = null;
             var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
             if (this.dbParameters.Exists(f => f.ParameterName == parameterName))
                 parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
-
-            if (memberMapper.TypeHandler != null)
-            {
-                if (memberMapper.NativeDbType != null)
-                    dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
-                else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
-                memberMapper.TypeHandler.SetValue(this.OrmProvider, dbParameter, fieldValue);
-            }
-            else
-            {
-                if (memberMapper.NativeDbType != null)
-                {
-                    fieldValue = this.OrmProvider.ToFieldValue(fieldValue, memberMapper.NativeDbType);
-                    dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
-                }
-                else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
-            }
+            var dbParameter = CreateParameter(memberMapper, parameterName, fieldValue);
             this.dbParameters.Add(dbParameter);
             return new SetField { MemberMapper = memberMapper, Value = parameterName };
         }
@@ -619,7 +600,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             return new SetField { MemberMapper = memberMapper, Value = "NULL" };
         else
         {
-            if (sqlSegment.IsConstantValue)
+            if (sqlSegment.IsConstant || sqlSegment.IsVariable)
             {
                 this.dbParameters ??= new();
                 var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
@@ -632,7 +613,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 this.dbParameters.Add(dbParameter);
                 sqlSegment.Value = parameterName;
                 sqlSegment.IsParameter = true;
-                sqlSegment.IsConstantValue = false;
+                sqlSegment.IsVariable = false;
+                sqlSegment.IsConstant = false;
                 return new SetField { MemberMapper = memberMapper, Value = sqlSegment.Value.ToString() };
             }
             return new SetField { MemberMapper = memberMapper, Value = sqlSegment.ToString() };
@@ -644,7 +626,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             return new SetField { MemberMapper = memberMapper, Value = "NULL" };
         else
         {
-            if (sqlSegment.IsConstantValue)
+            if (sqlSegment.IsConstant || sqlSegment.IsVariable)
             {
                 var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
                 if (dbParameters.Exists(f => f.ParameterName == parameterName))
@@ -657,32 +639,12 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 dbParameters.Add(dbParameter);
                 sqlSegment.Value = parameterName;
                 sqlSegment.IsParameter = true;
-                sqlSegment.IsConstantValue = false;
+                sqlSegment.IsVariable = false;
+                sqlSegment.IsConstant = false;
                 return new SetField { MemberMapper = memberMapper, Value = sqlSegment.Value.ToString() };
             }
             return new SetField { MemberMapper = memberMapper, Value = sqlSegment.ToString() };
         }
-    }
-    protected IDbDataParameter CreateParameter(MemberMap memberMapper, string parameterName, object fieldValue)
-    {
-        IDbDataParameter dbParameter = null;
-        if (memberMapper.TypeHandler != null)
-        {
-            if (memberMapper.NativeDbType != null)
-                dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
-            else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
-            memberMapper.TypeHandler.SetValue(this.OrmProvider, dbParameter, fieldValue);
-        }
-        else
-        {
-            if (memberMapper.NativeDbType != null)
-            {
-                var parameters = this.OrmProvider.ToFieldValue(fieldValue, memberMapper.NativeDbType);
-                dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, parameters);
-            }
-            else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
-        }
-        return dbParameter;
     }
     protected object EvaluateAndCache(IOrmProvider ormProvider, MemberMap memberMapper, Type type, object parameters)
     {

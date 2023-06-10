@@ -156,12 +156,16 @@ public class SqlVisitor : ISqlVisitor
                 //最终变成string，字段访问、参数、表达式、方法调用需要强制转换,如：a.IntField + 5, b.Field等，常量不需要强转
                 //整形，日期，布尔，...等等常量或变量当作object类型处理的，
                 sqlSegment = this.Visit(sqlSegment.Next(unaryExpr.Operand));
-                if (sqlSegment.TargetType != null && sqlSegment.Type != sqlSegment.TargetType && !sqlSegment.IsConstantValue)
+                if (sqlSegment.TargetType != null && sqlSegment.Type != sqlSegment.TargetType && !sqlSegment.IsConstant)
                 {
-                    sqlSegment.TableSegment.Mapper ??= this.mapProvider.GetEntityMap(sqlSegment.TableSegment.EntityType);
-                    var memberMapper = sqlSegment.TableSegment.Mapper.GetMemberMap(sqlSegment.FromMember.Name);
+                    var memberMapper = sqlSegment.MemberMapper;
+                    if (memberMapper == null)
+                    {
+                        sqlSegment.TableSegment.Mapper ??= this.mapProvider.GetEntityMap(sqlSegment.TableSegment.EntityType);
+                        memberMapper = sqlSegment.TableSegment.Mapper.GetMemberMap(sqlSegment.FromMember.Name);
+                    }
                     if (this.OrmProvider.MapDefaultType(memberMapper.NativeDbType) != sqlSegment.TargetType)
-                        sqlSegment.Value = this.OrmProvider.CastTo(sqlSegment.TargetType, this.GetQuotedValue(sqlSegment, sqlSegment.IsVariable));
+                        sqlSegment.Value = this.OrmProvider.CastTo(sqlSegment.TargetType, this.GetQuotedValue(sqlSegment));
                     if (sqlSegment.Type != sqlSegment.TargetType)
                         sqlSegment.Type = sqlSegment.TargetType;
                 }
@@ -207,16 +211,13 @@ public class SqlVisitor : ISqlVisitor
                 var rightSegment = this.Visit(leftSegment.Clone(binaryExpr.Right));
 
                 //计算数组访问，a??bb
-                if (leftSegment.IsConstantValue && rightSegment.IsConstantValue)
+                if (leftSegment.IsConstant && rightSegment.IsConstant)
                     return this.Evaluate(sqlSegment.Next(binaryExpr));
 
                 if (!leftSegment.HasField && rightSegment.HasField)
                 {
                     this.Swap(ref leftSegment, ref rightSegment);
-                    if (leftSegment.ExpectType != null && leftSegment.ExpectType.IsEnum && leftSegment.TargetType != null)
-                    {
-                        rightSegment = this.Visit(leftSegment.Clone(binaryExpr.Right));
-                    }
+                    rightSegment = this.Visit(leftSegment.Clone(binaryExpr.Right));
                 }
 
                 //bool类型的表达式，这里不做解析，到where、having、joinOn子句中去解析并展开合并
@@ -279,12 +280,8 @@ public class SqlVisitor : ISqlVisitor
             return SqlSegment.Null;
 
         sqlSegment.Value = constantExpr.Value;
-        sqlSegment.IsConstantValue = true;
-        //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
-        //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
-        if (sqlSegment.IsParameterized)
-            return this.ToParameter(this.ConvertTo(sqlSegment));
-        return this.ConvertTo(sqlSegment);
+        sqlSegment.IsConstant = true;
+        return sqlSegment;
     }
     public virtual SqlSegment VisitMethodCall(SqlSegment sqlSegment)
     {
@@ -393,7 +390,7 @@ public class SqlVisitor : ISqlVisitor
         {
             var elementSegment = sqlSegment.Clone(elementExpr);
             elementSegment = this.VisitAndDeferred(elementSegment);
-            if (!elementSegment.IsConstantValue)
+            if (!elementSegment.IsConstant)
                 isConstantValue = false;
             sqlSegment.Merge(elementSegment);
             result.Add(elementSegment);
@@ -428,7 +425,7 @@ public class SqlVisitor : ISqlVisitor
                 continue;
             var elementSegment = sqlSegment.Clone(elementInit.Arguments[0]);
             elementSegment = this.VisitAndDeferred(elementSegment);
-            if (!elementSegment.IsConstantValue)
+            if (!elementSegment.IsConstant)
                 isConstantValue = false;
             result.Add(elementSegment);
         }
@@ -832,7 +829,7 @@ public class SqlVisitor : ISqlVisitor
             {
                 var constValue = format.Substring(formatIndex, nextIndex - formatIndex);
                 var constExpr = Expression.Constant(constValue);
-                result.Add(new SqlSegment { Expression = constExpr, Value = constValue, IsConstantValue = true });
+                result.Add(new SqlSegment { Expression = constExpr, Value = constValue, IsConstant = true });
             }
             result.AddRange(this.SplitConcatList(parameters[index].Expression));
             index++;
@@ -972,43 +969,26 @@ public class SqlVisitor : ISqlVisitor
         this.AddIncludeTables(lastReaderField, readerFields);
         return readerFields;
     }
-    public virtual SqlSegment ToParameter(SqlSegment sqlSegment)
+    public virtual IDbDataParameter CreateParameter(MemberMap memberMapper, string parameterName, object fieldValue)
     {
-        if (sqlSegment == SqlSegment.Null)
-            sqlSegment.Value = DBNull.Value;
-
-        sqlSegment.IsParameter = true;
-        this.dbParameters ??= new();
-
-        //数组，直接返回@p0,@p1,@p2,@p3或是@Name0,@Name1,@Name2,@Name3
-        if (sqlSegment.Value is IEnumerable objValues && objValues is not string)
+        IDbDataParameter dbParameter = null;
+        if (memberMapper.TypeHandler != null)
         {
-            string parameterPrefix = null;
-            if (string.IsNullOrEmpty(sqlSegment.ParameterName))
-                parameterPrefix = this.OrmProvider.ParameterPrefix + this.parameterPrefix;
-            else parameterPrefix = this.OrmProvider.ParameterPrefix + sqlSegment.ParameterName;
-
-            int index = 0;
-            var builder = new StringBuilder();
-            foreach (var objValue in objValues)
-            {
-                if (index > 0) builder.Append(',');
-                var parameterName = parameterPrefix + this.dbParameters.Count.ToString();
-                builder.Append(parameterName);
-                this.dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, objValue));
-                index++;
-            }
-            return sqlSegment.Change(builder.ToString(), false, false, false);
+            if (memberMapper.NativeDbType != null)
+                dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue);
+            else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
+            memberMapper.TypeHandler.SetValue(this.OrmProvider, dbParameter, fieldValue);
         }
         else
         {
-            string parameterName = null;
-            if (string.IsNullOrEmpty(sqlSegment.ParameterName))
-                parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
-            else parameterName = this.OrmProvider.ParameterPrefix + sqlSegment.ParameterName;
-            this.dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value));
-            return sqlSegment.Change(parameterName, false, false, false);
+            if (memberMapper.NativeDbType != null)
+            {
+                var parameters = this.OrmProvider.ToFieldValue(fieldValue, memberMapper.NativeDbType);
+                dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, parameters);
+            }
+            else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
         }
+        return dbParameter;
     }
     public virtual string VisitFromQuery(LambdaExpression lambdaExpr, out bool isNeedAlias)
     {
@@ -1131,7 +1111,7 @@ public class SqlVisitor : ISqlVisitor
         isNeedAlias = queryVisitor.IsNeedAlias;
         return result;
     }
-    public virtual string GetQuotedValue(object fieldValue, bool? isVariable = null, int? index = null)
+    public virtual string GetQuotedValue(object fieldValue, MemberMap memberMapper = null, bool? isVariable = null, int? index = null)
     {
         if (fieldValue is DBNull)
             return "NULL";
@@ -1140,51 +1120,43 @@ public class SqlVisitor : ISqlVisitor
             if (sqlSegment == SqlSegment.Null)
                 return "NULL";
             //默认只要是变量就设置为参数
-            if (isVariable.HasValue && isVariable.Value || sqlSegment.IsVariable)
+            if (isVariable.HasValue && isVariable.Value || sqlSegment.IsVariable
+                || (this.isParameterized || sqlSegment.IsParameterized) && sqlSegment.IsConstant)
             {
                 string parameterName = null;
-                if (string.IsNullOrEmpty(sqlSegment.ParameterName))
-                    parameterName = this.OrmProvider.ParameterPrefix + sqlSegment.ParameterName;
                 this.dbParameters ??= new();
+                if (!string.IsNullOrEmpty(sqlSegment.ParameterName))
+                    parameterName = this.OrmProvider.ParameterPrefix + sqlSegment.ParameterName;
+                else parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
+
                 if (this.dbParameters.Exists(f => f.ParameterName == parameterName))
                     parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
                 if (index.HasValue)
                     parameterName += index.ToString();
-
-                var memberMapper = sqlSegment.MemberMapper;
+                var myMemberMapper = sqlSegment.MemberMapper ?? memberMapper;
                 IDbDataParameter dbParameter = null;
-                if (memberMapper.TypeHandler != null)
-                {
-                    if (memberMapper.NativeDbType != null)
-                        dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
-                    else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
-                    memberMapper.TypeHandler.SetValue(this.OrmProvider, dbParameter, sqlSegment.Value);
-                }
-                else
-                {
-                    if (memberMapper.NativeDbType != null)
-                    {
-                        sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.Value, memberMapper.NativeDbType);
-                        dbParameter = this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, sqlSegment.Value);
-                    }
-                    else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
-                }
+                if (myMemberMapper != null)
+                    dbParameter = this.CreateParameter(myMemberMapper, parameterName, sqlSegment.Value);
+                else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
                 this.dbParameters.Add(dbParameter);
                 return parameterName;
             }
-            else if (sqlSegment.IsConstantValue)
+            else if (sqlSegment.IsConstant)
                 return this.OrmProvider.GetQuotedValue(sqlSegment);
             else return sqlSegment.ToString();
         }
         else
         {
-            if (isVariable.HasValue && isVariable.Value)
+            if (isVariable.HasValue && isVariable.Value || this.isParameterized)
             {
                 fieldValue = this.OrmProvider.GetQuotedValue(fieldValue);
                 var parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
-                var dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
                 if (index.HasValue)
                     parameterName += index.ToString();
+                IDbDataParameter dbParameter = null;
+                if (memberMapper != null)
+                    dbParameter = this.CreateParameter(memberMapper, parameterName, fieldValue);
+                else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
                 this.dbParameters.Add(dbParameter);
                 return parameterName;
             }
@@ -1219,32 +1191,12 @@ public class SqlVisitor : ISqlVisitor
         string strExpression = null;
         if ((this.isSelect && !sqlSegment.IsExpression)
             || (this.isWhere && !sqlSegment.IsExpression))
-            strExpression = $"{sqlSegment} {strOperator} {this.GetQuotedValue(deferredSegment)}";
+            strExpression = $"{sqlSegment} {strOperator} {this.GetQuotedValue(deferredSegment, sqlSegment.MemberMapper)}";
         else strExpression = $"{sqlSegment}";
 
         if (this.isSelect || (this.isWhere && !isExpectBooleanType))
             sqlSegment.Change($"CASE WHEN {strExpression} THEN {ifTrueValue} ELSE {ifFalseValue} END", false, true, false);
         else sqlSegment.Change($"{strExpression}", false, true, false);
-        return sqlSegment;
-    }
-    public SqlSegment ConvertTo(SqlSegment sqlSegment)
-    {
-        //只处理枚举类型，字符串拼接的转Object不处理
-        if (sqlSegment.TargetType != null && sqlSegment.TargetType != sqlSegment.Type && sqlSegment.ExpectType != null)
-        {
-            var currentType = sqlSegment.Value.GetType();
-            if (sqlSegment.ExpectType != currentType)
-            {
-                if (sqlSegment.ExpectType.IsEnumType(out var enumType, out _))
-                    sqlSegment.Value = Enum.ToObject(enumType, sqlSegment.Value);
-                else sqlSegment.Value = Convert.ChangeType(sqlSegment.Value, sqlSegment.ExpectType);
-                sqlSegment.Type = sqlSegment.ExpectType;
-            }
-            if (sqlSegment.TargetType == typeof(string))
-                sqlSegment.Value = sqlSegment.Value.ToString();
-            else sqlSegment.Value = Convert.ChangeType(sqlSegment.Value, sqlSegment.TargetType);
-            sqlSegment.Type = sqlSegment.TargetType;
-        }
         return sqlSegment;
     }
     public List<ReaderField> FlattenFieldsTo(Type targetType, Expression toTargetExpr = null)
