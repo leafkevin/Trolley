@@ -62,9 +62,9 @@ public static class Extensions
         builder.Configure(typeof(TOrmProvider), new TModelConfiguration());
         return builder;
     }
-    public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
+    public static string GetQuotedValue(this IOrmProvider ormProvider, object value, string nullValue = "NULL")
     {
-        if (value == null) return "NULL";
+        if (value == null) return nullValue;
         return ormProvider.GetQuotedValue(value.GetType(), value);
     }
     public static EntityMap GetEntityMap(this IEntityMapProvider mapProvider, Type entityType)
@@ -302,11 +302,11 @@ public static class Extensions
         var current = root;
         var parent = root;
         var readerBuilders = new Dictionary<int, EntityBuildInfo>();
-        var deferredBuilds = new Stack<EntityBuildInfo>();
-        ITypeHandler typeHandler = null;
+        var deferredBuilds = new Stack<EntityBuildInfo>();        
 
         while (readerIndex < readerFields.Count)
         {
+            ITypeHandler typeHandler = null;
             var readerField = readerFields[readerIndex];
             if (readerField.FieldType == ReaderFieldType.Field)
             {

@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 namespace Trolley;
 
 public delegate SqlSegment MemberAccessSqlFormatter(ISqlVisitor visitor, SqlSegment target);
-public delegate SqlSegment MethodCallSqlFormatter(ISqlVisitor visitor, SqlSegment target, Stack<DeferredExpr> DeferredExprs, params SqlSegment[] arguments);
+public delegate SqlSegment MethodCallSqlFormatter(ISqlVisitor visitor, Expression orgExpr, Expression target, Stack<DeferredExpr> DeferredExprs, params Expression[] arguments);
 
 public interface IOrmProvider
 {
@@ -27,7 +27,7 @@ public interface IOrmProvider
     Type MapDefaultType(object nativeDbType);
     string CastTo(Type type, object value);
     string GetQuotedValue(Type fieldType, object value);
-    object ToFieldValue(object fieldValue, object nativeDbType);
+    object ToFieldValue(MemberMap memberMapper, object fieldValue);
     string GetBinaryOperator(ExpressionType nodeType);
     bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
     bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);

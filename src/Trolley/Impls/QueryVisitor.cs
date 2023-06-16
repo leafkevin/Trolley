@@ -945,7 +945,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         => this.tableAlias.TryAdd(aliasName, tableSegment);
     public virtual IQueryVisitor Clone(char tableAsStart = 'a', string parameterPrefix = "p")
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.dbKey, this.mapProvider, this.isParameterized, tableAsStart, parameterPrefix);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.dbKey, this.mapProvider, this.IsParameterized, tableAsStart, parameterPrefix);
         visitor.IsNeedAlias = this.IsNeedAlias;
         return visitor;
     }
@@ -1136,7 +1136,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     sqlSegment = this.VisitAndDeferred(sqlSegment);
                     //使用GetQuotedValue方法把常量都变成对应的字符串格式
                     //String和DateTime类型变成'...'数据,数字类型变成数字字符串
-                    fieldName = this.OrmProvider.GetQuotedValue(sqlSegment);
+                    fieldName = this.OrmProvider.GetQuotedValue(this.Change(sqlSegment));
                     if (sqlSegment.IsExpression)
                         fieldName = $"({fieldName})";
                     if (sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall || sqlSegment.FromMember?.Name != memberInfo.Name)
@@ -1176,7 +1176,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     readerFields.Add(methodCallField);
                     break;
                 }
-                else fieldName = this.OrmProvider.GetQuotedValue(sqlSegment);
+                else fieldName = this.OrmProvider.GetQuotedValue(this.Change(sqlSegment));
                 if (sqlSegment.IsExpression)
                     fieldName = $"({fieldName})";
                 if (sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall || sqlSegment.FromMember?.Name != memberInfo.Name)

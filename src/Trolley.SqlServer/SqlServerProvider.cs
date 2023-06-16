@@ -155,14 +155,6 @@ public partial class SqlServerProvider : BaseOrmProvider
             return result;
         return typeof(object);
     }
-    public override string GetQuotedValue(Type expectType, object value)
-    {
-        if (expectType == typeof(TimeSpan) && value is TimeSpan timeSpan)
-            return $"'{timeSpan.ToString("d\\ hh\\:mm\\:ss\\.fffffff")}'";
-        if (expectType == typeof(TimeOnly) && value is TimeOnly timeOnly)
-            return $"'{timeOnly.ToString("hh\\:mm\\:ss\\.fffffff")}'";
-        return base.GetQuotedValue(expectType, value);
-    }
     public override string CastTo(Type type, object value)
         => $"CAST({value} AS {castTos[type]})";
 }

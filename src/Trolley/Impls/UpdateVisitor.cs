@@ -277,6 +277,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (entityMapper.KeyMembers == null || entityMapper.KeyMembers.Count == 0)
             throw new Exception($"模型{entityMapper.EntityType.FullName}未配置主键信息");
 
+        this.dbParameters ??= new();
         builder.Append(" WHERE ");
         for (int i = 0; i < entityMapper.KeyMembers.Count; i++)
         {
@@ -531,23 +532,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             || typeof(IAggregateSelect).IsAssignableFrom(methodCallExpr.Method.DeclaringType))
             return this.VisitSqlMethodCall(sqlSegment);
 
-        SqlSegment target = null;
-        if (methodCallExpr.Object != null)
-            target = new SqlSegment { Expression = methodCallExpr.Object };
-
-        SqlSegment[] arguments = null;
-        if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
-        {
-            var argumentSegments = new List<SqlSegment>();
-            //如果target为null，第一个参数，直接使用现有对象sqlSegment
-            for (int i = 0; i < methodCallExpr.Arguments.Count; i++)
-            {
-                argumentSegments.Add(new SqlSegment { Expression = methodCallExpr.Arguments[i] });
-            }
-            arguments = argumentSegments.ToArray();
-        }
         if (!sqlSegment.IsDeferredFields && this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter))
-            return formatter.Invoke(this, target, sqlSegment.DeferredExprs, arguments);
+            return formatter.Invoke(this, methodCallExpr, methodCallExpr.Object, sqlSegment.DeferredExprs, methodCallExpr.Arguments.ToArray());
 
         var lambdaExpr = Expression.Lambda(sqlSegment.Expression);
         var objValue = lambdaExpr.Compile().DynamicInvoke();
@@ -611,11 +597,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
                 var dbParameter = this.CreateParameter(memberMapper, parameterName, sqlSegment.Value);
                 this.dbParameters.Add(dbParameter);
-                sqlSegment.Value = parameterName;
-                sqlSegment.IsParameter = true;
-                sqlSegment.IsVariable = false;
-                sqlSegment.IsConstant = false;
-                return new SetField { MemberMapper = memberMapper, Value = sqlSegment.Value.ToString() };
+                return new SetField { MemberMapper = memberMapper, Value = parameterName };
             }
             return new SetField { MemberMapper = memberMapper, Value = sqlSegment.ToString() };
         }
@@ -637,11 +619,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
                 var dbParameter = this.CreateParameter(memberMapper, parameterName, sqlSegment.Value);
                 dbParameters.Add(dbParameter);
-                sqlSegment.Value = parameterName;
-                sqlSegment.IsParameter = true;
-                sqlSegment.IsVariable = false;
-                sqlSegment.IsConstant = false;
-                return new SetField { MemberMapper = memberMapper, Value = sqlSegment.Value.ToString() };
+                return new SetField { MemberMapper = memberMapper, Value = parameterName };
             }
             return new SetField { MemberMapper = memberMapper, Value = sqlSegment.ToString() };
         }
@@ -658,8 +636,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 var ormProviderExpr = Expression.Constant(ormProvider);
                 var methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.ToFieldValue));
                 var fieldValueExpr = Expression.Convert(valueExpr, typeof(object));
-                var nativeDbTypeExpr = Expression.Constant(memberMapper.NativeDbType, typeof(object));
-                valueExpr = Expression.Call(ormProviderExpr, methodInfo, fieldValueExpr, nativeDbTypeExpr);
+                var memberMapperExpr = Expression.Constant(memberMapper);
+                valueExpr = Expression.Call(ormProviderExpr, methodInfo, memberMapperExpr, fieldValueExpr);
             }
             getter = Expression.Lambda<Func<object, object>>(Expression.Convert(valueExpr, typeof(object)), objExpr).Compile();
             getterCache.TryAdd(cacheKey, getter);

@@ -33,7 +33,7 @@ partial class SqlServerProvider
             case "Ticks":
                 memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                 {
-                    var targetSegment = visitor.VisitAndDeferred(target);
+                    var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                     if (targetSegment.IsConstant)
                         return targetSegment.Change(((TimeSpan)targetSegment.Value).Ticks);
                     var targetArgument = this.GetQuotedValue(targetSegment);
@@ -50,7 +50,7 @@ partial class SqlServerProvider
             case "Hour":
                 memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                 {
-                    var targetSegment = visitor.VisitAndDeferred(target);
+                    var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                     if (targetSegment.IsConstant)
                         return targetSegment.Change(((TimeOnly)targetSegment.Value).Hour);
 
@@ -61,7 +61,7 @@ partial class SqlServerProvider
             case "Millisecond":
                 memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                 {
-                    var targetSegment = visitor.VisitAndDeferred(target);
+                    var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                     if (targetSegment.IsConstant)
                         return targetSegment.Change(((TimeOnly)targetSegment.Value).Millisecond);
 
@@ -72,7 +72,7 @@ partial class SqlServerProvider
             case "Minute":
                 memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                 {
-                    var targetSegment = visitor.VisitAndDeferred(target);
+                    var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                     if (targetSegment.IsConstant)
                         return targetSegment.Change(((TimeOnly)targetSegment.Value).Minute);
 
@@ -83,7 +83,7 @@ partial class SqlServerProvider
             case "Second":
                 memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                 {
-                    var targetSegment = visitor.VisitAndDeferred(target);
+                    var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                     if (targetSegment.IsConstant)
                         return targetSegment.Change(((TimeOnly)targetSegment.Value).Second);
 
@@ -106,7 +106,7 @@ partial class SqlServerProvider
             switch (methodInfo.Name)
             {
                 case "FromTimeSpan":
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(args[0]);
                         if (valueSegment.IsConstant)
@@ -117,7 +117,7 @@ partial class SqlServerProvider
                     result = true;
                     break;
                 case "FromDateTime":
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(args[0]);
                         if (valueSegment.IsConstant)
@@ -131,7 +131,7 @@ partial class SqlServerProvider
                 case "TryParse":
                     if (parameterInfos.Length >= 1 && parameterInfos[0].ParameterType == typeof(string))
                     {
-                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                         {
                             var valueSegment = visitor.VisitAndDeferred(args[0]);
                             if (valueSegment.IsConstant)
@@ -146,7 +146,7 @@ partial class SqlServerProvider
                 case "TryParseExact":
                     if (parameterInfos.Length >= 2 && parameterInfos[0].ParameterType == typeof(string) && parameterInfos[1].ParameterType == typeof(string))
                     {
-                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                         {
                             var valueSegment = visitor.VisitAndDeferred(args[0]);
                             var formatSegment = visitor.VisitAndDeferred(args[1]);
@@ -166,9 +166,9 @@ partial class SqlServerProvider
             switch (methodInfo.Name)
             {
                 case "Add":
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(args[0]);
 
                         if (targetSegment.IsConstant && rightSegment.IsConstant)
@@ -180,9 +180,9 @@ partial class SqlServerProvider
                     result = true;
                     break;
                 case "CompareTo":
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(args[0]);
 
                         targetSegment.Merge(rightSegment);
@@ -191,9 +191,9 @@ partial class SqlServerProvider
                     result = true;
                     break;
                 case "Equals":
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(args[0]);
 
                         targetSegment.Merge(rightSegment);
@@ -203,9 +203,9 @@ partial class SqlServerProvider
                     break;
 
                     //case "Subtract":
-                    //    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    //    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     //    {
-                    //        var targetSegment = visitor.VisitAndDeferred(target);
+                    //        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                     //        var rightSegment = visitor.VisitAndDeferred(args[0]);
                     //        if (targetSegment.IsConstant && rightSegment.IsConstant)
                     //            return targetSegment.Change(((TimeOnly)targetSegment.Value).Subtract((TimeOnly)rightSegment.Value));
@@ -216,9 +216,9 @@ partial class SqlServerProvider
                     //    result = true;
                     //    break;
                     //case "Multiply":
-                    //    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    //    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     //    {
-                    //        var targetSegment = visitor.VisitAndDeferred(target);
+                    //        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                     //        var rightSegment = visitor.VisitAndDeferred(args[0]);
                     //        if (targetSegment.IsConstant && rightSegment.IsConstant)
                     //            return targetSegment.Change(((TimeOnly)targetSegment.Value).Multiply((double)rightSegment.Value));
@@ -231,9 +231,9 @@ partial class SqlServerProvider
                     //case "Divide":
                     //    if (parameterInfos[0].ParameterType == typeof(double))
                     //    {
-                    //        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    //        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     //        {
-                    //            var targetSegment = visitor.VisitAndDeferred(target);
+                    //            var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                     //            var rightSegment = visitor.VisitAndDeferred(args[0]);
                     //            if (targetSegment.IsConstant && rightSegment.IsConstant)
                     //                return targetSegment.Change(((TimeOnly)targetSegment.Value).Divide((double)rightSegment.Value));
@@ -245,9 +245,9 @@ partial class SqlServerProvider
                     //    }
                     //    if (parameterInfos[0].ParameterType == typeof(TimeOnly))
                     //    {
-                    //        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    //        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     //        {
-                    //            var targetSegment = visitor.VisitAndDeferred(target);
+                    //            var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                     //            var rightSegment = visitor.VisitAndDeferred(args[0]);
                     //            if (targetSegment.IsConstant && rightSegment.IsConstant)
                     //                return targetSegment.Change(((TimeOnly)targetSegment.Value).Divide((TimeOnly)rightSegment.Value));

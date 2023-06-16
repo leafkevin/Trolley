@@ -331,8 +331,7 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
                 blockBodies.Add(Expression.Call(insertBuilderExpr, methodInfo2, Expression.Constant(fieldName)));
                 blockBodies.Add(Expression.Call(valueBuilderExpr, methodInfo2, parameterNameExpr));
 
-                var isNullable = parameterMemberMapper.MemberType.IsNullableType(out _) || parameterMemberMapper.MemberType == typeof(string) || parameterMemberMapper.MemberType.IsEntityType();
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, isNullable, propMapper.NativeDbType, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
+                RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, true, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
                 columnIndex++;
             }
 
@@ -715,8 +714,7 @@ class Created<TEntity> : ICreated<TEntity>
                 var parameterNameExpr = Expression.Call(methodInfo3, Expression.Constant(parameterName), suffixExpr);
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
-                var isNullable = parameterMemberMapper.MemberType.IsNullableType(out _) || parameterMemberMapper.MemberType == typeof(string) || parameterMemberMapper.MemberType.IsEntityType();
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, isNullable, propMapper.NativeDbType, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
+                RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, true, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
                 columnIndex++;
             }
             blockBodies.Add(Expression.Call(builderExpr, methodInfo1, Expression.Constant(')')));
@@ -764,8 +762,7 @@ class Created<TEntity> : ICreated<TEntity>
                 valuesBuilder.Append(parameterName);
 
                 var parameterNameExpr = Expression.Constant(parameterName);
-                var isNullable = parameterMemberMapper.MemberType.IsNullableType(out _) || parameterMemberMapper.MemberType == typeof(string) || parameterMemberMapper.MemberType.IsEntityType();
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, isNullable, propMapper.NativeDbType, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
+                RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, true, propMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
                 columnIndex++;
             }
             insertBuilder.Append(')');
@@ -811,8 +808,7 @@ class Created<TEntity> : ICreated<TEntity>
 
                 var parameterNameExpr = Expression.Constant(parameterName);
                 //明确的SQL，传入的参数有可能为NULL,为NULL则插入NULL值
-                var isNullable = parameterMemberMapper.MemberType.IsNullableType(out _) || parameterMemberMapper.MemberType == typeof(string) || parameterMemberMapper.MemberType.IsEntityType();
-                RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, isNullable, parameterMemberMapper.NativeDbType, parameterMemberMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
+                RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, true, parameterMemberMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
             }
             commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
             commandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);

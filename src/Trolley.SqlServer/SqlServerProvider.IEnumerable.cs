@@ -24,7 +24,7 @@ partial class SqlServerProvider
                 if (methodInfo.IsStatic && parameterInfos.Length >= 2 && methodInfo.DeclaringType == typeof(Enumerable))
                 {
                     //数组调用
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var builder = new StringBuilder();
                         var arraySegment = visitor.VisitAndDeferred(args[0]);
@@ -69,10 +69,10 @@ partial class SqlServerProvider
                 if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
                      && typeof(IEnumerable<>).MakeGenericType(methodInfo.DeclaringType.GenericTypeArguments[0]).IsAssignableFrom(methodInfo.DeclaringType))
                 {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var builder = new StringBuilder();
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var elementSegment = visitor.VisitAndDeferred(args[0]);
                         var sqlSegments = targetSegment.Value as List<SqlSegment>;
 
@@ -112,9 +112,9 @@ partial class SqlServerProvider
                 if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType == typeof(Enumerable) && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
                      && methodInfo.DeclaringType.GenericTypeArguments[0] == typeof(char))
                 {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         return target.Change($"REVERSE({this.GetQuotedValue(targetSegment)})", false, false, true);
                     });
                     result = true;

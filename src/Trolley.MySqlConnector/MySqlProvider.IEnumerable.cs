@@ -24,21 +24,23 @@ partial class MySqlProvider
                 if (methodInfo.IsStatic && parameterInfos.Length >= 2 && methodInfo.DeclaringType == typeof(Enumerable))
                 {
                     //数组调用
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var builder = new StringBuilder();
-                        var arraySegment = visitor.VisitAndDeferred(args[0]);
-                        var sqlSegments = arraySegment.Value as List<SqlSegment>;
+                        var elementSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                        var arraySegment = visitor.VisitAndDeferred(elementSegment.Clone(args[0]));
 
-                        foreach (var eleSegment in sqlSegments)
+                        var enumerable = arraySegment.Value as IEnumerable;
+                        foreach (var item in enumerable)
                         {
                             if (builder.Length > 0)
                                 builder.Append(',');
-                            builder.Append(this.GetQuotedValue(eleSegment));
+                            string sqlArgument = null;
+                            if (item is SqlSegment sqlSegment)
+                                sqlArgument = visitor.GetQuotedValue(visitor.Change(sqlSegment), nullValue: "");
+                            else sqlArgument = visitor.GetQuotedValue(item, arraySegment, nullValue: "");
+                            builder.Append(sqlArgument);
                         }
-
-                        var elementSegment = visitor.VisitAndDeferred(args[1]);
-                        var element = this.GetQuotedValue(elementSegment);
 
                         int notIndex = 0;
                         if (deferExprs != null && deferExprs.Count > 0)
@@ -58,8 +60,11 @@ partial class MySqlProvider
 
                         string notString = notIndex % 2 > 0 ? "NOT " : "";
                         if (builder.Length > 0)
-                            return elementSegment.Change($"{element} {notString}IN ({builder})", false, true, false);
-                        else return elementSegment.Change("1<>0", false, true, false);
+                        {
+                            var elementArgument = visitor.GetQuotedValue(visitor.Change(elementSegment));
+                            return visitor.Merge(elementSegment, arraySegment.ToParameter(visitor), $"{elementArgument} {notString}IN ({builder})", true, false);
+                        }
+                        else return visitor.Change(elementSegment, "1<>0", true, false);
                     });
                     result = true;
                 }
@@ -69,20 +74,23 @@ partial class MySqlProvider
                 if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
                      && typeof(IEnumerable<>).MakeGenericType(methodInfo.DeclaringType.GenericTypeArguments[0]).IsAssignableFrom(methodInfo.DeclaringType))
                 {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var builder = new StringBuilder();
-                        var targetSegment = visitor.VisitAndDeferred(target);
-                        var elementSegment = visitor.VisitAndDeferred(args[0]);
-                        var sqlSegments = targetSegment.Value as List<SqlSegment>;
+                        var elementSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(elementSegment.Clone(target));
 
-                        foreach (var eleSegment in sqlSegments)
+                        var enumerable = targetSegment.Value as IEnumerable;
+                        foreach (var item in enumerable)
                         {
                             if (builder.Length > 0)
                                 builder.Append(',');
-                            builder.Append(this.GetQuotedValue(eleSegment));
+                            string sqlArgument = null;
+                            if (item is SqlSegment sqlSegment)
+                                sqlArgument = visitor.GetQuotedValue(visitor.Change(sqlSegment), nullValue: "");
+                            else sqlArgument = visitor.GetQuotedValue(item, targetSegment, nullValue: "");
+                            builder.Append(sqlArgument);
                         }
-                        string element = this.GetQuotedValue(elementSegment);
 
                         int notIndex = 0;
                         if (deferExprs != null && deferExprs.Count > 0)
@@ -102,20 +110,38 @@ partial class MySqlProvider
 
                         string notString = notIndex % 2 > 0 ? "NOT " : "";
                         if (builder.Length > 0)
-                            return elementSegment.Change($"{element} {notString}IN ({builder})", false, true, false);
-                        else return elementSegment.Change("1<>0", false, true, false);
+                        {
+                            string elementArgument = visitor.GetQuotedValue(visitor.Change(elementSegment));
+                            return visitor.Merge(elementSegment, targetSegment.ToParameter(visitor), $"{elementArgument} {notString}IN ({builder})", true, false);
+                        }
+                        else return visitor.Change(elementSegment, "1<>0", true, false);
                     });
                     return true;
                 }
                 break;
             case "Reverse":
-                if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType == typeof(Enumerable) && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
-                     && methodInfo.DeclaringType.GenericTypeArguments[0] == typeof(char))
+                if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType == typeof(Enumerable)
+                    && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
+                    && methodInfo.DeclaringType.GenericTypeArguments[0] == typeof(char))
                 {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
-                        return target.Change($"REVERSE({this.GetQuotedValue(targetSegment)})", false, false, true);
+                        var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        if (args0Segment.IsConstant || args0Segment.IsVariable)
+                        {
+                            if (!methodCallCache.TryGetValue(cacheKey, out var reverseDelegate))
+                            {
+                                var sourceExpr = Expression.Parameter(target.Type, "source");
+                                var callExpr = Expression.Call(methodInfo, sourceExpr);
+                                var resultExpr = Expression.Convert(callExpr, typeof(object));
+                                reverseDelegate = Expression.Lambda<Func<object, object>>(resultExpr, sourceExpr).Compile();
+                                methodCallCache.TryAdd(cacheKey, reverseDelegate);
+                            }
+                            var toValue = reverseDelegate as Func<object, object>;
+                            args0Segment.Value = toValue.Invoke(args0Segment.Value);
+                            return visitor.Change(args0Segment);
+                        }
+                        return visitor.Change(args0Segment, $"REVERSE({visitor.GetQuotedValue(args0Segment)})", false, true);
                     });
                     result = true;
                 }

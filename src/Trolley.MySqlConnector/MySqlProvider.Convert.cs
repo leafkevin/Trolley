@@ -28,31 +28,29 @@ partial class MySqlProvider
             case "ToUInt32":
             case "ToUInt64":
             case "ToDecimal":
-                if (parameterInfos.Length == 1)
-                {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
-                    {
-                        args[0] = visitor.VisitAndDeferred(args[0]);
-                        if (args[0].IsConstant || args[0].IsVariable)
-                            return args[0].Change(this.GetQuotedValue(methodCallExpr.Type, args[0]));
-
-                        target.Merge(args[0]);
-                        return target.Change(this.CastTo(methodCallExpr.Type, visitor.GetQuotedValue(args[0])), false, false, true);
-                    });
-                    result = true;
-                }
-                break;
             case "ToString":
                 if (parameterInfos.Length == 1)
                 {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        args[0] = visitor.VisitAndDeferred(args[0]);
-                        if (args[0].IsConstant)
-                            return args[0].Change(this.GetQuotedValue(methodCallExpr.Type, args[0]));
-
-                        target.Merge(args[0]);
-                        return target.Change(this.CastTo(methodCallExpr.Type, visitor.GetQuotedValue(args[0])), false, false, true);
+                        var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        if (args0Segment.IsConstant || args0Segment.IsVariable)
+                        {
+                            var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
+                            if (!methodCallCache.TryGetValue(cacheKey, out var toValueDelegate))
+                            {
+                                var valueExpr = Expression.Parameter(typeof(object), "value");
+                                var callExpr = Expression.Call(methodInfo, valueExpr);
+                                var toValueExpr = Expression.Convert(callExpr, typeof(object));
+                                toValueDelegate = Expression.Lambda(toValueExpr, valueExpr).Compile();
+                                methodCallCache.TryAdd(cacheKey, toValueDelegate);
+                            }
+                            var toValue = toValueDelegate as Func<object, object>;
+                            args0Segment.Value = toValue.Invoke(args0Segment.Value);
+                            return visitor.Change(args0Segment);
+                        }
+                        var args0Argument = visitor.GetQuotedValue(visitor.Change(args0Segment));
+                        return visitor.Change(args0Segment, this.CastTo(methodCallExpr.Type, args0Argument), false, true);
                     });
                     result = true;
                 }

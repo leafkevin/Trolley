@@ -273,7 +273,6 @@ class Deleted<TEntity> : IDeleted<TEntity>
 
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
-            var localParameters = new Dictionary<string, int>();
             ParameterExpression typedParameterExpr = null;
             var parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
             bool isEntityType = false;
@@ -318,8 +317,8 @@ class Deleted<TEntity> : IDeleted<TEntity>
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
                 if (isEntityType)
-                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, false, keyMapper.NativeDbType, keyMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
-                else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, keyMapper.NativeDbType, this.ormProvider, blockBodies);
+                    RepositoryHelper.AddKeyMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, keyMapper, this.ormProvider, blockBodies);
+                else RepositoryHelper.AddKeyValueParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, keyMapper, this.ormProvider, blockBodies);
             }
             commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, StringBuilder, int, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, builderExpr, indexExpr, parameterExpr).Compile();
             commandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
@@ -415,8 +414,8 @@ class Deleted<TEntity> : IDeleted<TEntity>
                 var parameterNameExpr = Expression.Constant(parameterName);
 
                 if (isEntityType)
-                    RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, false, keyMapper.NativeDbType, keyMapper, this.ormProvider, localParameters, blockParameters, blockBodies);
-                else RepositoryHelper.AddParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, keyMapper.NativeDbType, this.ormProvider, blockBodies);
+                    RepositoryHelper.AddKeyMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, keyMapper, this.ormProvider, blockBodies);
+                else RepositoryHelper.AddKeyValueParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, keyMapper, this.ormProvider, blockBodies);
                 index++;
             }
             var resultLabelExpr = Expression.Label(typeof(string));

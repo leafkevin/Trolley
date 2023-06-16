@@ -10,5 +10,4 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
     }
     public override IUpdateVisitor From(params Type[] entityTypes)
         => throw new NotSupportedException("MySql不支持Update From语法，支持Update InnerJoin/LeftJoin语法");
-
 }

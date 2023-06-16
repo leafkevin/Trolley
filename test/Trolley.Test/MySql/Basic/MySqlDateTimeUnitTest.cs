@@ -46,7 +46,7 @@ public class MySqlDateTimeUnitTest : UnitTestBase
               IsEquals = f.UpdatedAt.Equals(DateTime.Parse("2023-03-25"))
           })
           .ToSql(out _);
-        Assert.True(sql == "SELECT NOW() AS `Now`,'0001-01-01 00:00:00.000' AS `MinValue`,'9999-12-31 23:59:59.999' AS `MaxValue`,UTC_TIMESTAMP() AS `UtcNow`,CURDATE() AS `Today`,'1970-01-01 00:00:00.000' AS `UnixEpoch`,'2023-05-06 00:00:00.000' AS `Date`,CONVERT(NOW(),DATE) AS `CurrentDate`,(`UpdatedAt`='2023-03-25 00:00:00.000') AS `IsEquals` FROM `sys_user` WHERE `Id`=1");
+        Assert.True(sql == "SELECT NOW() AS `Now`,'0001-01-01 00:00:00.0000000' AS `MinValue`,'9999-12-31 23:59:59.9999999' AS `MaxValue`,UTC_TIMESTAMP() AS `UtcNow`,CURDATE() AS `Today`,'1970-01-01 00:00:00.0000000' AS `UnixEpoch`,'2023-05-06 00:00:00.0000000' AS `Date`,CONVERT(NOW(),DATE) AS `CurrentDate`,(`UpdatedAt`='2023-03-25 00:00:00.0000000') AS `IsEquals` FROM `sys_user` WHERE `Id`=1");
     }
     [Fact]
     public void Subtract()
@@ -66,7 +66,7 @@ public class MySqlDateTimeUnitTest : UnitTestBase
               ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
           })
           .ToSql(out _);
-        Assert.True(sql == "");
+        Assert.True(sql == "SELECT SUBTIME(`CreatedAt`,'365 00:00:00.0000000') AS `OneYearsAgo1`,SUBTIME(NOW(),'365 00:00:00.0000000') AS `OneYearsAgo2`,DAYOFMONTH(LAST_DAY(CONCAT(YEAR(NOW()),'-',MONTH(NOW()),'-01'))) AS `DayInMonth`,((YEAR(NOW()))%4=0 AND (YEAR(NOW()))%100<>0 OR (YEAR(NOW()))%400=0) AS `IsLeapYear1`,1 AS `IsLeapYear2`,CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) AS `Parse`,'2023-05-07 13:08:45.0000000' AS `ParseExact` FROM `sys_user` WHERE `UpdatedAt`>SUBTIME(NOW(),'365 00:00:00.0000000')");
     }
     [Fact]
     public void Compare()
@@ -87,7 +87,7 @@ public class MySqlDateTimeUnitTest : UnitTestBase
               ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
           })
           .ToSql(out _);
-        Assert.True(sql == "SELECT (CASE WHEN `CreatedAt`='2023-03-03 00:00:00.000' THEN 0 WHEN TIMESTAMPDIFF(MICROSECOND,`CreatedAt`,'2023-03-03 00:00:00.000')<0 THEN 1 ELSE -1 END) AS `CompareTo`,DATE_SUB(`CreatedAt`,INTERVAL 365*86400000000 MICROSECOND) AS `OneYearsAgo1`,TIME(TIMESTAMPDIFF(MICROSECOND,NOW(),'2023-03-20 00:00:00.000')) AS `OneYearsAgo2`,DAYOFMONTH(LAST_DAY(CONCAT(YEAR(NOW()),'-',MONTH(NOW()),'-01'))) AS `DayInMonth`,((YEAR(NOW()))%4=0 AND (YEAR(NOW()))%100<>0 OR (YEAR(NOW()))%400=0) AS `IsLeapYear1`,1 AS `IsLeapYear2`,CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) AS `Parse`,'2023-05-07 13:08:45.000' AS `ParseExact` FROM `sys_user` WHERE (CASE WHEN `UpdatedAt`='2023-03-20 00:00:00.000' THEN 0 WHEN TIMESTAMPDIFF(MICROSECOND,`UpdatedAt`,'2023-03-20 00:00:00.000')<0 THEN 1 ELSE -1 END)>0");
+        Assert.True(sql == "SELECT (CASE WHEN `CreatedAt`='2023-03-03 00:00:00.0000000' THEN 0 WHEN `CreatedAt`>'2023-03-03 00:00:00.0000000' THEN 1 ELSE -1 END) AS `CompareTo`,SUBTIME(`CreatedAt`,'365 00:00:00.0000000') AS `OneYearsAgo1`,TIME(NOW()-'2023-03-20 00:00:00.0000000') AS `OneYearsAgo2`,DAYOFMONTH(LAST_DAY(CONCAT(YEAR(NOW()),'-',MONTH(NOW()),'-01'))) AS `DayInMonth`,((YEAR(NOW()))%4=0 AND (YEAR(NOW()))%100<>0 OR (YEAR(NOW()))%400=0) AS `IsLeapYear1`,1 AS `IsLeapYear2`,CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) AS `Parse`,'2023-05-07 13:08:45.0000000' AS `ParseExact` FROM `sys_user` WHERE (CASE WHEN `UpdatedAt`='2023-03-20 00:00:00.0000000' THEN 0 WHEN `UpdatedAt`>'2023-03-20 00:00:00.0000000' THEN 1 ELSE -1 END)>0");
     }
     [Fact]
     public void Operation()
@@ -107,6 +107,6 @@ public class MySqlDateTimeUnitTest : UnitTestBase
               DivOp2 = TimeSpan.FromHours(30) / TimeSpan.FromHours(3)
           })
           .ToSql(out _);
-        Assert.True(sql == "SELECT DATE_ADD(`CreatedAt`,INTERVAL(5*3600000000) MICROSECOND) AS `AddOp`,DATE_SUB(`CreatedAt`,INTERVAL 10*3600000000 MICROSECOND) AS `SubOp` FROM `sys_user` WHERE (CASE WHEN `UpdatedAt`='2023-03-20 00:00:00' THEN 0 WHEN `UpdatedAt`>'2023-03-20 00:00:00' THEN 1 ELSE -1 END)>0");
+        Assert.True(sql == "SELECT DATE_ADD(`CreatedAt`,INTERVAL(TIME_TO_SEC('0 05:00:00.0000000')*1000000) MICROSECOND) AS `AddOp`,SUBTIME(`CreatedAt`,'0 10:00:00.0000000') AS `SubOp`,ADDTIME(`SomeTimes`,'0 00:25:00.0000000') AS `AddOp1`,'1 05:45:00.0000000' AS `SubOp1`,'0 01:15:00.0000000' AS `MulOp`,'0 06:00:00.0000000' AS `DivOp1`,10 AS `DivOp2` FROM `sys_user` WHERE (CASE WHEN `UpdatedAt`='2023-03-20 00:00:00.0000000' THEN 0 WHEN `UpdatedAt`>'2023-03-20 00:00:00.0000000' THEN 1 ELSE -1 END)>0");
     }
 }

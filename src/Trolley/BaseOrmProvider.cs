@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -9,9 +10,9 @@ namespace Trolley;
 
 public abstract class BaseOrmProvider : IOrmProvider
 {
-    protected static ConcurrentDictionary<int, MemberAccessSqlFormatter> memberAccessSqlFormatterCache = new();
-    protected static ConcurrentDictionary<int, MethodCallSqlFormatter> methodCallSqlFormatterCache = new();
-    protected static ConcurrentDictionary<int, Func<object, object[], object>> indexMethodCallCache = new();
+    protected static readonly ConcurrentDictionary<int, MemberAccessSqlFormatter> memberAccessSqlFormatterCache = new();
+    protected static readonly ConcurrentDictionary<int, MethodCallSqlFormatter> methodCallSqlFormatterCache = new();
+    protected static readonly ConcurrentDictionary<int, Delegate> methodCallCache = new();
 
     public virtual string ParameterPrefix => "@";
     public virtual string SelectIdentitySql => ";SELECT @@IDENTITY";
@@ -43,33 +44,38 @@ public abstract class BaseOrmProvider : IOrmProvider
     public virtual string GetQuotedValue(Type expectType, object value)
     {
         if (value == null) return "NULL";
-        if (expectType == typeof(bool))
-            return Convert.ToBoolean(value) ? "1" : "0";
-        if (expectType == typeof(string))
-            return "'" + value.ToString().Replace("\\", "\\\\").Replace("'", @"\'") + "'";
-        if (expectType == typeof(DateTime))
-            return "'" + Convert.ToDateTime(value).ToString("yyyy-MM-dd HH:mm:ss.fff") + "'";
+        if (expectType == typeof(bool) && value is bool bValue)
+            return bValue ? "1" : "0";
+        if (expectType == typeof(string) && value is string strValue)
+            return $"'{strValue.Replace("\\", "\\\\").Replace("'", @"\'")}'";
+        if (expectType == typeof(DateTime) && value is DateTime dateTime)
+            return $"'{dateTime:yyyy-MM-dd HH:mm:ss.fffffff}'";
+        if (expectType == typeof(TimeSpan) && value is TimeSpan timeSpan)
+            return $"'{timeSpan.ToString("d\\ hh\\:mm\\:ss\\.fffffff")}'";
+        if (expectType == typeof(TimeOnly) && value is TimeOnly timeOnly)
+            return $"'{timeOnly.ToString("hh\\:mm\\:ss\\.fffffff")}'";
         if (value is SqlSegment sqlSegment)
         {
             if (sqlSegment == SqlSegment.Null || !sqlSegment.IsConstant)
                 return sqlSegment.ToString();
+            //此处不应出现变量的情况，应该在此之前把变量都已经变成了参数
+            if (sqlSegment.IsVariable) throw new Exception("此处不应出现变量的情况，在调用IOrmProvider.GetQuotedValue方法之前，先调用ISqlVisitor.Change方法把变量都变成参数");
             return this.GetQuotedValue(sqlSegment.Value);
         }
         return value.ToString();
     }
-    public virtual object ToFieldValue(object fieldValue, object nativeDbType)
+    public virtual object ToFieldValue(MemberMap memberMapper, object fieldValue)
     {
         if (fieldValue == null)
             return DBNull.Value;
 
         var result = fieldValue;
-        var fieldType = fieldValue.GetType();
-        if (fieldType.IsNullableType(out var underlyingType))
-            result = Convert.ChangeType(result, underlyingType);
+        memberMapper.MemberType.IsNullableType(out var underlyingType);
 
-        if (nativeDbType != null)
+        if (memberMapper.NativeDbType != null)
         {
-            var defaultType = this.MapDefaultType(nativeDbType);
+           //TODO:始终相等
+            var defaultType = this.MapDefaultType(memberMapper.NativeDbType);
             if (defaultType == underlyingType)
                 return result;
 
@@ -78,7 +84,11 @@ public abstract class BaseOrmProvider : IOrmProvider
             if (underlyingType.IsEnum)
             {
                 if (defaultType == typeof(string))
+                {
+                    if (fieldValue.GetType() != underlyingType)
+                        result = Enum.ToObject(underlyingType, result);
                     result = result.ToString();
+                }
                 else result = Convert.ChangeType(result, defaultType);
             }
             else if (underlyingType == typeof(Guid))
@@ -155,6 +165,8 @@ public abstract class BaseOrmProvider : IOrmProvider
                 return true;
             if (methodInfo.DeclaringType == typeof(TimeSpan) && this.TryGetTimeSpanMethodCallSqlFormatter(methodCallExpr, out formatter))
                 return true;
+            if (methodInfo.DeclaringType == typeof(TimeOnly) && this.TryGetTimeOnlyMethodCallSqlFormatter(methodCallExpr, out formatter))
+                return true;
             if (methodInfo.DeclaringType == typeof(Convert) && this.TryGetConvertMethodCallSqlFormatter(methodCallExpr, out formatter))
                 return true;
             if (this.TryGetIEnumerableMethodCallSqlFormatter(methodCallExpr, out formatter))
@@ -166,12 +178,13 @@ public abstract class BaseOrmProvider : IOrmProvider
                 case "Equals":
                     if (!methodInfo.IsStatic && parameterInfos.Length == 1)
                     {
-                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                         {
-                            var targetSegment = visitor.VisitAndDeferred(target);
-                            var rightSegment = visitor.VisitAndDeferred(target);
-                            targetSegment.Merge(rightSegment);
-                            return targetSegment.Change($"{this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)}", false, true, false);
+                            var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                            var rightSegment = visitor.VisitAndDeferred(targetSegment.Clone(args[0]));
+                            var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                            var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
+                            return visitor.Merge(targetSegment, rightSegment, $"{targetArgument}={rightArgument}", true, false);
                         });
                         result = true;
                     }
@@ -179,13 +192,13 @@ public abstract class BaseOrmProvider : IOrmProvider
                 case "Compare":
                     if (methodInfo.IsStatic && parameterInfos.Length == 2)
                     {
-                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                         {
-                            var leftSegment = visitor.VisitAndDeferred(args[0]);
-                            var rightSegment = visitor.VisitAndDeferred(args[1]);
-
-                            leftSegment.Merge(rightSegment);
-                            return leftSegment.Change($"CASE WHEN {this.GetQuotedValue(leftSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(leftSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END", false, true, false);
+                            var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            var rightSegment = visitor.VisitAndDeferred(leftSegment.Clone(args[1]));
+                            var leftArgument = this.GetQuotedValue(visitor.Change(leftSegment));
+                            var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
+                            return visitor.Merge(leftSegment, rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END", true, false);
                         });
                         result = true;
                     }
@@ -193,13 +206,13 @@ public abstract class BaseOrmProvider : IOrmProvider
                 case "CompareTo":
                     if (!methodInfo.IsStatic && parameterInfos.Length == 1)
                     {
-                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                         {
-                            var targetSegment = visitor.VisitAndDeferred(target);
-                            var rightSegment = visitor.VisitAndDeferred(args[0]);
-
-                            targetSegment.Merge(rightSegment);
-                            return targetSegment.Change($"CASE WHEN {this.GetQuotedValue(targetSegment)}={this.GetQuotedValue(rightSegment)} THEN 0 WHEN {this.GetQuotedValue(targetSegment)}>{this.GetQuotedValue(rightSegment)} THEN 1 ELSE -1 END", false, true, false);
+                            var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                            var rightSegment = visitor.VisitAndDeferred(targetSegment.Clone(args[0]));
+                            var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                            var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
+                            return visitor.Merge(targetSegment, rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", true, false);
                         });
                         result = true;
                     }
@@ -207,26 +220,212 @@ public abstract class BaseOrmProvider : IOrmProvider
                 case "ToString":
                     if (!methodInfo.IsStatic && parameterInfos.Length == 0)
                     {
-                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                         {
-                            var targetSegment = visitor.VisitAndDeferred(target);
-                            if (targetSegment.IsConstant)
-                                return targetSegment.Change(targetSegment.ToString());
-                            return targetSegment.Change(this.CastTo(typeof(string), this.GetQuotedValue(targetSegment)), false, false, true);
+                            var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                            if (targetSegment.IsConstant || targetSegment.IsVariable)
+                                return visitor.Change(targetSegment, targetSegment.Value.ToString());
+
+                            var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                            return visitor.Change(targetSegment, this.CastTo(typeof(string), targetArgument), false, true);
                         });
                         result = true;
                     }
                     break;
                 case "Parse":
-                case "TryParse":
-                    if (!methodInfo.IsStatic && parameterInfos.Length == 1)
+                    if (methodInfo.IsStatic && methodInfo.DeclaringType == typeof(Enum))
                     {
-                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        if (parameterInfos.Length == 1 || parameterInfos[0].ParameterType != typeof(Type))
                         {
-                            args[0] = visitor.VisitAndDeferred(args[0]);
-                            if (args[0].IsConstant)
-                                return args[0].Change(this.GetQuotedValue(methodInfo.DeclaringType, args[0]));
-                            return args[0].Change(this.CastTo(methodInfo.DeclaringType, this.GetQuotedValue(args[0])), false, false, true);
+                            var enumType = methodInfo.GetGenericArguments()[0];
+                            var enumUnderlyingType = enumType.GetEnumUnderlyingType();
+                            methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                            {
+                                var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                                if (args0Segment.IsConstant || args0Segment.IsVariable)
+                                    return visitor.Change(args0Segment, Enum.Parse(enumType, args0Segment.Value.ToString()));
+
+                                var args0Argument = this.GetQuotedValue(visitor.Change(args0Segment));
+                                return visitor.Change(args0Segment, this.CastTo(enumUnderlyingType, args0Argument), false, true);
+                            });
+                            result = true;
+                            break;
+                        }
+                        if (parameterInfos.Length > 1 && parameterInfos[0].ParameterType == typeof(Type))
+                        {
+                            var enumType = parameterInfos[0].ParameterType;
+                            var enumUnderlyingType = enumType.GetEnumUnderlyingType();
+                            methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                            {
+                                SqlSegment resultSegment = null;
+                                var argumentSegments = new List<SqlSegment>();
+                                Array.ForEach(args, f =>
+                                {
+                                    var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = f });
+                                    argumentSegments.Add(sqlSegment);
+                                    if (resultSegment == null) resultSegment = sqlSegment;
+                                    else resultSegment.Merge(sqlSegment);
+                                    resultSegment.IsConstant = resultSegment.IsConstant && sqlSegment.IsConstant;
+                                    resultSegment.IsVariable = resultSegment.IsVariable || sqlSegment.IsVariable;
+                                });
+                                if (resultSegment.IsConstant || resultSegment.IsVariable)
+                                {
+                                    if (!methodCallCache.TryGetValue(cacheKey, out var parseDelegate))
+                                    {
+                                        var argumentsExpr = new List<ParameterExpression>();
+                                        for (int i = 0; i < args.Length; i++)
+                                        {
+                                            argumentsExpr.Add(Expression.Parameter(args[i].Type, $"args{i}"));
+                                        }
+                                        var callExpr = Expression.Call(methodInfo, argumentsExpr.ToArray());
+                                        parseDelegate = Expression.Lambda(callExpr, argumentsExpr).Compile();
+                                        methodCallCache.TryAdd(cacheKey, parseDelegate);
+                                    }
+                                    var arguments = argumentSegments.Select(f => f.Value).ToArray();
+                                    return visitor.Change(resultSegment, parseDelegate.DynamicInvoke(arguments));
+                                }
+                                var valueArgument = this.GetQuotedValue(visitor.Change(argumentSegments[1]));
+                                return visitor.Change(resultSegment, this.CastTo(methodInfo.DeclaringType, valueArgument), false, true);
+                            });
+                            result = true;
+                            break;
+                        }
+                    }
+                    if (methodInfo.IsStatic && parameterInfos.Length >= 1)
+                    {
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                        {
+                            SqlSegment resultSegment = null;
+                            var argumentSegments = new List<SqlSegment>();
+                            Array.ForEach(args, f =>
+                            {
+                                var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = f });
+                                argumentSegments.Add(sqlSegment);
+                                if (resultSegment == null) resultSegment = sqlSegment;
+                                else resultSegment.Merge(sqlSegment);
+                                resultSegment.IsConstant = resultSegment.IsConstant && sqlSegment.IsConstant;
+                                resultSegment.IsVariable = resultSegment.IsVariable || sqlSegment.IsVariable;
+                            });
+                            if (resultSegment.IsConstant || resultSegment.IsVariable)
+                            {
+                                if (!methodCallCache.TryGetValue(cacheKey, out var parseDelegate))
+                                {
+                                    var argumentsExpr = new List<ParameterExpression>();
+                                    for (int i = 0; i < args.Length; i++)
+                                    {
+                                        argumentsExpr.Add(Expression.Parameter(args[i].Type, $"args{i}"));
+                                    }
+                                    var callExpr = Expression.Call(methodInfo, argumentsExpr.ToArray());
+                                    parseDelegate = Expression.Lambda(callExpr, argumentsExpr).Compile();
+                                    methodCallCache.TryAdd(cacheKey, parseDelegate);
+                                }
+                                var arguments = argumentSegments.Select(f => f.Value).ToArray();
+                                return visitor.Change(resultSegment, parseDelegate.DynamicInvoke(arguments));
+                            }
+                            var valueArgument = this.GetQuotedValue(visitor.Change(argumentSegments[1]));
+                            return visitor.Change(resultSegment, this.CastTo(methodInfo.DeclaringType, valueArgument), false, true);
+                        });
+                        result = true;
+                    }
+                    break;
+                case "TryParse":
+                    if (methodInfo.IsStatic && methodInfo.DeclaringType == typeof(Enum))
+                    {
+                        if (parameterInfos.Length == 1 || parameterInfos[0].ParameterType != typeof(Type))
+                        {
+                            var enumType = methodInfo.GetGenericArguments()[0];
+                            var enumUnderlyingType = enumType.GetEnumUnderlyingType();
+                            methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                            {
+                                var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                                if (args0Segment.IsConstant || args0Segment.IsVariable)
+                                    return visitor.Change(args0Segment, Enum.Parse(enumType, args0Segment.Value.ToString()));
+
+                                var args0Argument = this.GetQuotedValue(visitor.Change(args0Segment));
+                                return visitor.Change(args0Segment, this.CastTo(enumUnderlyingType, args0Argument), false, true);
+                            });
+                            result = true;
+                            break;
+                        }
+                        if (parameterInfos.Length > 1 && parameterInfos[0].ParameterType == typeof(Type))
+                        {
+                            var enumType = parameterInfos[0].ParameterType;
+                            var enumUnderlyingType = enumType.GetEnumUnderlyingType();
+                            methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                            {
+                                SqlSegment resultSegment = null;
+                                var argumentSegments = new List<SqlSegment>();
+                                for (int i = 0; i < args.Length - 1; i++)
+                                {
+                                    var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[i] });
+                                    argumentSegments.Add(sqlSegment);
+                                    if (resultSegment == null) resultSegment = sqlSegment;
+                                    else resultSegment.Merge(sqlSegment);
+                                    resultSegment.IsConstant = resultSegment.IsConstant && sqlSegment.IsConstant;
+                                    resultSegment.IsVariable = resultSegment.IsVariable || sqlSegment.IsVariable;
+                                }
+                                if (resultSegment.IsConstant || resultSegment.IsVariable)
+                                {
+                                    if (!methodCallCache.TryGetValue(cacheKey, out var parseDelegate))
+                                    {
+                                        var argTypes = new List<Type>();
+                                        var argumentExprs = new List<ParameterExpression>();
+                                        for (int i = 0; i < args.Length - 1; i++)
+                                        {
+                                            argTypes.Add(args[i].Type);
+                                            argumentExprs.Add(Expression.Parameter(args[i].Type, $"args{i}"));
+                                        }
+                                        var parseMethodInfo = typeof(Enum).GetMethod(nameof(Enum.Parse), argTypes.ToArray());
+                                        var callExpr = Expression.Call(parseMethodInfo, argumentExprs.ToArray());
+                                        parseDelegate = Expression.Lambda(callExpr, argumentExprs).Compile();
+                                        methodCallCache.TryAdd(cacheKey, parseDelegate);
+                                    }
+                                    var arguments = argumentSegments.Select(f => f.Value).ToArray();
+                                    return visitor.Change(resultSegment, parseDelegate.DynamicInvoke(arguments));
+                                }
+                                var valueArgument = this.GetQuotedValue(visitor.Change(argumentSegments[1]));
+                                return visitor.Change(resultSegment, this.CastTo(enumUnderlyingType, valueArgument), false, true);
+                            });
+                            result = true;
+                            break;
+                        }
+                    }
+                    if (methodInfo.IsStatic && parameterInfos.Length >= 1)
+                    {
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                        {
+                            SqlSegment resultSegment = null;
+                            var argumentSegments = new List<SqlSegment>();
+                            for (int i = 0; i < args.Length - 1; i++)
+                            {
+                                var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[i] });
+                                argumentSegments.Add(sqlSegment);
+                                if (resultSegment == null) resultSegment = sqlSegment;
+                                else resultSegment.Merge(sqlSegment);
+                                resultSegment.IsConstant = resultSegment.IsConstant && sqlSegment.IsConstant;
+                                resultSegment.IsVariable = resultSegment.IsVariable || sqlSegment.IsVariable;
+                            }
+                            if (resultSegment.IsConstant || resultSegment.IsVariable)
+                            {
+                                if (!methodCallCache.TryGetValue(cacheKey, out var parseDelegate))
+                                {
+                                    var argTypes = new List<Type>();
+                                    var argumentExprs = new List<ParameterExpression>();
+                                    for (int i = 0; i < args.Length - 1; i++)
+                                    {
+                                        argTypes.Add(args[i].Type);
+                                        argumentExprs.Add(Expression.Parameter(args[i].Type, $"args{i}"));
+                                    }
+                                    var parseMethodInfo = methodInfo.DeclaringType.GetMethod("Parse", argTypes.ToArray());
+                                    var callExpr = Expression.Call(parseMethodInfo, argumentExprs.ToArray());
+                                    parseDelegate = Expression.Lambda(callExpr, argumentExprs).Compile();
+                                    methodCallCache.TryAdd(cacheKey, parseDelegate);
+                                }
+                                var arguments = argumentSegments.Select(f => f.Value).ToArray();
+                                return visitor.Change(resultSegment, parseDelegate.DynamicInvoke(arguments));
+                            }
+                            var valueArgument = this.GetQuotedValue(visitor.Change(argumentSegments[0]));
+                            return visitor.Change(resultSegment, this.CastTo(methodInfo.DeclaringType, valueArgument), false, true);
                         });
                         result = true;
                     }
@@ -234,22 +433,24 @@ public abstract class BaseOrmProvider : IOrmProvider
                 case "get_Item":
                     if (!methodInfo.IsStatic && parameterInfos.Length > 0)
                     {
-                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target, deferExprs, args) =>
+                        methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                         {
-                            var targetSegment = visitor.VisitAndDeferred(target);
-                            var isConstantValue = targetSegment.IsConstant;
+                            var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                            var isConstant = targetSegment.IsConstant;
+                            var isVariable = targetSegment.IsVariable;
                             var targetType = targetSegment.Value.GetType();
                             var arguments = new List<object>();
                             for (int i = 0; i < args.Length; i++)
                             {
-                                var argumentSegment = visitor.VisitAndDeferred(args[i]);
-                                isConstantValue = isConstantValue && argumentSegment.IsConstant;
+                                var argumentSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[i] });
+                                isConstant = isConstant && argumentSegment.IsConstant;
+                                isVariable = isVariable || argumentSegment.IsVariable;
                                 targetSegment.Merge(argumentSegment);
                                 arguments.Add(argumentSegment.Value);
                             }
-                            if (isConstantValue)
+                            if (isConstant || isVariable)
                             {
-                                if (!indexMethodCallCache.TryGetValue(cacheKey, out var indexDelegate))
+                                if (!methodCallCache.TryGetValue(cacheKey, out var indexDelegate))
                                 {
                                     var listExpr = Expression.Parameter(typeof(object), "list");
                                     var indicesExpr = Expression.Parameter(typeof(object[]), "indices");
@@ -266,9 +467,10 @@ public abstract class BaseOrmProvider : IOrmProvider
                                     var resultExpr = Expression.Convert(callExpr, typeof(object));
 
                                     indexDelegate = Expression.Lambda<Func<object, object[], object>>(resultExpr, listExpr, indicesExpr).Compile();
-                                    indexMethodCallCache.TryAdd(cacheKey, indexDelegate);
+                                    methodCallCache.TryAdd(cacheKey, indexDelegate);
                                 }
-                                return targetSegment.Change(indexDelegate.Invoke(targetSegment.Value, arguments.ToArray()));
+                                var indexToValue = indexDelegate as Func<object, object[], object>;
+                                return visitor.Change(targetSegment, indexToValue.Invoke(targetSegment.Value, arguments.ToArray()));
                             }
                             throw new NotSupportedException($"不支持的方法调用,{methodInfo.DeclaringType.FullName}.{methodInfo.Name}");
                         });

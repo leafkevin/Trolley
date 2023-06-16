@@ -212,11 +212,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                     sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
                 var dbParameter = this.CreateParameter(memberMapper, parameterName, sqlSegment.Value);
                 this.dbParameters.Add(dbParameter);
-                sqlSegment.Value = parameterName;
-                sqlSegment.IsParameter = true;
-                sqlSegment.IsVariable = false;
-                sqlSegment.IsConstant = false;
-                builder.Append(sqlSegment.Value.ToString());
+                builder.Append(parameterName);
             }
             else builder.Append(sqlSegment.ToString());
         }
