@@ -74,11 +74,13 @@ public abstract class BaseOrmProvider : IOrmProvider
 
         if (memberMapper.NativeDbType != null)
         {
-           //TODO:始终相等
+            //模型类型与数据库默认映射类型一致，如：bool,数字，浮点数，String，DateTime，TimeSpan，TimeOnly，Guid等
+            //通常fieldValue和memberMapper的类型是一致的，不一致表达式无法书写出来
             var defaultType = this.MapDefaultType(memberMapper.NativeDbType);
             if (defaultType == underlyingType)
                 return result;
 
+            //模型类型与数据库默认映射类型不一致的情况，如：数字，浮点数，TimeSpan，TimeOnly，枚举，Guid
             //Gender? gender = Gender.Male;
             //(int)gender.Value;
             if (underlyingType.IsEnum)
