@@ -134,10 +134,8 @@ public class SqlSegment
             ExpectType = this.ExpectType,
             TargetType = this.TargetType
         };
-        //if (this.HasField && !this.IsExpression && !this.IsMethodCall)
-        //TODO:所有方法的返回值与当前成员访问的类型不一致就要清空MemberMapper属性值
-        //暂时好像不需要，方法返回值不一样的地方，不使用Clone,直接New SqlSegment
-        if (this.HasField) newSqlSegment.MemberMapper = this.MemberMapper;
+        if (this.HasField && !this.IsExpression && !this.IsMethodCall)
+            newSqlSegment.MemberMapper = this.MemberMapper;
         return newSqlSegment;
     }
     public SqlSegment ToParameter(ISqlVisitor visitor)

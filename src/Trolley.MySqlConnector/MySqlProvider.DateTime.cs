@@ -174,7 +174,7 @@ partial class MySqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).TimeOfDay);
 
-                        return visitor.Change(targetSegment, $"TIMESTAMPDIFF(MICROSECOND,CONVERT({this.GetQuotedValue(targetSegment)},DATE),{this.GetQuotedValue(targetSegment)})", false, true);
+                        return visitor.Change(targetSegment, $"CONVERT({this.GetQuotedValue(targetSegment)},TIME)", false, true);
                     });
                     result = true;
                     break;

@@ -71,7 +71,6 @@ public abstract class BaseOrmProvider : IOrmProvider
 
         var result = fieldValue;
         memberMapper.MemberType.IsNullableType(out var underlyingType);
-
         if (memberMapper.NativeDbType != null)
         {
             //模型类型与数据库默认映射类型一致，如：bool,数字，浮点数，String，DateTime，TimeSpan，TimeOnly，Guid等
@@ -87,7 +86,7 @@ public abstract class BaseOrmProvider : IOrmProvider
             {
                 if (defaultType == typeof(string))
                 {
-                    if (fieldValue.GetType() != underlyingType)
+                    if (result.GetType() != underlyingType)
                         result = Enum.ToObject(underlyingType, result);
                     result = result.ToString();
                 }

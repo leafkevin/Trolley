@@ -53,7 +53,7 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Date);
 
-                        return visitor.Change(targetSegment, $"CONVERT(CHAR(10),{this.GetQuotedValue(targetSegment)},120)", false, true);
+                        return visitor.Change(targetSegment, $"CONVERT(DATE,{this.GetQuotedValue(targetSegment)})", false, true);
                     });
                     result = true;
                     break;
@@ -118,7 +118,7 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Millisecond);
 
-                        return visitor.Change(targetSegment, $"DATEPART(MILLISECOND,{this.GetQuotedValue(targetSegment)})/1000", true, false);
+                        return visitor.Change(targetSegment, $"DATEPART(MILLISECOND,{this.GetQuotedValue(targetSegment)})", true, false);
                     });
                     result = true;
                     break;
@@ -162,7 +162,7 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Ticks);
 
-                        return visitor.Change(targetSegment, $"DATEDIFF_BIG(MICROSECOND,'0001-01-01',{this.GetQuotedValue(targetSegment)})", false, true);
+                        return visitor.Change(targetSegment, $"DATEDIFF_BIG(MICROSECOND,'0001-01-01',{this.GetQuotedValue(targetSegment)})*10", true, false);
                     });
                     result = true;
                     break;
@@ -173,7 +173,7 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).TimeOfDay);
 
-                        return visitor.Change(targetSegment, $"DATEDIFF(SECOND,CONVERT(CHAR(10),{this.GetQuotedValue(targetSegment)},120),{this.GetQuotedValue(targetSegment)})", false, true);
+                        return visitor.Change(targetSegment, $"CONVERT(TIME,{this.GetQuotedValue(targetSegment)})", false, true);
                     });
                     result = true;
                     break;
