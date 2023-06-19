@@ -87,7 +87,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                 if (defaultType == typeof(string))
                 {
                     if (result.GetType() != underlyingType)
-                        result = Enum.ToObject(underlyingType, result);
+                        result = Enum.Parse(underlyingType, result.ToString());
                     result = result.ToString();
                 }
                 else result = Convert.ChangeType(result, defaultType);

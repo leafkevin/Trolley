@@ -22,7 +22,6 @@ public interface ISqlVisitor
     SqlSegment VisitConditional(SqlSegment sqlSegment);
     SqlSegment VisitListInit(SqlSegment sqlSegment);
     SqlSegment VisitTypeIs(SqlSegment sqlSegment);
-    List<SqlSegment> VisitLogicBinaryExpr(Expression conditionExpr);
     SqlSegment Evaluate(SqlSegment sqlSegment);
     object Evaluate(Expression expr);
     T Evaluate<T>(Expression expr);

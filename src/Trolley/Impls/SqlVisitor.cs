@@ -155,19 +155,19 @@ public class SqlVisitor : ISqlVisitor
                 //最终变成string，字段访问、参数、表达式、方法调用需要强制转换,如：a.IntField + 5, b.Field等，常量不需要强转
                 //整形，日期，布尔，...等等常量或变量当作object类型处理的，
                 sqlSegment = this.Visit(sqlSegment.Next(unaryExpr.Operand));
-                if (sqlSegment.TargetType != null && sqlSegment.Type != sqlSegment.TargetType && !sqlSegment.IsConstant && !sqlSegment.IsVariable)
-                {
-                    var memberMapper = sqlSegment.MemberMapper;
-                    if (memberMapper == null)
-                    {
-                        sqlSegment.TableSegment.Mapper ??= this.mapProvider.GetEntityMap(sqlSegment.TableSegment.EntityType);
-                        memberMapper = sqlSegment.TableSegment.Mapper.GetMemberMap(sqlSegment.FromMember.Name);
-                    }
-                    if (this.OrmProvider.MapDefaultType(memberMapper.NativeDbType) != sqlSegment.TargetType)
-                        sqlSegment.Value = this.OrmProvider.CastTo(sqlSegment.TargetType, this.GetQuotedValue(sqlSegment));
-                    if (sqlSegment.Type != sqlSegment.TargetType)
-                        sqlSegment.Type = sqlSegment.TargetType;
-                }
+                //if (sqlSegment.TargetType != null && sqlSegment.Type != sqlSegment.TargetType && !sqlSegment.IsConstant && !sqlSegment.IsVariable)
+                //{
+                //    var memberMapper = sqlSegment.MemberMapper;
+                //    if (memberMapper == null)
+                //    {
+                //        sqlSegment.TableSegment.Mapper ??= this.mapProvider.GetEntityMap(sqlSegment.TableSegment.EntityType);
+                //        memberMapper = sqlSegment.TableSegment.Mapper.GetMemberMap(sqlSegment.FromMember.Name);
+                //    }
+                //    if (this.OrmProvider.MapDefaultType(memberMapper.NativeDbType) != sqlSegment.TargetType)
+                //        sqlSegment.Value = this.OrmProvider.CastTo(sqlSegment.TargetType, this.GetQuotedValue(sqlSegment));
+                //    if (sqlSegment.Type != sqlSegment.TargetType)
+                //        sqlSegment.Type = sqlSegment.TargetType;
+                //}
                 return sqlSegment;
         }
         return this.Visit(sqlSegment.Next(unaryExpr.Operand));
@@ -451,65 +451,6 @@ public class SqlVisitor : ISqlVisitor
         }
         throw new NotSupportedException($"不支持的表达式操作，{sqlSegment.Expression}");
     }
-    public virtual List<SqlSegment> VisitLogicBinaryExpr(Expression conditionExpr)
-    {
-        Func<Expression, bool> isConditionExpr = f => f.NodeType == ExpressionType.AndAlso || f.NodeType == ExpressionType.OrElse;
-
-        int deep = 0;
-        var lastOperationType = OperationType.None;
-        var deferredExprs = new Stack<Expression>();
-        var completedSegements = new List<SqlSegment>();
-        var binaryExpr = conditionExpr as BinaryExpression;
-
-        while (binaryExpr != null)
-        {
-            if (isConditionExpr(binaryExpr.Left))
-            {
-                deferredExprs.Push(binaryExpr.Right);
-                binaryExpr = binaryExpr.Left as BinaryExpression;
-                continue;
-            }
-            var operationType = binaryExpr.NodeType == ExpressionType.AndAlso ? OperationType.And : OperationType.Or;
-            if (lastOperationType == OperationType.None)
-                lastOperationType = operationType;
-            if (operationType != lastOperationType)
-            {
-                lastOperationType = operationType;
-                deep++;
-            }
-            var leftSegment = this.CreateConditionSegment(binaryExpr.Left);
-            leftSegment.OperationType = operationType;
-            leftSegment.Deep = deep;
-            completedSegements.Add(leftSegment);
-
-            if (isConditionExpr(binaryExpr.Right))
-            {
-                binaryExpr = binaryExpr.Right as BinaryExpression;
-                continue;
-            }
-            var rightSegment = this.CreateConditionSegment(binaryExpr.Right);
-            rightSegment.OperationType = operationType;
-            rightSegment.Deep = deep;
-            completedSegements.Add(rightSegment);
-
-            bool isCompleted = true;
-            while (deferredExprs.TryPop(out var deferredExpr))
-            {
-                if (isConditionExpr(deferredExpr))
-                {
-                    binaryExpr = deferredExpr as BinaryExpression;
-                    isCompleted = false;
-                    break;
-                }
-                var deferredSegment = this.CreateConditionSegment(deferredExpr);
-                deferredSegment.OperationType = operationType;
-                deferredSegment.Deep = deep;
-                completedSegements.Add(deferredSegment);
-            }
-            if (isCompleted) break;
-        }
-        return completedSegements;
-    }
     public virtual SqlSegment Evaluate(SqlSegment sqlSegment)
     {
         var lambdaExpr = Expression.Lambda(sqlSegment.Expression);
@@ -624,7 +565,7 @@ public class SqlVisitor : ISqlVisitor
                         };
                         removeIndices.Add(this.tables.Count);
                         this.tables.Add(tableSegment);
-                        this.tableAlias.Add(aliasName, tableSegment);
+                        this.tableAlias[aliasName] = tableSegment;
                         if (index > 0) builder.Append(',');
                         builder.Append(this.OrmProvider.GetTableName(subTableMapper.TableName));
                         builder.Append($" {tableSegment.AliasName}");
@@ -739,61 +680,21 @@ public class SqlVisitor : ISqlVisitor
     {
         if (conditionExpr.NodeType == ExpressionType.AndAlso || conditionExpr.NodeType == ExpressionType.OrElse)
         {
-            int lastDeep = 0;
-            var builder = new StringBuilder();
-            var sqlSegments = this.VisitLogicBinaryExpr(conditionExpr);
-
+            var completedExprs = this.VisitLogicBinaryExpr(conditionExpr);
             if (conditionExpr.NodeType == ExpressionType.OrElse)
                 this.lastWhereNodeType = OperationType.Or;
             else this.lastWhereNodeType = OperationType.And;
 
-            for (int i = 0; i < sqlSegments.Count; i++)
+            var builder = new StringBuilder();
+            foreach (var completedExpr in completedExprs)
             {
-                var sqlSegment = this.VisitAndDeferred(sqlSegments[i]);
-                var separator = sqlSegment.OperationType == OperationType.And ? " AND " : " OR ";
-                if (i > 0)
+                if (completedExpr.ExpressionType == ConditionType.OperatorType)
                 {
-                    if (sqlSegment.Deep < lastDeep)
-                    {
-                        var loopTimes = lastDeep - sqlSegment.Deep;
-                        for (int j = 0; j < loopTimes; j++)
-                        {
-                            builder.Append(')');
-                        }
-                    }
-                    builder.Append(separator);
+                    builder.Append(completedExpr.Body);
+                    continue;
                 }
-                if (i == 0)
-                {
-                    if (sqlSegment.Deep > 0)
-                    {
-                        for (int j = 0; j < sqlSegment.Deep; j++)
-                        {
-                            builder.Append('(');
-                        }
-                    }
-                }
-                else
-                {
-                    if (sqlSegment.Deep > lastDeep)
-                    {
-                        var loopTimes = sqlSegment.Deep - lastDeep;
-                        for (int j = 0; j < loopTimes; j++)
-                        {
-                            builder.Append('(');
-                        }
-                    }
-                }
-                builder.Append(sqlSegment.ToString());
-                lastDeep = sqlSegment.Deep;
-            }
-            if (lastDeep > 0)
-            {
-                while (lastDeep > 0)
-                {
-                    builder.Append(')');
-                    lastDeep--;
-                }
+                var sqlSegment = this.VisitAndDeferred(this.CreateConditionSegment(completedExpr.Body as Expression));
+                builder.Append(sqlSegment);
             }
             return builder.ToString();
         }
@@ -1343,11 +1244,13 @@ public class SqlVisitor : ISqlVisitor
 
         string strExpression = null;
         //TODO:测试一下true=true 或是1=0两个常量或是常量和变量的相等条件
-        if ((this.isSelect && !sqlSegment.IsExpression)
-            || (this.isWhere && !sqlSegment.IsExpression))
-            strExpression = $"{sqlSegment} {strOperator} {this.GetQuotedValue(deferredSegment, sqlSegment.MemberMapper)}";
+        if ((this.isSelect && !sqlSegment.IsExpression) || (this.isWhere && !sqlSegment.IsExpression))
+        {
+            if (deferredSegment == SqlSegment.Null)
+                strExpression = $"{sqlSegment} {strOperator} {this.GetQuotedValue(deferredSegment, sqlSegment.MemberMapper)}";
+            else strExpression = $"{sqlSegment}{strOperator}{this.GetQuotedValue(deferredSegment, sqlSegment.MemberMapper)}";
+        }
         else strExpression = $"{sqlSegment}";
-
         if (this.isSelect || (this.isWhere && !isExpectBooleanType))
             sqlSegment.Change($"CASE WHEN {strExpression} THEN {ifTrueValue} ELSE {ifFalseValue} END", false, true, false);
         else sqlSegment.Change($"{strExpression}", false, true, false);
@@ -1499,6 +1402,136 @@ public class SqlVisitor : ISqlVisitor
         if (tableSegment != null && !string.IsNullOrEmpty(tableSegment.AliasName) && (this.IsNeedAlias || tableSegment.IsNeedAlais))
             fieldName = tableSegment.AliasName + "." + fieldName;
         return fieldName;
+    }
+    private List<ConditionExpression> VisitLogicBinaryExpr(Expression conditionExpr)
+    {
+        Func<Expression, bool> isConditionExpr = f => f.NodeType == ExpressionType.AndAlso || f.NodeType == ExpressionType.OrElse;
+
+        int deep = 0;
+        string lastOperationType = string.Empty;
+        var operators = new Stack<ConditionOperator>();
+        var leftExprs = new Stack<Expression>();
+        var completedStackExprs = new Stack<ConditionExpression>();
+
+        var nextExpr = conditionExpr as BinaryExpression;
+        while (nextExpr != null)
+        {
+            var operationType = nextExpr.NodeType == ExpressionType.AndAlso ? " AND " : " OR ";
+            if (!string.IsNullOrEmpty(lastOperationType) && lastOperationType != operationType)
+                deep++;
+
+            if (isConditionExpr(nextExpr.Right))
+            {
+                leftExprs.Push(nextExpr.Left);
+                nextExpr = nextExpr.Right as BinaryExpression;
+                lastOperationType = operationType;
+                if (deep > 0)
+                {
+                    operators.Push(new ConditionOperator
+                    {
+                        OperatorType = operationType,
+                        Deep = deep
+                    });
+                }
+                continue;
+            }
+            //先压进右括号
+            var lastDeep = 0;
+            if (operators.TryPop(out var conditionOperator))
+                lastDeep = conditionOperator.Deep;
+            for (int i = deep; i > lastDeep; i--)
+            {
+                completedStackExprs.Push(new ConditionExpression
+                {
+                    ExpressionType = ConditionType.OperatorType,
+                    Body = ")"
+                });
+            }
+            //再压进右侧表达式
+            completedStackExprs.Push(new ConditionExpression
+            {
+                ExpressionType = ConditionType.Expression,
+                Body = nextExpr.Right
+            });
+            //再压进当前操作符
+            completedStackExprs.Push(new ConditionExpression
+            {
+                ExpressionType = ConditionType.OperatorType,
+                Body = operationType
+            });
+            if (isConditionExpr(nextExpr.Left))
+            {
+                nextExpr = nextExpr.Left as BinaryExpression;
+                lastOperationType = operationType;
+                if (deep > 0)
+                {
+                    operators.Push(new ConditionOperator
+                    {
+                        OperatorType = operationType,
+                        Deep = deep
+                    });
+                }
+                continue;
+            }
+            //再压进左侧表达式
+            completedStackExprs.Push(new ConditionExpression
+            {
+                ExpressionType = ConditionType.Expression,
+                Body = nextExpr.Left
+            });
+            if (operators.TryPop(out conditionOperator))
+            {
+                lastDeep = conditionOperator.Deep;
+                lastOperationType = conditionOperator.OperatorType;
+            }
+            else lastDeep = 0;
+            //再压进左括号
+            for (int i = deep; i > lastDeep; i--)
+            {
+                completedStackExprs.Push(new ConditionExpression
+                {
+                    ExpressionType = ConditionType.OperatorType,
+                    Body = "("
+                });
+            }
+            //再压进操作符
+            if (leftExprs.Count > 0)
+            {
+                for (int i = deep; i > lastDeep; i--)
+                {
+                    completedStackExprs.Push(new ConditionExpression
+                    {
+                        ExpressionType = ConditionType.OperatorType,
+                        Body = lastOperationType
+                    });
+                }
+            }
+            if (leftExprs.TryPop(out var deferredExpr))
+            {
+                if (operators.TryPop(out conditionOperator))
+                    deep = conditionOperator.Deep;
+                else deep = 0;
+
+                if (isConditionExpr(deferredExpr))
+                {
+                    nextExpr = deferredExpr as BinaryExpression;
+                    continue;
+                }
+                completedStackExprs.Push(new ConditionExpression
+                {
+                    ExpressionType = ConditionType.Expression,
+                    Body = deferredExpr
+                });
+                break;
+            }
+            else break;
+        }
+        var completedExprs = new List<ConditionExpression>();
+        while (completedStackExprs.TryPop(out var completedExpr))
+        {
+            completedExprs.Add(completedExpr);
+        }
+        return completedExprs;
     }
     private bool FindReaderField(MemberInfo memberInfo, int index, out ReaderField readerField)
     {
@@ -1670,5 +1703,20 @@ public class SqlVisitor : ISqlVisitor
                 currentExpr = unaryExpr.Operand;
         }
         return currentExpr as LambdaExpression;
+    }
+    class ConditionOperator
+    {
+        public string OperatorType { get; set; }
+        public int Deep { get; set; }
+    }
+    class ConditionExpression
+    {
+        public object Body { get; set; }
+        public ConditionType ExpressionType { get; set; }
+    }
+    enum ConditionType
+    {
+        OperatorType,
+        Expression
     }
 }

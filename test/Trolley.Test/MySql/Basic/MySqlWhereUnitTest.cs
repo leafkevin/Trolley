@@ -124,4 +124,23 @@ public class MySqlWhereUnitTest : UnitTestBase
             .ToSql(out _);
         Assert.True(sql == "SELECT * FROM `sys_order` a,`sys_user` b WHERE a.`BuyerId`=b.`Id` AND (a.`SellerId` IS NULL OR a.`ProductCount` IS NULL) AND a.`Products` IS NOT NULL AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)");
     }
+    [Fact]
+    public void Where()
+    {
+        this.Initialize();
+        using var repository = dbFactory.Create();
+        var sql1 = repository.From<Order>()
+            .Where(f => Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) && (f.BuyerId.IsNull() || f.BuyerId == 2)
+                && (f.OrderNo.Contains("ON_") || string.IsNullOrEmpty(f.OrderNo)))
+            .Select(f => f.Id)
+            .ToSql(out _);
+        Assert.True(sql1 == "SELECT a.`Id` FROM `sys_order` a WHERE EXISTS(SELECT * FROM `sys_user` t WHERE t.`Id`=a.`BuyerId` AND t.`IsEnabled`=1) AND (a.`BuyerId` IS NULL OR a.`BuyerId`=2) AND (a.`OrderNo` LIKE '%ON_%' OR (a.`OrderNo` IS NULL OR a.`OrderNo`=''))");
+
+        var sql2 = repository.From<Order>()
+          .Where(f => (f.BuyerId.IsNull() || f.BuyerId == 2) && (f.OrderNo.Contains("ON_") || string.IsNullOrEmpty(f.OrderNo))
+              && (Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) || f.SellerId.IsNull()))
+          .Select(f => f.Id)
+          .ToSql(out _);
+        Assert.True(sql2 == "SELECT a.`Id` FROM `sys_order` a WHERE (`BuyerId` IS NULL OR `BuyerId`=2) AND (`OrderNo` LIKE '%ON_%' OR (`OrderNo` IS NULL OR `OrderNo`='')) AND (EXISTS(SELECT * FROM `sys_user` t WHERE t.`Id`=a.`BuyerId` AND t.`IsEnabled`=1) OR a.`SellerId` IS NULL)");
+    }
 }
