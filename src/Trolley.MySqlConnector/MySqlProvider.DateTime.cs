@@ -239,7 +239,8 @@ partial class MySqlProvider
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return visitor.Change(valueSegment, DateTime.Parse(valueSegment.ToString()));
 
-                        return visitor.Change(valueSegment, $"CAST({this.GetQuotedValue(valueSegment)} AS DATETIME)", false, true);
+                        var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
+                        return visitor.Change(valueSegment, $"CAST({valueArgument} AS DATETIME)", false, true);
                     });
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 3 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
@@ -263,7 +264,6 @@ partial class MySqlProvider
                         {
                             formatArgument = $"'{formatSegment}'";
 
-                            //分钟
                             if (formatArgument.Contains("mm"))
                                 formatArgument = formatArgument.NextReplace("mm", "%i");
                             else formatArgument = formatArgument.NextReplace("m", "%i");
@@ -313,7 +313,7 @@ partial class MySqlProvider
                                 formatArgument = formatArgument.NextReplace("t", "SUBSTRING(%p,1,1)");
                         }
                         var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
-                        return visitor.Merge(valueSegment, formatSegment, $"STR_TO_DATE({valueArgument},'{formatArgument}')", false, true);
+                        return visitor.Merge(valueSegment, formatSegment, providerSegment, $"STR_TO_DATE({valueArgument},'{formatArgument}')", false, true);
                     });
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 1 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
@@ -324,6 +324,7 @@ partial class MySqlProvider
                     {
                         var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+
                         var leftArgument = this.GetQuotedValue(visitor.Change(leftSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
                         return visitor.Merge(leftSegment, rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END", true, false);
@@ -478,6 +479,7 @@ partial class MySqlProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
                                 return visitor.Merge(targetSegment, rightSegment, Convert.ToDateTime(targetSegment.Value).Subtract(Convert.ToDateTime(rightSegment.Value)));
@@ -512,7 +514,7 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                        return visitor.Merge(targetSegment, rightSegment, $"{targetArgument}={rightArgument}", true, false);
+                        return visitor.Merge(targetSegment, rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 1 ELSE 0 END", true, false);
                     });
                     result = true;
                     break;
@@ -536,6 +538,7 @@ partial class MySqlProvider
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
                                 return visitor.Change(targetSegment, visitor.Change(targetSegment).ToString());
 
+                            var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                             return visitor.Change(targetSegment, $"DATE_FORMAT({this.GetQuotedValue(targetSegment)},'%Y-%m-%d %H:%i:%s')", false, true);
                         });
                         result = true;

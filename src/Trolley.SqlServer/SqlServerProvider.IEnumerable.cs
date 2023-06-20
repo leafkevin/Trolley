@@ -27,18 +27,20 @@ partial class SqlServerProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var builder = new StringBuilder();
-                        var arraySegment = visitor.VisitAndDeferred(args[0]);
-                        var sqlSegments = arraySegment.Value as List<SqlSegment>;
+                        var elementSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                        var arraySegment = visitor.VisitAndDeferred(elementSegment.Clone(args[0]));
 
-                        foreach (var eleSegment in sqlSegments)
+                        var enumerable = arraySegment.Value as IEnumerable;
+                        foreach (var item in enumerable)
                         {
                             if (builder.Length > 0)
                                 builder.Append(',');
-                            builder.Append(this.GetQuotedValue(eleSegment));
+                            string sqlArgument = null;
+                            if (item is SqlSegment sqlSegment)
+                                sqlArgument = visitor.GetQuotedValue(visitor.Change(sqlSegment), nullValue: "");
+                            else sqlArgument = visitor.GetQuotedValue(item, arraySegment, nullValue: "");
+                            builder.Append(sqlArgument);
                         }
-
-                        var elementSegment = visitor.VisitAndDeferred(args[1]);
-                        var element = this.GetQuotedValue(elementSegment);
 
                         int notIndex = 0;
                         if (deferExprs != null && deferExprs.Count > 0)
@@ -58,8 +60,11 @@ partial class SqlServerProvider
 
                         string notString = notIndex % 2 > 0 ? "NOT " : "";
                         if (builder.Length > 0)
-                            return elementSegment.Change($"{element} {notString}IN ({builder})", false, true, false);
-                        else return elementSegment.Change("1<>0", false, true, false);
+                        {
+                            var elementArgument = visitor.GetQuotedValue(visitor.Change(elementSegment));
+                            return visitor.Merge(elementSegment, arraySegment.ToParameter(visitor), $"{elementArgument} {notString}IN ({builder})", true, false);
+                        }
+                        else return visitor.Change(elementSegment, "1<>0", true, false);
                     });
                     result = true;
                 }
@@ -72,17 +77,20 @@ partial class SqlServerProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var builder = new StringBuilder();
-                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                        var elementSegment = visitor.VisitAndDeferred(args[0]);
-                        var sqlSegments = targetSegment.Value as List<SqlSegment>;
+                        var elementSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var targetSegment = visitor.VisitAndDeferred(elementSegment.Clone(target));
 
-                        foreach (var eleSegment in sqlSegments)
+                        var enumerable = targetSegment.Value as IEnumerable;
+                        foreach (var item in enumerable)
                         {
                             if (builder.Length > 0)
                                 builder.Append(',');
-                            builder.Append(this.GetQuotedValue(eleSegment));
+                            string sqlArgument = null;
+                            if (item is SqlSegment sqlSegment)
+                                sqlArgument = visitor.GetQuotedValue(visitor.Change(sqlSegment), nullValue: "");
+                            else sqlArgument = visitor.GetQuotedValue(item, targetSegment, nullValue: "");
+                            builder.Append(sqlArgument);
                         }
-                        string element = this.GetQuotedValue(elementSegment);
 
                         int notIndex = 0;
                         if (deferExprs != null && deferExprs.Count > 0)
@@ -102,8 +110,11 @@ partial class SqlServerProvider
 
                         string notString = notIndex % 2 > 0 ? "NOT " : "";
                         if (builder.Length > 0)
-                            return elementSegment.Change($"{element} {notString}IN ({builder})", false, true, false);
-                        else return elementSegment.Change("1<>0", false, true, false);
+                        {
+                            string elementArgument = visitor.GetQuotedValue(visitor.Change(elementSegment));
+                            return visitor.Merge(elementSegment, targetSegment.ToParameter(visitor), $"{elementArgument} {notString}IN ({builder})", true, false);
+                        }
+                        else return visitor.Change(elementSegment, "1<>0", true, false);
                     });
                     return true;
                 }
