@@ -120,13 +120,28 @@ partial class SqlServerProvider
                 }
                 break;
             case "Reverse":
-                if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType == typeof(Enumerable) && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
-                     && methodInfo.DeclaringType.GenericTypeArguments[0] == typeof(char))
+                if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType == typeof(Enumerable)
+                    && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
+                    && methodInfo.DeclaringType.GenericTypeArguments[0] == typeof(char))
                 {
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                        return target.Change($"REVERSE({this.GetQuotedValue(targetSegment)})", false, false, true);
+                        var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        if (args0Segment.IsConstant || args0Segment.IsVariable)
+                        {
+                            if (!methodCallCache.TryGetValue(cacheKey, out var reverseDelegate))
+                            {
+                                var sourceExpr = Expression.Parameter(target.Type, "source");
+                                var callExpr = Expression.Call(methodInfo, sourceExpr);
+                                var resultExpr = Expression.Convert(callExpr, typeof(object));
+                                reverseDelegate = Expression.Lambda<Func<object, object>>(resultExpr, sourceExpr).Compile();
+                                methodCallCache.TryAdd(cacheKey, reverseDelegate);
+                            }
+                            var toValue = reverseDelegate as Func<object, object>;
+                            args0Segment.Value = toValue.Invoke(args0Segment.Value);
+                            return visitor.Change(args0Segment);
+                        }
+                        return visitor.Change(args0Segment, $"REVERSE({visitor.GetQuotedValue(args0Segment)})", false, true);
                     });
                     result = true;
                 }

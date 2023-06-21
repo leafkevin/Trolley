@@ -536,7 +536,7 @@ partial class MySqlProvider
                                 return visitor.Change(targetSegment, ((string)targetSegment.Value).TrimEnd());
 
                             var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
-                            return targetSegment.Change($"RTRIM({targetArgument})", false, true);
+                            return visitor.Change(targetSegment, $"RTRIM({targetArgument})", false, true);
                         });
                         result = true;
                     }
@@ -744,7 +744,6 @@ partial class MySqlProvider
                         result = true;
                     }
                     break;
-
                 case "ToString":
                     if (parameterInfos.Length >= 0)
                     {
@@ -785,7 +784,7 @@ partial class MySqlProvider
 
                             var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                             var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
-                            return visitor.Change(targetSegment, $"LOCATE({valueArgument},{targetArgument})-1", true, false);
+                            return visitor.Merge(targetSegment, valueSegment, $"LOCATE({valueArgument},{targetArgument})-1", true, false);
                         });
                         result = true;
                     }
