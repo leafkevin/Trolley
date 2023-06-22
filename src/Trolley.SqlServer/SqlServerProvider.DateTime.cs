@@ -53,7 +53,8 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Date);
 
-                        return visitor.Change(targetSegment, $"CONVERT(DATE,{this.GetQuotedValue(targetSegment)})", false, true);
+                        var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                        return visitor.Change(targetSegment, $"CONVERT(DATE,{targetArgument})", false, true);
                     });
                     result = true;
                     break;
@@ -64,7 +65,8 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Day);
 
-                        return visitor.Change(targetSegment, $"DATEPART(DAY,{this.GetQuotedValue(targetSegment)})", false, true);
+                        var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                        return visitor.Change(targetSegment, $"DATEPART(DAY,{targetArgument})", false, true);
                     });
                     result = true;
                     break;
@@ -75,7 +77,8 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).DayOfWeek);
 
-                        return visitor.Change(targetSegment, $"DATEPART(WEEKDAY,{this.GetQuotedValue(targetSegment)})-1", true, false);
+                        var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                        return visitor.Change(targetSegment, $"DATEPART(WEEKDAY,{targetArgument})-1", true, false);
                     });
                     result = true;
                     break;
@@ -86,7 +89,8 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).DayOfYear);
 
-                        return visitor.Change(targetSegment, $"DATEPART(DAYOFYEAR,{this.GetQuotedValue(targetSegment)})", false, true);
+                        var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                        return visitor.Change(targetSegment, $"DATEPART(DAYOFYEAR,{targetArgument})", false, true);
                     });
                     result = true;
                     break;
@@ -97,7 +101,8 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Hour);
 
-                        return visitor.Change(targetSegment, $"DATEPART(HOUR,{this.GetQuotedValue(targetSegment)})", false, true);
+                        var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                        return visitor.Change(targetSegment, $"DATEPART(HOUR,{targetArgument})", false, true);
                     });
                     result = true;
                     break;
@@ -118,7 +123,8 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Millisecond);
 
-                        return visitor.Change(targetSegment, $"DATEPART(MILLISECOND,{this.GetQuotedValue(targetSegment)})", true, false);
+                        var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                        return visitor.Change(targetSegment, $"DATEPART(MILLISECOND,{targetArgument})", true, false);
                     });
                     result = true;
                     break;
@@ -129,7 +135,8 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Minute);
 
-                        return visitor.Change(targetSegment, $"DATEPART(MINUTE,{this.GetQuotedValue(targetSegment)})", false, true);
+                        var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                        return visitor.Change(targetSegment, $"DATEPART(MINUTE,{targetArgument})", false, true);
                     });
                     result = true;
                     break;
@@ -140,7 +147,8 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Month);
 
-                        return visitor.Change(targetSegment, $"DATEPART(MONTH,{this.GetQuotedValue(targetSegment)})", false, true);
+                        var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                        return visitor.Change(targetSegment, $"DATEPART(MONTH,{targetArgument})", false, true);
                     });
                     result = true;
                     break;
@@ -151,7 +159,8 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Second);
 
-                        return visitor.Change(targetSegment, $"DATEPART(SECOND,{this.GetQuotedValue(targetSegment)})", false, true);
+                        var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                        return visitor.Change(targetSegment, $"DATEPART(SECOND,{targetArgument})", false, true);
                     });
                     result = true;
                     break;
@@ -162,7 +171,8 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Ticks);
 
-                        return visitor.Change(targetSegment, $"DATEDIFF_BIG(MICROSECOND,'0001-01-01',{this.GetQuotedValue(targetSegment)})*10", true, false);
+                        var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                        return visitor.Change(targetSegment, $"DATEDIFF_BIG(MICROSECOND,'0001-01-01',{targetArgument})*10", true, false);
                     });
                     result = true;
                     break;
@@ -173,7 +183,8 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).TimeOfDay);
 
-                        return visitor.Change(targetSegment, $"CONVERT(TIME,{this.GetQuotedValue(targetSegment)})", false, true);
+                        var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                        return visitor.Change(targetSegment, $"CONVERT(TIME,{targetArgument})", false, true);
                     });
                     result = true;
                     break;
@@ -184,7 +195,8 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Year);
 
-                        return visitor.Change(targetSegment, $"DATEPART(YEAR,{this.GetQuotedValue(targetSegment)})", false, true);
+                        var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                        return visitor.Change(targetSegment, $"DATEPART(YEAR,{targetArgument})", false, true);
                     });
                     result = true;
                     break;
@@ -214,7 +226,7 @@ partial class SqlServerProvider
 
                         var leftArgument = this.GetQuotedValue(visitor.Change(leftSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                        return visitor.Merge(leftSegment, rightSegment, $"DAY(EOMONTH('{this.GetQuotedValue(leftSegment)}-{this.GetQuotedValue(rightSegment).PadLeft(2, '0')}-01')", false, true);
+                        return visitor.Merge(leftSegment, rightSegment, $"DAY(EOMONTH('{leftArgument}-{rightArgument.PadLeft(2, '0')}-01')", false, true);
                     });
                     result = true;
                     break;

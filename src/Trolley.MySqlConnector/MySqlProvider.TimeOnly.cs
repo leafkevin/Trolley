@@ -33,11 +33,10 @@ partial class MySqlProvider
                 {
                     var targetSegment = visitor.VisitAndDeferred(target);
                     if (targetSegment.IsConstant || targetSegment.IsVariable)
-                        return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Ticks);
+                        return visitor.Change(targetSegment, ((TimeOnly)targetSegment.Value).Ticks);
 
-                    //mysql只返回6位，丢失一位精度
                     var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
-                    return visitor.Change(targetSegment, $"MICROSECOND({targetArgument})*10", true, false);
+                    return visitor.Change(targetSegment, $"TIME_TO_SEC({targetArgument})*10000000", true, false);
                 });
                 result = true;
                 break;
@@ -46,7 +45,7 @@ partial class MySqlProvider
                 {
                     var targetSegment = visitor.VisitAndDeferred(target);
                     if (targetSegment.IsConstant || targetSegment.IsVariable)
-                        return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Hour);
+                        return visitor.Change(targetSegment, ((TimeOnly)targetSegment.Value).Hour);
 
                     var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                     return visitor.Change(targetSegment, $"HOUR({targetArgument})", false, true);
@@ -58,7 +57,7 @@ partial class MySqlProvider
                 {
                     var targetSegment = visitor.VisitAndDeferred(target);
                     if (targetSegment.IsConstant || targetSegment.IsVariable)
-                        return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Millisecond);
+                        return visitor.Change(targetSegment, ((TimeOnly)targetSegment.Value).Millisecond);
 
                     var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                     return visitor.Change(targetSegment, $"MICROSECOND({targetArgument} DIV 1000 MOD 1000)", false, true);
@@ -70,7 +69,7 @@ partial class MySqlProvider
                 {
                     var targetSegment = visitor.VisitAndDeferred(target);
                     if (targetSegment.IsConstant || targetSegment.IsVariable)
-                        return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Minute);
+                        return visitor.Change(targetSegment, ((TimeOnly)targetSegment.Value).Minute);
 
                     var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                     return visitor.Change(targetSegment, $"MINUTE({targetArgument})", false, true);
@@ -82,7 +81,7 @@ partial class MySqlProvider
                 {
                     var targetSegment = visitor.VisitAndDeferred(target);
                     if (targetSegment.IsConstant || targetSegment.IsVariable)
-                        return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Second);
+                        return visitor.Change(targetSegment, ((TimeOnly)targetSegment.Value).Second);
 
                     var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                     return visitor.Change(targetSegment, $"SECOND({targetArgument})", false, true);
@@ -167,28 +166,6 @@ partial class MySqlProvider
         {
             switch (methodInfo.Name)
             {
-                case "CompareTo":
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
-                    {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
-                        var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                        return visitor.Merge(targetSegment, rightSegment, $"CASE WHEN ({targetArgument}={rightArgument} THEN 0 WHEN ({targetArgument}>{rightArgument})=1 THEN 1 ELSE -1 END", true, false);
-                    });
-                    result = true;
-                    break;
-                case "Equals":
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
-                    {
-                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
-                        var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                        return visitor.Merge(targetSegment, rightSegment, $"{targetArgument}={rightArgument}", true, false);
-                    });
-                    result = true;
-                    break;
                 case "Add":
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
@@ -212,11 +189,10 @@ partial class MySqlProvider
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return visitor.Merge(targetSegment, rightSegment, ((TimeOnly)targetSegment.Value).AddHours((double)rightSegment.Value));
-                        
+
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                        //rightSegment只支持常量或变量，不支持参数
-                        return visitor.Merge(targetSegment, rightSegment, $"ADDTIME({targetArgument},'{rightArgument}:00:00')", false, true);
+                        return visitor.Merge(targetSegment, rightSegment, $"TIME_ADD({targetArgument},INTERVAL {rightArgument} HOUR)", false, true);
                     });
                     result = true;
                     break;
@@ -228,11 +204,36 @@ partial class MySqlProvider
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return visitor.Merge(targetSegment, rightSegment, ((TimeOnly)targetSegment.Value).AddMinutes((double)rightSegment.Value));
-                        
+
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                        //rightSegment只支持常量或变量，不支持参数
-                        return visitor.Merge(targetSegment, rightSegment, $"ADDTIME({targetArgument},'0:{rightArgument}:00')", false, true);
+                        return visitor.Merge(targetSegment, rightSegment, $"TIME_ADD({targetArgument},INTERVAL {rightArgument} MINUTE)", false, true);
+                    });
+                    result = true;
+                    break;
+                case "CompareTo":
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                    {
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                        var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
+                        if (targetSegment.IsConstant) targetArgument = $"TIME({targetArgument})";
+                        if (rightSegment.IsConstant) rightArgument = $"TIME({rightArgument})";
+                        return visitor.Merge(targetSegment, rightSegment, $"CASE WHEN ({targetArgument}={rightArgument} THEN 0 WHEN ({targetArgument}>{rightArgument})=1 THEN 1 ELSE -1 END", true, false);
+                    });
+                    result = true;
+                    break;
+                case "Equals":
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                    {
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                        var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
+                        if (targetSegment.IsConstant) targetArgument = $"TIME({targetArgument})";
+                        if (rightSegment.IsConstant) rightArgument = $"TIME({rightArgument})";
+                        return visitor.Merge(targetSegment, rightSegment, $"{targetArgument}={rightArgument}", true, false);
                     });
                     result = true;
                     break;
