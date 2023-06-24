@@ -323,7 +323,7 @@ partial class MySqlProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                        var rightSegment = visitor.VisitAndDeferred(leftSegment.Clone(args[1]));
 
                         var leftArgument = this.GetQuotedValue(visitor.Change(leftSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
@@ -479,7 +479,6 @@ partial class MySqlProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
                                 return visitor.Merge(targetSegment, rightSegment, Convert.ToDateTime(targetSegment.Value).Subtract(Convert.ToDateTime(rightSegment.Value)));
