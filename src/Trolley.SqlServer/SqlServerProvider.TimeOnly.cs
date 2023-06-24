@@ -36,7 +36,7 @@ partial class SqlServerProvider
                         return visitor.Change(targetSegment, ((TimeOnly)targetSegment.Value).Ticks);
 
                     var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
-                    return visitor.Change(targetSegment, $"DATEDIFF_BIG(MICROSECOND,CAST('00:00:00' AS TIME),(CAST {targetArgument} AS TIME))*10", true, false);
+                    return visitor.Change(targetSegment, $"DATEDIFF_BIG(MICROSECOND,CAST('00:00:00' AS TIME),{targetArgument})*10", true, false);
                 });
                 result = true;
                 break;
@@ -215,7 +215,7 @@ partial class SqlServerProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var rightSegment = visitor.VisitAndDeferred(targetSegment.Clone(args[0]));
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
                         if (targetSegment.IsConstant) targetArgument = $"CAST({targetArgument} AS TIME)";
@@ -228,7 +228,7 @@ partial class SqlServerProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var rightSegment = visitor.VisitAndDeferred(targetSegment.Clone(args[0]));
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
                         if (targetSegment.IsConstant) targetArgument = $"CAST({targetArgument} AS TIME)";
@@ -246,7 +246,7 @@ partial class SqlServerProvider
                             if (targetSegment.IsConstant && targetSegment.IsVariable)
                                 return visitor.Change(targetSegment, ((TimeOnly)targetSegment.Value).ToTimeSpan());
 
-                            return targetSegment;
+                            return visitor.Change(targetSegment, this.GetQuotedValue(visitor.Change(targetSegment)));
                         });
                         result = true;
                     }

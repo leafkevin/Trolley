@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq.Expressions;
 
 namespace Trolley.MySqlConnector;
@@ -41,7 +42,7 @@ partial class MySqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).Ticks);
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
-                        return visitor.Change(targetSegment, $"TIMESTAMPDIFF(MICROSECOND,'1970-01-01',{targetArgument})*10+621355968000000000", true, false);
+                        return visitor.Change(targetSegment, $"TIME_TO_SEC({targetArgument})*10000000", true, false);
                     });
                     result = true;
                     break;
@@ -76,7 +77,7 @@ partial class MySqlProvider
                             return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).Milliseconds);
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
-                        return visitor.Change(targetSegment, $"MICROSECOND({targetArgument})/1000", true, false);
+                        return visitor.Change(targetSegment, $"MICROSECOND({targetArgument}) DIV 1000 MOD 1000", true, false);
                     });
                     result = true;
                     break;
@@ -112,7 +113,7 @@ partial class MySqlProvider
                             return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).TotalDays);
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
-                        return visitor.Change(targetSegment, $"TIME_TO_SEC({targetArgument})/{1000 * 3600 * 24}", true, false);
+                        return visitor.Change(targetSegment, $"TIME_TO_SEC({targetArgument})/{3600 * 24}", true, false);
                     });
                     result = true;
                     break;
@@ -124,7 +125,7 @@ partial class MySqlProvider
                             return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).TotalHours);
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
-                        return visitor.Change(targetSegment, $"TIME_TO_SEC({targetArgument})/{1000 * 3600}", true, false);
+                        return visitor.Change(targetSegment, $"TIME_TO_SEC({targetArgument})/3600", true, false);
                     });
                     result = true;
                     break;
@@ -187,6 +188,8 @@ partial class MySqlProvider
 
                         var leftArgument = this.GetQuotedValue(visitor.Change(leftSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
+                        if (leftSegment.IsConstant) leftArgument = $"TIME({leftArgument})";
+                        if (rightSegment.IsConstant) rightArgument = $"TIME({rightArgument})";
                         return visitor.Merge(leftSegment, rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END", true, false);
                     });
                     result = true;
@@ -207,10 +210,11 @@ partial class MySqlProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return visitor.Change(valueSegment, TimeSpan.FromDays((double)valueSegment.Value));
-                        return visitor.Change(valueSegment, $"TIME(DATE_ADD('0001-01-01',INTERVAL {valueArgument} DAY))", false, true);
+
+                        var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
+                        return visitor.Change(valueSegment, $"ADDTIME('00:00:00',SEC_TO_TIME({valueArgument}*{24 * 3600}))", false, true);
                     });
                     result = true;
                     break;
@@ -218,10 +222,10 @@ partial class MySqlProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return visitor.Change(valueSegment, TimeSpan.FromHours((double)valueSegment.Value));
-                        return visitor.Change(valueSegment, $"TIME(DATE_ADD('0001-01-01',INTERVAL {valueArgument} HOUR))", false, true);
+                        var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
+                        return visitor.Change(valueSegment, $"ADDTIME('00:00:00',SEC_TO_TIME({valueArgument}*3600))", false, true);
                     });
                     result = true;
                     break;
@@ -229,10 +233,10 @@ partial class MySqlProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return visitor.Change(valueSegment, TimeSpan.FromMilliseconds((double)valueSegment.Value));
-                        return visitor.Change(valueSegment, $"TIME(DATE_ADD('0001-01-01',INTERVAL {valueArgument}*1000 MICROSECOND))", false, true);
+                        var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
+                        return visitor.Change(valueSegment, $"ADDTIME('00:00:00',SEC_TO_TIME({valueArgument}/1000))", false, true);
                     });
                     result = true;
                     break;
@@ -240,10 +244,10 @@ partial class MySqlProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return visitor.Change(valueSegment, TimeSpan.FromMinutes((double)valueSegment.Value));
-                        return visitor.Change(valueSegment, $"TIME(DATE_ADD('0001-01-01',INTERVAL {valueArgument} MINUTE))", false, true);
+                        var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
+                        return visitor.Change(valueSegment, $"ADDTIME('00:00:00',SEC_TO_TIME({valueArgument}*60))", false, true);
                     });
                     result = true;
                     break;
@@ -251,10 +255,10 @@ partial class MySqlProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return visitor.Change(valueSegment, TimeSpan.FromSeconds((double)valueSegment.Value));
-                        return visitor.Change(valueSegment, $"TIME(DATE_ADD('0001-01-01',INTERVAL {valueArgument} SECOND))", false, true);
+                        var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
+                        return visitor.Change(valueSegment, $"ADDTIME('00:00:00',SEC_TO_TIME({valueArgument}))", false, true);
                     });
                     result = true;
                     break;
@@ -262,10 +266,10 @@ partial class MySqlProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return visitor.Change(valueSegment, TimeSpan.FromTicks((long)valueSegment.Value));
-                        return visitor.Change(valueSegment, $"TIME(DATE_ADD('0001-01-01',INTERVAL {valueArgument}/10 MICROSECOND))", false, true);
+                        var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
+                        return visitor.Change(valueSegment, $"ADDTIME('00:00:00',SEC_TO_TIME({valueArgument}/{TimeSpan.TicksPerSecond}))", false, true);
                     });
                     result = true;
                     break;
@@ -278,7 +282,7 @@ partial class MySqlProvider
                             return visitor.Change(valueSegment, TimeSpan.Parse(valueSegment.ToString()));
 
                         var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
-                        return visitor.Change(valueSegment, $"CAST({valueArgument} AS SIGNED)", false, true);
+                        return visitor.Change(valueSegment, $"CAST({valueArgument} AS TIME)", false, true);
                     });
                     result = true;
                     break;
@@ -287,11 +291,13 @@ partial class MySqlProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        if (valueSegment.IsConstant || valueSegment.IsVariable)
-                            return visitor.Change(valueSegment, TimeSpan.Parse(valueSegment.ToString()));
+                        var formatSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                        if ((valueSegment.IsConstant || valueSegment.IsVariable)
+                            && (formatSegment.IsConstant || formatSegment.IsVariable))
+                            return visitor.Merge(valueSegment, formatSegment, TimeSpan.ParseExact(valueSegment.ToString(), formatSegment.ToString(), CultureInfo.InvariantCulture));
 
                         var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
-                        return visitor.Change(valueSegment, $"CAST({valueArgument} AS SIGNED)", false, true);
+                        return visitor.Merge(valueSegment, formatSegment, $"CAST({valueArgument} AS TIME)", false, true);
                     });
                     result = true;
                     break;
@@ -305,7 +311,7 @@ partial class MySqlProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var rightSegment = visitor.VisitAndDeferred(targetSegment.Clone(args[0]));
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
@@ -317,7 +323,7 @@ partial class MySqlProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var rightSegment = visitor.VisitAndDeferred(targetSegment.Clone(args[0]));
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
@@ -329,7 +335,7 @@ partial class MySqlProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var rightSegment = visitor.VisitAndDeferred(targetSegment.Clone(args[0]));
 
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
@@ -352,7 +358,7 @@ partial class MySqlProvider
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                        return visitor.Merge(targetSegment, rightSegment, $"SUBTIME({targetArgument},{rightArgument})", false, true);
+                        return visitor.Merge(targetSegment, rightSegment, $"TIMEDIFF({targetArgument},{rightArgument})", false, true);
                     });
                     result = true;
                     break;

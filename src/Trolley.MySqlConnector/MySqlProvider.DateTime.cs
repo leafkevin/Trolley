@@ -486,7 +486,7 @@ partial class MySqlProvider
 
                             var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                             var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                            return visitor.Merge(targetSegment, rightSegment, $"TIME({targetArgument}-{rightArgument})", false, true);
+                            return visitor.Merge(targetSegment, rightSegment, $"TIMEDIFF({targetArgument},{rightArgument})", false, true);
                         });
                         result = true;
                     }
