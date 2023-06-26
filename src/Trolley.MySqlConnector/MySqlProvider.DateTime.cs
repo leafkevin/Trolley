@@ -513,7 +513,7 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                        return visitor.Merge(targetSegment, rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 1 ELSE 0 END", true, false);
+                        return visitor.Merge(targetSegment, rightSegment, $"{targetArgument}={rightArgument}", true, false);
                     });
                     result = true;
                     break;
