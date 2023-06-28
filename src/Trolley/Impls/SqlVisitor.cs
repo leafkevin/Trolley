@@ -262,7 +262,8 @@ public class SqlVisitor : ISqlVisitor
                 string strLeft = this.GetQuotedValue(this.Change(leftSegment));
                 string strRight = this.GetQuotedValue(this.Change(rightSegment));
                 if (binaryExpr.NodeType == ExpressionType.Coalesce)
-                    return this.Merge(leftSegment, rightSegment, $"{operators}({strLeft},{strRight})", false, true);
+                    //虽然是函数调用，左右两边同类型，可当字段访问处理
+                    return this.Merge(leftSegment, rightSegment, $"{operators}({strLeft},{strRight})");
 
                 if (leftSegment.IsExpression)
                     strLeft = $"({strLeft})";

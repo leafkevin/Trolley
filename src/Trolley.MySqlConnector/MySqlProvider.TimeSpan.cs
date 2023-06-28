@@ -188,8 +188,6 @@ partial class MySqlProvider
 
                         var leftArgument = this.GetQuotedValue(visitor.Change(leftSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                        if (leftSegment.IsConstant) leftArgument = $"TIME({leftArgument})";
-                        if (rightSegment.IsConstant) rightArgument = $"TIME({rightArgument})";
                         return visitor.Merge(leftSegment, rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END", true, false);
                     });
                     result = true;
@@ -280,7 +278,6 @@ partial class MySqlProvider
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return visitor.Change(valueSegment, TimeSpan.Parse(valueSegment.ToString()));
-
                         var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
                         return visitor.Change(valueSegment, $"CAST({valueArgument} AS TIME)", false, true);
                     });
@@ -351,7 +348,7 @@ partial class MySqlProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var rightSegment = visitor.VisitAndDeferred(targetSegment.Clone(args[0]));
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return visitor.Merge(targetSegment, rightSegment, ((TimeSpan)targetSegment.Value).Subtract((TimeSpan)rightSegment.Value));

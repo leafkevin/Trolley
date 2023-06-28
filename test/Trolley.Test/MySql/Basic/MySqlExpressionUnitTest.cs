@@ -56,7 +56,7 @@ public class MySqlExpressionUnitTest : UnitTestBase
                  IsNeedParameter = f.Name.Contains("kevin") ? "Yes" : "No",
              })
              .ToSql(out _);
-        Assert.True(sql == "SELECT (CASE WHEN `IsEnabled` = 1 THEN 'Enabled' ELSE 'Disabled' END) AS `IsEnabled`,(CASE WHEN `GuidField` IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END) AS `GuidField`,(CASE WHEN `Age`>35 THEN 1 ELSE 0 END) AS `IsOld`,(CASE WHEN `Name` LIKE '%kevin%' THEN 'Yes' ELSE 'No' END) AS `IsNeedParameter` FROM `sys_user` WHERE (CASE WHEN `IsEnabled` = 1 THEN 'Enabled' ELSE 'Disabled' END)='Enabled' AND (CASE WHEN `GuidField` IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END)='HasValue'");
+        Assert.True(sql == "SELECT (CASE WHEN `IsEnabled`=1 THEN 'Enabled' ELSE 'Disabled' END) AS `IsEnabled`,(CASE WHEN `GuidField` IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END) AS `GuidField`,(CASE WHEN `Age`>35 THEN 1 ELSE 0 END) AS `IsOld`,(CASE WHEN `Name` LIKE '%kevin%' THEN 'Yes' ELSE 'No' END) AS `IsNeedParameter` FROM `sys_user` WHERE (CASE WHEN `IsEnabled`=1 THEN 'Enabled' ELSE 'Disabled' END)='Enabled' AND (CASE WHEN `GuidField` IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END)='HasValue'");
 
         var enabled = "Enabled";
         var hasValue = "HasValue";
@@ -71,7 +71,7 @@ public class MySqlExpressionUnitTest : UnitTestBase
                 IsNeedParameter = f.Name.Contains("kevin") ? "Yes" : "No",
             })
             .ToSql(out var dbParameters);
-        Assert.True(sql == "SELECT (CASE WHEN `IsEnabled` = 1 THEN @p4 ELSE 'Disabled' END) AS `IsEnabled`,(CASE WHEN `GuidField` IS NOT NULL THEN @p5 ELSE 'NoValue' END) AS `GuidField`,(CASE WHEN `Age`>35 THEN 1 ELSE 0 END) AS `IsOld`,(CASE WHEN `Name` LIKE '%kevin%' THEN 'Yes' ELSE 'No' END) AS `IsNeedParameter` FROM `sys_user` WHERE (CASE WHEN `IsEnabled` = 1 THEN @p0 ELSE 'Disabled' END)=@p1 AND (CASE WHEN `GuidField` IS NOT NULL THEN @p2 ELSE 'NoValue' END)=@p3");
+        Assert.True(sql == "SELECT (CASE WHEN `IsEnabled`=1 THEN @p4 ELSE 'Disabled' END) AS `IsEnabled`,(CASE WHEN `GuidField` IS NOT NULL THEN @p5 ELSE 'NoValue' END) AS `GuidField`,(CASE WHEN `Age`>35 THEN 1 ELSE 0 END) AS `IsOld`,(CASE WHEN `Name` LIKE '%kevin%' THEN 'Yes' ELSE 'No' END) AS `IsNeedParameter` FROM `sys_user` WHERE (CASE WHEN `IsEnabled`=1 THEN @p0 ELSE 'Disabled' END)=@p1 AND (CASE WHEN `GuidField` IS NOT NULL THEN @p2 ELSE 'NoValue' END)=@p3");
         Assert.True(dbParameters[0].Value.ToString() == enabled);
         Assert.True(dbParameters[1].Value.ToString() == enabled);
         Assert.True(dbParameters[2].Value.ToString() == hasValue);

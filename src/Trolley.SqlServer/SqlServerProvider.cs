@@ -157,4 +157,14 @@ public partial class SqlServerProvider : BaseOrmProvider
     }
     public override string CastTo(Type type, object value)
         => $"CAST({value} AS {castTos[type]})";
+    public override string GetQuotedValue(Type expectType, object value)
+    {
+        if (expectType == typeof(DateTime) && value is DateTime dateTime)
+            return $"'{dateTime:yyyy-MM-dd HH:mm:ss.fff}'";
+        if (expectType == typeof(TimeSpan) && value is TimeSpan timeSpan)
+            return $"'{timeSpan.ToString("d\\ hh\\:mm\\:ss\\.fff")}'";
+        if (expectType == typeof(TimeOnly) && value is TimeOnly timeOnly)
+            return $"'{timeOnly.ToString("hh\\:mm\\:ss\\.fff")}'";
+        return base.GetQuotedValue(expectType, value);
+    }
 }

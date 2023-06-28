@@ -176,7 +176,7 @@ public class MySqlUnitTest4 : UnitTestBase
         sql = repository.Delete<Order>()
             .Where(f => f.BuyerId == 1 && orderNos.Contains(f.OrderNo))
             .ToSql(out parameters);
-        Assert.True(sql == "DELETE FROM `sys_order` WHERE `BuyerId`=1 OR `OrderNo` IN (@p0,@p1,@p2)");
+        Assert.True(sql == "DELETE FROM `sys_order` WHERE `BuyerId`=1 AND `OrderNo` IN (@p0,@p1,@p2)");
         Assert.True((string)parameters[0].Value == orderNos[0]);
         Assert.True((string)parameters[1].Value == orderNos[1]);
         Assert.True((string)parameters[2].Value == orderNos[2]);

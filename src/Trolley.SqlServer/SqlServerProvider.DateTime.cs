@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq.Expressions;
+using System.Text;
 
 namespace Trolley.SqlServer;
 
@@ -17,15 +18,15 @@ partial class SqlServerProvider
             {
                 //静态成员访问，理论上没有target对象，为了不再创建sqlSegment对象，外层直接把对象传了进来
                 case "MinValue":
-                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change(DateTime.MinValue));
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change($"{DateTime.MinValue:yyyy-MM-dd HH:mm:ss.fffffff}"));
                     result = true;
                     break;
                 case "MaxValue":
-                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change(DateTime.MaxValue));
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change($"{DateTime.MaxValue:yyyy-MM-dd HH:mm:ss.fffffff}"));
                     result = true;
                     break;
                 case "UnixEpoch":
-                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change(DateTime.UnixEpoch));
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change($"{DateTime.UnixEpoch:yyyy-MM-dd HH:mm:ss.fffffff}"));
                     result = true;
                     break;
                 case "Today":
@@ -49,7 +50,11 @@ partial class SqlServerProvider
                 case "Date":
                     memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        SqlSegment targetSegment = null;
+                        if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null)
+                            targetSegment = target.Change(visitor.Evaluate(target.Expression));
+                        else targetSegment = visitor.VisitAndDeferred(target);
+
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Date);
 
@@ -61,7 +66,11 @@ partial class SqlServerProvider
                 case "Day":
                     memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        SqlSegment targetSegment = null;
+                        if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null)
+                            targetSegment = target.Change(visitor.Evaluate(target.Expression));
+                        else targetSegment = visitor.VisitAndDeferred(target);
+
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Day);
 
@@ -73,7 +82,11 @@ partial class SqlServerProvider
                 case "DayOfWeek":
                     memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        SqlSegment targetSegment = null;
+                        if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null)
+                            targetSegment = target.Change(visitor.Evaluate(target.Expression));
+                        else targetSegment = visitor.VisitAndDeferred(target);
+
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).DayOfWeek);
 
@@ -85,7 +98,11 @@ partial class SqlServerProvider
                 case "DayOfYear":
                     memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        SqlSegment targetSegment = null;
+                        if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null)
+                            targetSegment = target.Change(visitor.Evaluate(target.Expression));
+                        else targetSegment = visitor.VisitAndDeferred(target);
+
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).DayOfYear);
 
@@ -97,7 +114,11 @@ partial class SqlServerProvider
                 case "Hour":
                     memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        SqlSegment targetSegment = null;
+                        if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null)
+                            targetSegment = target.Change(visitor.Evaluate(target.Expression));
+                        else targetSegment = visitor.VisitAndDeferred(target);
+
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Hour);
 
@@ -109,9 +130,14 @@ partial class SqlServerProvider
                 case "Kind":
                     memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        SqlSegment targetSegment = null;
+                        if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null)
+                            targetSegment = target.Change(visitor.Evaluate(target.Expression));
+                        else targetSegment = visitor.VisitAndDeferred(target);
+
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Kind);
+
                         throw new NotSupportedException("不支持的成员访问，DateTime只支持常量的Kind成员访问");
                     });
                     result = true;
@@ -119,7 +145,11 @@ partial class SqlServerProvider
                 case "Millisecond":
                     memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        SqlSegment targetSegment = null;
+                        if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null)
+                            targetSegment = target.Change(visitor.Evaluate(target.Expression));
+                        else targetSegment = visitor.VisitAndDeferred(target);
+
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Millisecond);
 
@@ -131,7 +161,11 @@ partial class SqlServerProvider
                 case "Minute":
                     memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        SqlSegment targetSegment = null;
+                        if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null)
+                            targetSegment = target.Change(visitor.Evaluate(target.Expression));
+                        else targetSegment = visitor.VisitAndDeferred(target);
+
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Minute);
 
@@ -143,7 +177,11 @@ partial class SqlServerProvider
                 case "Month":
                     memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        SqlSegment targetSegment = null;
+                        if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null)
+                            targetSegment = target.Change(visitor.Evaluate(target.Expression));
+                        else targetSegment = visitor.VisitAndDeferred(target);
+
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Month);
 
@@ -155,7 +193,11 @@ partial class SqlServerProvider
                 case "Second":
                     memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        SqlSegment targetSegment = null;
+                        if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null)
+                            targetSegment = target.Change(visitor.Evaluate(target.Expression));
+                        else targetSegment = visitor.VisitAndDeferred(target);
+
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Second);
 
@@ -167,7 +209,11 @@ partial class SqlServerProvider
                 case "Ticks":
                     memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        SqlSegment targetSegment = null;
+                        if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null)
+                            targetSegment = target.Change(visitor.Evaluate(target.Expression));
+                        else targetSegment = visitor.VisitAndDeferred(target);
+
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Ticks);
 
@@ -179,7 +225,11 @@ partial class SqlServerProvider
                 case "TimeOfDay":
                     memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        SqlSegment targetSegment = null;
+                        if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null)
+                            targetSegment = target.Change(visitor.Evaluate(target.Expression));
+                        else targetSegment = visitor.VisitAndDeferred(target);
+
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).TimeOfDay);
 
@@ -191,7 +241,11 @@ partial class SqlServerProvider
                 case "Year":
                     memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
-                        var targetSegment = visitor.VisitAndDeferred(target);
+                        SqlSegment targetSegment = null;
+                        if (target.Expression is MemberExpression memberExpr && memberExpr.Expression == null)
+                            targetSegment = target.Change(visitor.Evaluate(target.Expression));
+                        else targetSegment = visitor.VisitAndDeferred(target);
+
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Year);
 
@@ -268,7 +322,7 @@ partial class SqlServerProvider
                         if ((valueSegment.IsConstant || valueSegment.IsVariable)
                             && (formatSegment.IsConstant || formatSegment.IsVariable)
                             && (providerSegment.IsConstant || providerSegment.IsVariable))
-                            return visitor.Merge(valueSegment, formatSegment, providerSegment, DateTime.ParseExact(valueSegment.ToString(), formatSegment.ToString(), (IFormatProvider)providerSegment.Value));
+                            return visitor.Merge(valueSegment, formatSegment, DateTime.ParseExact(valueSegment.ToString(), formatSegment.ToString(), (IFormatProvider)providerSegment.Value));
 
                         if (!(formatSegment.IsConstant || formatSegment.IsVariable))
                             throw new NotSupportedException($"方法DateTime.{methodInfo.Name}格式化字符串，暂时不支持非常量、变量的解析");
@@ -300,7 +354,7 @@ partial class SqlServerProvider
                             case "dd/mm/yyyy hh:mi:ss:mmmPM": formatValue = $"CONVERT(DATETIME,{valueArgument},131)"; break;
                             default: formatValue = $"CAST({valueArgument} AS DATETIME)"; break;
                         }
-                        return visitor.Merge(valueSegment, formatSegment, providerSegment, formatValue, false, true);
+                        return visitor.Merge(valueSegment, formatSegment, formatValue, false, true);
                     });
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 1 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
@@ -334,8 +388,27 @@ partial class SqlServerProvider
                             return visitor.Merge(targetSegment, rightSegment, Convert.ToDateTime(targetSegment.Value).Add((TimeSpan)rightSegment.Value));
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
-                        var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                        return visitor.Merge(targetSegment, rightSegment, $"DATEADD(MILLISECOND,DATEDIFF(MILLISECOND,0,{rightArgument}),{targetArgument})", false, true);
+                        if (rightSegment.IsConstant || rightSegment.IsVariable)
+                        {
+                            var builder = new StringBuilder();
+                            var timeSpan = (TimeSpan)rightSegment.Value;
+                            if (timeSpan.Days > 0)
+                            {
+                                builder.Append($"DATEADD(DAY,{timeSpan.Days},{targetArgument})");
+                                timeSpan = timeSpan.Subtract(TimeSpan.FromDays(timeSpan.Days));
+                            }
+                            if (timeSpan.Ticks > 0)
+                            {
+                                if (builder.Length > 0) builder.Insert(0, $"DATEADD(MILLISECOND,-{timeSpan.Ticks / TimeSpan.TicksPerMillisecond},");
+                                else builder.Append($"DATEADD(MILLISECOND,-{timeSpan.Ticks / TimeSpan.TicksPerMillisecond},");
+                                builder.Append($"{targetArgument})");
+                            }
+                            return visitor.Merge(targetSegment, rightSegment, builder.ToString(), false, true);
+                        }
+                        //非常量、变量的，只能小于一天
+                        visitor.Change(rightSegment, $"DATEDIFF_BIG(MILLISECOND,'00:00:00',{rightSegment}");
+                        var rightArgument = this.GetQuotedValue(rightSegment);
+                        return visitor.Merge(targetSegment, rightSegment, $"DATEADD(MILLISECOND,-{rightArgument},{targetArgument})", false, true);
                     });
                     result = true;
                     break;
@@ -497,8 +570,27 @@ partial class SqlServerProvider
                                 return visitor.Merge(targetSegment, rightSegment, Convert.ToDateTime(targetSegment.Value).Subtract((TimeSpan)rightSegment.Value));
 
                             var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
-                            var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                            return visitor.Merge(targetSegment, rightSegment, $"CAST({targetArgument}-{rightArgument} AS DATETIME)", false, true);
+                            if (rightSegment.IsConstant || rightSegment.IsVariable)
+                            {
+                                var builder = new StringBuilder();
+                                var timeSpan = (TimeSpan)rightSegment.Value;
+                                if (timeSpan.Days > 0)
+                                {
+                                    builder.Append($"DATEADD(DAY,-{timeSpan.Days},{targetArgument})");
+                                    timeSpan = timeSpan.Subtract(TimeSpan.FromDays(timeSpan.Days));
+                                }
+                                if (timeSpan.Ticks > 0)
+                                {
+                                    if (builder.Length > 0) builder.Insert(0, $"DATEADD(MILLISECOND,-{timeSpan.Ticks / TimeSpan.TicksPerMillisecond},");
+                                    else builder.Append($"DATEADD(MILLISECOND,-{timeSpan.Ticks / TimeSpan.TicksPerMillisecond},");
+                                    builder.Append($"{targetArgument})");
+                                }
+                                return visitor.Merge(targetSegment, rightSegment, builder.ToString(), false, true);
+                            }
+                            //非常量、变量的，只能小于一天
+                            visitor.Change(rightSegment, $"DATEDIFF_BIG(MILLISECOND,'00:00:00',{rightSegment}");
+                            var rightArgument = this.GetQuotedValue(rightSegment);
+                            return visitor.Merge(targetSegment, rightSegment, $"DATEADD(MILLISECOND,-{rightArgument},{targetArgument})", false, true);
                         });
                         result = true;
                     }
