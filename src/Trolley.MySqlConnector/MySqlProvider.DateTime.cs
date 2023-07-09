@@ -57,7 +57,8 @@ partial class MySqlProvider
                         else targetSegment = visitor.VisitAndDeferred(target);
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Date);
+                            if (targetSegment.IsConstant || targetSegment.IsVariable)
+                                return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Date);
 
                         return visitor.Change(targetSegment, $"CONVERT({this.GetQuotedValue(targetSegment)},DATE)", false, true);
                     });

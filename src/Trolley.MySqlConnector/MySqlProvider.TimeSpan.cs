@@ -358,7 +358,7 @@ partial class MySqlProvider
                             }
                             return visitor.Merge(targetSegment, rightSegment, builder.ToString(), false, true);
                         }
-                       
+
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
                         return visitor.Merge(targetSegment, rightSegment, $"ADDTIME({targetArgument},{rightArgument})", false, true);
                     });
