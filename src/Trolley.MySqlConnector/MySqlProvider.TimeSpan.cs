@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Linq.Expressions;
+using System.Text;
 
 namespace Trolley.MySqlConnector;
 
@@ -40,7 +41,8 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).Ticks);
+                            return targetSegment.ChangeValue(((TimeSpan)targetSegment.Value).Ticks);
+
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         return visitor.Change(targetSegment, $"TIME_TO_SEC({targetArgument})*10000000", true, false);
                     });
@@ -51,9 +53,9 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).Days);
+                            return targetSegment.ChangeValue(((TimeSpan)targetSegment.Value).Days);
 
-                        throw new NotSupportedException("暂时不支持TimeSpan类型参数返回天数");
+                        throw new NotSupportedException("暂时不支持非常量、变量TimeSpan类型返回天数");
                     });
                     result = true;
                     break;
@@ -62,7 +64,7 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).Hours);
+                            return targetSegment.ChangeValue(((TimeSpan)targetSegment.Value).Hours);
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         return visitor.Change(targetSegment, $"HOUR({targetArgument})", false, true);
@@ -74,7 +76,7 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).Milliseconds);
+                            return targetSegment.ChangeValue(((TimeSpan)targetSegment.Value).Milliseconds);
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         return visitor.Change(targetSegment, $"MICROSECOND({targetArgument}) DIV 1000 MOD 1000", true, false);
@@ -86,7 +88,7 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).Minutes);
+                            return targetSegment.ChangeValue(((TimeSpan)targetSegment.Value).Minutes);
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         return visitor.Change(targetSegment, $"MINUTE({targetArgument})", false, true);
@@ -98,7 +100,7 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).Seconds);
+                            return targetSegment.ChangeValue(((TimeSpan)targetSegment.Value).Seconds);
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         return visitor.Change(targetSegment, $"SECOND({targetArgument})", false, true);
@@ -110,7 +112,7 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).TotalDays);
+                            return targetSegment.ChangeValue(((TimeSpan)targetSegment.Value).TotalDays);
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         return visitor.Change(targetSegment, $"TIME_TO_SEC({targetArgument})/{3600 * 24}", true, false);
@@ -122,7 +124,7 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).TotalHours);
+                            return targetSegment.ChangeValue(((TimeSpan)targetSegment.Value).TotalHours);
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         return visitor.Change(targetSegment, $"TIME_TO_SEC({targetArgument})/3600", true, false);
@@ -134,7 +136,7 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).TotalMilliseconds);
+                            return targetSegment.ChangeValue(((TimeSpan)targetSegment.Value).TotalMilliseconds);
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         return visitor.Change(targetSegment, $"TIME_TO_SEC({targetArgument})*1000", true, false);
@@ -146,7 +148,7 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).TotalMinutes);
+                            return targetSegment.ChangeValue(((TimeSpan)targetSegment.Value).TotalMinutes);
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         return visitor.Change(targetSegment, $"TIME_TO_SEC({targetArgument})/60", true, false);
@@ -158,7 +160,7 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).TotalSeconds);
+                            return targetSegment.ChangeValue(((TimeSpan)targetSegment.Value).TotalSeconds);
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         return visitor.Change(targetSegment, $"TIME_TO_SEC({targetArgument})", false, true);
@@ -184,12 +186,10 @@ partial class MySqlProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                        var rightSegment = visitor.VisitAndDeferred(leftSegment.Clone(args[1]));
 
                         var leftArgument = this.GetQuotedValue(visitor.Change(leftSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                        if (leftSegment.IsConstant) leftArgument = $"TIME({leftArgument})";
-                        if (rightSegment.IsConstant) rightArgument = $"TIME({rightArgument})";
                         return visitor.Merge(leftSegment, rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END", true, false);
                     });
                     result = true;
@@ -198,7 +198,7 @@ partial class MySqlProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                        var rightSegment = visitor.VisitAndDeferred(leftSegment.Clone(args[1]));
 
                         var leftArgument = this.GetQuotedValue(visitor.Change(leftSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
@@ -211,7 +211,7 @@ partial class MySqlProvider
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
-                            return visitor.Change(valueSegment, TimeSpan.FromDays((double)valueSegment.Value));
+                            return valueSegment.ChangeValue(TimeSpan.FromDays(Convert.ToDouble(valueSegment.Value)));
 
                         var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
                         return visitor.Change(valueSegment, $"ADDTIME('00:00:00',SEC_TO_TIME({valueArgument}*{24 * 3600}))", false, true);
@@ -223,7 +223,7 @@ partial class MySqlProvider
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
-                            return visitor.Change(valueSegment, TimeSpan.FromHours((double)valueSegment.Value));
+                            return valueSegment.ChangeValue(TimeSpan.FromHours(Convert.ToDouble(valueSegment.Value)));
                         var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
                         return visitor.Change(valueSegment, $"ADDTIME('00:00:00',SEC_TO_TIME({valueArgument}*3600))", false, true);
                     });
@@ -234,7 +234,7 @@ partial class MySqlProvider
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
-                            return visitor.Change(valueSegment, TimeSpan.FromMilliseconds((double)valueSegment.Value));
+                            return valueSegment.ChangeValue(TimeSpan.FromMilliseconds(Convert.ToDouble(valueSegment.Value)));
                         var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
                         return visitor.Change(valueSegment, $"ADDTIME('00:00:00',SEC_TO_TIME({valueArgument}/1000))", false, true);
                     });
@@ -245,7 +245,7 @@ partial class MySqlProvider
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
-                            return visitor.Change(valueSegment, TimeSpan.FromMinutes((double)valueSegment.Value));
+                            return valueSegment.ChangeValue(TimeSpan.FromMinutes(Convert.ToDouble(valueSegment.Value)));
                         var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
                         return visitor.Change(valueSegment, $"ADDTIME('00:00:00',SEC_TO_TIME({valueArgument}*60))", false, true);
                     });
@@ -256,7 +256,7 @@ partial class MySqlProvider
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
-                            return visitor.Change(valueSegment, TimeSpan.FromSeconds((double)valueSegment.Value));
+                            return valueSegment.ChangeValue(TimeSpan.FromSeconds(Convert.ToDouble(valueSegment.Value)));
                         var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
                         return visitor.Change(valueSegment, $"ADDTIME('00:00:00',SEC_TO_TIME({valueArgument}))", false, true);
                     });
@@ -267,7 +267,7 @@ partial class MySqlProvider
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
-                            return visitor.Change(valueSegment, TimeSpan.FromTicks((long)valueSegment.Value));
+                            return valueSegment.ChangeValue(TimeSpan.FromTicks(Convert.ToInt64(valueSegment.Value)));
                         var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
                         return visitor.Change(valueSegment, $"ADDTIME('00:00:00',SEC_TO_TIME({valueArgument}/{TimeSpan.TicksPerSecond}))", false, true);
                     });
@@ -279,8 +279,7 @@ partial class MySqlProvider
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
-                            return visitor.Change(valueSegment, TimeSpan.Parse(valueSegment.ToString()));
-
+                            return valueSegment.ChangeValue(TimeSpan.Parse(valueSegment.ToString()));
                         var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
                         return visitor.Change(valueSegment, $"CAST({valueArgument} AS TIME)", false, true);
                     });
@@ -294,7 +293,7 @@ partial class MySqlProvider
                         var formatSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
                         if ((valueSegment.IsConstant || valueSegment.IsVariable)
                             && (formatSegment.IsConstant || formatSegment.IsVariable))
-                            return visitor.Merge(valueSegment, formatSegment, TimeSpan.ParseExact(valueSegment.ToString(), formatSegment.ToString(), CultureInfo.InvariantCulture));
+                            return valueSegment.Merge(formatSegment).ChangeValue(TimeSpan.ParseExact(valueSegment.ToString(), formatSegment.ToString(), CultureInfo.InvariantCulture));
 
                         var valueArgument = this.GetQuotedValue(visitor.Change(valueSegment));
                         return visitor.Merge(valueSegment, formatSegment, $"CAST({valueArgument} AS TIME)", false, true);
@@ -339,9 +338,27 @@ partial class MySqlProvider
 
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
-                            return visitor.Merge(targetSegment, rightSegment, ((TimeSpan)targetSegment.Value).Add((TimeSpan)rightSegment.Value));
+                            return targetSegment.Merge(rightSegment).ChangeValue(((TimeSpan)targetSegment.Value).Add((TimeSpan)rightSegment.Value));
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                        if (rightSegment.IsConstant || rightSegment.IsVariable)
+                        {
+                            var builder = new StringBuilder();
+                            var timeSpan = (TimeSpan)rightSegment.Value;
+                            if (timeSpan.Days > 0)
+                            {
+                                builder.Append($"DATE_ADD({targetArgument},INTERVAL {timeSpan.Days} DAY)");
+                                timeSpan = timeSpan.Subtract(TimeSpan.FromDays(timeSpan.Days));
+                            }
+                            if (timeSpan.Ticks > 0)
+                            {
+                                if (builder.Length > 0) builder.Insert(0, $"ADDTIME(");
+                                else builder.Append($"ADDTIME({targetArgument}");
+                                builder.Append($",{this.GetQuotedValue(timeSpan)})");
+                            }
+                            return visitor.Merge(targetSegment, rightSegment, builder.ToString(), false, true);
+                        }
+                       
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
                         return visitor.Merge(targetSegment, rightSegment, $"ADDTIME({targetArgument},{rightArgument})", false, true);
                     });
@@ -351,10 +368,10 @@ partial class MySqlProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var rightSegment = visitor.VisitAndDeferred(targetSegment.Clone(args[0]));
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
-                            return visitor.Merge(targetSegment, rightSegment, ((TimeSpan)targetSegment.Value).Subtract((TimeSpan)rightSegment.Value));
+                            return targetSegment.Merge(rightSegment).ChangeValue(((TimeSpan)targetSegment.Value).Subtract((TimeSpan)rightSegment.Value));
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
@@ -369,7 +386,7 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
-                            return visitor.Merge(targetSegment, rightSegment, ((TimeSpan)targetSegment.Value).Multiply((double)rightSegment.Value));
+                            return targetSegment.Merge(rightSegment).ChangeValue(((TimeSpan)targetSegment.Value).Multiply((double)rightSegment.Value));
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
@@ -386,7 +403,7 @@ partial class MySqlProvider
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
-                                return visitor.Merge(targetSegment, rightSegment, ((TimeSpan)targetSegment.Value).Divide((double)rightSegment.Value));
+                                return targetSegment.Merge(rightSegment).ChangeValue(((TimeSpan)targetSegment.Value).Divide((double)rightSegment.Value));
 
                             var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                             var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
@@ -402,7 +419,7 @@ partial class MySqlProvider
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
-                                return visitor.Merge(targetSegment, rightSegment, ((TimeSpan)targetSegment.Value).Divide((TimeSpan)rightSegment.Value));
+                                return targetSegment.Merge(rightSegment).ChangeValue(((TimeSpan)targetSegment.Value).Divide((TimeSpan)rightSegment.Value));
 
                             var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                             var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));

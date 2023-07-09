@@ -302,7 +302,7 @@ public static class Extensions
         var current = root;
         var parent = root;
         var readerBuilders = new Dictionary<int, EntityBuildInfo>();
-        var deferredBuilds = new Stack<EntityBuildInfo>();        
+        var deferredBuilds = new Stack<EntityBuildInfo>();
 
         while (readerIndex < readerFields.Count)
         {
@@ -498,15 +498,70 @@ public static class Extensions
                 throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
             typedValueExpr = Expression.New(typeof(Guid).GetConstructor(new Type[] { fieldType }), Expression.Convert(objLocalExpr, fieldType));
         }
-        else if (underlyingType == typeof(TimeSpan) || underlyingType == typeof(TimeOnly))
+        else if (underlyingType == typeof(DateTime))
+        {
+            if (fieldType == typeof(long) || fieldType == typeof(ulong))
+                typedValueExpr = Expression.New(underlyingType.GetConstructor(new Type[] { fieldType }), Expression.Convert(objLocalExpr, fieldType));
+            else if (fieldType == typeof(string))
+            {
+                methodInfo = underlyingType.GetMethod(nameof(DateTime.Parse), new Type[] { typeof(string) });
+                typedValueExpr = Expression.Call(methodInfo, Expression.Convert(objLocalExpr, fieldType));
+            }
+            else if (fieldType == typeof(DateOnly))
+            {
+                methodInfo = underlyingType.GetMethod(nameof(DateOnly.ToDateTime), new Type[] { typeof(TimeOnly) });
+                typedValueExpr = Expression.Call(Expression.Convert(objLocalExpr, fieldType), methodInfo, Expression.Constant(TimeOnly.MinValue));
+            }
+            else throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
+        }
+        else if (underlyingType == typeof(DateOnly))
+        {
+            if (fieldType == typeof(string))
+            {
+                methodInfo = underlyingType.GetMethod(nameof(DateOnly.Parse), new Type[] { typeof(string) });
+                typedValueExpr = Expression.Call(methodInfo, Expression.Convert(objLocalExpr, fieldType));
+            }
+            else if (fieldType == typeof(DateTime))
+            {
+                methodInfo = underlyingType.GetMethod(nameof(DateOnly.FromDateTime), new Type[] { typeof(DateTime) });
+                typedValueExpr = Expression.Call(methodInfo, Expression.Convert(objLocalExpr, fieldType));
+            }
+            else throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
+        }
+        else if (underlyingType == typeof(TimeSpan))
         {
             if (fieldType == typeof(long))
                 typedValueExpr = Expression.New(underlyingType.GetConstructor(new Type[] { fieldType }), Expression.Convert(objLocalExpr, fieldType));
-            else if (fieldType != underlyingType && (fieldType == typeof(TimeSpan) || fieldType == typeof(TimeOnly)))
+            else if (fieldType == typeof(string))
             {
-                Expression fieldValueExpr = Expression.Convert(objLocalExpr, fieldType);
-                fieldValueExpr = Expression.Property(fieldValueExpr, nameof(TimeSpan.Ticks));
-                typedValueExpr = Expression.New(underlyingType.GetConstructor(new Type[] { typeof(long) }), fieldValueExpr);
+                methodInfo = underlyingType.GetMethod(nameof(TimeSpan.Parse), new Type[] { typeof(string) });
+                typedValueExpr = Expression.Call(methodInfo, Expression.Convert(objLocalExpr, fieldType));
+            }
+            else if (fieldType == typeof(TimeOnly))
+            {
+                methodInfo = underlyingType.GetMethod(nameof(TimeOnly.ToTimeSpan));
+                typedValueExpr = Expression.Call(Expression.Convert(objLocalExpr, fieldType), methodInfo);
+            }
+            else throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
+        }
+        else if (underlyingType == typeof(TimeOnly))
+        {
+            if (fieldType == typeof(long))
+                typedValueExpr = Expression.New(underlyingType.GetConstructor(new Type[] { fieldType }), Expression.Convert(objLocalExpr, fieldType));
+            else if (fieldType == typeof(string))
+            {
+                methodInfo = underlyingType.GetMethod(nameof(TimeOnly.Parse), new Type[] { typeof(string) });
+                typedValueExpr = Expression.Call(methodInfo, Expression.Convert(objLocalExpr, fieldType));
+            }
+            else if (fieldType == typeof(DateTime))
+            {
+                methodInfo = underlyingType.GetMethod(nameof(TimeOnly.FromDateTime));
+                typedValueExpr = Expression.Call(methodInfo, Expression.Convert(objLocalExpr, fieldType));
+            }
+            else if (fieldType == typeof(TimeSpan))
+            {
+                methodInfo = underlyingType.GetMethod(nameof(TimeOnly.FromTimeSpan));
+                typedValueExpr = Expression.Call(methodInfo, Expression.Convert(objLocalExpr, fieldType));
             }
             else throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
         }

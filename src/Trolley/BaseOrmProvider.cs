@@ -51,7 +51,7 @@ public abstract class BaseOrmProvider : IOrmProvider
         if (expectType == typeof(DateTime) && value is DateTime dateTime)
             return $"'{dateTime:yyyy-MM-dd HH:mm:ss.fffffff}'";
         if (expectType == typeof(TimeSpan) && value is TimeSpan timeSpan)
-            return $"'{timeSpan.ToString("d\\ hh\\:mm\\:ss\\.fffffff")}'";
+            return $"'{timeSpan.ToString("hh\\:mm\\:ss\\.fffffff")}'";
         if (expectType == typeof(TimeOnly) && value is TimeOnly timeOnly)
             return $"'{timeOnly.ToString("hh\\:mm\\:ss\\.fffffff")}'";
         if (value is SqlSegment sqlSegment)
@@ -73,13 +73,13 @@ public abstract class BaseOrmProvider : IOrmProvider
         memberMapper.MemberType.IsNullableType(out var underlyingType);
         if (memberMapper.NativeDbType != null)
         {
-            //模型类型与数据库默认映射类型一致，如：bool,数字，浮点数，String，DateTime，TimeSpan，TimeOnly，Guid等
+            //模型类型与数据库默认映射类型一致，如：bool,数字，浮点数，String，DateTime，TimeSpan，DateOnly，TimeOnly，Guid等
             //通常fieldValue和memberMapper的类型是一致的，不一致表达式无法书写出来
             var defaultType = this.MapDefaultType(memberMapper.NativeDbType);
             if (defaultType == underlyingType)
                 return result;
 
-            //模型类型与数据库默认映射类型不一致的情况，如：数字，浮点数，TimeSpan，TimeOnly，枚举，Guid
+            //模型类型与数据库默认映射类型不一致的情况，如：数字，浮点数，TimeSpan，DateOnly，TimeOnly，枚举，Guid
             //Gender? gender = Gender.Male;
             //(int)gender.Value;
             if (underlyingType.IsEnum)
@@ -99,15 +99,36 @@ public abstract class BaseOrmProvider : IOrmProvider
                 if (defaultType == typeof(byte[]))
                     result = ((Guid)result).ToByteArray();
             }
-            else if (underlyingType == typeof(TimeSpan) || underlyingType == typeof(TimeOnly))
+            else if (underlyingType == typeof(DateTime))
             {
                 if (defaultType == typeof(long))
+                    result = ((DateTime)result).Ticks;
+                if (defaultType == typeof(string))
+                    result = ((DateTime)result).ToString("yyyy-MM-dd HH:mm:ss.fffffff");
+            }
+            else if (underlyingType == typeof(DateOnly))
+            {
+                if (defaultType == typeof(string))
+                    result = ((DateOnly)result).ToString("yyyy-MM-dd");
+            }
+            else if (underlyingType == typeof(TimeSpan))
+            {
+                var timeSpan = (TimeSpan)result;
+                if (defaultType == typeof(long))
+                    result = timeSpan.Ticks;
+                if (defaultType == typeof(string))
                 {
-                    if (result is TimeSpan timeSpan)
-                        result = timeSpan.Ticks;
-                    if (result is TimeOnly timeOnly)
-                        result = timeOnly.Ticks;
+                    if (timeSpan.TotalDays > 1)
+                        result = timeSpan.ToString("d\\.hh\\:mm\\:ss\\.fffffff");
+                    else result = ((DateOnly)result).ToString("hh\\:mm\\:ss\\.fffffff");
                 }
+            }
+            else if (underlyingType == typeof(TimeOnly))
+            {
+                if (defaultType == typeof(long))
+                    result = ((TimeSpan)result).Ticks;
+                if (defaultType == typeof(string))
+                    result = ((DateOnly)result).ToString("hh\\:mm\\:ss\\.fffffff");
             }
             else result = Convert.ChangeType(result, defaultType);
         }

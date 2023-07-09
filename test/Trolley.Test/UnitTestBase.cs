@@ -22,11 +22,11 @@ public class UnitTestBase
                 CompanyId = 1,
                 Gender = Gender.Male,
                 GuidField= Guid.NewGuid(),
-                SomeTimes= TimeOnly.FromTimeSpan( TimeSpan.FromSeconds(4769)),
+                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
                 IsEnabled = true,
-                CreatedAt = DateTime.Parse("2023-03-03"),
+                CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
                 CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
                 UpdatedBy = 1
             },
             new User
@@ -37,9 +37,9 @@ public class UnitTestBase
                 CompanyId = 2,
                 Gender = Gender.Male,
                 GuidField= Guid.NewGuid(),
-                SomeTimes= TimeOnly.FromTimeSpan( TimeSpan.FromSeconds(5730)),
+                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
                 IsEnabled = true,
-                CreatedAt =  DateTime.Parse("2023-03-03 06:06:06"),
+                CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
                 CreatedBy = 1,
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1

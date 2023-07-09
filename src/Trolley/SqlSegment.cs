@@ -96,6 +96,8 @@ public class SqlSegment
     /// <returns>返回合并后的结果，并赋值到当前sqlSegment中</returns>
     public SqlSegment Merge(SqlSegment rightSegment)
     {
+        this.IsConstant = this.IsConstant && rightSegment.IsConstant;
+        this.IsVariable = this.IsVariable || rightSegment.IsVariable;
         this.HasField = this.HasField || rightSegment.HasField;
         this.IsParameter = this.IsParameter || rightSegment.IsParameter;
         return this;

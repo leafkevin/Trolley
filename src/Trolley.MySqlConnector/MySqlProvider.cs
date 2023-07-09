@@ -7,6 +7,8 @@ namespace Trolley.MySqlConnector;
 
 public partial class MySqlProvider : BaseOrmProvider
 {
+    private static TimeSpan MaxTimeSpan = TimeSpan.Parse("00:59:59").Add(TimeSpan.FromHours(838));
+    private static TimeSpan MinTimeSpan = -TimeSpan.Parse("00:59:59").Add(TimeSpan.FromHours(838));
     private static Dictionary<object, Type> defaultMapTypes = new();
     private static Dictionary<Type, object> defaultDbTypes = new();
     private static Dictionary<Type, string> castTos = new();
@@ -39,11 +41,11 @@ public partial class MySqlProvider : BaseOrmProvider
         defaultMapTypes[MySqlDbType.LongText] = typeof(string);
         defaultMapTypes[MySqlDbType.Text] = typeof(string);
         defaultMapTypes[MySqlDbType.JSON] = typeof(string);
-        defaultMapTypes[MySqlDbType.Date] = typeof(DateTime);
         defaultMapTypes[MySqlDbType.DateTime] = typeof(DateTime);
         defaultMapTypes[MySqlDbType.Newdate] = typeof(DateTime);
         defaultMapTypes[MySqlDbType.Timestamp] = typeof(DateTime);
-        defaultMapTypes[MySqlDbType.Time] = typeof(TimeSpan);
+        defaultMapTypes[MySqlDbType.Date] = typeof(DateOnly);
+        defaultMapTypes[MySqlDbType.Time] = typeof(TimeOnly);
         defaultMapTypes[MySqlDbType.TinyBlob] = typeof(byte[]);
         defaultMapTypes[MySqlDbType.MediumBlob] = typeof(byte[]);
         defaultMapTypes[MySqlDbType.LongBlob] = typeof(byte[]);
@@ -65,8 +67,9 @@ public partial class MySqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(double)] = MySqlDbType.Double;
         defaultDbTypes[typeof(decimal)] = MySqlDbType.Decimal;
         defaultDbTypes[typeof(string)] = MySqlDbType.VarChar;
-        defaultDbTypes[typeof(TimeSpan)] = MySqlDbType.Time;
         defaultDbTypes[typeof(DateTime)] = MySqlDbType.DateTime;
+        defaultDbTypes[typeof(DateOnly)] = MySqlDbType.Date;
+        defaultDbTypes[typeof(TimeOnly)] = MySqlDbType.Time;
         defaultDbTypes[typeof(Guid)] = MySqlDbType.Guid;
         defaultDbTypes[typeof(byte[])] = MySqlDbType.VarBinary;
 
@@ -82,8 +85,9 @@ public partial class MySqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(float?)] = MySqlDbType.Float;
         defaultDbTypes[typeof(double?)] = MySqlDbType.Double;
         defaultDbTypes[typeof(decimal?)] = MySqlDbType.Decimal;
-        defaultDbTypes[typeof(TimeSpan?)] = MySqlDbType.Time;
         defaultDbTypes[typeof(DateTime?)] = MySqlDbType.DateTime;
+        defaultDbTypes[typeof(DateOnly?)] = MySqlDbType.Date;
+        defaultDbTypes[typeof(TimeOnly?)] = MySqlDbType.Time;
         defaultDbTypes[typeof(Guid?)] = MySqlDbType.Guid;
 
         castTos[typeof(string)] = "CHAR";
@@ -98,6 +102,8 @@ public partial class MySqlProvider : BaseOrmProvider
         castTos[typeof(ulong)] = "UNSIGNED";
         castTos[typeof(decimal)] = "DECIMAL(36,18)";
         castTos[typeof(DateTime)] = "DATETIME";
+        castTos[typeof(DateOnly)] = "DATE";
+        castTos[typeof(TimeOnly)] = "TIME";
 
         castTos[typeof(bool?)] = "SIGNED";
         castTos[typeof(byte?)] = "UNSIGNED";
@@ -110,6 +116,8 @@ public partial class MySqlProvider : BaseOrmProvider
         castTos[typeof(ulong?)] = "UNSIGNED";
         castTos[typeof(decimal?)] = "DECIMAL(36,18)";
         castTos[typeof(DateTime?)] = "DATETIME";
+        castTos[typeof(DateOnly?)] = "DATE";
+        castTos[typeof(TimeOnly?)] = "TIME";
     }
     public override IDbConnection CreateConnection(string connectionString)
         => new MySqlConnection(connectionString);
@@ -142,4 +150,19 @@ public partial class MySqlProvider : BaseOrmProvider
     }
     public override string CastTo(Type type, object value)
         => $"CAST({value} AS {castTos[type]})";
+    public override string GetQuotedValue(Type expectType, object value)
+    {
+        if (expectType == typeof(TimeSpan) && value is TimeSpan timeSpan)
+        {
+            //在SELECT的场景才会用到
+            if (timeSpan > MaxTimeSpan)
+                return "'34.22:59:59.0000000";
+            if (timeSpan < MinTimeSpan)
+                return "'-34.22:59:59.0000000";
+            if (timeSpan > TimeSpan.FromDays(1) || timeSpan < -TimeSpan.FromDays(1))
+                return $"'{(int)timeSpan.TotalDays}.{timeSpan.ToString("hh\\:mm\\:ss\\.fffffff")}'";
+            return $"'{timeSpan.ToString("hh\\:mm\\:ss\\.fffffff")}'";
+        }
+        return base.GetQuotedValue(expectType, value);
+    }
 }

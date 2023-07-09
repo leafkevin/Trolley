@@ -262,6 +262,7 @@ public class SqlVisitor : ISqlVisitor
                 string strLeft = this.GetQuotedValue(this.Change(leftSegment));
                 string strRight = this.GetQuotedValue(this.Change(rightSegment));
                 if (binaryExpr.NodeType == ExpressionType.Coalesce)
+                    //虽然是函数调用，左右两边同类型，可当字段访问处理
                     return this.Merge(leftSegment, rightSegment, $"{operators}({strLeft},{strRight})", false, true);
 
                 if (leftSegment.IsExpression)
@@ -397,8 +398,6 @@ public class SqlVisitor : ISqlVisitor
         sqlSegment = this.Visit(sqlSegment.Next(conditionalExpr.Test));
         var ifTrueSegment = this.Visit(new SqlSegment { Expression = conditionalExpr.IfTrue });
         var ifFalseSegment = this.Visit(new SqlSegment { Expression = conditionalExpr.IfFalse });
-        sqlSegment.Merge(ifTrueSegment);
-        sqlSegment.Merge(ifFalseSegment);
         var leftArgument = this.GetQuotedValue(ifTrueSegment);
         var rightArgument = this.GetQuotedValue(ifFalseSegment);
         if (sqlSegment.MemberMapper != null)
@@ -415,6 +414,8 @@ public class SqlVisitor : ISqlVisitor
                 sqlSegment.TargetType = null;
             }
         }
+        sqlSegment.Merge(ifTrueSegment);
+        sqlSegment.Merge(ifFalseSegment);
         return this.VisitDeferredBoolConditional(sqlSegment, conditionalExpr.IfTrue.Type == typeof(bool), leftArgument, rightArgument);
     }
     public virtual SqlSegment VisitListInit(SqlSegment sqlSegment)
@@ -1135,6 +1136,7 @@ public class SqlVisitor : ISqlVisitor
                 {
                     sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.MemberMapper, sqlSegment.Value);
                     sqlSegment.Type = sqlSegment.TargetType;
+                    return this.OrmProvider.GetQuotedValue(sqlSegment.Value);
                 }
                 return this.OrmProvider.GetQuotedValue(sqlSegment);
             }
@@ -1183,6 +1185,9 @@ public class SqlVisitor : ISqlVisitor
                 dbParameter = this.CreateParameter(sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
             else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
             this.dbParameters.Add(dbParameter);
+            sqlSegment.IsConstant = false;
+            sqlSegment.IsVariable = false;
+            sqlSegment.IsParameter = true;
             return parameterName;
         }
         else if (sqlSegment.IsConstant)
@@ -1191,6 +1196,7 @@ public class SqlVisitor : ISqlVisitor
             {
                 sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.MemberMapper, sqlSegment.Value);
                 sqlSegment.Type = sqlSegment.TargetType;
+                return this.OrmProvider.GetQuotedValue(sqlSegment.Value);
             }
             return this.OrmProvider.GetQuotedValue(sqlSegment);
         }

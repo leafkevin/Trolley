@@ -32,12 +32,12 @@ public partial class SqlServerProvider : BaseOrmProvider
         defaultMapTypes[SqlDbType.NVarChar] = typeof(string);
         defaultMapTypes[SqlDbType.Text] = typeof(string);
         defaultMapTypes[SqlDbType.NText] = typeof(string);
-        defaultMapTypes[SqlDbType.Date] = typeof(DateTime);
         defaultMapTypes[SqlDbType.SmallDateTime] = typeof(DateTime);
         defaultMapTypes[SqlDbType.DateTime] = typeof(DateTime);
         defaultMapTypes[SqlDbType.Timestamp] = typeof(DateTime);
         defaultMapTypes[SqlDbType.DateTime2] = typeof(DateTime);
         defaultMapTypes[SqlDbType.DateTimeOffset] = typeof(DateTimeOffset);
+        defaultMapTypes[SqlDbType.Date] = typeof(DateOnly);
         defaultMapTypes[SqlDbType.Time] = typeof(TimeOnly);
         defaultMapTypes[SqlDbType.Image] = typeof(byte[]);
         defaultMapTypes[SqlDbType.Binary] = typeof(byte[]);
@@ -55,6 +55,7 @@ public partial class SqlServerProvider : BaseOrmProvider
         defaultDbTypes[typeof(string)] = SqlDbType.NVarChar;
         defaultDbTypes[typeof(DateTime)] = SqlDbType.DateTime;
         defaultDbTypes[typeof(DateTimeOffset)] = SqlDbType.DateTimeOffset;
+        defaultDbTypes[typeof(DateOnly)] = SqlDbType.Date;
         defaultDbTypes[typeof(TimeOnly)] = SqlDbType.Time;
         defaultDbTypes[typeof(byte[])] = SqlDbType.VarBinary;
         defaultDbTypes[typeof(Guid)] = SqlDbType.UniqueIdentifier;
@@ -69,6 +70,7 @@ public partial class SqlServerProvider : BaseOrmProvider
         defaultDbTypes[typeof(decimal?)] = SqlDbType.Decimal;
         defaultDbTypes[typeof(DateTime?)] = SqlDbType.DateTime;
         defaultDbTypes[typeof(DateTimeOffset?)] = SqlDbType.DateTimeOffset;
+        defaultDbTypes[typeof(DateOnly?)] = SqlDbType.Date;
         defaultDbTypes[typeof(TimeOnly?)] = SqlDbType.Time;
         defaultDbTypes[typeof(Guid?)] = SqlDbType.UniqueIdentifier;
 
@@ -87,6 +89,7 @@ public partial class SqlServerProvider : BaseOrmProvider
         castTos[typeof(decimal)] = "DECIMAL(36,18)";
         castTos[typeof(bool)] = "BIT";
         castTos[typeof(DateTime)] = "DATETIME";
+        castTos[typeof(DateOnly)] = "DATE";
         castTos[typeof(TimeOnly)] = "TIME";
         castTos[typeof(Guid)] = "UNIQUEIDENTIFIER";
 
@@ -104,6 +107,7 @@ public partial class SqlServerProvider : BaseOrmProvider
         castTos[typeof(decimal?)] = "DECIMAL(36,18)";
         castTos[typeof(bool?)] = "BIT";
         castTos[typeof(DateTime?)] = "DATETIME";
+        castTos[typeof(DateOnly?)] = "DATE";
         castTos[typeof(TimeOnly?)] = "TIME";
         castTos[typeof(Guid?)] = "UNIQUEIDENTIFIER";
     }
@@ -157,4 +161,19 @@ public partial class SqlServerProvider : BaseOrmProvider
     }
     public override string CastTo(Type type, object value)
         => $"CAST({value} AS {castTos[type]})";
+    public override string GetQuotedValue(Type expectType, object value)
+    {
+        if (expectType == typeof(DateTime) && value is DateTime dateTime)
+            return $"'{dateTime:yyyy-MM-dd HH:mm:ss.fff}'";
+        if (expectType == typeof(TimeSpan) && value is TimeSpan timeSpan)
+        {
+            //在SELECT的场景才会用到
+            if (timeSpan > TimeSpan.FromDays(1) || timeSpan < -TimeSpan.FromDays(1))
+                return $"'{(int)timeSpan.TotalDays}.{timeSpan.ToString("hh\\:mm\\:ss\\.fff")}'";
+            return $"'{timeSpan.ToString("hh\\:mm\\:ss\\.fff")}'";
+        }
+        if (expectType == typeof(TimeOnly) && value is TimeOnly timeOnly)
+            return $"'{timeOnly.ToString("hh\\:mm\\:ss\\.fff")}'";
+        return base.GetQuotedValue(expectType, value);
+    }
 }

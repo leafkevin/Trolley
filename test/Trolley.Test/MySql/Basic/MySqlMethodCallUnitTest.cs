@@ -128,38 +128,54 @@ public class MySqlMethodCallUnitTest : UnitTestBase
                 NameCompare = string.Compare(f.Name, "leafkevin"),
                 CreatedAtCompare = DateTime.Compare(f.CreatedAt, DateTime.Parse(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))),
                 CreatedAtCompare1 = DateTime.Compare(f.CreatedAt, DateTime.Now),
-                UpdatedAtCompare = DateTime.Compare(f.UpdatedAt, f.UpdatedAt.Subtract(TimeSpan.FromMinutes(5)))
+                UpdatedAtCompare = DateTime.Compare(f.UpdatedAt, f.UpdatedAt.Subtract(TimeSpan.FromMinutes(2005)))
             })
             .ToSql(out _);
-        Assert.True(sql1 == "SELECT (CASE WHEN `Name`='leafkevin' THEN 0 WHEN `Name`>'leafkevin' THEN 1 ELSE -1 END) AS `NameCompare`,(CASE WHEN `CreatedAt`=CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) THEN 0 WHEN `CreatedAt`>CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) THEN 1 ELSE -1 END) AS `CreatedAtCompare`,(CASE WHEN `CreatedAt`=NOW() THEN 0 WHEN `CreatedAt`>NOW() THEN 1 ELSE -1 END) AS `CreatedAtCompare1`,(CASE WHEN `UpdatedAt`=SUBTIME(`UpdatedAt`,'0 00:05:00.0000000') THEN 0 WHEN `UpdatedAt`>SUBTIME(`UpdatedAt`,'0 00:05:00.0000000') THEN 1 ELSE -1 END) AS `UpdatedAtCompare` FROM `sys_user` WHERE `Id`=1");
+        Assert.True(sql1 == "SELECT (CASE WHEN `Name`='leafkevin' THEN 0 WHEN `Name`>'leafkevin' THEN 1 ELSE -1 END) AS `NameCompare`,(CASE WHEN `CreatedAt`=CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) THEN 0 WHEN `CreatedAt`>CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) THEN 1 ELSE -1 END) AS `CreatedAtCompare`,(CASE WHEN `CreatedAt`=NOW() THEN 0 WHEN `CreatedAt`>NOW() THEN 1 ELSE -1 END) AS `CreatedAtCompare1`,(CASE WHEN `UpdatedAt`=SUBTIME(DATE_SUB(`UpdatedAt`,INTERVAL 1 DAY),'09:25:00.0000000') THEN 0 WHEN `UpdatedAt`>SUBTIME(DATE_SUB(`UpdatedAt`,INTERVAL 1 DAY),'09:25:00.0000000') THEN 1 ELSE -1 END) AS `UpdatedAtCompare` FROM `sys_user` WHERE `Id`=1");
 
-        var sql2 = repository.From<User>()
-            .Where(f => f.Id == 1)
-            .Select(f => new
-            {
-                NameCompare = string.Compare(f.Name, "leafkevin".ToParameter()),
-                CreatedAtCompare = DateTime.Compare(f.CreatedAt, DateTime.Parse(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))),
-                CreatedAtCompare1 = DateTime.Compare(f.CreatedAt, DateTime.Now),
-                UpdatedAtCompare = DateTime.Compare(f.UpdatedAt, f.UpdatedAt.Subtract(TimeSpan.FromMinutes(5)))
-            })
-            .ToSql(out _);
-        Assert.True(sql2 == "SELECT (CASE WHEN `Name`=@p0 THEN 0 WHEN `Name`>@p0 THEN 1 ELSE -1 END) AS `NameCompare`,(CASE WHEN `CreatedAt`=CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) THEN 0 WHEN `CreatedAt`>CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) THEN 1 ELSE -1 END) AS `CreatedAtCompare`,(CASE WHEN `CreatedAt`=NOW() THEN 0 WHEN `CreatedAt`>NOW() THEN 1 ELSE -1 END) AS `CreatedAtCompare1`,(CASE WHEN `UpdatedAt`=SUBTIME(`UpdatedAt`,'0 00:05:00.0000000') THEN 0 WHEN `UpdatedAt`>SUBTIME(`UpdatedAt`,'0 00:05:00.0000000') THEN 1 ELSE -1 END) AS `UpdatedAtCompare` FROM `sys_user` WHERE `Id`=1");
-
-        var result = repository.From<User>()
+        var result1 = repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new
             {
                 NameCompare = string.Compare(f.Name, "leafkevin"),
                 CreatedAtCompare = DateTime.Compare(f.CreatedAt, DateTime.Parse(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))),
                 CreatedAtCompare1 = DateTime.Compare(f.CreatedAt, DateTime.Now),
-                UpdatedAtCompare = DateTime.Compare(f.UpdatedAt, f.UpdatedAt.Subtract(TimeSpan.FromMinutes(5)))
+                UpdatedAtCompare = DateTime.Compare(f.UpdatedAt, f.UpdatedAt.Subtract(TimeSpan.FromMinutes(2005)))
             })
             .First();
-        Assert.NotNull(result);
-        Assert.True(result.NameCompare == 0);
-        Assert.True(result.CreatedAtCompare == -1);
-        Assert.True(result.CreatedAtCompare1 == -1);
-        Assert.True(result.UpdatedAtCompare == 1);
+        Assert.NotNull(result1);
+        Assert.True(result1.NameCompare == 0);
+        Assert.True(result1.CreatedAtCompare == -1);
+        Assert.True(result1.CreatedAtCompare1 == -1);
+        Assert.True(result1.UpdatedAtCompare == 1);
+
+        var sql2 = repository.From<User>()
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                NameCompare = string.Compare(f.Name, "leafkevin"),
+                CreatedAtCompare = DateTime.Compare(f.CreatedAt, DateTime.Parse(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))),
+                CreatedAtCompare1 = DateTime.Compare(f.CreatedAt, DateTime.Now),
+                UpdatedAtCompare = DateTime.Compare(f.UpdatedAt, f.UpdatedAt.Subtract(TimeSpan.FromMinutes(15)))
+            })
+            .ToSql(out _);
+        Assert.True(sql2 == "SELECT (CASE WHEN `Name`='leafkevin' THEN 0 WHEN `Name`>'leafkevin' THEN 1 ELSE -1 END) AS `NameCompare`,(CASE WHEN `CreatedAt`=CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) THEN 0 WHEN `CreatedAt`>CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) THEN 1 ELSE -1 END) AS `CreatedAtCompare`,(CASE WHEN `CreatedAt`=NOW() THEN 0 WHEN `CreatedAt`>NOW() THEN 1 ELSE -1 END) AS `CreatedAtCompare1`,(CASE WHEN `UpdatedAt`=SUBTIME(`UpdatedAt`,'00:15:00.0000000') THEN 0 WHEN `UpdatedAt`>SUBTIME(`UpdatedAt`,'00:15:00.0000000') THEN 1 ELSE -1 END) AS `UpdatedAtCompare` FROM `sys_user` WHERE `Id`=1");
+
+        var result2 = repository.From<User>()
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                NameCompare = string.Compare(f.Name, "leafkevin"),
+                CreatedAtCompare = DateTime.Compare(f.CreatedAt, DateTime.Parse(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))),
+                CreatedAtCompare1 = DateTime.Compare(f.CreatedAt, DateTime.Now),
+                UpdatedAtCompare = DateTime.Compare(f.UpdatedAt, f.UpdatedAt.Subtract(TimeSpan.FromMinutes(15)))
+            })
+            .First();
+        Assert.NotNull(result2);
+        Assert.True(result2.NameCompare == 0);
+        Assert.True(result2.CreatedAtCompare == -1);
+        Assert.True(result2.CreatedAtCompare1 == -1);
+        Assert.True(result2.UpdatedAtCompare == 1);
     }
     [Fact]
     public void CompareTo()

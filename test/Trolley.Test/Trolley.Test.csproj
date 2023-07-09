@@ -4,11 +4,8 @@
 	</PropertyGroup>
 	<ItemGroup>
 	  <Compile Remove="PostgreSql\**" />
-	  <Compile Remove="SqlServer\**" />
 	  <EmbeddedResource Remove="PostgreSql\**" />
-	  <EmbeddedResource Remove="SqlServer\**" />
 	  <None Remove="PostgreSql\**" />
-	  <None Remove="SqlServer\**" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.1" />
@@ -28,6 +25,7 @@
 	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\..\src\Trolley.MySqlConnector\Trolley.MySqlConnector.csproj" />
+	  <ProjectReference Include="..\..\src\Trolley.SqlServer\Trolley.SqlServer.csproj" />
 	  <ProjectReference Include="..\..\src\Trolley\Trolley.csproj" />
 	</ItemGroup>
 </Project>

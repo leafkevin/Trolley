@@ -467,6 +467,40 @@ public class MySqlUnitTest3 : UnitTestBase
         Assert.True((string)parameters10[parameters10.Count - 1].Value == company.Name);
     }
     [Fact]
+    public void Update_TimeSpan_Fields()
+    {
+        using var repository = dbFactory.Create();
+        var sql1 = repository.Update<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                SomeTimes = TimeSpan.FromMinutes(1455)
+            })
+            .ToSql(out var parameters1);
+        Assert.True(sql1 == "UPDATE `sys_user` SET `SomeTimes`=@SomeTimes WHERE `Id`=@kId");
+        Assert.True(parameters1[0].ParameterName == "@SomeTimes");
+        Assert.True(parameters1[0].Value.GetType() == typeof(TimeSpan));
+        Assert.True((TimeSpan)parameters1[0].Value == TimeSpan.FromMinutes(1455));
+
+        var sql2 = repository.Update<User>()
+            .Set(f => new { SomeTimes = TimeSpan.FromMinutes(1455) })
+            .Where(f => f.Id == 1)
+            .ToSql(out var parameters2);
+        Assert.True(sql2 == "UPDATE `sys_user` SET `SomeTimes`=@SomeTimes WHERE `Id`=1");
+        Assert.True(parameters2[0].ParameterName == "@SomeTimes");
+        Assert.True(parameters1[0].Value.GetType() == typeof(TimeSpan));
+        Assert.True((TimeSpan)parameters1[0].Value == TimeSpan.FromMinutes(1455));
+
+        int age = 20;
+        var sql7 = repository.Update<User>()
+            .WithBy(f => new { f.SomeTimes, Age = age }, new { Id = 1, SomeTimes = TimeSpan.FromMinutes(1455) })
+            .ToSql(out var parameters7);
+        Assert.True(sql7 == "UPDATE `sys_user` SET `SomeTimes`=@SomeTimes,`Age`=@Age WHERE `Id`=@kId");
+        Assert.True(parameters7[0].ParameterName == "@SomeTimes");
+        Assert.True(parameters1[0].Value.GetType() == typeof(TimeSpan));
+        Assert.True((TimeSpan)parameters1[0].Value == TimeSpan.FromMinutes(1455));
+    }
+    [Fact]
     public void Update_Set_MethodCall()
     {
         using var repository = dbFactory.Create();

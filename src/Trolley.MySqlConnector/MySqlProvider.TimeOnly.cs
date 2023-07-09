@@ -34,29 +34,19 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).Ticks);
+                            return visitor.Change(targetSegment, ((TimeOnly)targetSegment.Value).Ticks);
+
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         return visitor.Change(targetSegment, $"TIME_TO_SEC({targetArgument})*10000000", true, false);
                     });
                     result = true;
                     break;
-                case "Days":
+                case "Hour":
                     memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
                     {
                         var targetSegment = visitor.VisitAndDeferred(target);
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).Days);
-
-                        throw new NotSupportedException("暂时不支持TimeSpan类型参数返回天数");
-                    });
-                    result = true;
-                    break;
-                case "Hours":
-                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) =>
-                    {
-                        var targetSegment = visitor.VisitAndDeferred(target);
-                        if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((TimeSpan)targetSegment.Value).Hours);
+                            return visitor.Change(targetSegment, ((TimeOnly)targetSegment.Value).Hour);
 
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         return visitor.Change(targetSegment, $"HOUR({targetArgument})", false, true);
@@ -230,8 +220,6 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(targetSegment.Clone(args[0]));
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                        if (targetSegment.IsConstant) targetArgument = $"TIME({targetArgument})";
-                        if (rightSegment.IsConstant) rightArgument = $"TIME({rightArgument})";
                         return visitor.Merge(targetSegment, rightSegment, $"CASE WHEN ({targetArgument}={rightArgument} THEN 0 WHEN ({targetArgument}>{rightArgument})=1 THEN 1 ELSE -1 END", true, false);
                     });
                     result = true;
@@ -243,8 +231,6 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(targetSegment.Clone(args[0]));
                         var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                        if (targetSegment.IsConstant) targetArgument = $"TIME({targetArgument})";
-                        if (rightSegment.IsConstant) rightArgument = $"TIME({rightArgument})";
                         return visitor.Merge(targetSegment, rightSegment, $"{targetArgument}={rightArgument}", true, false);
                     });
                     result = true;
