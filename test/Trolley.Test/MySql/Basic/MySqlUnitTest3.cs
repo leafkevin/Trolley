@@ -4,16 +4,14 @@ using System.Collections.Generic;
 using System.Linq;
 using Trolley.MySqlConnector;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Trolley.Test.MySql;
 
 public class MySqlUnitTest3 : UnitTestBase
 {
-    private readonly ITestOutputHelper output;
-    public MySqlUnitTest3(ITestOutputHelper output)
+
+    public MySqlUnitTest3()
     {
-        this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
@@ -35,12 +33,16 @@ public class MySqlUnitTest3 : UnitTestBase
     {
         Initialize();
         using var repository = dbFactory.Create();
-        var result = repository.Update<User>(new { Id = 1, Name = "leafkevin11" });
+        var result = repository.Update<User>(f => new
+        {
+            Name = f.Name + "_1",
+            Gender = Gender.Female
+        }, t => t.Id == 1);
         var result1 = repository.Get<User>(1);
         Assert.True(result > 0);
         Assert.NotNull(result1);
         Assert.True(result1.Name == result1.Name);
-        Assert.True(result1.Name == "leafkevin11");
+        Assert.True(result1.Name == "leafkevin_1");
     }
     [Fact]
     public void Update_Fields_Where()
@@ -91,7 +93,6 @@ public class MySqlUnitTest3 : UnitTestBase
         var result = repository.Update<OrderDetail>(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters);
         var updatedDetails = await repository.QueryAsync<OrderDetail>();
         repository.Commit();
-
         Assert.True(result == parameters.Count);
         int index = 0;
         updatedDetails.ForEach(f =>
@@ -110,7 +111,11 @@ public class MySqlUnitTest3 : UnitTestBase
         Initialize();
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
-        var result = repository.Update<Order>().WithBy(new { ProductCount = 10, Id = 1 }).Execute();
+        var result = repository.Update<Order>().WithBy(new
+        {
+            ProductCount = 10,
+            Id = 1
+        }).Execute();
         var result1 = repository.Get<Order>(new { Id = 1 });
         repository.Commit();
         if (result > 0)
@@ -129,8 +134,6 @@ public class MySqlUnitTest3 : UnitTestBase
             .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
             .ToListAsync();
         var sql = repository.Update<OrderDetail>().WithBulkBy(parameters).ToSql(out _);
-        this.output.WriteLine(sql);
-        this.output.WriteLine("UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price5,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5");
         Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price5,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5");
     }
     [Fact]
@@ -139,10 +142,23 @@ public class MySqlUnitTest3 : UnitTestBase
         using var repository = dbFactory.Create();
         var parameters = await repository.From<OrderDetail>()
             .Where(f => new int[] { 1, 2, 3, 4, 5, 6 }.Contains(f.Id))
-            .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
+            .Select(f => new
+            {
+                f.Id,
+                Price = f.Price + 80,
+                Quantity = f.Quantity + 2,
+                Amount = f.Amount + 100
+            })
             .ToListAsync();
         var sql = repository.Update<OrderDetail>()
-            .WithBulkBy(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters)
+            .WithBulkBy(f => new
+            {
+                Price = 200,
+                f.Quantity,
+                UpdatedBy = 2,
+                f.Amount,
+                ProductId = DBNull.Value
+            }, parameters)
             .ToSql(out _);
         Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity0,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount0,`ProductId`=NULL WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity1,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount1,`ProductId`=NULL WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity2,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount2,`ProductId`=NULL WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity3,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount3,`ProductId`=NULL WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity4,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount4,`ProductId`=NULL WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity5,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount5,`ProductId`=NULL WHERE `Id`=@kId5");
     }
@@ -153,7 +169,14 @@ public class MySqlUnitTest3 : UnitTestBase
         var orders = await repository.From<Order>()
             .Where(f => new int[] { 1, 2, 3 }.Contains(f.Id))
             .ToListAsync();
-        var sql = repository.Update<Order>().WithBulkBy(f => new { BuyerId = DBNull.Value, OrderNo = "ON_" + f.OrderNo, f.TotalAmount }, orders).ToSql(out _);
+        var sql = repository.Update<Order>()
+            .WithBulkBy(f => new
+            {
+                BuyerId = DBNull.Value,
+                OrderNo = "ON_" + f.OrderNo,
+                f.TotalAmount
+            }, orders)
+            .ToSql(out _);
         Assert.True(sql == "UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount0 WHERE `Id`=@kId0;UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount1 WHERE `Id`=@kId1;UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount2 WHERE `Id`=@kId2");
     }
     [Fact]
@@ -178,15 +201,32 @@ public class MySqlUnitTest3 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
-            .Set(x => x.TotalAmount, (a, b) => a.From<OrderDetail>('b')
-                .Where(f => f.OrderId == b.Id)
-                .Select(t => Sql.Sum(t.Amount))
-             )
+            .Set((a, b) => new
+            {
+                TotalAmount = a.From<OrderDetail>('b')
+                    .Where(f => f.OrderId == b.Id)
+                    .Select(t => Sql.Sum(t.Amount))
+            })
             .SetValue(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
         Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+    }
+    [Fact]
+    public void Update_Set_FromQuery_One_Enum()
+    {
+        using var repository = dbFactory.Create();
+        var sql = repository.Update<Company>()
+            .Set((a, b) => new
+            {
+                Nature = a.From<Company>('b')
+                    .Where(f => f.Name.Contains("Internet"))
+                    .Select(t => t.Nature)
+            })
+            .Where(f => f.Nature == CompanyNature.Production)
+            .ToSql(out _);
+        Assert.True(sql == "UPDATE `sys_company` a SET a.`Nature`=(SELECT b.`Nature` FROM `sys_company` b WHERE b.`Name` LIKE '%Internet%') WHERE a.`Nature`='Production'");
     }
     [Fact]
     public void Update_Set_FromQuery_Fields()
@@ -345,9 +385,17 @@ public class MySqlUnitTest3 : UnitTestBase
             {
                 OrderNo = f.OrderNo + "111",
                 Products = new List<int> { 1, 2, 3 },
-                BuyerId = DBNull.Value
+                BuyerId = DBNull.Value,
+                UpdatedAt = DateTime.UtcNow
             })
             .Where(x => x.Id == 1)
+            .Execute();
+        repository.Update<Order>()
+            .Set(f => new
+            {
+                UpdatedAt = DateTime.Now
+            })
+            .Where(x => x.Id == 2)
             .Execute();
         var order = repository.Get<Order>(1);
         repository.Commit();
@@ -467,7 +515,7 @@ public class MySqlUnitTest3 : UnitTestBase
         Assert.True((string)parameters10[parameters10.Count - 1].Value == company.Name);
     }
     [Fact]
-    public void Update_TimeSpan_Fields()
+    public async void Update_TimeSpan_Fields()
     {
         using var repository = dbFactory.Create();
         var sql1 = repository.Update<User>()
@@ -499,6 +547,18 @@ public class MySqlUnitTest3 : UnitTestBase
         Assert.True(parameters7[0].ParameterName == "@SomeTimes");
         Assert.True(parameters1[0].Value.GetType() == typeof(TimeSpan));
         Assert.True((TimeSpan)parameters1[0].Value == TimeSpan.FromMinutes(1455));
+
+        repository.BeginTransaction();
+        await repository.Update<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                SomeTimes = TimeSpan.FromMinutes(55)
+            })
+            .ExecuteAsync();
+        var userInfo = repository.Get<User>(1);
+        repository.Commit();
+        Assert.True(userInfo.SomeTimes.Value == TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(55)));
     }
     [Fact]
     public void Update_Set_MethodCall()

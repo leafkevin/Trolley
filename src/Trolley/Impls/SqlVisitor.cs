@@ -262,7 +262,10 @@ public class SqlVisitor : ISqlVisitor
                 string strLeft = this.GetQuotedValue(this.Change(leftSegment));
                 string strRight = this.GetQuotedValue(this.Change(rightSegment));
                 if (binaryExpr.NodeType == ExpressionType.Coalesce)
+                {
+                    leftSegment.IsFieldType = true;
                     return this.Merge(leftSegment, rightSegment, $"{operators}({strLeft},{strRight})", false, true);
+                }
 
                 if (leftSegment.IsExpression)
                     strLeft = $"({strLeft})";
@@ -396,23 +399,25 @@ public class SqlVisitor : ISqlVisitor
         var conditionalExpr = sqlSegment.Expression as ConditionalExpression;
         sqlSegment = this.Visit(sqlSegment.Next(conditionalExpr.Test));
         var ifTrueSegment = this.Visit(new SqlSegment { Expression = conditionalExpr.IfTrue });
-        var ifFalseSegment = this.Visit(new SqlSegment { Expression = conditionalExpr.IfFalse });
         var leftArgument = this.GetQuotedValue(ifTrueSegment);
-        var rightArgument = this.GetQuotedValue(ifFalseSegment);
+
         if (sqlSegment.MemberMapper != null)
         {
             //三元条件表达式，通常都会改变原表达式的类型，类型相同则继续使用MemberMapper
-            bool isEquals = conditionalExpr.IfTrue.Type == sqlSegment.MemberMapper.MemberType;
-            if (sqlSegment.MemberMapper.MemberType.IsNullableType(out var underlyingType))
-                isEquals = isEquals || conditionalExpr.IfTrue.Type == underlyingType;
-            if (!isEquals)
-            {
-                sqlSegment.MemberMapper = null;
-                sqlSegment.Type = null;
-                sqlSegment.ExpectType = null;
-                sqlSegment.TargetType = null;
-            }
+            sqlSegment.MemberMapper = null;
+            sqlSegment.Type = null;
+            sqlSegment.ExpectType = null;
+            sqlSegment.TargetType = null;
         }
+        SqlSegment ifFalseSegment = null;
+        if (ifTrueSegment.HasField && (!ifTrueSegment.IsExpression && !ifTrueSegment.IsMethodCall || ifTrueSegment.IsFieldType))
+        {
+            ifFalseSegment = this.Visit(ifTrueSegment.Clone(conditionalExpr.IfFalse));
+            sqlSegment.MemberMapper = ifTrueSegment.MemberMapper;
+            sqlSegment.IsFieldType = true;
+        }
+        else ifFalseSegment = this.Visit(new SqlSegment { Expression = conditionalExpr.IfFalse });
+        var rightArgument = this.GetQuotedValue(ifFalseSegment);
         sqlSegment.Merge(ifTrueSegment);
         sqlSegment.Merge(ifFalseSegment);
         return this.VisitDeferredBoolConditional(sqlSegment, conditionalExpr.IfTrue.Type == typeof(bool), leftArgument, rightArgument);
@@ -1054,6 +1059,7 @@ public class SqlVisitor : ISqlVisitor
     }
     public virtual SqlSegment Change(SqlSegment sqlSegment)
     {
+        if (sqlSegment.IsParameter) return sqlSegment;
         if (sqlSegment.IsVariable || (sqlSegment.IsParameterized || this.IsParameterized) && sqlSegment.IsConstant)
         {
             string parameterName = null;

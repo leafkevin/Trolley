@@ -80,6 +80,40 @@ public class MySqlExpressionUnitTest : UnitTestBase
         Assert.True(dbParameters[5].Value.ToString() == hasValue);
     }
     [Fact]
+    public async void WhereCoalesceConditional()
+    {
+        this.Initialize();
+        using var repository = dbFactory.Create();
+        var sql1 = repository.From<Company>()
+            .Where(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet)
+            .ToSql(out _);
+        Assert.True(sql1 == "SELECT `Id`,`Name`,`Nature`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy` FROM `sys_company` WHERE COALESCE(`Nature`,'Internet')='Internet'");
+        var result1 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet);
+        Assert.True(result1.Count >= 2);
+        Assert.True(result1[0].Nature == CompanyNature.Internet);
+
+        var localNature = CompanyNature.Internet;
+        var sql2 = repository.From<Company>()
+            .Where(f => (f.Nature ?? CompanyNature.Internet) == localNature)
+            .ToSql(out var dbParameters);
+        Assert.True(sql2 == "SELECT `Id`,`Name`,`Nature`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy` FROM `sys_company` WHERE COALESCE(`Nature`,'Internet')=@p0");
+        Assert.True((string)dbParameters[0].Value == localNature.ToString());
+        Assert.True(dbParameters[0].Value.GetType() == typeof(string));
+        var result2 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == localNature);
+        Assert.True(result2.Count >= 2);
+        Assert.True(result2[0].Nature == localNature);
+
+        var sql3 = repository.From<Company>()
+        .Where(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature)
+        .ToSql(out dbParameters);
+        Assert.True(sql3 == "SELECT `Id`,`Name`,`Nature`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy` FROM `sys_company` WHERE (CASE WHEN `IsEnabled`=1 THEN `Nature` ELSE 'Internet' END)=@p0");
+        Assert.True((string)dbParameters[0].Value == localNature.ToString());
+        Assert.True(dbParameters[0].Value.GetType() == typeof(string));
+        var result3 = await repository.QueryAsync<Company>(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature);
+        Assert.True(result3.Count >= 2);
+        Assert.True(result3[0].Nature == localNature);
+    }
+    [Fact]
     public void Index()
     {
         this.Initialize();

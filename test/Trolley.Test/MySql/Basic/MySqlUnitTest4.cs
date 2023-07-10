@@ -228,6 +228,17 @@ public class MySqlUnitTest4 : UnitTestBase
         //Assert.True((int)parameters[0].Value == 1);
         //Assert.True((int)parameters[1].Value == 2);
     }
+	[Fact]
+	public void Delete_Where_And()
+    {
+        using var repository = dbFactory.Create();
+        bool? isMale = true;
+        var sql = repository.Delete<User>()
+            .Where(f => f.Name.Contains("kevin"))
+            .And(isMale.HasValue, f => f.Age > 25)
+            .ToSql(out _);
+        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Name` LIKE '%kevin%' AND `Age`>25");
+    }
     [Fact]
     public void Delete_Enum_Fields()
     {
@@ -259,5 +270,21 @@ public class MySqlUnitTest4 : UnitTestBase
         Assert.True(parameters2[0].ParameterName == "@p0");
         Assert.True(parameters2[0].Value.GetType() == typeof(string));
         Assert.True((string)parameters2[0].Value == CompanyNature.Internet.ToString());
+    }
+	[Fact]
+    public void Transation()
+    {
+        using var repository = dbFactory.Create();
+        bool? isMale = true;
+        repository.Timeout(60);
+        repository.BeginTransaction();
+        repository.Update<User>()
+            .WithBy(new { Name = "leafkevin1", Id = 1 })
+            .Execute();
+        repository.Delete<User>()
+            .Where(f => f.Name.Contains("kevin"))
+            .And(isMale.HasValue, f => f.Age > 25)
+            .Execute();
+        repository.Commit();
     }
 }

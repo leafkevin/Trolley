@@ -57,8 +57,7 @@ partial class MySqlProvider
                         else targetSegment = visitor.VisitAndDeferred(target);
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            if (targetSegment.IsConstant || targetSegment.IsVariable)
-                                return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Date);
+                            return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Date);
 
                         return visitor.Change(targetSegment, $"CONVERT({this.GetQuotedValue(targetSegment)},DATE)", false, true);
                     });
@@ -429,7 +428,9 @@ partial class MySqlProvider
                                 else builder.Append($"ADDTIME({targetArgument}");
                                 builder.Append($",{this.GetQuotedValue(timeSpan)})");
                             }
-                            return visitor.Merge(targetSegment, rightSegment, builder.ToString(), false, true);
+                            //变量当作常量处理
+                            targetSegment.IsVariable = false;
+                            return targetSegment.Change(builder.ToString(), false, false, true);
                         }
                         //非常量、变量的，只能小于一天,数据库的Time类型映射成TimeSpan
                         var rightArgument = this.GetQuotedValue(rightSegment);
@@ -600,7 +601,9 @@ partial class MySqlProvider
                                     else builder.Append($"SUBTIME({targetArgument}");
                                     builder.Append($",{this.GetQuotedValue(timeSpan)})");
                                 }
-                                return visitor.Merge(targetSegment, rightSegment, builder.ToString(), false, true);
+                                //变量当作常量处理
+                                targetSegment.IsVariable = false;
+                                return targetSegment.Change(builder.ToString(), false, false, true);
                             }
                             //非常量、变量的，只能小于一天,数据库的Time类型映射成TimeSpan
                             var rightArgument = this.GetQuotedValue(rightSegment);
@@ -641,6 +644,7 @@ partial class MySqlProvider
                                 return visitor.Change(targetSegment, visitor.Change(targetSegment).ToString());
 
                             var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                            targetSegment.Type = methodInfo.ReturnType;
                             return visitor.Change(targetSegment, $"DATE_FORMAT({this.GetQuotedValue(targetSegment)},'%Y-%m-%d %H:%i:%s')", false, true);
                         });
                         result = true;
@@ -712,6 +716,7 @@ partial class MySqlProvider
                                 return visitor.Merge(targetSegment, rightSegment, ((DateTime)targetSegment.Value).ToString(rightSegment.ToString()));
 
                             var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                            targetSegment.Type = methodInfo.ReturnType;
                             return visitor.Merge(targetSegment, rightSegment, $"DATE_FORMAT({targetArgument},{formatArgument})", false, true);
                         });
                         result = true;

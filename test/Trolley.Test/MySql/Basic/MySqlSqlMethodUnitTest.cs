@@ -1,14 +1,14 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using Trolley.SqlServer;
+using Trolley.MySqlConnector;
 using Xunit;
 
-namespace Trolley.Test.SqlServer;
+namespace Trolley.Test.MySql;
 
-public class SqlServerSqlMethodUnitTest : UnitTestBase
+public class MySqlSqlMethodUnitTest : UnitTestBase
 {
-    public SqlServerSqlMethodUnitTest()
+    public MySqlSqlMethodUnitTest()
     {
         var services = new ServiceCollection();
         services.AddSingleton(f =>
@@ -16,11 +16,11 @@ public class SqlServerSqlMethodUnitTest : UnitTestBase
             var builder = new OrmDbFactoryBuilder()
             .Register("fengling", true, f =>
             {
-                var connectionString = "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true";
-                f.Add<SqlServerProvider>(connectionString, true);
+                var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
+                f.Add<MySqlProvider>(connectionString, true);
             })
             .AddTypeHandler<JsonTypeHandler>()
-            .Configure<SqlServerProvider, SqlServerModelConfiguration>();
+            .Configure<MySqlProvider, MySqlModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
@@ -32,16 +32,16 @@ public class SqlServerSqlMethodUnitTest : UnitTestBase
         Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.From<User>()
-          .Where(f => Sql.In(f.Id, new int[] { 1, 2, 3 }))
-          .Select(f => f.Id)
-          .ToSql(out _);
-        Assert.True(sql == "SELECT [Id] FROM [sys_user] WHERE [Id] IN (1,2,3)");
+            .Where(f => Sql.In(f.Id, new int[] { 1, 2, 3 }))
+            .Select(f => f.Id)
+            .ToSql(out _);
+        Assert.True(sql == "SELECT `Id` FROM `sys_user` WHERE `Id` IN (1,2,3)");
 
         sql = repository.From<User>()
-           .Where(f => Sql.In(f.CreatedAt, new DateTime[] { DateTime.Parse("2023-03-03"), DateTime.Parse("2023-03-03 00:00:00"), DateTime.Parse("2023-03-03 06:06:06") }))
-           .Select(f => f.Id)
-           .ToSql(out _);
-        Assert.True(sql == "SELECT [Id] FROM [sys_user] WHERE [CreatedAt] IN ('2023-03-03 00:00:00.000','2023-03-03 00:00:00.000','2023-03-03 06:06:06.000')");
+            .Where(f => Sql.In(f.CreatedAt, new DateTime[] { DateTime.Parse("2023-03-03"), DateTime.Parse("2023-03-03 00:00:00"), DateTime.Parse("2023-03-03 06:06:06") }))
+            .Select(f => f.Id)
+            .ToSql(out _);
+        Assert.True(sql == "SELECT `Id` FROM `sys_user` WHERE `CreatedAt` IN ('2023-03-03 00:00:00.0000000','2023-03-03 00:00:00.0000000','2023-03-03 06:06:06.0000000')");
     }
     [Fact]
     public void ToFlatten()
@@ -54,7 +54,7 @@ public class SqlServerSqlMethodUnitTest : UnitTestBase
                 Col2 = f.OrderNo.ToUpper() + "_AbCd".ToLower()
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (LOWER([OrderNo])+'_ABCD') AS [Col1],(UPPER([OrderNo])+'_abcd') AS [Col2] FROM [sys_order]");
+        Assert.True(sql == "SELECT CONCAT(LOWER(`OrderNo`),'_ABCD') AS `Col1`,CONCAT(UPPER(`OrderNo`),'_abcd') AS `Col2` FROM `sys_order`");
 
         repository.BeginTransaction();
         repository.Delete<Order>(8);

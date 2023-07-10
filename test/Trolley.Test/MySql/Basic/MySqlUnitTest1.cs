@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+ï»¿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using Trolley.MySqlConnector;
@@ -61,7 +61,7 @@ public class MySqlUnitTest1 : UnitTestBase
         {
             Id = 1,
             BrandNo = "BN-001",
-            Name = "²¨Ë¾µÇ",
+            Name = "æ³¢å¸ç™»",
             User = 1
         });
         repository.Commit();
@@ -79,7 +79,7 @@ public class MySqlUnitTest1 : UnitTestBase
             {
                 Id = 1,
                 ProductNo="PN-001",
-                Name = "²¨Ë¾µÇÓğÈŞ·ş",
+                Name = "æ³¢å¸ç™»ç¾½ç»’æœ",
                 BrandId = 1,
                 CategoryId = 1,
                 IsEnabled = true,
@@ -92,7 +92,7 @@ public class MySqlUnitTest1 : UnitTestBase
             {
                 Id = 2,
                 ProductNo="PN-002",
-                Name = "Ñ©ÖĞ·ÉÓğÈŞ¿ã",
+                Name = "é›ªä¸­é£ç¾½ç»’è£¤",
                 BrandId = 2,
                 CategoryId = 2,
                 IsEnabled = true,
@@ -105,7 +105,7 @@ public class MySqlUnitTest1 : UnitTestBase
             {
                 Id = 3,
                 ProductNo="PN-003",
-                Name = "ÓÅÒÂ¿â±£Å¯ÄÚÒÂ",
+                Name = "ä¼˜è¡£åº“ä¿æš–å†…è¡£",
                 BrandId = 3,
                 CategoryId = 3,
                 IsEnabled = true,
@@ -129,7 +129,7 @@ public class MySqlUnitTest1 : UnitTestBase
         {
             Id = 1,
             BrandNo = "BN-001",
-            Name = "²¨Ë¾µÇ",
+            Name = "æ³¢å¸ç™»",
             User = 1
         }).ExecuteAsync();
         Assert.Equal(1, count);
@@ -137,7 +137,7 @@ public class MySqlUnitTest1 : UnitTestBase
         {
             Id = 2,
             BrandNo = "BN-002",
-            Name = "Ñ©ÖĞ·É",
+            Name = "é›ªä¸­é£",
             User = 1
         }).ExecuteAsync();
         Assert.Equal(1, count);
@@ -145,7 +145,7 @@ public class MySqlUnitTest1 : UnitTestBase
         {
             Id = 3,
             BrandNo = "BN-003",
-            Name = "ÓÅÒÂ¿â",
+            Name = "ä¼˜è¡£åº“",
             User = 1
         }).ExecuteAsync();
         Assert.Equal(1, count);
@@ -186,19 +186,19 @@ public class MySqlUnitTest1 : UnitTestBase
         var user = repository.Get<User>(1);
         var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
         var sql = repository.Create<User>()
-             .WithBy(new
-             {
-                 Id = 1,
-                 Name = "leafkevin",
-                 Age = 25,
-                 CompanyId = 1,
-                 Gender = Gender.Male,
-                 IsEnabled = true,
-                 CreatedAt = DateTime.Now,
-                 CreatedBy = 1,
-                 UpdatedAt = DateTime.Now,
-                 UpdatedBy = 1
-             })
+            .WithBy(new
+            {
+                Id = 1,
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
             .WithBy(false, new { user.SomeTimes })
             .WithBy(guidField.HasValue, new { GuidField = guidField })
             .ToSql(out _);
@@ -232,7 +232,7 @@ public class MySqlUnitTest1 : UnitTestBase
             .WithBy(new Dictionary<string, object>()
             {
                     //{ "Id", 1},
-                    { "Name","Î¢Èí11"},
+                    { "Name","å¾®è½¯11"},
                     { "IsEnabled", true},
                     { "CreatedAt", DateTime.Now},
                     { "CreatedBy", 1},
@@ -253,7 +253,7 @@ public class MySqlUnitTest1 : UnitTestBase
                 {
                     Id = 1,
                     ProductNo="PN-001",
-                    Name = "²¨Ë¾µÇÓğÈŞ·ş",
+                    Name = "æ³¢å¸ç™»ç¾½ç»’æœ",
                     BrandId = 1,
                     CategoryId = 1,
                     IsEnabled = true,
@@ -266,7 +266,7 @@ public class MySqlUnitTest1 : UnitTestBase
                 {
                     Id = 2,
                     ProductNo="PN-002",
-                    Name = "Ñ©ÖĞ·ÉÓğÈŞ¿ã",
+                    Name = "é›ªä¸­é£ç¾½ç»’è£¤",
                     BrandId = 2,
                     CategoryId = 2,
                     IsEnabled = true,
@@ -279,7 +279,7 @@ public class MySqlUnitTest1 : UnitTestBase
                 {
                     Id = 3,
                     ProductNo="PN-003",
-                    Name = "ÓÅÒÂ¿â±£Å¯ÄÚÒÂ",
+                    Name = "ä¼˜è¡£åº“ä¿æš–å†…è¡£",
                     BrandId = 3,
                     CategoryId = 3,
                     IsEnabled = true,
@@ -301,7 +301,7 @@ public class MySqlUnitTest1 : UnitTestBase
                 {
                     Id = 1,
                     ProductNo="PN-001",
-                    Name = "²¨Ë¾µÇÓğÈŞ·ş",
+                    Name = "æ³¢å¸ç™»ç¾½ç»’æœ",
                     BrandId = 1,
                     CategoryId = 1,
                     IsEnabled = true,
@@ -314,7 +314,7 @@ public class MySqlUnitTest1 : UnitTestBase
                 {
                     Id = 2,
                     ProductNo="PN-002",
-                    Name = "Ñ©ÖĞ·ÉÓğÈŞ¿ã",
+                    Name = "é›ªä¸­é£ç¾½ç»’è£¤",
                     BrandId = 2,
                     CategoryId = 2,
                     IsEnabled = true,
@@ -327,7 +327,7 @@ public class MySqlUnitTest1 : UnitTestBase
                 {
                     Id = 3,
                     ProductNo="PN-003",
-                    Name = "ÓÅÒÂ¿â±£Å¯ÄÚÒÂ",
+                    Name = "ä¼˜è¡£åº“ä¿æš–å†…è¡£",
                     BrandId = 3,
                     CategoryId = 3,
                     IsEnabled = true,
@@ -353,7 +353,7 @@ public class MySqlUnitTest1 : UnitTestBase
                 {
                     { "Id",1 },
                     { "ProductNo","PN-001"},
-                    { "Name","²¨Ë¾µÇÓğÈŞ·ş"},
+                    { "Name","æ³¢å¸ç™»ç¾½ç»’æœ"},
                     { "BrandId",1},
                     { "CategoryId",1},
                     { "IsEnabled",true},
@@ -366,7 +366,7 @@ public class MySqlUnitTest1 : UnitTestBase
                 {
                     { "Id",2},
                     { "ProductNo","PN-002"},
-                    { "Name","Ñ©ÖĞ·ÉÓğÈŞ¿ã"},
+                    { "Name","é›ªä¸­é£ç¾½ç»’è£¤"},
                     { "BrandId",2},
                     { "CategoryId",2},
                     { "IsEnabled",true},
@@ -379,7 +379,7 @@ public class MySqlUnitTest1 : UnitTestBase
                 {
                     { "Id",3},
                     { "ProductNo","PN-003"},
-                    { "Name","ÓÅÒÂ¿â±£Å¯ÄÚÒÂ"},
+                    { "Name","ä¼˜è¡£åº“ä¿æš–å†…è¡£"},
                     { "BrandId",3},
                     { "CategoryId",3},
                     { "IsEnabled",true},
@@ -506,7 +506,7 @@ public class MySqlUnitTest1 : UnitTestBase
             BuyerId = 1,
             SellerId = 2,
             TotalAmount = 500,
-            //´Ë×Ö¶Î¿ÉÎª¿Õ£¬µ«²»¸³Öµ
+            //æ­¤å­—æ®µå¯ä¸ºç©ºï¼Œä½†ä¸èµ‹å€¼
             //ProductCount = 3,
             Products = new List<int> { 1, 2 },
             IsEnabled = true,
@@ -540,8 +540,8 @@ public class MySqlUnitTest1 : UnitTestBase
                 Disputes = new Dispute
                 {
                     Id = 2,
-                    Content = "ÎŞÁ¼ÉÌ¼Ò",
-                    Result = "Í¬ÒâÍË¿î",
+                    Content = "æ— è‰¯å•†å®¶",
+                    Result = "åŒæ„é€€æ¬¾",
                     Users = "Buyer2,Seller2",
                     CreatedAt = DateTime.Parse("2023-03-05")
                 },
@@ -569,8 +569,8 @@ public class MySqlUnitTest1 : UnitTestBase
                 Disputes = new Dispute
                 {
                     Id = 2,
-                    Content = "ÎŞÁ¼ÉÌ¼Ò",
-                    Result = "Í¬ÒâÍË¿î",
+                    Content = "æ— è‰¯å•†å®¶",
+                    Result = "åŒæ„é€€æ¬¾",
                     Users = "Buyer2,Seller2",
                     CreatedAt = DateTime.Now
                 },

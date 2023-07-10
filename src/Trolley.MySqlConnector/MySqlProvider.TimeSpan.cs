@@ -202,7 +202,7 @@ partial class MySqlProvider
 
                         var leftArgument = this.GetQuotedValue(visitor.Change(leftSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                        return visitor.Merge(leftSegment, rightSegment, $"{leftSegment}={rightSegment}", true, false);
+                        return visitor.Merge(leftSegment, rightSegment, $"{leftArgument}={rightArgument}", true, false);
                     });
                     result = true;
                     break;

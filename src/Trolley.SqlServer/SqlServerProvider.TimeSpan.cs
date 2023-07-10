@@ -353,11 +353,13 @@ partial class SqlServerProvider
                             }
                             if (timeSpan.Ticks > 0)
                             {
-                                if (builder.Length > 0) builder.Insert(0, $"DATEADD(MILLISECOND,-{timeSpan.Ticks / TimeSpan.TicksPerMillisecond},");
-                                else builder.Append($"DATEADD(MILLISECOND,-{timeSpan.Ticks / TimeSpan.TicksPerMillisecond},");
+                                if (builder.Length > 0) builder.Insert(0, $"DATEADD(MILLISECOND,{timeSpan.TotalMilliseconds},");
+                                else builder.Append($"DATEADD(MILLISECOND,{timeSpan.TotalMilliseconds},");
                                 builder.Append($"{targetArgument})");
                             }
-                            return visitor.Merge(targetSegment, rightSegment, builder.ToString(), false, true);
+                            //变量当作常量处理
+                            targetSegment.IsVariable = false;
+                            return targetSegment.Change(builder.ToString(), false, false, true);
                         }
                         //非常量、变量的，只能小于一天
                         visitor.Change(rightSegment, $"DATEDIFF_BIG(MILLISECOND,'00:00:00',{rightSegment}");

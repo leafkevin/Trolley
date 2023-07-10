@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using Trolley.MySqlConnector;
 using Xunit;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Trolley.Test.MySql;
 
@@ -40,8 +39,8 @@ public class MySqlMethodCallUnitTest : UnitTestBase
             .ToSql(out _);
         Assert.True(sql == "SELECT `Id` FROM `sys_user` WHERE `Id` IN (1,2)");
         var result = repository.From<User>()
-             .Where(f => new int[] { 1, 2 }.Contains(f.Id))
-             .ToList();
+            .Where(f => new int[] { 1, 2 }.Contains(f.Id))
+            .ToList();
         Assert.NotNull(result);
         Assert.True(result.Count == 2);
 
@@ -91,6 +90,7 @@ public class MySqlMethodCallUnitTest : UnitTestBase
              .Where(f => f.Id == 1)
              .Select(f => string.Concat(f.Name + "_1_" + isMale, f.Age + 5, isMale) + "_2_" + f.Age + "_3_" + isMale + "_4_" + count)
              .FirstAsync();
+        Assert.NotNull(result);
         Assert.True(result == "leafkevin_1_False30False_2_25_3_False_4_10");
     }
     [Fact]
@@ -191,6 +191,26 @@ public class MySqlMethodCallUnitTest : UnitTestBase
             })
             .ToSql(out _);
         Assert.True(sql == "SELECT (CASE WHEN `Id`=1 THEN 0 WHEN `Id`>1 THEN 1 ELSE -1 END) AS `IntCompare`,(CASE WHEN `OrderNo`='OrderNo-001' THEN 0 WHEN `OrderNo`>'OrderNo-001' THEN 1 ELSE -1 END) AS `StringCompare`,(CASE WHEN `CreatedAt`='2022-12-20 00:00:00.0000000' THEN 0 WHEN `CreatedAt`>'2022-12-20 00:00:00.0000000' THEN 1 ELSE -1 END) AS `DateTimeCompare`,(CASE WHEN `IsEnabled`=0 THEN 0 WHEN `IsEnabled`>0 THEN 1 ELSE -1 END) AS `BooleanCompare` FROM `sys_order`");
+
+		var result = repository.From<Order>()
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                f.Id,
+                f.OrderNo,
+                f.CreatedAt,
+                f.IsEnabled,
+                IntCompare = f.Id.CompareTo(1),
+                StringCompare = f.OrderNo.CompareTo("OrderNo-001"),
+                DateTimeCompare = f.CreatedAt.CompareTo(DateTime.Parse("2022-12-20")),
+                BooleanCompare = f.IsEnabled.CompareTo(false)
+            })
+            .First();
+        Assert.NotNull(result);
+        Assert.True(result.IntCompare == result.Id.CompareTo(1));
+        Assert.True(result.StringCompare == result.OrderNo.CompareTo("OrderNo-001"));
+        Assert.True(result.DateTimeCompare == result.CreatedAt.CompareTo(DateTime.Parse("2022-12-20")));
+        Assert.True(result.BooleanCompare == result.IsEnabled.CompareTo(false));
     }
     [Fact]
     public void Trims()
@@ -210,13 +230,13 @@ public class MySqlMethodCallUnitTest : UnitTestBase
         var strValue2 = "  123   ";
         var strValue3 = "_End";
         var sql1 = repository.From<Order>()
-        .Select(f => new
-        {
-            Trim = strValue1 + f.OrderNo.Trim() + strValue2.Trim() + strValue3,
-            TrimStart = "Begin_" + f.OrderNo.TrimStart() + strValue2.TrimStart() + "_End",
-            TrimEnd = "Begin_" + f.OrderNo.TrimEnd() + strValue2.TrimEnd() + "_End"
-        })
-        .ToSql(out var dbParameters);
+            .Select(f => new
+            {
+                Trim = strValue1 + f.OrderNo.Trim() + strValue2.Trim() + strValue3,
+                TrimStart = "Begin_" + f.OrderNo.TrimStart() + strValue2.TrimStart() + "_End",
+                TrimEnd = "Begin_" + f.OrderNo.TrimEnd() + strValue2.TrimEnd() + "_End"
+            })
+            .ToSql(out var dbParameters);
         Assert.True(sql1 == "SELECT CONCAT(@p0,TRIM(`OrderNo`),@p1,@p2) AS `Trim`,CONCAT('Begin_',LTRIM(`OrderNo`),@p3,'_End') AS `TrimStart`,CONCAT('Begin_',RTRIM(`OrderNo`),@p4,'_End') AS `TrimEnd` FROM `sys_order`");
         Assert.True((string)dbParameters[0].Value == strValue1);
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
@@ -480,7 +500,6 @@ public class MySqlMethodCallUnitTest : UnitTestBase
             .Set(f => new { TotalAmount = 100 })
             .Where(f => f.BuyerId == id && orderNos.Contains(f.OrderNo))
             .ToSql(out _);
-        int sdfsdf = 0;
     }
     private string DeferInvoke() => "DeferInvoke";
 }

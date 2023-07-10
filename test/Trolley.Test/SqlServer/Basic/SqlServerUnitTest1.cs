@@ -288,7 +288,7 @@ public class SqlServerUnitTest1 : UnitTestBase
                     UpdatedAt = DateTime.Now,
                     UpdatedBy = 1
                 }
-            })
+            }, 50)
             .ToSql(out _);
         Assert.True(sql == "INSERT INTO [sys_product] ([Id],[ProductNo],[Name],[BrandId],[CategoryId],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)");
 
@@ -528,20 +528,59 @@ public class SqlServerUnitTest1 : UnitTestBase
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
         repository.Delete<Order>(4);
-        var count = repository.Create<Order>(new Order
-        {
-            Id = 4,
-            OrderNo = "ON-001",
-            BuyerId = 1,
-            SellerId = 2,
-            TotalAmount = 500,
-            Products = new List<int> { 1, 2 },
-            IsEnabled = true,
-            CreatedAt = DateTime.Now,
-            CreatedBy = 1,
-            UpdatedAt = DateTime.Now,
-            UpdatedBy = 1
-        });
+        var sql = repository.Create<Order>()
+            .WithBy(new Order
+            {
+                Id = 4,
+                OrderNo = "ON-001",
+                BuyerId = 1,
+                SellerId = 2,
+                TotalAmount = 500,
+                Products = new List<int> { 1, 2 },
+                Disputes = new Dispute
+                {
+                    Id = 2,
+                    Content = "无良商家",
+                    Result = "同意退款",
+                    Users = "Buyer2,Seller2",
+                    CreatedAt = DateTime.Parse("2023-03-05")
+                },
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .ToSql(out var parameters);
+        Assert.True(sql == "INSERT INTO [sys_order] ([Id],[OrderNo],[ProductCount],[TotalAmount],[BuyerId],[SellerId],[Products],[Disputes],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) VALUES(@Id,@OrderNo,@ProductCount,@TotalAmount,@BuyerId,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+        Assert.True(parameters[6].ParameterName == "@Products");
+        Assert.True((string)parameters[6].Value == "[1,2]");
+        Assert.True(parameters[7].ParameterName == "@Disputes");
+        Assert.True((string)parameters[7].Value == "{\"Id\":2,\"Users\":\"Buyer2,Seller2\",\"Content\":\"\\u65E0\\u826F\\u5546\\u5BB6\",\"Result\":\"\\u540C\\u610F\\u9000\\u6B3E\",\"CreatedAt\":\"2023-03-05T00:00:00\"}");
+        var count = repository.Create<Order>()
+            .WithBy(new Order
+            {
+                Id = 4,
+                OrderNo = "ON-001",
+                BuyerId = 1,
+                SellerId = 2,
+                TotalAmount = 500,
+                Products = new List<int> { 1, 2 },
+                Disputes = new Dispute
+                {
+                    Id = 2,
+                    Content = "无良商家",
+                    Result = "同意退款",
+                    Users = "Buyer2,Seller2",
+                    CreatedAt = DateTime.Now
+                },
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .Execute();
         var order = repository.Get<Order>(4);
         repository.Commit();
         if (count > 0)

@@ -293,7 +293,7 @@ partial class SqlServerProvider
 
                         var leftArgument = this.GetQuotedValue(visitor.Change(leftSegment));
                         var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                        return visitor.Merge(leftSegment, rightSegment, $"DAY(EOMONTH('{leftArgument}-{rightArgument.PadLeft(2, '0')}-01')", false, true);
+                        return visitor.Merge(leftSegment, rightSegment, $"DAY(EOMONTH(CAST({leftArgument} AS NVARCHAR(4))+'-'+CAST({rightArgument} AS NVARCHAR(2))+'-01'))", false, true);
                     });
                     result = true;
                     break;
@@ -412,16 +412,18 @@ partial class SqlServerProvider
                             }
                             if (timeSpan.Ticks > 0)
                             {
-                                if (builder.Length > 0) builder.Insert(0, $"DATEADD(MILLISECOND,-{timeSpan.Ticks / TimeSpan.TicksPerMillisecond},");
-                                else builder.Append($"DATEADD(MILLISECOND,-{timeSpan.Ticks / TimeSpan.TicksPerMillisecond},");
-                                builder.Append($"{targetArgument})");
+                                if (builder.Length > 0) builder.Insert(0, $"DATEADD(MILLISECOND,{timeSpan.TotalMilliseconds},");
+                                else builder.Append($"DATEADD(MILLISECOND,{timeSpan.TotalMilliseconds},{targetArgument}");
+                                builder.Append(')');
                             }
-                            return visitor.Merge(targetSegment, rightSegment, builder.ToString(), false, true);
+                            //变量当作常量处理
+                            targetSegment.IsVariable = false;
+                            return targetSegment.Change(builder.ToString(), false, false, true);
                         }
                         //非常量、变量的，只能小于一天
                         visitor.Change(rightSegment, $"DATEDIFF_BIG(MILLISECOND,'00:00:00',{rightSegment}");
                         var rightArgument = this.GetQuotedValue(rightSegment);
-                        return visitor.Merge(targetSegment, rightSegment, $"DATEADD(MILLISECOND,-{rightArgument},{targetArgument})", false, true);
+                        return visitor.Merge(targetSegment, rightSegment, $"DATEADD(MILLISECOND,{rightArgument},{targetArgument})", false, true);
                     });
                     result = true;
                     break;
@@ -567,7 +569,8 @@ partial class SqlServerProvider
 
                             var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
                             var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
-                            return visitor.Merge(targetSegment, rightSegment, $"{targetArgument}-{rightArgument}", true, false);
+                            targetSegment.IsVariable = false;
+                            return targetSegment.Change($"CAST(DATEDIFF(DAY,'1900-01-01 00:00:00',{targetArgument}-{rightArgument}) AS VARCHAR)+'.'+CONVERT(VARCHAR,{targetArgument}-{rightArgument},108)", false, true, false);
                         });
                         result = true;
                     }
@@ -594,11 +597,13 @@ partial class SqlServerProvider
                                 }
                                 if (timeSpan.Ticks > 0)
                                 {
-                                    if (builder.Length > 0) builder.Insert(0, $"DATEADD(MILLISECOND,-{timeSpan.Ticks / TimeSpan.TicksPerMillisecond},");
-                                    else builder.Append($"DATEADD(MILLISECOND,-{timeSpan.Ticks / TimeSpan.TicksPerMillisecond},");
-                                    builder.Append($"{targetArgument})");
+                                    if (builder.Length > 0) builder.Insert(0, $"DATEADD(MILLISECOND,-{timeSpan.TotalMilliseconds},");
+                                    else builder.Append($"DATEADD(MILLISECOND,-{timeSpan.TotalMilliseconds},{targetArgument}");
+                                    builder.Append(')');
                                 }
-                                return visitor.Merge(targetSegment, rightSegment, builder.ToString(), false, true);
+                                //变量当作常量处理
+                                targetSegment.IsVariable = false;
+                                return targetSegment.Change(builder.ToString(), false, false, true);
                             }
                             //非常量、变量的，只能小于一天
                             visitor.Change(rightSegment, $"DATEDIFF_BIG(MILLISECOND,'00:00:00',{rightSegment}");
@@ -640,6 +645,7 @@ partial class SqlServerProvider
                                 return visitor.Change(targetSegment, visitor.Change(targetSegment).ToString());
 
                             var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
+                            targetSegment.Type = methodInfo.ReturnType;
                             return visitor.Change(targetSegment, $"CONVERT(VARCHAR,{targetArgument},121)", false, true);
                         });
                         result = true;

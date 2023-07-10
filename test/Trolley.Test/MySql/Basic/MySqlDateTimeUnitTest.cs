@@ -77,7 +77,7 @@ public class MySqlDateTimeUnitTest : UnitTestBase
         var days = 365;
         using var repository = dbFactory.Create();
         var sql = repository.From<User>()
-            .Where(f => f.UpdatedAt > DateTime.Now - TimeSpan.FromDays(days))
+            .Where(f => f.UpdatedAt > DateTime.Now - TimeSpan.FromDays(days) - TimeSpan.FromMinutes(25))
             .Select(f => new
             {
                 Add = f.CreatedAt.Add(TimeSpan.FromDays(365)),
@@ -93,7 +93,7 @@ public class MySqlDateTimeUnitTest : UnitTestBase
                 ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT DATE_ADD(`CreatedAt`,INTERVAL 365 DAY) AS `Add`,DATE_ADD(`CreatedAt`,INTERVAL 30 DAY) AS `AddDays`,DATE_ADD(`CreatedAt`,INTERVAL 300*1000 MICROSECOND) AS `AddMilliseconds`,DATE_SUB(`CreatedAt`,INTERVAL 365 DAY) AS `Subtract1`,DATE_SUB(NOW(),INTERVAL 365 DAY) AS `Subtract2`,TIMEDIFF(`UpdatedAt`,`CreatedAt`) AS `Subtract3`,DAYOFMONTH(LAST_DAY(CONCAT(YEAR(NOW()),'-',MONTH(NOW()),'-01'))) AS `DayInMonth`,((YEAR(NOW()))%4=0 AND (YEAR(NOW()))%100<>0 OR (YEAR(NOW()))%400=0) AS `IsLeapYear1`,1 AS `IsLeapYear2`,CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) AS `Parse`,'2023-05-07 13:08:45.0000000' AS `ParseExact` FROM `sys_user` WHERE `UpdatedAt`>@p0");
+        Assert.True(sql == "SELECT DATE_ADD(`CreatedAt`,INTERVAL 365 DAY) AS `Add`,DATE_ADD(`CreatedAt`,INTERVAL 30 DAY) AS `AddDays`,DATE_ADD(`CreatedAt`,INTERVAL 300*1000 MICROSECOND) AS `AddMilliseconds`,DATE_SUB(`CreatedAt`,INTERVAL 365 DAY) AS `Subtract1`,DATE_SUB(NOW(),INTERVAL 365 DAY) AS `Subtract2`,TIMEDIFF(`UpdatedAt`,`CreatedAt`) AS `Subtract3`,DAYOFMONTH(LAST_DAY(CONCAT(YEAR(NOW()),'-',MONTH(NOW()),'-01'))) AS `DayInMonth`,((YEAR(NOW()))%4=0 AND (YEAR(NOW()))%100<>0 OR (YEAR(NOW()))%400=0) AS `IsLeapYear1`,1 AS `IsLeapYear2`,CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) AS `Parse`,'2023-05-07 13:08:45.0000000' AS `ParseExact` FROM `sys_user` WHERE `UpdatedAt`>SUBTIME(DATE_SUB(NOW(),INTERVAL 365 DAY),'00:25:00.0000000')");
 
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
