@@ -51,6 +51,7 @@ partial class SqlServerProvider
                             return visitor.Change(args0Segment);
                         }
                         var args0Argument = visitor.GetQuotedValue(visitor.Change(args0Segment));
+                        args0Segment.Type = methodInfo.ReturnType;
                         return visitor.Change(args0Segment, this.CastTo(methodCallExpr.Type, args0Argument), false, true);
                     });
                     result = true;

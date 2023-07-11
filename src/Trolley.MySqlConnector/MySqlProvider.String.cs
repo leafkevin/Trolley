@@ -765,7 +765,6 @@ partial class MySqlProvider
                                     return visitor.Change(targetSegment, targetSegment.Value.ToString());
 
                                 var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
-                                targetSegment.Type = methodInfo.ReturnType;
                                 return visitor.Change(targetSegment, this.CastTo(typeof(string), targetArgument), false, true);
                             });
                             result = true;
