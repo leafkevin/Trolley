@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public interface IMultiQueryReader : IDisposable
+public interface IMultiQueryReader : IDisposable, IAsyncDisposable
 {
     /// <summary>
     /// 读取单个动态类型对象或值，记录不存在时返回动态类型的默认值

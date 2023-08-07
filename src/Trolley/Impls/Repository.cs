@@ -4,11 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq.Expressions;
-using System.Reflection.PortableExecutable;
-using System.Runtime.CompilerServices;
-using System.Security.AccessControl;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -800,175 +796,87 @@ public class Repository : IRepository
     #endregion
 
     #region QueryMultiple
-    //public IMultiQueryReader QueryMultiple(string rawSql, object parameters = null)
-    //{
-    //    if (string.IsNullOrEmpty(rawSql))
-    //        throw new ArgumentNullException(nameof(rawSql));
+    public IMultiQueryReader QueryMultiple(string rawSql, object parameters = null)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
 
-    //    Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
-    //    if (parameters != null)
-    //    {
-    //        if (parameters is Dictionary<string, object>)
-    //        {
-    //            commandInitializer = (command, ormProvider, parameter) =>
-    //            {
-    //                var dict = parameter as Dictionary<string, object>;
-    //                foreach (var item in dict)
-    //                {
-    //                    var parameterName = this.OrmProvider.ParameterPrefix + item.Key;
-    //                    if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-    //                        continue;
-    //                    var dbParameter = this.OrmProvider.CreateParameter(parameterName, dict[item.Key]);
-    //                    command.Parameters.Add(dbParameter);
-    //                }
-    //            };
-    //        }
-    //        else
-    //        {
-    //            var parameterType = parameters.GetType();
-    //            var cacheKey = HashCode.Combine("Execute", this.connection, rawSql, parameterType);
-    //            if (!sqlCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
-    //            {
-    //                var parameterMapper = this.MapProvider.GetEntityMap(parameterType);
-    //                var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
-    //                var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-    //                var parameterExpr = Expression.Parameter(typeof(object), "parameter");
+        Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
+        if (parameters != null)
+            commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.connection, this.OrmProvider, this.MapProvider, rawSql, parameters);
 
-    //                var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
-    //                var blockParameters = new List<ParameterExpression>();
-    //                var blockBodies = new List<Expression>();
-    //                blockParameters.Add(typedParameterExpr);
-    //                blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
+        var command = this.connection.CreateCommand();
+        command.CommandText = rawSql;
+        command.CommandType = CommandType.Text;
+        command.Transaction = this.Transaction;
+        if (parameters != null)
+            commandInitializer.Invoke(command, this.OrmProvider, parameters);
 
-    //                foreach (var memberMapper in parameterMapper.MemberMaps)
-    //                {
-    //                    var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-    //                    if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-    //                        continue;
-    //                    var parameterNameExpr = Expression.Constant(parameterName);
-    //                    RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, memberMapper, this.OrmProvider, blockBodies);
-    //                }
-    //                commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
-    //                sqlCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
-    //            }
-    //            commandInitializer = commandInitializerDelegate as Action<IDbCommand, IOrmProvider, object>;
-    //        }
-    //    }
+        this.connection.Open();
+        var reader = command.ExecuteReader();
+        return new MultiQueryReader(this.DbKey, command, reader, this.OrmProvider, this.MapProvider);
+    }
+    public async Task<IMultiQueryReader> QueryMultipleAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
 
-    //    var command = this.connection.CreateCommand();
-    //    command.CommandText = rawSql;
-    //    command.CommandType = CommandType.Text;
-    //    command.Transaction = this.Transaction;
-    //    if (parameters != null)
-    //        commandInitializer.Invoke(command, this.OrmProvider, parameters);
+        Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
+        if (parameters != null)
+            commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.connection, this.OrmProvider, this.MapProvider, rawSql, parameters);
 
-    //    this.connection.Open();
-    //    var reader = command.ExecuteReader();
-    //    return new MultiQueryReader(this.DbKey, command, reader, this.OrmProvider);
-    //}
-    //public async Task<IMultiQueryReader> QueryMultipleAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
-    //{
-    //    if (string.IsNullOrEmpty(rawSql))
-    //        throw new ArgumentNullException(nameof(rawSql));
+        var cmd = this.connection.CreateCommand();
+        cmd.CommandText = rawSql;
+        cmd.CommandType = CommandType.Text;
+        cmd.Transaction = this.Transaction;
+        if (parameters != null)
+            commandInitializer.Invoke(cmd, this.OrmProvider, parameters);
 
-    //    Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
-    //    if (parameters != null)
-    //    {
-    //        if (parameters is Dictionary<string, object>)
-    //        {
-    //            commandInitializer = (command, ormProvider, parameter) =>
-    //            {
-    //                var dict = parameter as Dictionary<string, object>;
-    //                foreach (var item in dict)
-    //                {
-    //                    var parameterName = this.OrmProvider.ParameterPrefix + item.Key;
-    //                    if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-    //                        continue;
-    //                    var dbParameter = this.OrmProvider.CreateParameter(parameterName, dict[item.Key]);
-    //                    command.Parameters.Add(dbParameter);
-    //                }
-    //            };
-    //        }
-    //        else
-    //        {
-    //            var parameterType = parameters.GetType();
-    //            var cacheKey = HashCode.Combine("Execute", this.connection, rawSql, parameterType);
-    //            if (!sqlCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
-    //            {
-    //                var parameterMapper = this.MapProvider.GetEntityMap(parameterType);
-    //                var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
-    //                var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-    //                var parameterExpr = Expression.Parameter(typeof(object), "parameter");
+        if (cmd is not DbCommand command)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
-    //                var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
-    //                var blockParameters = new List<ParameterExpression>();
-    //                var blockBodies = new List<Expression>();
-    //                blockParameters.Add(typedParameterExpr);
-    //                blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
+        await this.connection.OpenAsync(cancellationToken);
+        var reader = await command.ExecuteReaderAsync(cancellationToken);
+        return new MultiQueryReader(this.DbKey, command, reader, this.OrmProvider, this.MapProvider);
+    }
+    public IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries)
+    {
+        if (subQueries == null)
+            throw new ArgumentNullException(nameof(subQueries));
 
-    //                foreach (var memberMapper in parameterMapper.MemberMaps)
-    //                {
-    //                    var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-    //                    if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-    //                        continue;
-    //                    var parameterNameExpr = Expression.Constant(parameterName);
-    //                    RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, memberMapper, this.OrmProvider, blockBodies);
-    //                }
-    //                commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
-    //                sqlCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
-    //            }
-    //            commandInitializer = commandInitializerDelegate as Action<IDbCommand, IOrmProvider, object>;
-    //        }
-    //    }
+        using var command = this.connection.CreateCommand();
+        var multiQuery = new MultipleQuery(this.DbKey, this.connection, this.OrmProvider, this.MapProvider, command);
+        subQueries.Invoke(multiQuery);
+        var readerGetters = multiQuery.ReaderGetters;
 
-    //    var cmd = this.connection.CreateCommand();
-    //    cmd.CommandText = rawSql;
-    //    cmd.CommandType = CommandType.Text;
-    //    cmd.Transaction = this.Transaction;
-    //    if (parameters != null)
-    //        commandInitializer.Invoke(cmd, this.OrmProvider, parameters);
+        command.CommandText = multiQuery.BuildSql();
+        command.CommandType = CommandType.Text;
+        command.Transaction = this.Transaction;
 
-    //    if (cmd is not DbCommand command)
-    //        throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+        this.connection.Open();
+        var reader = command.ExecuteReader();
+        return new MultiQueryReader(this.DbKey, command, reader, this.OrmProvider, this.MapProvider, readerGetters);
+    }
+    public async Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default)
+    {
+        if (subQueries == null)
+            throw new ArgumentNullException(nameof(subQueries));
 
-    //    await this.connection.OpenAsync(cancellationToken);
-    //    var reader = await command.ExecuteReaderAsync(cancellationToken);
-    //    return new MultiQueryReader(this.DbKey, command, reader, this.OrmProvider);
-    //}
-    //public IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries)
-    //{
-    //    if (subQueries == null)
-    //        throw new ArgumentNullException(nameof(subQueries));
+        var cmd = this.connection.CreateCommand();
+        var multiQuery = new MultipleQuery(this.DbKey, this.connection, this.OrmProvider, this.MapProvider, cmd);
+        subQueries.Invoke(multiQuery);
+        var readerGetters = multiQuery.ReaderGetters;
 
-    //    using var command = this.connection.CreateCommand();
-    //    var multiQuery = new MultipleQuery(this.DbKey, this.connection, this.OrmProvider, this.MapProvider, command);
-    //    subQueries.Invoke(multiQuery);
-    //    command.CommandText = multiQuery.BuildSql();
-    //    command.CommandType = CommandType.Text;
-    //    command.Transaction = this.Transaction;
+        cmd.CommandText = multiQuery.BuildSql();
+        cmd.CommandType = CommandType.Text;
+        cmd.Transaction = this.Transaction;
 
-    //    this.connection.Open();
-    //    var reader = command.ExecuteReader();
-    //    return new MultiQueryReader(this.DbKey, command, reader, this.OrmProvider);
-    //}
-    //public async Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default)
-    //{
-    //    if (subQueries == null)
-    //        throw new ArgumentNullException(nameof(subQueries));
-
-    //    var cmd = this.connection.CreateCommand();
-    //    var multiQuery = new MultipleQuery(this.DbKey, this.connection, this.OrmProvider, this.MapProvider, cmd);
-    //    subQueries.Invoke(multiQuery);
-    //    cmd.CommandText = multiQuery.BuildSql();
-    //    cmd.CommandType = CommandType.Text;
-    //    cmd.Transaction = this.Transaction;
-
-    //    if (cmd is not DbCommand command)
-    //        throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-    //    await this.connection.OpenAsync(cancellationToken);
-    //    var reader = await command.ExecuteReaderAsync(cancellationToken);
-    //    return new MultiQueryReader(this.DbKey, command, reader, this.OrmProvider);
-    //}
+        if (cmd is not DbCommand command)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+        await this.connection.OpenAsync(cancellationToken);
+        var reader = await command.ExecuteReaderAsync(cancellationToken);
+        return new MultiQueryReader(this.DbKey, command, reader, this.OrmProvider, this.MapProvider, readerGetters);
+    }
     #endregion
 
     #region Others

@@ -244,15 +244,15 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a');
     /// <summary>
-    /// 使用原始SQL和parameters参数，查询满足条件的首条记录，记录不存在时返回TEntity类型的默认值
+    /// 使用原始SQL语句rawSql和参数parameters查询表TEntity数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值
     /// </summary>
-    /// <typeparam name="TEntity">返回的实体类型</typeparam>
-    /// <param name="rawSql">查询SQL</param>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="rawSql">原始SQL</param>
     /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，可以为null</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     TEntity QueryFirst<TEntity>(string rawSql, object parameters = null);
     /// <summary>
-    /// 使用原始SQL和parameters参数，查询满足条件的首条记录，记录不存在时返回TEntity类型的默认值
+    /// 使用原始SQL语句rawSql和参数parameters查询表TEntity数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值
     /// </summary>
     /// <typeparam name="TEntity">返回的实体类型</typeparam>
     /// <param name="rawSql">查询SQL</param>
@@ -261,80 +261,135 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 查询与whereObj对象各属性值都相等的首条记录，记录不存在时返回TEntity类型的默认值,用法：
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，用法：
     /// <code>
-    /// repository.Exists&lt;User&gt;(new { Id = 1 })
-    /// SQL: SELECT COUNT(1) FROM `sys_user` WHERE `Id`=@Id
+    /// repository.QueryFirst&lt;User&gt;(new { Id = 1, IsEnabled = true })
+    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
     /// </code>
     /// </summary>
-    /// <typeparam name="TEntity">返回的实体类型</typeparam>
-    /// <param name="whereObj">条件对象，对象的每个属性都参与比较，推荐使用匿名对象</param>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不能为null</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     TEntity QueryFirst<TEntity>(object whereObj);
     /// <summary>
-    /// 查询与whereObj对象各属性值都相等的首条记录，记录不存在时返回TEntity类型的默认值,用法：
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回TEntity类型的默认值，用法：
     /// <code>
-    /// repository.QueryFirstAsync&lt;User&gt;(new { Id = 1 })
-    /// SQL: SELECT COUNT(1) FROM `sys_user` WHERE `Id`=@Id
+    /// await repository.QueryFirstAsync&lt;User&gt;(new { Id = 1, IsEnabled = true })
+    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
     /// </code>
     /// </summary>
-    /// <typeparam name="TEntity">返回的实体类型</typeparam>
-    /// <param name="whereObj">条件对象，对象的每个属性都参与比较，推荐使用匿名对象</param>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不能为null</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     Task<TEntity> QueryFirstAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 使用原始SQL语句rawSql和参数parameters查询多条数据，记录不存在时返回TEntity类型的默认值,用法：
+    /// 使用原始SQL语句rawSql和参数parameters查询表TEntity数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表
     /// </summary>
-    /// <typeparam name="TEntity"></typeparam>
-    /// <param name="rawSql"></param>
-    /// <param name="parameters"></param>
-    /// <returns></returns>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="rawSql">原始SQL</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
+    /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
     List<TEntity> Query<TEntity>(string rawSql, object parameters = null);
-    Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
-    List<TEntity> Query<TEntity>(object whereObj);
     /// <summary>
-    /// 查询与whereObj对象各属性值都相等的首条记录，记录不存在时返回TEntity类型的默认值,用法：
+    /// 使用原始SQL语句rawSql和参数parameters查询表TEntity数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="rawSql">原始SQL</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
+    Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，用法：
     /// <code>
-    /// repository.Exists&lt;User&gt;(new { Id = 1 })
-    /// SQL: SELECT COUNT(1) FROM `sys_user` WHERE `Id`=@Id
+    /// repository.Query&lt;User&gt;(new { Id = 1, IsEnabled = true })
+    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
     /// </code>
     /// </summary>
-    /// <typeparam name="TEntity">返回的实体类型</typeparam>
-    /// <param name="whereObj">条件对象，对象的每个属性都参与比较，推荐使用匿名对象</param>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不能为null</param>
+    /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
+    List<TEntity> Query<TEntity>(object whereObj);
+    /// <summary>
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，用法：
+    /// <code>
+    /// await repository.QueryAsync&lt;User&gt;(new { Id = 1, IsEnabled = true })
+    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不能为null</param>
     /// <param name="cancellationToken">取消Token</param>
-    /// <returns></returns>
+    /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
     Task<List<TEntity>> QueryAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default);
     #endregion
 
     #region Get
+    /// <summary>
+    /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，用法：
+    /// <code>
+    /// repository.Get&lt;User&gt;(1) //或是
+    /// repository.Get&lt;User&gt;(new { Id = 1}) //或是
+    /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ...};
+    /// repository.Get&lt;User&gt;(userInfo) //三种写法是等价的
+    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="whereObj">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
+    /// <returns>返回实体对象或是TEntity类型默认值</returns>
     TEntity Get<TEntity>(object whereObj);
+    /// <summary>
+    /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，用法：
+    /// <code>
+    /// await repository.GetAsync&lt;User&gt;(1) //或是
+    /// await repository.GetAsync&lt;User&gt;(new { Id = 1}) //或是
+    /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ...};
+    /// await repository.GetAsync&lt;User&gt;(userInfo) //三种写法是等价的
+    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="whereObj">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回实体对象或是TEntity类型默认值</returns>
     Task<TEntity> GetAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default);
     #endregion
 
     #region Create
     /// <summary>
-    /// 创建T类型插入对象
+    /// 创建TEntity类型插入对象
     /// </summary>
-    /// <typeparam name="T">插入对象类型</typeparam>
+    /// <typeparam name="TEntity">插入实体类型</typeparam>
     /// <returns>返回插入对象</returns>
-    ICreate<T> Create<T>();
+    ICreate<TEntity> Create<TEntity>();
     #endregion
 
-    #region Update  
-    IUpdate<T> Update<T>();
+    #region Update
+    /// <summary>
+    /// 创建TEntity类型更新对象
+    /// </summary>
+    /// <typeparam name="TEntity">更新实体类型</typeparam>
+    /// <returns>返回更新对象</returns>
+    IUpdate<TEntity> Update<TEntity>();
     #endregion
 
     #region Delete
-    IDelete<T> Delete<T>();
+    /// <summary>
+    /// 创建TEntity类型删除对象
+    /// </summary>
+    /// <typeparam name="TEntity">删除实体类型</typeparam>
+    /// <returns>返回删除对象</returns>
+    IDelete<TEntity> Delete<TEntity>();
     #endregion
 
     #region Exists
     /// <summary>
     /// 判断是否存在表TEntity中满足与whereObj对象各属性值都相等的记录，存在返回true，否则返回false。
     /// <code>
-    /// repository.Exists&lt;User&gt;(new { Id = 1 })
-    /// SQL: SELECT COUNT(1) FROM `sys_user` WHERE `Id`=@Id
+    /// repository.Exists&lt;User&gt;(new { Id = 1, IsEnabled = true })
+    /// SQL: SELECT COUNT(1) FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体对象类型</typeparam>
@@ -344,8 +399,8 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <summary>
     /// 判断是否存在表TEntity中满足与whereObj对象各属性值都相等的记录，存在返回true，否则返回false。
     /// <code>
-    /// await repository.ExistsAsync&lt;User&gt;(new { Id = 1 })
-    /// SQL: SELECT COUNT(1) FROM `sys_user` WHERE `Id`=@Id
+    /// await repository.ExistsAsync&lt;User&gt;(new { Id = 1, IsEnabled = true })
+    /// SQL: SELECT COUNT(1) FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体对象类型</typeparam>
@@ -372,15 +427,52 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     #endregion
 
     #region Execute
-    int Execute(string sql, object parameters = null);
+    /// <summary>
+    /// 执行原始SQL，并返回影响行数
+    /// </summary>
+    /// <param name="rawSql">要执行的SQL</param>
+    /// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
+    /// <returns>返回影响行数</returns>
+    int Execute(string rawSql, object parameters = null);
+    /// <summary>
+    /// 执行原始SQL，并返回影响行数
+    /// </summary>
+    /// <param name="rawSql">要执行的SQL</param>
+    /// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回影响行数</returns>
     Task<int> ExecuteAsync(string sql, object parameters = null, CancellationToken cancellationToken = default);
     #endregion
 
     #region QueryMultiple
-    //IMultiQueryReader QueryMultiple(string rawSql, object parameters = null);
-    //Task<IMultiQueryReader> QueryMultipleAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
-    //IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries);
-    //Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 多SQL语句一起执行，并返回多个结果集，根据SQL语句按顺序接收返回结果。
+    /// </summary>
+    /// <param name="rawSql">要执行的SQL</param>
+    /// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
+    /// <returns>返回多结果集Reader对象</returns>
+    IMultiQueryReader QueryMultiple(string rawSql, object parameters = null);
+    /// <summary>
+    /// 多SQL语句一起执行，并返回多个结果集，根据SQL语句顺序接收返回结果。
+    /// </summary>
+    /// <param name="rawSql">要执行的SQL</param>
+    /// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回多结果集Reader对象</returns>
+    Task<IMultiQueryReader> QueryMultipleAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 使用IMultipleQuery操作生成多个SQL语句一起执行，并返回多个结果集，根据IMultipleQuery操作顺序接收返回结果。
+    /// </summary>
+    /// <param name="subQueries">多个SQL查询操作，不能为null</param>
+    /// <returns>返回多结果集Reader对象</returns>
+    IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries);
+    /// <summary>
+    /// 使用IMultipleQuery操作生成多个SQL语句一起执行，并返回多个结果集，根据IMultipleQuery操作顺序接收返回结果。
+    /// </summary>
+    /// <param name="subQueries">多个SQL查询操作，不能为null</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回多结果集Reader对象</returns>
+    Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default);
     #endregion
 
     #region Others

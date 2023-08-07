@@ -10,7 +10,6 @@ class MultipleQuery : IMultipleQuery
 {
     #region 字段
     private StringBuilder sqlBuilder = new();
-    private List<Func<IDataReader, object>> readerGetters = new();
     #endregion
 
     #region 公共属性
@@ -20,6 +19,7 @@ class MultipleQuery : IMultipleQuery
     public IOrmProvider OrmProvider { get; private set; }
     public IEntityMapProvider MapProvider { get; private set; }
     public IDbCommand Command { get; private set; }
+    public List<Func<IDataReader, object>> ReaderGetters { get; private set; }
     #endregion
 
     #region 构造方法
@@ -30,6 +30,7 @@ class MultipleQuery : IMultipleQuery
         this.OrmProvider = ormProvider;
         this.MapProvider = entityMapProvider;
         this.Command = command;
+        this.ReaderGetters = new();
     }
     public MultipleQuery(TheaConnection connection, IOrmProvider ormProvider, IEntityMapProvider entityMapProvider, IDbCommand command)
     {
@@ -38,6 +39,7 @@ class MultipleQuery : IMultipleQuery
         this.OrmProvider = ormProvider;
         this.MapProvider = entityMapProvider;
         this.Command = command;
+        this.ReaderGetters = new();
     }
     #endregion   
 
@@ -303,7 +305,7 @@ class MultipleQuery : IMultipleQuery
         if (this.sqlBuilder.Length > 0)
             this.sqlBuilder.Append(';');
         this.sqlBuilder.Append(sql);
-        this.readerGetters.Add(readerGetter);
+        this.ReaderGetters.Add(readerGetter);
         if (dbParameters != null && dbParameters.Count > 0)
         {
             dbParameters.ForEach(f =>

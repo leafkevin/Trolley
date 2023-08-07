@@ -3,6 +3,7 @@ using System.Data.Common;
 using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
+using System;
 
 namespace Trolley;
 
@@ -12,28 +13,54 @@ class MultiQueryReader : IMultiQueryReader
     private readonly IDbCommand command;
     private readonly IDataReader reader;
     private readonly IOrmProvider ormProvider;
+    private readonly IEntityMapProvider mapProvider;
     private int readerIndex = 0;
-    public MultiQueryReader(string dbKey, IDbCommand command, IDataReader reader, IOrmProvider ormProvider)
+    private readonly List<Func<IDataReader, object>> readerGetters;
+    public MultiQueryReader(string dbKey, IDbCommand command, IDataReader reader, IOrmProvider ormProvider, IEntityMapProvider mapProvider, List<Func<IDataReader, object>> readerGetters = null)
     {
         this.dbKey = dbKey;
         this.command = command;
         this.reader = reader;
         this.ormProvider = ormProvider;
+        this.mapProvider = mapProvider;
+        this.readerGetters = readerGetters;
     }
     public dynamic ReadFirst()
     {
-        return null;
+        dynamic result = default;
+        if (this.reader.Read())
+        {
+            if (this.readerGetters != null)
+                result = (dynamic)this.readerGetters[readerIndex].Invoke(this.reader);
+            else
+            {
+                var entityType = typeof(T);
+                if (entityType.IsEntityType())
+                    result = reader.To<T>(this.dbKey, this.ormProvider, this.mapProvider);
+                else result = reader.To<T>();
+            }
+        }
+        this.ReadNextResult();
+        return result;
     }
     public T ReadFirst<T>()
     {
-        //if (this.reader.Read())
-        //{
-        //    var entityType = typeof(T);
-        //    if (entityType.IsEntityType())
-        //        return this.reader.To<T>(this.dbKey, this.ormProvider, readerFields);
-        //    else return this.reader.To<T>();
-        //}
-        return default(T);
+        T result = default;
+        if (this.reader.Read())
+        {
+            if (this.readerGetters != null)
+                result = (T)this.readerGetters[readerIndex].Invoke(this.reader);
+            else
+            {
+                var entityType = typeof(T);
+                if (entityType.IsEntityType())
+                    result = reader.To<T>(this.dbKey, this.ormProvider, this.mapProvider);
+                else result = reader.To<T>();
+            }
+        }
+        this.ReadNextResult();
+        this.readerIndex++;
+        return result;
     }
     public List<dynamic> Read()
     {
@@ -84,21 +111,39 @@ class MultiQueryReader : IMultiQueryReader
         return null;
     }
 
-    public void Dispose()
-    {
-        throw new System.NotImplementedException();
-    }
+
 
     private void ReadNextResult()
     {
         if (!this.reader.NextResult())
         {
-            this.reader.Close();
-            this.reader.Dispose();
             var conn = this.command.Connection;
-            conn.Close();
-            conn.Dispose();
+            this.reader.Dispose();
             this.command.Dispose();
+            conn.Dispose();
         }
+    }
+    private async Task ReadNextResultAsync()
+    {
+        if (!this.reader.NextResult())
+        {
+            if (this.command is not DbCommand dbCommand)
+                throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+            if (this.reader is not DbDataReader dbReader)
+                throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+
+            var conn = dbCommand.Connection;
+            await dbReader.DisposeAsync();
+            await dbCommand.DisposeAsync();
+            await conn.DisposeAsync();
+        }
+    }
+    public void Dispose()
+    {
+        throw new System.NotImplementedException();
+    }
+    public ValueTask DisposeAsync()
+    {
+        throw new System.NotImplementedException();
     }
 }
