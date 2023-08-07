@@ -94,6 +94,7 @@ CREATE TABLE `sys_order`  (
   `ProductCount` int NULL DEFAULT NULL,
   `TotalAmount` double NULL DEFAULT NULL,
   `BuyerId` int NULL DEFAULT NULL,
+  `BuyerSource` varchar(50) NULL DEFAULT NULL,
   `SellerId` int NULL DEFAULT NULL,
   `Products` JSON NULL,
   `Disputes` JSON NULL,
@@ -108,9 +109,9 @@ CREATE TABLE `sys_order`  (
 -- ----------------------------
 -- Records of sys_order
 -- ----------------------------
-INSERT INTO `sys_order` VALUES (1, 'ON-001', 2, 500, 1, 2, '[1,2]', '{\"Id\":1,\"Users\":\"Buyer1,Seller1\",\"Content\":\"\\u65E0\\u826F\\u5546\\u5BB6\\uFF0C\\u6295\\u8BC9\\uFF0C\\u6295\\u8BC9\",\"Result\":\"\\u540C\\u610F\\u66F4\\u6362\",\"CreatedAt\":\"2023-04-29T00:05:28.9494366+08:00\"}', 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order` VALUES (2, 'ON-002', NULL, 350, 2, 1, '[1,3]', '{\"Id\":2,\"Users\":\"Buyer2,Seller2\",\"Content\":\"\\u65E0\\u826F\\u5546\\u5BB6\",\"Result\":\"\\u540C\\u610F\\u9000\\u6B3E\",\"CreatedAt\":\"2023-04-29T00:05:28.9495535+08:00\"}', 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order` VALUES (3, 'ON-003', 1, 199, 1, 2, '[2]', NULL, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order` VALUES (1, 'ON-001', 2, 500, 1, 'Douyi', 2, '[1,2]', '{\"Id\":1,\"Users\":\"Buyer1,Seller1\",\"Content\":\"\\u65E0\\u826F\\u5546\\u5BB6\\uFF0C\\u6295\\u8BC9\\uFF0C\\u6295\\u8BC9\",\"Result\":\"\\u540C\\u610F\\u66F4\\u6362\",\"CreatedAt\":\"2023-04-29T00:05:28.9494366+08:00\"}', 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order` VALUES (2, 'ON-002', NULL, 350, 2, 'Taobao', 1, '[1,3]', '{\"Id\":2,\"Users\":\"Buyer2,Seller2\",\"Content\":\"\\u65E0\\u826F\\u5546\\u5BB6\",\"Result\":\"\\u540C\\u610F\\u9000\\u6B3E\",\"CreatedAt\":\"2023-04-29T00:05:28.9495535+08:00\"}', 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order` VALUES (3, 'ON-003', 1, 199, 1, 'Taobao', 2, '[2]', NULL, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
 
 -- ----------------------------
 -- Table structure for sys_order_detail
@@ -199,6 +200,7 @@ CREATE TABLE `sys_user`  (
   `CompanyId` int NULL DEFAULT NULL,
   `GuidField` char(36) NULL DEFAULT NULL,
   `SomeTimes` time(6) NULL DEFAULT NULL,
+  `SourceType` varchar(50) NULL DEFAULT NULL,
   `IsEnabled` tinyint(1) NULL DEFAULT NULL,
   `CreatedAt` datetime NULL DEFAULT NULL,
   `CreatedBy` int NULL DEFAULT NULL,
@@ -210,7 +212,6 @@ CREATE TABLE `sys_user`  (
 -- ----------------------------
 -- Records of sys_user
 -- ----------------------------
-INSERT INTO `sys_user` VALUES (1, 'leafkevin', 2, 25, 1, 'e09d9d46-1783-475b-9d57-2721d163c29f', '01:19:29.000000', 1, '2023-03-03 00:00:00', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_user` VALUES (2, 'cindy', 2, 21, 2, '20687f1c-3f27-4741-894e-fa59bcd43dbc', '01:35:30.000000', 1, '2023-03-03 06:06:06', 1, '2023-04-29 00:05:28', 1);
-
+INSERT INTO `sys_user` VALUES (1, 'leafkevin', 2, 25, 1, 'e09d9d46-1783-475b-9d57-2721d163c29f', '01:19:29.000000', 'Douyin', 1, '2023-03-03 00:00:00', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_user` VALUES (2, 'cindy', 2, 21, 2, '20687f1c-3f27-4741-894e-fa59bcd43dbc', '01:35:30.000000', 'Taobao', 1, '2023-03-03 06:06:06', 1, '2023-04-29 00:05:28', 1);
 SET FOREIGN_KEY_CHECKS = 1;

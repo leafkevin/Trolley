@@ -1535,7 +1535,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             //  if(!reader.Read())break;
             //  includeResult2.Add(reader.To<T>(reader, dbKey, ormProvider, false, readerFields));
             //}
-            //reader.NextResult()           
+            //reader.NextResult()
             var breakLabel = Expression.Label();
             var toMethodInfo = typeof(Extensions).GetMethod(nameof(Extensions.To),
                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static,

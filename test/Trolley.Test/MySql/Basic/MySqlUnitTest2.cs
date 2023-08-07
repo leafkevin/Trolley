@@ -549,7 +549,7 @@ public class MySqlUnitTest2 : UnitTestBase
         Assert.True(result.Items.Count == 1);
         Assert.NotNull(result.Items[0].Product);
         Assert.True(result.Items[0].Product.Id == 1);
-    }    
+    }
     [Fact]
     public void FromQuery_Ignore_Include()
     {

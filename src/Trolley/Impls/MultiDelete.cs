@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-class Delete<TEntity> : IDelete<TEntity>
+class MultiDelete<TEntity> : IMultiDelete<TEntity>
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
@@ -20,7 +20,7 @@ class Delete<TEntity> : IDelete<TEntity>
     private readonly IEntityMapProvider mapProvider;
     private readonly bool isParameterized;
 
-    public Delete(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false)
+    public MultiDelete(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -29,23 +29,23 @@ class Delete<TEntity> : IDelete<TEntity>
         this.isParameterized = isParameterized;
     }
 
-    public IDeleted<TEntity> Where(object keys)
+    public IMultiDeleted<TEntity> Where(object keys)
     {
         if (keys == null)
             throw new ArgumentNullException(nameof(keys));
 
-        return new Deleted<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider, keys);
+        return new MultiDeleted<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider, keys);
     }
-    public IDeleting<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
+    public IMultiDeleting<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
         var visitor = this.ormProvider.NewDeleteVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
         visitor.Where(predicate);
-        return new Deleting<TEntity>(this.connection, this.transaction, visitor);
+        return new MultiDeleting<TEntity>(this.connection, this.transaction, visitor);
     }
-    public IDeleting<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    public IMultiDeleting<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -53,10 +53,10 @@ class Delete<TEntity> : IDelete<TEntity>
         var visitor = this.ormProvider.NewDeleteVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
         if (condition) visitor.Where(ifPredicate);
         else if (elsePredicate != null) visitor.Where(elsePredicate);
-        return new Deleting<TEntity>(this.connection, this.transaction, visitor);
+        return new MultiDeleting<TEntity>(this.connection, this.transaction, visitor);
     }
 }
-class Deleted<TEntity> : IDeleted<TEntity>
+class MultiDeleted<TEntity> : IMultiDeleted<TEntity>
 {
     private static ConcurrentDictionary<int, object> commandInitializerCache = new();
     private readonly TheaConnection connection;
@@ -65,7 +65,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
     private readonly IEntityMapProvider mapProvider;
     private object parameters = null;
 
-    public Deleted(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, object parameters)
+    public MultiDeleted(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, object parameters)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -467,20 +467,20 @@ class Deleted<TEntity> : IDeleted<TEntity>
         };
     }
 }
-class Deleting<TEntity> : IDeleting<TEntity>
+class MultiDeleting<TEntity> : IMultiDeleting<TEntity>
 {
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
     private readonly IDeleteVisitor visitor;
 
-    public Deleting(TheaConnection connection, IDbTransaction transaction, IDeleteVisitor visitor)
+    public MultiDeleting(TheaConnection connection, IDbTransaction transaction, IDeleteVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
     }
 
-    public IDeleting<TEntity> And(Expression<Func<TEntity, bool>> predicate)
+    public IMultiDeleting<TEntity> And(Expression<Func<TEntity, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -488,7 +488,7 @@ class Deleting<TEntity> : IDeleting<TEntity>
         this.visitor.And(predicate);
         return this;
     }
-    public IDeleting<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    public IMultiDeleting<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));

@@ -207,6 +207,13 @@ public static class Extensions
         }
         return true;
     }
+    /// <summary>
+    /// 返回的是单个基础值类型数据，如：int,DateTime等基础类型的数据
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <param name="reader"></param>
+    /// <param name="columnIndex"></param>
+    /// <returns></returns>
     internal static TValue To<TValue>(this IDataReader reader, int columnIndex = 0)
     {
         var targetType = typeof(TValue);
@@ -217,6 +224,15 @@ public static class Extensions
         var deserializer = (Func<IDataReader, int, TValue>)converter;
         return deserializer.Invoke(reader, columnIndex);
     }
+    /// <summary>
+    /// 使用SQL+参数查询,返回的是单纯的实体
+    /// </summary>
+    /// <typeparam name="TEntity"></typeparam>
+    /// <param name="reader"></param>
+    /// <param name="dbKey"></param>
+    /// <param name="ormProvider"></param>
+    /// <param name="mapProvider"></param>
+    /// <returns></returns>
     internal static TEntity To<TEntity>(this IDataReader reader, string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
     {
         var entityType = typeof(TEntity);
@@ -242,6 +258,15 @@ public static class Extensions
         }
         return ((Func<IDataReader, TEntity>)deserializer).Invoke(reader);
     }
+    /// <summary>
+    /// 使用非SQL查询，返回的是可能包含Include对象，包含层次的实体对象
+    /// </summary>
+    /// <typeparam name="TEntity"></typeparam>
+    /// <param name="reader"></param>
+    /// <param name="dbKey"></param>
+    /// <param name="ormProvider"></param>
+    /// <param name="readerFields"></param>
+    /// <returns></returns>
     internal static TEntity To<TEntity>(this IDataReader reader, string dbKey, IOrmProvider ormProvider, List<ReaderField> readerFields)
     {
         var entityType = typeof(TEntity);

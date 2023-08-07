@@ -157,13 +157,15 @@ public class MySqlUnitTest1 : UnitTestBase
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
         var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
-        var sql =
-        repository.Create<User>()
+        var sql = repository.Create<User>()
             .WithBy(new
             {
                 Id = 1,
                 Name = "leafkevin",
-                Age = 25,
+                Age = 25
+            })
+            .WithBy(new
+            {
                 CompanyId = 1,
                 Gender = Gender.Male,
                 IsEnabled = true,

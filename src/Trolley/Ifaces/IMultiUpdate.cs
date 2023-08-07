@@ -3,8 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Trolley;
 
@@ -12,7 +10,7 @@ namespace Trolley;
 /// 更新数据
 /// </summary>
 /// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
-public interface IUpdate<TEntity>
+public interface IMultiUpdate<TEntity>
 {
     /// <summary>
     /// 使用更新对象parameters部分字段更新，单对象更新，更新对象parameters必须包含主键字段，用法：
@@ -33,7 +31,7 @@ public interface IUpdate<TEntity>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
     /// <param name="parameters">部分字段更新对象参数，包含想要更新的必需栏位值和主键字段值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSet<TEntity> WithBy<TUpdateObj>(TUpdateObj parameters);
+    IMultiUpdateSet<TEntity> WithBy<TUpdateObj>(TUpdateObj parameters);
     /// <summary>
     /// 使用表达式fieldsExpr筛选更新字段，更新对象parameters部分字段更新，单对象更新，更新对象parameters必须包含主键字段，
     /// 表达式中，栏位固定赋值则更新为固定值，只是成员访问的字段将被更新为更新对象parameters中对应的字段值，用法：
@@ -59,7 +57,7 @@ public interface IUpdate<TEntity>
     /// <param name="fieldsExpr">要更新的字段筛选表达式</param>
     /// <param name="parameters">部分字段更新对象参数，包含想要更新的必需栏位值和主键字段值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSet<TEntity> WithBy<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr, object parameters);
+    IMultiUpdateSet<TEntity> WithBy<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr, object parameters);
     /// <summary>
     /// 使用集合对象parameters部分字段批量更新，集合对象parameters中的单个实体中必须包含主键字段，
     /// 支持分批次更新，更新条数超过设置的bulkCount值，将在下次更新，直到所有数据更新完毕，bulkCount默认500
@@ -79,7 +77,7 @@ public interface IUpdate<TEntity>
     /// <param name="parameters">更新对象参数集合，包含想要更新的必需栏位值和主键字段值</param>
     /// <param name="bulkCount">单次更新的最大数据条数</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSet<TEntity> WithBulkBy<TUpdateObj>(IEnumerable<TUpdateObj> parameters, int bulkCount = 500);
+    IMultiUpdateSet<TEntity> WithBulkBy<TUpdateObj>(IEnumerable<TUpdateObj> parameters, int bulkCount = 500);
     /// <summary>
     /// 使用表达式fieldsExpr筛选更新字段，集合对象parameters部分字段批量更新，集合对象parameters中的单个实体中必须包含主键字段，
     /// 支持分批次更新，更新条数超过设置的bulkCount值，将在下次更新，直到所有数据更新完毕，bulkCount默认500
@@ -108,7 +106,7 @@ public interface IUpdate<TEntity>
     /// <param name="parameters">更新对象参数集合，包含想要更新的必需栏位值和主键字段值</param>
     /// <param name="bulkCount">单次更新的最大数据条数</param>
     /// <returns></returns>
-    IUpdateSet<TEntity> WithBulkBy<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr, IEnumerable parameters, int bulkCount = 500);
+    IMultiUpdateSet<TEntity> WithBulkBy<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr, IEnumerable parameters, int bulkCount = 500);
     /// <summary>
     /// 使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
     /// <code>
@@ -144,7 +142,7 @@ public interface IUpdate<TEntity>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr);
+    IMultiUpdateSetting<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
     /// 如果为false，则不生成更新语句，用法：
@@ -178,7 +176,7 @@ public interface IUpdate<TEntity>
     /// <param name="condition">更新条件</param>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> SetIf<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsExpr);
+    IMultiUpdateSetting<TEntity> SetIf<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsExpr);
     /// <summary>
     /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
     /// <code>
@@ -203,7 +201,7 @@ public interface IUpdate<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> Set<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr);
+    IMultiUpdateSetting<TEntity> Set<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -229,7 +227,7 @@ public interface IUpdate<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr);
+    IMultiUpdateSetting<TEntity> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr);
     /// <summary>
     /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
     /// <code>
@@ -251,7 +249,7 @@ public interface IUpdate<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -274,7 +272,7 @@ public interface IUpdate<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateSetting<TEntity> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
     /// <code>
@@ -301,7 +299,7 @@ public interface IUpdate<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateSetting<TEntity> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
     /// <code>
@@ -329,20 +327,20 @@ public interface IUpdate<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateSetting<TEntity> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     /// <summary>
     /// 连接表TSource获取更新数据
     /// </summary>
     /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
     /// <returns>返回数据更新来源对象</returns>
-    IUpdateFrom<TEntity, TSource> From<TSource>();
+    IMultiUpdateFrom<TEntity, TSource> From<TSource>();
     /// <summary>
     /// 连接表T1, T2获取更新数据
     /// </summary>
     /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
     /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
     /// <returns>返回数据更新来源对象</returns>
-    IUpdateFrom<TEntity, T1, T2> From<T1, T2>();
+    IMultiUpdateFrom<TEntity, T1, T2> From<T1, T2>();
     /// <summary>
     /// 连接表T1, T2, T3获取更新数据
     /// </summary>
@@ -350,7 +348,7 @@ public interface IUpdate<TEntity>
     /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
     /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
     /// <returns>返回数据更新来源对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3> From<T1, T2, T3>();
+    IMultiUpdateFrom<TEntity, T1, T2, T3> From<T1, T2, T3>();
     /// <summary>
     /// 连接表T1, T2, T3, T4获取更新数据
     /// </summary>
@@ -359,7 +357,7 @@ public interface IUpdate<TEntity>
     /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
     /// <typeparam name="T4">数据来源表T4实体类型</typeparam>
     /// <returns>返回数据更新来源对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>();
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>();
     /// <summary>
     /// 连接表T1, T2, T3, T4, T5获取更新数据
     /// </summary>
@@ -369,39 +367,34 @@ public interface IUpdate<TEntity>
     /// <typeparam name="T4">数据来源表T4实体类型</typeparam>
     /// <typeparam name="T5">数据来源表T5实体类型</typeparam>
     /// <returns>返回数据更新来源对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
     /// <summary>
     /// InnerJoin连接表TSource获取更新数据
     /// </summary>
     /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
-    IUpdateJoin<TEntity, TSource> InnerJoin<TSource>(Expression<Func<TEntity, TSource, bool>> joinOn);
+    IMultiUpdateJoin<TEntity, TSource> InnerJoin<TSource>(Expression<Func<TEntity, TSource, bool>> joinOn);
     /// <summary>
     /// LeftJoin连接表TSource获取更新数据
     /// </summary>
     /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
-    IUpdateJoin<TEntity, TSource> LeftJoin<TSource>(Expression<Func<TEntity, TSource, bool>> joinOn);
+    IMultiUpdateJoin<TEntity, TSource> LeftJoin<TSource>(Expression<Func<TEntity, TSource, bool>> joinOn);
 }
 /// <summary>
 /// 更新数据
 /// </summary>
 /// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
-public interface IUpdateSet<TEntity>
+public interface IMultiUpdateSet<TEntity>
 {
     /// <summary>
     /// 执行更新动作，并返回更新行数
     /// </summary>
-    /// <returns>返回更新行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行更新动作，并返回更新行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回更新行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    /// <param name="result">返回更新行数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Execute(out int result);
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
@@ -413,7 +406,7 @@ public interface IUpdateSet<TEntity>
 /// 更新数据
 /// </summary>
 /// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
-public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
+public interface IMultiUpdateSetting<TEntity> : IMultiUpdateSet<TEntity>
 {
     #region Set/SetIf/SetValue/SetValueIf
     /// <summary>
@@ -451,7 +444,7 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr);
+    IMultiUpdateSetting<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
     /// 如果为false，则不生成更新语句，用法：
@@ -485,7 +478,7 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <param name="condition">更新条件</param>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> SetIf<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsExpr);
+    IMultiUpdateSetting<TEntity> SetIf<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsExpr);
     /// <summary>
     /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
     /// <code>
@@ -510,7 +503,7 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> Set<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr);
+    IMultiUpdateSetting<TEntity> Set<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -536,7 +529,7 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr);
+    IMultiUpdateSetting<TEntity> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsExpr);
     /// <summary>
     /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
     /// <code>
@@ -558,7 +551,7 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -581,7 +574,7 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateSetting<TEntity> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
     /// <code>
@@ -608,7 +601,7 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateSetting<TEntity> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
     /// <code>
@@ -636,7 +629,7 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateSetting<TEntity> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     #endregion
 
     #region Where/And
@@ -645,7 +638,7 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
+    IMultiUpdateSetting<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -654,13 +647,13 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
+    IMultiUpdateSetting<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> And(Expression<Func<TEntity, bool>> predicate);
+    IMultiUpdateSetting<TEntity> And(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -669,14 +662,14 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
+    IMultiUpdateSetting<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     #endregion
 }
 /// <summary>
 /// 更新数据，仅限SQL SERVER数据库使用
 /// </summary>
 /// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
-public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
+public interface IMultiUpdateFrom<TEntity, T1> : IMultiUpdateSet<TEntity>
 {
     #region Set/SetIf/SetValue/SetValueIf
     /// <summary>
@@ -704,7 +697,7 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1> Set<TFields>(Expression<Func<TEntity, T1, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1> Set<TFields>(Expression<Func<TEntity, T1, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
     /// 如果为false，则不生成更新语句，用法：   
@@ -733,7 +726,7 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="condition">更新条件</param>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, TFields>> fieldsExpr);
     /// <summary>
     /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
     /// <code>
@@ -757,7 +750,7 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -785,7 +778,7 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsExpr);
     /// <summary>
     /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
     /// <code>
@@ -808,7 +801,7 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateFrom<TEntity, T1> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -833,7 +826,7 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateFrom<TEntity, T1> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
     /// <code>
@@ -858,7 +851,7 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateFrom<TEntity, T1> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
     /// <code>
@@ -885,7 +878,7 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateFrom<TEntity, T1> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     #endregion
 
     #region Where/And
@@ -894,7 +887,7 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate);
+    IMultiUpdateFrom<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -903,13 +896,13 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1> Where(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate, Expression<Func<TEntity, T1, bool>> elsePredicate = null);
+    IMultiUpdateFrom<TEntity, T1> Where(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate, Expression<Func<TEntity, T1, bool>> elsePredicate = null);
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1> And(Expression<Func<TEntity, T1, bool>> predicate);
+    IMultiUpdateFrom<TEntity, T1> And(Expression<Func<TEntity, T1, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -918,7 +911,7 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1> And(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate = null, Expression<Func<TEntity, T1, bool>> elsePredicate = null);
+    IMultiUpdateFrom<TEntity, T1> And(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate = null, Expression<Func<TEntity, T1, bool>> elsePredicate = null);
     #endregion
 }
 /// <summary>
@@ -926,7 +919,7 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
 /// </summary>
 /// <typeparam name="TEntity">更新数据库表TEntity实体类型，需要有模型映射</typeparam>
 /// <typeparam name="T1">获取更新值表T1实体类型，需要有模型映射</typeparam>
-public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
+public interface IMultiUpdateJoin<TEntity, T1> : IMultiUpdateSet<TEntity>
 {
     #region Join
     /// <summary>
@@ -935,14 +928,14 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
     /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
-    IUpdateJoin<TEntity, T1, T2> InnerJoin<T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn);
+    IMultiUpdateJoin<TEntity, T1, T2> InnerJoin<T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn);
     /// <summary>
     /// LeftJoin连接表T获取更新数据
     /// </summary>
     /// <typeparam name="T2">数据来源表T实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
-    IUpdateJoin<TEntity, T1, T2> LeftJoin<T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn);
+    IMultiUpdateJoin<TEntity, T1, T2> LeftJoin<T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn);
     #endregion
 
     #region Set/SetIf/SetValue/SetValueIf
@@ -970,7 +963,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> Set<TFields>(Expression<Func<TEntity, T1, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1> Set<TFields>(Expression<Func<TEntity, T1, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
     /// 如果为false，则不生成更新语句，用法：   
@@ -998,7 +991,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="condition">更新条件</param>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, TFields>> fieldsExpr);
     /// <summary>
     /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
     /// <code>
@@ -1022,7 +1015,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -1048,7 +1041,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsExpr);
     /// <summary>
     /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
     /// <code>
@@ -1074,7 +1067,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateJoin<TEntity, T1> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -1102,7 +1095,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateJoin<TEntity, T1> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
     /// <code>
@@ -1126,7 +1119,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateJoin<TEntity, T1> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
     /// <code>
@@ -1152,7 +1145,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateJoin<TEntity, T1> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     #endregion
 
     #region Where/And
@@ -1161,7 +1154,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate);
+    IMultiUpdateJoin<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -1170,13 +1163,13 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> Where(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate, Expression<Func<TEntity, T1, bool>> elsePredicate = null);
+    IMultiUpdateJoin<TEntity, T1> Where(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate, Expression<Func<TEntity, T1, bool>> elsePredicate = null);
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> And(Expression<Func<TEntity, T1, bool>> predicate);
+    IMultiUpdateJoin<TEntity, T1> And(Expression<Func<TEntity, T1, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -1185,7 +1178,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> And(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate = null, Expression<Func<TEntity, T1, bool>> elsePredicate = null);
+    IMultiUpdateJoin<TEntity, T1> And(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate = null, Expression<Func<TEntity, T1, bool>> elsePredicate = null);
     #endregion
 }
 /// <summary>
@@ -1194,7 +1187,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
 /// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
 /// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
 /// <typeparam name="T2">更新值来源表TT2实体类型</typeparam>
-public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
+public interface IMultiUpdateFrom<TEntity, T1, T2> : IMultiUpdateSet<TEntity>
 {
     #region Set/SetIf/SetValue/SetValueIf
     /// <summary>
@@ -1222,7 +1215,7 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2> Set<TFields>(Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1, T2> Set<TFields>(Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
     /// 如果为false，则不生成更新语句，用法：   
@@ -1251,7 +1244,7 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="condition">更新条件</param>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1, T2> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr);
     /// <summary>
     /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
     /// <code>
@@ -1275,7 +1268,7 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1, T2> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -1303,7 +1296,7 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1, T2> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsExpr);
     /// <summary>
     /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
     /// <code>
@@ -1326,7 +1319,7 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateFrom<TEntity, T1, T2> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -1351,7 +1344,7 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateFrom<TEntity, T1, T2> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
     /// <code>
@@ -1376,7 +1369,7 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateFrom<TEntity, T1, T2> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
     /// <code>
@@ -1403,7 +1396,7 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateFrom<TEntity, T1, T2> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     #endregion
 
     #region Where/And
@@ -1412,7 +1405,7 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2> Where(Expression<Func<TEntity, T1, T2, bool>> predicate);
+    IMultiUpdateFrom<TEntity, T1, T2> Where(Expression<Func<TEntity, T1, T2, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -1421,13 +1414,13 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2> Where(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null);
+    IMultiUpdateFrom<TEntity, T1, T2> Where(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null);
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2> And(Expression<Func<TEntity, T1, T2, bool>> predicate);
+    IMultiUpdateFrom<TEntity, T1, T2> And(Expression<Func<TEntity, T1, T2, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -1436,7 +1429,7 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2> And(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null);
+    IMultiUpdateFrom<TEntity, T1, T2> And(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null);
     #endregion
 }
 /// <summary>
@@ -1445,7 +1438,7 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
 /// <typeparam name="TEntity">更新数据库表TEntity实体类型，需要有模型映射</typeparam>
 /// <typeparam name="T1">获取更新值表T1实体类型，需要有模型映射/typeparam>
 /// <typeparam name="T2">获取更新值表T2实体类型，需要有模型映射/typeparam>
-public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
+public interface IMultiUpdateJoin<TEntity, T1, T2> : IMultiUpdateSet<TEntity>
 {
     #region Join
     /// <summary>
@@ -1454,14 +1447,14 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> InnerJoin<T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn);
+    IMultiUpdateJoin<TEntity, T1, T2, T3> InnerJoin<T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn);
     /// <summary>
     /// LeftJoin连接表T获取更新数据
     /// </summary>
     /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> LeftJoin<T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn);
+    IMultiUpdateJoin<TEntity, T1, T2, T3> LeftJoin<T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn);
     #endregion
 
     #region Set/SetIf/SetValue/SetValueIf
@@ -1489,7 +1482,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> Set<TFields>(Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1, T2> Set<TFields>(Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
     /// 如果为false，则不生成更新语句，用法：   
@@ -1517,7 +1510,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="condition">更新条件</param>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1, T2> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr);
     /// <summary>
     /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
     /// <code>
@@ -1541,7 +1534,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1, T2> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -1567,7 +1560,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1, T2> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsExpr);
     /// <summary>
     /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
     /// <code>
@@ -1593,7 +1586,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateJoin<TEntity, T1, T2> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -1621,7 +1614,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateJoin<TEntity, T1, T2> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
     /// <code>
@@ -1645,7 +1638,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateJoin<TEntity, T1, T2> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
     /// <code>
@@ -1671,7 +1664,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateJoin<TEntity, T1, T2> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     #endregion
 
     #region Where/And
@@ -1680,7 +1673,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> Where(Expression<Func<TEntity, T1, T2, bool>> predicate);
+    IMultiUpdateJoin<TEntity, T1, T2> Where(Expression<Func<TEntity, T1, T2, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -1689,13 +1682,13 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> Where(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null);
+    IMultiUpdateJoin<TEntity, T1, T2> Where(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null);
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> And(Expression<Func<TEntity, T1, T2, bool>> predicate);
+    IMultiUpdateJoin<TEntity, T1, T2> And(Expression<Func<TEntity, T1, T2, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -1704,7 +1697,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> And(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null);
+    IMultiUpdateJoin<TEntity, T1, T2> And(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null);
     #endregion
 }
 /// <summary>
@@ -1714,7 +1707,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
 /// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
 /// <typeparam name="T2">更新值来源表TT2实体类型</typeparam>
 /// <typeparam name="T3">更新值来源表TT3实体类型</typeparam>
-public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
+public interface IMultiUpdateFrom<TEntity, T1, T2, T3> : IMultiUpdateSet<TEntity>
 {
     #region Set/SetIf/SetValue/SetValueIf
     /// <summary>
@@ -1742,7 +1735,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
     /// 如果为false，则不生成更新语句，用法：   
@@ -1771,7 +1764,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="condition">更新条件</param>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
     /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
     /// <code>
@@ -1795,7 +1788,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -1823,7 +1816,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
     /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
     /// <code>
@@ -1846,7 +1839,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -1871,7 +1864,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
     /// <code>
@@ -1896,7 +1889,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateFrom<TEntity, T1, T2, T3> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
     /// <code>
@@ -1923,7 +1916,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateFrom<TEntity, T1, T2, T3> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     #endregion
 
     #region Where/And
@@ -1932,7 +1925,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3> Where(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
+    IMultiUpdateFrom<TEntity, T1, T2, T3> Where(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -1941,13 +1934,13 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null);
+    IMultiUpdateFrom<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null);
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3> And(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
+    IMultiUpdateFrom<TEntity, T1, T2, T3> And(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -1956,7 +1949,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3> And(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null);
+    IMultiUpdateFrom<TEntity, T1, T2, T3> And(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null);
     #endregion
 }
 /// <summary>
@@ -1966,7 +1959,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
 /// <typeparam name="T1">获取更新值表T1实体类型，需要有模型映射/typeparam>
 /// <typeparam name="T2">获取更新值表T2实体类型，需要有模型映射/typeparam>
 /// <typeparam name="T3">获取更新值表T3实体类型，需要有模型映射/typeparam>
-public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
+public interface IMultiUpdateJoin<TEntity, T1, T2, T3> : IMultiUpdateSet<TEntity>
 {
     #region Join
     /// <summary>
@@ -1975,14 +1968,14 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <typeparam name="T4">数据来源表T4实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> InnerJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> InnerJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn);
     /// <summary>
     /// LeftJoin连接表T获取更新数据
     /// </summary>
     /// <typeparam name="T4">数据来源表T4实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> LeftJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> LeftJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn);
     #endregion
 
     #region Set/SetIf/SetValue/SetValueIf
@@ -2010,7 +2003,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
     /// 如果为false，则不生成更新语句，用法：   
@@ -2038,7 +2031,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="condition">更新条件</param>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
     /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
     /// <code>
@@ -2062,7 +2055,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -2088,7 +2081,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
     /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
     /// <code>
@@ -2114,7 +2107,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -2142,7 +2135,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
     /// <code>
@@ -2166,7 +2159,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateJoin<TEntity, T1, T2, T3> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
     /// <code>
@@ -2192,7 +2185,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateJoin<TEntity, T1, T2, T3> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     #endregion
 
     #region Where/And
@@ -2201,7 +2194,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> Where(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
+    IMultiUpdateJoin<TEntity, T1, T2, T3> Where(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -2210,13 +2203,13 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null);
+    IMultiUpdateJoin<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null);
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> And(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
+    IMultiUpdateJoin<TEntity, T1, T2, T3> And(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -2225,7 +2218,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> And(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null);
+    IMultiUpdateJoin<TEntity, T1, T2, T3> And(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null);
     #endregion
 }
 /// <summary>
@@ -2236,7 +2229,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
 /// <typeparam name="T2">更新值来源表TT2实体类型</typeparam>
 /// <typeparam name="T3">更新值来源表TT3实体类型</typeparam>
 /// <typeparam name="T4">更新值来源表TT4实体类型</typeparam>
-public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
+public interface IMultiUpdateFrom<TEntity, T1, T2, T3, T4> : IMultiUpdateSet<TEntity>
 {
     #region Set/SetIf/SetValue/SetValueIf
     /// <summary>
@@ -2264,7 +2257,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
     /// 如果为false，则不生成更新语句，用法：   
@@ -2293,7 +2286,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="condition">更新条件</param>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
     /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
     /// <code>
@@ -2317,7 +2310,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -2345,7 +2338,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
     /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
     /// <code>
@@ -2368,7 +2361,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -2393,7 +2386,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
     /// <code>
@@ -2418,7 +2411,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
     /// <code>
@@ -2445,7 +2438,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     #endregion
 
     #region Where/And
@@ -2454,7 +2447,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> Where(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4> Where(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -2463,13 +2456,13 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null);
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> And(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4> And(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -2478,7 +2471,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null);
     #endregion
 }
 /// <summary>
@@ -2489,7 +2482,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
 /// <typeparam name="T2">获取更新值表T2实体类型，需要有模型映射/typeparam>
 /// <typeparam name="T3">获取更新值表T3实体类型，需要有模型映射/typeparam>
 /// <typeparam name="T4">获取更新值表T4实体类型，需要有模型映射/typeparam>
-public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
+public interface IMultiUpdateJoin<TEntity, T1, T2, T3, T4> : IMultiUpdateSet<TEntity>
 {
     #region Join
     /// <summary>
@@ -2498,14 +2491,14 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <typeparam name="T5">数据来源表T5实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> InnerJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> InnerJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn);
     /// <summary>
     /// LeftJoin连接表T获取更新数据
     /// </summary>
     /// <typeparam name="T5">数据来源表T5实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> LeftJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> LeftJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn);
     #endregion
 
     #region Set/SetIf/SetValue/SetValueIf
@@ -2533,7 +2526,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
     /// 如果为false，则不生成更新语句，用法：   
@@ -2561,7 +2554,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="condition">更新条件</param>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
     /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
     /// <code>
@@ -2585,7 +2578,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -2611,7 +2604,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
     /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
     /// <code>
@@ -2637,7 +2630,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -2665,7 +2658,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
     /// <code>
@@ -2689,7 +2682,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
     /// <code>
@@ -2715,7 +2708,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     #endregion
 
     #region Where/And
@@ -2724,7 +2717,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> Where(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> Where(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -2733,13 +2726,13 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null);
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> And(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> And(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -2748,7 +2741,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null);
     #endregion
 }
 /// <summary>
@@ -2760,7 +2753,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
 /// <typeparam name="T3">更新值来源表TT3实体类型</typeparam>
 /// <typeparam name="T4">更新值来源表TT4实体类型</typeparam>
 /// <typeparam name="T5">更新值来源表TT5实体类型</typeparam>
-public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
+public interface IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IMultiUpdateSet<TEntity>
 {
     #region Set/SetIf/SetValue/SetValueIf
     /// <summary>
@@ -2788,7 +2781,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
     /// 如果为false，则不生成更新语句，用法：   
@@ -2817,7 +2810,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="condition">更新条件</param>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
     /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
     /// <code>
@@ -2841,7 +2834,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -2869,7 +2862,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
     /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
     /// <code>
@@ -2892,7 +2885,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -2917,7 +2910,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
     /// <code>
@@ -2942,7 +2935,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
     /// <code>
@@ -2969,7 +2962,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     #endregion
 
     #region Where/And
@@ -2978,7 +2971,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -2987,13 +2980,13 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> elsePredicate = null);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> elsePredicate = null);
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> And(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> And(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -3002,7 +2995,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> elsePredicate = null);
+    IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> elsePredicate = null);
     #endregion
 }
 /// <summary>
@@ -3014,7 +3007,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
 /// <typeparam name="T3">获取更新值表T3实体类型，需要有模型映射/typeparam>
 /// <typeparam name="T4">获取更新值表T4实体类型，需要有模型映射/typeparam>
 /// <typeparam name="T5">获取更新值表T5实体类型，需要有模型映射/typeparam>
-public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
+public interface IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IMultiUpdateSet<TEntity>
 {
     #region Set/SetIf/SetValue/SetValueIf
     /// <summary>
@@ -3041,7 +3034,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
     /// 如果为false，则不生成更新语句，用法：   
@@ -3069,7 +3062,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="condition">更新条件</param>
     /// <param name="fieldsExpr">更新字段表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
     /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
     /// <code>
@@ -3093,7 +3086,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -3119,7 +3112,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsExpr">子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
     /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
     /// <code>
@@ -3145,7 +3138,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
     /// <code>
@@ -3173,7 +3166,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">单个字段筛选表达式</param>
     /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
     /// <summary>
     /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
     /// <code>
@@ -3197,7 +3190,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
     /// <code>
@@ -3223,7 +3216,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="fieldExpr">筛选单个字段表达式</param>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
     #endregion
 
     #region Where/And
@@ -3232,7 +3225,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -3241,13 +3234,13 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> elsePredicate = null);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> elsePredicate = null);
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> And(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> And(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -3256,6 +3249,6 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> elsePredicate = null);
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> elsePredicate = null);
     #endregion
 }

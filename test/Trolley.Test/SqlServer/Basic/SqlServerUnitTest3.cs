@@ -181,23 +181,25 @@ public class SqlServerUnitTest3 : UnitTestBase
     [Fact]
     public void Update_Set_FromQuery_Multi()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
-            .Set((a, b) => new
+            .From<User>()
+            .SetIf(true, (x, y) => new
             {
-                TotalAmount = a.From<OrderDetail>('b')
-                    .Where(f => f.OrderId == b.Id)
-                    .Select(t => Sql.Sum(t.Amount)),
-                OrderNo = b.OrderNo + "_111",
-                BuyerId = DBNull.Value
+                TotalAmount = 200.56,
+                OrderNo = x.OrderNo + "-111",
+                BuyerSource = y.SourceType
             })
-            .Where(a => a.BuyerId == 1)
-            .ToSql(out _);
+            .SetValue(x => x.Products, new List<int> { 1, 2, 3 })
+            .Where((a, b) => a.BuyerId == b.Id && a.BuyerId == 1)
+          .ToSql(out _);
         Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(b.[Amount]) FROM [sys_order_detail] b WHERE b.[OrderId]=[sys_order].[Id]),[OrderNo]=([sys_order].[OrderNo]+'_111'),[BuyerId]=NULL WHERE [sys_order].[BuyerId]=1");
     }
     [Fact]
     public void Update_Set_FromQuery_One()
     {
+        Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
             .Set((a, b) => new

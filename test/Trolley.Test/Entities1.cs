@@ -9,6 +9,13 @@ public enum Gender : byte
     Female,
     Male
 }
+public enum UserSourceType
+{
+    Wechat,
+    Douyin,
+    Taobao,
+    Website
+}
 public class User
 {
     public int Id { get; set; }
@@ -18,6 +25,7 @@ public class User
     public int CompanyId { get; set; }
     public TimeOnly? SomeTimes { get; set; }
     public Guid? GuidField { get; set; }
+    public UserSourceType SourceType { get; set; }
     public bool IsEnabled { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -67,6 +75,7 @@ public class Order
     public string OrderNo { get; set; }
     public double TotalAmount { get; set; }
     public int BuyerId { get; set; }
+    public UserSourceType BuyerSource { get; set; }
     public int SellerId { get; set; }
     public int? ProductCount { get; set; }
     public List<int> Products { get; set; }

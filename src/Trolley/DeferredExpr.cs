@@ -18,7 +18,7 @@ public struct DeferredExpr
     /// </summary>
     public OperationType OperationType { get; set; }
     /// <summary>
-    /// SqlSegment.Null/SqlSegment.True/null常量或是字符串连接操作的List<Expression>或是Expression成员访问表达式
+    /// SqlSegment.Null/SqlSegment.True/null常量或是字符串连接操作的List&lt;Expression&gt;或是Expression成员访问表达式
     /// </summary>
     public object Value { get; set; }
 }

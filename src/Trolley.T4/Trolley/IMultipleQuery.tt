@@ -1,0 +1,1775 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
+<#@ output extension=".cs" #>
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq.Expressions;
+
+namespace Trolley;
+
+public interface IMultipleQuery
+{
+    #region Query
+    /// <summary>
+    /// 查询数据，用法：
+    /// <code>
+    /// repository
+    ///     .From&lt;Menu&gt;()
+    ///     .Select(f => new { f.Id, f.Name, f.ParentId })
+    ///     .First();
+    /// </code>
+    /// 生成的SQL:<code>SELECT `Id`,`Name`,`ParentId` FROM `sys_menu`</code>
+    /// </summary>
+    /// <typeparam name="T">实体类型</typeparam>
+    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
+    /// <param name="suffixRawSql">额外的原始SQL, SqlServer会有With用法，如：
+    /// <cdoe>SELECT * FROM sys_user WITH(NOLOCK)</cdoe>
+    /// </param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> From<T>(char tableAsStart = 'a', string suffixRawSql = null);
+    /// <summary>
+    /// SQL子查询，用法：
+    /// <code>
+    /// repository
+    ///     .From(f => f.From&lt;Page, Menu&gt;('o')
+    ///         .Where((a, b) => a.Id == b.PageId)
+    ///         .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
+    ///     .InnerJoin&lt;Menu&gt;>((a, b) => a.Id == b.Id)
+    ///     .Where((a, b) => a.Id == b.Id)
+    ///     .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL：
+    /// <code>
+    /// SELECT a.`Id`,b.`Name`,a.`ParentId`,a.`Url` FROM (SELECT p.`Id`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) a INNER JOIN `sys_menu` b ON a.`Id`=b.`Id` WHERE a.`Id`=b.`Id`
+    /// </code>
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="subQuery"></param>
+    /// <param name="tableAsStart"></param>
+    /// <returns></returns>
+    IMultiQuery<T> From<T>(Func<IFromQuery, IFromQuery<T>> subQuery, char tableAsStart = 'a');
+    /// <summary>
+    /// 使用CTE子句创建查询对象，不能自我引用不能递归查询，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f => f.From<Menu>()
+    ///         .Select(x => new { x.Id, x.Name, x.ParentId, x.PageId }), "MenuList")
+    ///     .InnerJoin<Page>((a, b) => a.Id == b.Id)
+    ///     .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH MenuList(Id,Name,ParentId,PageId) AS 
+    /// (
+    ///     SELECT `Id`,`Name`,`ParentId`,`PageId` FROM `sys_menu`
+    /// )
+    /// SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN `sys_page` b ON a.`Id`=b.`Id`
+    /// </code>
+    /// </summary>
+    /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
+    /// <param name="cteSubQuery">CTE 查询子句</param>
+    /// <param name="cteTableName">CTE子句的临时表名，默认值：cte</param>
+    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> FromWith<T>(Func<IFromQuery, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    /// <summary>
+    /// 使用可递归CTE子句创建查询对象，可以自我引用递归查询，要有包含自我引用的Union或Union All查询子句，
+    /// <para>通常用来查询树型数据，查找叶子或是查找根，用法：</para>
+    /// <code>
+    /// repository
+    ///     .FromWithRecursive((f, cte) =&gt; f.From&lt;Menu&gt;()
+    ///             .Where(x =&gt; x.Id == 1)
+    ///             .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
+    ///         .UnionAllRecursive((x, y) =&gt; x.From&lt;Menu&gt;()
+    ///             .InnerJoinRecursive(y, cte, (a, b) =&gt; a.ParentId == b.Id)
+    ///             .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId })), "MenuList")
+    ///     .NextWithRecursive((f, cte) =&gt; f.From&lt;Page, Menu&gt;()
+    ///             .Where((a, b) =&gt; a.Id == b.PageId)
+    ///             .Select((x, y) =&gt; new { y.Id, y.ParentId, x.Url })
+    ///         .UnionAll(x =&gt; x.From&lt;Menu&gt;()
+    ///             .LeftJoin&lt;Page&gt;((a, b) =&gt; a.PageId == b.Id)
+    ///             .Where((a, b) =&gt; a.Id &gt; 1)
+    ///             .Select((x, y) =&gt; new { x.Id, x.ParentId, y.Url })), "MenuPageList")
+    ///     .InnerJoin((a, b) =&gt; a.Id == b.Id)
+    ///     .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId, b.Url })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL
+    /// <code>
+    /// WITH RECURSIVE MenuList(Id,Name,ParentId) AS
+    /// (
+    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
+    ///     SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id`
+    /// ),
+    /// MenuPageList(Id,Url) AS 
+    /// (
+    ///     SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=1 UNION ALL
+    ///     SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`>1
+    /// )
+    /// SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageList b ON a.`Id`=b.`Id`
+    /// </code>
+    /// </summary>
+    /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
+    /// <param name="cteSubQuery">CTE 查询子句，带有Union或Union All查询子句</param>
+    /// <param name="cteTableName">CTE子句的临时表名，默认值：cte</param>
+    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> FromWithRecursive<T>(Func<IFromQuery, string, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+<#
+    var count = 10;
+    string tables = "T1";
+    string currentTable = null;
+    for (int i = 2; i <= count; i++)
+    {
+        tables += $", T{i}";
+#>
+    /// <summary>
+    /// 使用<#=i#>个表创建查询对象
+    /// </summary>
+<#
+        for(int j = 1; j <= i; j++)
+        {
+            currentTable = $"T{j}";
+#>
+    /// <typeparam name="<#=currentTable#>">表T<#=j#>实体类型</typeparam>
+<#      }#>
+    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a');
+<#  }#>
+    /// <summary>
+    /// 执行SQL查询，返回满足条件的TEntity实体第一条记录，记录不存在时返回TEntity类型的默认值
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="rawSql">原始SQL</param>
+    /// <param name="result">返回TEntity实体或默认值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery QueryFirst<TEntity>(string rawSql, out TEntity result);
+    /// <summary>
+    /// 执行SQL查询，返回满足条件的TEntity实体第一条记录，记录不存在时返回TEntity类型的默认值
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="rawSql">原始SQL</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
+     /// <param name="result">返回TEntity实体或默认值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery QueryFirst<TEntity>(string rawSql, object parameters, out TEntity result);
+    /// <summary>
+    /// 执行SQL查询，返回TEntity实体所有字段的第一条记录，记录不存在时返回TEntity类型的默认值
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
+    /// <param name="result">返回TEntity实体或默认值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery QueryFirst<TEntity>(object whereObj, out TEntity result);
+    /// <summary>
+    /// 执行SQL查询，返回满足条件的所有TEntity实体记录，记录不存在时返回空的List&lt;TEntity&gt;类型对象
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="rawSql">原始SQL</param>
+    /// <param name="result">返回TEntity实体列表，没有数据将返回空列表</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Query<TEntity>(string rawSql, out List<TEntity> result);
+    /// <summary>
+    /// 执行SQL查询，返回满足条件的所有TEntity实体记录，记录不存在时返回空的List&lt;TEntity&gt;类型对象
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="rawSql">原始SQL</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
+    /// <param name="result">返回TEntity实体列表，没有数据将返回空列表</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Query<TEntity>(string rawSql, object parameters, out List<TEntity> result);
+    /// <summary>
+    /// 执行SQL查询，返回满足条件的所有TEntity实体记录，记录不存在时返回空的List&lt;TEntity&gt;类型对象
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
+    /// <param name="result">返回TEntity实体列表，没有数据将返回空列表</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Query<TEntity>(object whereObj, out List<TEntity> result);
+    #endregion
+
+    #region CRUD
+    /// <summary>
+    /// 根据主键信息，获取TEntity实体，记录不存在时返回TEntity类型的默认值
+    /// </summary>
+    /// <typeparam name="TEntity">获取实体类型</typeparam>
+    /// <returns>返回实体对象或是TEntity类型默认值</returns>
+    IMultipleQuery Get<TEntity>(object whereObj);
+    /// <summary>
+    /// 创建TEntity类型插入对象
+    /// </summary>
+    /// <typeparam name="TEntity">插入对象类型</typeparam>
+    /// <returns>返回插入对象</returns>
+    IMultiCreate<TEntity> Create<TEntity>();
+    /// <summary>
+    /// 创建T类型更新对象
+    /// </summary>
+    /// <typeparam name="TEntity">更新对象类型</typeparam>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdate<TEntity> Update<TEntity>();
+    /// <summary>
+    /// 创建TEntity类型删除对象
+    /// </summary>
+    /// <typeparam name="TEntity">删除对象类型</typeparam>
+    /// <returns>返回删除对象</returns>
+    IMultiDelete<TEntity> Delete<TEntity>();
+    /// <summary>
+    /// 判断TEntity表是否存在满足whereObj条件的记录，存在返回true,否则返回false，查询条件：TEntity表中对应字段值等于whreObj对象中的各属性值。
+    /// </summary>
+    /// <typeparam name="TEntity">实体对象类型</typeparam>
+    /// <param name="whereObj">where条件对象，根据TEntity表中对应字段值等于whreObj对象中的各属性值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Exists<TEntity>(object whereObj);
+    /// <summary>
+    /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true,否则返回false
+    /// </summary>
+    /// <typeparam name="TEntity">实体对象类型</typeparam>
+    /// <param name="wherePredicate">where条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate);
+    /// <summary>
+    /// 执行原始SQL，并返回影响行数
+    /// </summary>
+    /// <param name="sql">要执行的SQL</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Execute(string sql);
+    /// <summary>
+    /// 执行原始SQL，并返回影响行数
+    /// </summary>
+    /// <param name="sql">要执行的SQL</param>
+    /// <param name="parameters">SQL中使用的参数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Execute(string sql, object parameters);
+    #endregion
+}
+/// <summary>
+/// 查询数据
+/// </summary>
+/// <typeparam name="T">实体类型</typeparam>
+public interface IMultiQuery<T>
+{
+    #region Union/UnionAll
+    /// <summary>
+    /// Union操作，用法：
+    /// <code>
+    /// await repository.From&lt;Order&gt;()
+    ///     .Where(x => x.Id == 1)
+    ///     .Select(x => new
+    ///     {
+    ///         x.Id,
+    ///         x.OrderNo,
+    ///         x.SellerId,
+    ///         x.BuyerId
+    ///      })
+    ///     .Union(f => f.From&lt;Order&gt;()
+    ///         .Where(x => x.Id > 1)
+    ///         .Select(x => new
+    ///         {
+    ///             x.Id,
+    ///             x.OrderNo,
+    ///             x.SellerId,
+    ///             x.BuyerId
+    ///         }))
+    ///     .ToListAsync();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`=1 UNION
+    /// SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`&gt;1
+    /// </code>
+    /// </summary>
+    /// <param name="subQuery">子查询，需要有Select语句，如：
+    /// <code>
+    /// f.From&lt;Order&gt;()
+    ///     .Where(x => x.Id > 1)
+    ///     .Select(x => new
+    ///     {
+    ///         x.Id,
+    ///         x.OrderNo,
+    ///         x.SellerId,
+    ///         x.BuyerId
+    ///     }
+    /// </code>
+    /// </param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery);
+    /// <summary>
+    /// Union All操作，用法：
+    /// <code>
+    /// repository.From&lt;Order&gt;()
+    ///     .Where(x =&gt; x.Id == 1)
+    ///     .Select(x =&gt; new
+    ///     {
+    ///         x.Id,
+    ///         x.OrderNo,
+    ///         x.SellerId,
+    ///         x.BuyerId
+    ///     })
+    ///     .UnionAll(f =&gt; f
+    ///         .From&lt;Order&gt;()
+    ///         .Where(x =&gt; x.Id &gt; 1)
+    ///         .Select(x =&gt; new
+    ///         {
+    ///             x.Id,
+    ///             x.OrderNo,
+    ///             x.SellerId,
+    ///             x.BuyerId
+    ///         }))
+    ///     .ToListAsync();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`=1 UNION ALL
+    /// SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`&gt;1
+    /// </code>
+    /// </summary>
+    /// <param name="subQuery">子查询，需要有Select语句，如：
+    ///  f.From&lt;Order&gt;()
+    ///     .Where(x =&gt; x.Id &gt; 1)
+    ///     .Select(x =&gt; new
+    ///     {
+    ///         x.Id,
+    ///         x.OrderNo,
+    ///         x.SellerId,
+    ///         x.BuyerId
+    ///     }
+    /// </param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> UnionAll(Func<IFromQuery, IFromQuery<T>> subQuery);
+    #endregion
+
+    #region CTE NextWith/NextWithRecursive
+    /// <summary>
+    /// 继续定义CTE With子句，在Select查询之前，可以定义一个或多个CTE子句，多个CTE With子句要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith((f =&gt; ...), "MenuList")
+    ///     .NextWith(f => f.From&lt;Page&gt;()
+    ///         .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///         .Where((a, b) =&gt; a.Id == 1)
+    ///         .Select((x, y) =&gt; new { y.Id, x.Url })), "MenuPageList")
+    ///     .InnerJoin((a, b) =&gt; a.Id == b.Id)
+    ///     .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId, b.Url })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH MenuList(Id,Name,ParentId) AS 
+    /// (
+    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1
+    /// ),
+    /// MenuPageList(Id,Url) AS
+    /// (
+    ///     SELECT b.`Id`, a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=1
+    /// )
+    /// SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageList b ON a.`Id`=b.`Id`
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    /// <summary>
+    /// 继续定义可递归的CTE With子句，可以引用CTE自身。在Select查询之前，可以定义一个或多个CTE子句，多个CTE With子句要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWithRecursive((f, cte) =&gt; f.From&lt;Menu&gt;()
+    ///             .Where(x =&gt; x.Id == 1)
+    ///             .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
+    ///         .UnionAllRecursive((x, y) =&gt; x.From&lt;Menu&gt;()
+    ///             .InnerJoinRecursive(y, cte, (a, b) =&gt; a.ParentId == b.Id)
+    ///             .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId })), "MenuList")
+    ///     .NextWithRecursive((f, cte) =&gt; f.From&lt;Page, Menu&gt;()
+    ///             .Where((a, b) =&gt; a.Id == b.PageId)
+    ///             .Select((x, y) =&gt; new { y.Id, y.ParentId, x.Url })
+    ///         .UnionAll(x =&gt; x.From&lt;Menu&gt;()
+    ///             .LeftJoin&lt;Page&gt;((a, b) =&gt; a.PageId == b.Id)
+    ///             .Where((a, b) =&gt; a.Id &gt; 1)
+    ///             .Select((x, y) =&gt; new { x.Id, x.ParentId, y.Url })), "MenuPageList")
+    ///     .InnerJoin((a, b) =&gt; a.Id == b.Id)
+    ///     .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId, b.Url })
+    ///     .ToList();
+    /// 生成的SQL:
+    /// <code>
+    /// WITH RECURSIVE MenuList(Id,Name,ParentId) AS 
+    /// (
+    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
+    ///     SELECT a.`Id`, a.`Name`, a.`ParentId` FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id`
+    /// ),
+    /// MenuPageList(Id,ParentId,Url) AS
+    /// (
+    ///     SELECT a.`Id`,a.`ParentId`,b.`Url` FROM `sys_menu` a,`sys_page` b WHERE a.`PageId`=b.Id UNION ALL
+    ///     SELECT a.`Id`,a.`ParentId`,b.`Url` FROM `sys_menu` a INNER JOIN MenuList b ON a.`Id`=b.`ParentId`
+    /// ),
+    /// SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageList b ON a.`Id`=b.`Id`
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE With子句临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    #endregion
+
+    #region WithTable
+    /// <summary>
+    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository
+    ///     .From&lt;Menu&gt;()
+    ///     .WithTable(f => f.From&lt;Page, Menu&gt;('c')
+    ///         .Where((a, b) => a.Id == b.PageId)
+    ///         .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
+    ///     .Where((a, b) => a.Id == b.Id)
+    ///     .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL：
+    /// <code>
+    /// SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `sys_menu` a,(SELECT d.`Id`,d.`ParentId`,c.`Url` FROM `sys_page` c,`sys_menu` d WHERE c.`Id`=d.`PageId`) b WHERE a.`Id`=b.`Id`
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQuery">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery);
+    #endregion
+
+    #region Join
+    /// <summary>
+    /// 添加TOther表，与现有表T做INNER JOIN关联，用法:
+    /// <code>
+    /// repository.From&lt;User&gt;()
+    ///     .InnerJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
+    ///     .Where((a, b) =r&gt; b.ProductCount &gt; 1)
+    ///     .Select((x, y) =r&gt; new
+    ///     {
+    ///         User = x,
+    ///         Order = y
+    ///     })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL：
+    /// <code>
+    /// SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`OrderNo`,b.`ProductCount`,b.`TotalAmount`,b.`BuyerId`,b.`SellerId`,b.`Products`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE b.`ProductCount`&gt;1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加TOther表，与现有表T做LEFT JOIN关联，用法:
+    /// <code>
+    /// repository.From&lt;User&gt;()
+    ///     .LeftJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
+    ///     .Where((a, b) =r&gt; b.ProductCount &gt; 1)
+    ///     .Select((x, y) =r&gt; new
+    ///     {
+    ///         User = x,
+    ///         Order = y
+    ///     })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL：
+    /// <code>
+    /// SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`OrderNo`,b.`ProductCount`,b.`TotalAmount`,b.`BuyerId`,b.`SellerId`,b.`Products`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_user` a LEFT JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE b.`ProductCount`&gt;1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加TOther表，与现有表T做RIGHT JOIN关联，用法:
+    /// <code>
+    /// repository.From&lt;User&gt;()
+    ///     .RightJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
+    ///     .Where((a, b) =r&gt; b.ProductCount &gt; 1)
+    ///     .Select((x, y) =r&gt; new
+    ///     {
+    ///         User = x,
+    ///         Order = y
+    ///     })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL：
+    /// <code>
+    /// SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`OrderNo`,b.`ProductCount`,b.`TotalAmount`,b.`BuyerId`,b.`SellerId`,b.`Products`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_user` a RIGHT JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE b.`ProductCount`&gt;1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询作为临时表，并与现有表T做INNER JOIN关联，用法:
+    /// <code>
+    /// await repository.From&lt;User&gt;()
+    ///     .InnerJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
+    ///     .InnerJoin(f =&gt; f.From&lt;OrderDetail&gt;()
+    ///         .GroupBy(x =&gt; x.OrderId)
+    ///         .Select((x, y) =&gt; new
+    ///         {
+    ///             y.OrderId,
+    ///             ProductCount = x.CountDistinct(y.ProductId)
+    ///         }), (a, b, c) =&gt; b.Id == c.OrderId)
+    ///     .Where((a, b, c) =&gt; c.ProductCount &gt; 2)
+    ///     .Select((a, b, c) =&gt; new
+    ///     {
+    ///         User = a,
+    ///         Order = b,
+    ///         c.ProductCount
+    ///     })
+    ///     .ToListAsync();
+    /// </code>
+    /// 生成的SQL：
+    /// <code>
+    /// SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`OrderNo`,b.`ProductCount`,b.`TotalAmount`,b.`BuyerId`,b.`SellerId`,b.`Products`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt`,c.`ProductCount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` INNER JOIN (SELECT a.`OrderId`,COUNT(DISTINCT a.`ProductId`) AS ProductCount FROM `sys_order_detail` a GROUP BY a.`OrderId`) c ON b.`Id`=c.`OrderId` WHERE c.`ProductCount`&gt;2
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询作为临时表，并与现有表T做LEFT JOIN关联，用法:
+    /// <code>
+    /// await repository.From&lt;User&gt;()
+    ///     .InnerJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
+    ///     .LeftJoin(f =&gt; f.From&lt;OrderDetail&gt;()
+    ///         .GroupBy(x =&gt; x.OrderId)
+    ///         .Select((x, y) =&gt; new
+    ///         {
+    ///             y.OrderId,
+    ///             ProductCount = x.CountDistinct(y.ProductId)
+    ///         }), (a, b, c) =&gt; b.Id == c.OrderId)
+    ///     .Where((a, b, c) =&gt; c.ProductCount &gt; 2)
+    ///     .Select((a, b, c) =&gt; new
+    ///     {
+    ///         User = a,
+    ///         Order = b,
+    ///         c.ProductCount
+    ///     })
+    ///     .ToListAsync();
+    /// </code>
+    /// 生成的SQL：
+    /// <code>
+    /// SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`OrderNo`,b.`ProductCount`,b.`TotalAmount`,b.`BuyerId`,b.`SellerId`,b.`Products`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt`,c.`ProductCount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` LEFT JOIN (SELECT a.`OrderId`,COUNT(DISTINCT a.`ProductId`) AS ProductCount FROM `sys_order_detail` a GROUP BY a.`OrderId`) c ON b.`Id`=c.`OrderId` WHERE c.`ProductCount`&gt;2
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询作为临时表，并与现有表T做RIGHT JOIN关联，用法:
+    /// <code>
+    /// ... ...
+    /// .RightJoin(f =&gt; f.From&lt;OrderDetail&gt;()
+    ///     .GroupBy(x =&gt; x.OrderId)
+    ///     .Select((x, y) =&gt; new
+    ///     {
+    ///         y.OrderId,
+    ///         ProductCount = x.CountDistinct(y.ProductId)
+    ///     }), (a, b, c) =&gt; b.Id == c.OrderId)
+    /// ... ...
+    /// </code>
+    /// 生成的SQL：
+    /// <code>
+    /// ... ... RIGHT JOIN (SELECT a.`OrderId`,COUNT(DISTINCT a.`ProductId`) AS ProductCount FROM `sys_order_detail` a GROUP BY a.`OrderId`) ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的<paramref name="TOther"/>类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    #endregion
+
+    #region Include
+    /// <summary>
+    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
+    /// 1:1关联关系，随主表一起查询，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// </summary>
+    /// <example>
+    /// 1:1关联关系导航属性
+    /// <code>
+    /// repository.From&lt;Product&gt;()
+    ///   .Include(f =&gt; f.Brand)
+    ///   .Where(f =&gt; f.ProductNo.Contains("PN-00"))
+    ///   .ToSql(out _);
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`Price`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
+    /// </code>
+    /// </example>
+    /// <example>
+    /// 1:1关联关系导航属性
+    /// <code>
+    /// repository.From&lt;Product&gt;()
+    ///   .Include(f =&gt; f.Brand)
+    ///   .Where(f =&gt; f.ProductNo.Contains("PN-00"))
+    ///   .ToSql(out _);
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`Price`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
+    /// </code>
+    /// </example>
+    /// <typeparam name="TMember">导航属性泛型类型</typeparam>
+    /// <param name="memberSelector">导航属性选择表达式</param>
+    /// <returns>返回实体对象，带有导航属性</returns>
+    IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector);
+    /// <summary>
+    /// 单表查询，包含1:N关联方式的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系。
+    /// </summary>
+    /// <typeparam name="TElment">导航属性泛型类型</typeparam>
+    /// <param name="memberSelector">导航属性选择表达式</param>
+    /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
+    /// <returns>返回实体对象，带有导航属性</returns>
+    IIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
+    #endregion
+
+    #region Where/And
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> Where(Expression<Func<T, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null);
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> And(Expression<Func<T, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
+    #endregion
+
+    #region GroupBy/OrderBy
+    /// <summary>
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// <example>
+    /// <code>
+    /// repository.From&lt;User&gt;()
+    ///    .InnerJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
+    ///    .GroupBy((a, b) =&gt; new { a.Id, a.Name, b.CreatedAt.Date })
+    ///    .OrderBy((x, a, b) =&gt; x.Grouping)
+    ///    .Select((x, a, b) =&gt; new
+    ///    {
+    ///        x.Grouping,
+    ///        OrderCount = x.Count(b.Id),
+    ///        TotalAmount = x.Sum(b.TotalAmount)
+    ///    })
+    ///    .ToSql(out _);
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ORDER BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE)
+    /// </code>
+    /// </example>
+    /// </summary>
+    /// <typeparam name="TGrouping">分组后的实体对象类型，可以是单个字段类型或是匿名类型</typeparam>
+    /// <param name="groupingExpr">分组表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr);
+    /// <summary>
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderBy((a, b) => new { a.Id, b.Id }) 或是 OrderBy(x => x.CreatedAt.Date)
+    /// </summary>
+    /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
+    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderBy(true, (a, b) => new { a.Id, b.Id }) 或是 OrderBy(true, x => x.CreatedAt.Date)
+    /// </summary>
+    /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
+    /// <param name="condition">排序表达式生效条件，为true生效</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
+    /// <summary>
+    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
+    /// OrderByDescending((a, b) => new { a.Id, b.Id }) 或是 OrderByDescending(x => x.CreatedAt.Date)
+    /// </summary>
+    /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
+    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending(true, (a, b) => new { a.Id, b.Id }) 或是 OrderByDescending(true, x => x.CreatedAt.Date)
+    /// </summary>
+    /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
+    /// <param name="condition">排序表达式生效条件，为true生效</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
+    #endregion
+
+    /// <summary>
+    /// 生成DISTINCT语句，去掉重复数据
+    /// </summary>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> Distinct();
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> Take(int limit);
+    /// <summary>
+    /// 分页查询
+    /// </summary>
+    /// <param name="pageIndex">第几页索引，从1开始</param>
+    /// <param name="pageSize">每页显示条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> Page(int pageIndex, int pageSize);
+
+    #region Select
+    /// <summary>
+    /// 直接返回所有字段
+    /// </summary>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> Select();
+    /// <summary>
+    /// 选择指定字段返回，可以是单个字段或多个字段的匿名对象，用法：
+    /// Select(f => new { f.Id, f.Name }) 或是 Select(x => x.CreatedAt.Date)
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
+    /// <summary>
+    /// 选择指定聚合字段返回，可以是单个聚合字段或多个聚合字段的匿名对象，用法：
+    /// <code>
+    /// repository.From&lt;Order&gt;()
+    ///    .SelectAggregate((x, a) =&gt; new
+    ///    {
+    ///        OrderCount = x.Count(a.Id),
+    ///        TotalAmount = x.Sum(a.TotalAmount)
+    ///    })
+    ///    .ToSql(out _);
+    /// </code>
+    /// 生成的SQL:
+    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` FROM `sys_order`</code>
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型，单个字段类型，或是多个字段的匿名类</typeparam>
+    /// <param name="fieldsExpr">字段选择表达式，单个聚合字段或多个聚合字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr);
+    #endregion
+
+    #region Aggregate
+    #region Count
+    /// <summary>
+    /// 返回数据条数
+    /// </summary>
+    /// <param name="result">返回数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Count(out int result);
+    /// <summary>
+    /// 返回数据条数
+    /// </summary>
+    /// <param name="result">返回数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery LongCount(out long result);
+    /// <summary>
+    /// 返回某个字段的数据条数，用法：
+    /// <code>repository.From&lt;Order&gt;().Count(f =&gt; f.BuyerId);</code>
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Count<TField>(Expression<Func<T, TField>> fieldExpr, out int result);
+    /// <summary>
+    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// <code>repository.From&lt;Order&gt;().CountDistinct(f =&gt; f.BuyerId);</code>
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段去重后的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr, out int result);
+    /// <summary>
+    /// 返回某个字段的数据条数，用法：
+    /// <code>repository.From&lt;Order&gt;().LongCount(f =&gt; f.BuyerId);</code>
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery LongCount<TField>(Expression<Func<T, TField>> fieldExpr, out long result);
+    /// <summary>
+    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// <code>repository.From&lt;Order&gt;().LongCountDistinct(f =&gt; f.BuyerId);</code>
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段去重后的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr, out long result);
+    #endregion
+
+    /// <summary>
+    /// 计算指定字段的求和值
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段的求和值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Sum<TField>(Expression<Func<T, TField>> fieldExpr, out TField result);
+    /// <summary>
+    /// 计算指定字段的平均值
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段的平均值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Avg<TField>(Expression<Func<T, TField>> fieldExpr, out TField result);
+    /// <summary>
+    /// 计算指定字段的最大值
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段的最大值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Max<TField>(Expression<Func<T, TField>> fieldExpr, out TField result);
+    /// <summary>
+    /// 计算指定字段的最小值
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段的最小值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Min<TField>(Expression<Func<T, TField>> fieldExpr, out TField result);
+    #endregion
+
+    #region First/ToList/ToPageList/ToDictionary
+    /// <summary>
+    /// 执行SQL查询，返回T实体所有字段的第一条记录，记录不存在时返回T类型的默认值
+    /// </summary>
+    /// <param name="result">返回T实体或默认值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery First(out T result);
+    /// <summary>
+    /// 执行SQL查询，返回T实体所有字段的记录，记录不存在时返回没有任何元素的空列表
+    /// </summary>
+    /// <param name="result">返回T实体列表或没有任何元素的空列表</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery ToList(out List<T> result);
+    /// <summary>
+    /// 按照指定的分页设置执行SQL查询，返回T实体所有字段的指定条数IPagedList&lt;T&gt;列表，记录不存在时返回没有任何元素的空IPagedList&lt;T&gt;列表
+    /// </summary>
+    /// <param name="result">返回IPagedList&lt;T&gt;列表或没有任何元素的空IPagedList&lt;T&gt;列表</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery ToPageList(out IPagedList<T> result);
+    /// <summary>
+    /// 执行SQL查询，返回T实体所有字段的记录并转化为Dictionary&lt;TKey, TValue&gt;字典，记录不存在时返回没有任何元素的空Dictionary&lt;TKey, TValue&gt;字典
+    /// </summary>
+    /// <typeparam name="TKey">字典Key类型</typeparam>
+    /// <typeparam name="TValue">字典Value类型</typeparam>
+    /// <param name="keySelector">字典Key选择委托</param>
+    /// <param name="valueSelector">字典Value选择委托</param>
+    /// <param name="result">返回Dictionary&lt;TKey, TValue&gt;字典或没有任何元素的空Dictionary&lt;TKey, TValue&gt;字典</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector, out Dictionary<TKey, TValue> result) where TKey : notnull;
+    #endregion
+
+    // <summary>
+    /// 返回当前查询的SQL和参数列表
+    /// </summary>
+    /// <param name="dbParameters">参数列表</param>
+    /// <returns>当前查询的SQL</returns>
+    string ToSql(out List<IDbDataParameter> dbParameters);
+}
+<#
+    count = 15;
+    tables = "T1";
+    currentTable = "T1";
+    var tableAlias = "a";
+    var currentAlias = "a";    
+    for (int i = 2; i < count; i++)
+    {
+        tables += $", T{i}";
+        tableAlias += $", {(char)(96 + i)}";
+	currentAlias = $"{(char)(97 + i)}";
+#>
+/// <summary>
+/// 多表<#=tables#>查询
+/// </summary>
+/// <typeparam name="T1">表T1实体类型</typeparam>
+<#
+        for (int j = 2; j <= i; j++)
+        {
+            currentTable = $"T{j}";
+#>
+/// <typeparam name="<#=currentTable#>">表<#=currentTable#>实体类型</typeparam>
+<#      }#>
+public interface IMultiQuery<<#=tables#>>
+{
+    #region CTE NextWith/NextWithRecursive
+    /// <summary>
+    /// 继续定义CTE With子句，在Select查询之前，可以定义一个或多个CTE子句，多个CTE With子句要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ..., "Cte1")
+    ///     ... ...
+    ///     .NextWith(f =&gt; ..., "CteN")
+    ///     ... ...
+    ///     .Select((<#=tables#>) =&gt; new { ... ... })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH Cte1(...) AS 
+    /// (
+    ///     SELECT ... FROM ... WHERE ...
+    /// ),
+    /// ... ...
+    /// CteN(...) AS
+    /// (
+    ///     SELECT ... FROM ... WHERE ... UNION ALL ...
+    /// )
+    /// SELECT ... FROM Cte1 a INNER JOIN Cte2 b ON xxx ... LEFT JOIN CteN ON ... ... WHERE ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表的别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>, TTarget> NextWith<TTarget>(Func<IFromQuery, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');    
+    /// <summary>
+    /// 继续定义可递归的CTE With子句，可以引用CTE自身。在Select查询之前，可以定义一个或多个CTE子句，多个CTE With子句要连续定义，首个CTE With子句必须也是可递归的，才能使用本方法，用法：
+    /// <code>
+    /// repository
+    ///     .FromWithRecursive((f, cte) =&gt; f.From&lt;Menu&gt;()
+    ///             .Where(x =&gt; x.Id == 1)
+    ///             .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
+    ///         .UnionAllRecursive((x, y) =&gt; x.From&lt;Menu&gt;()
+    ///             .InnerJoinRecursive(y, cte, (a, b) =&gt; a.ParentId == b.Id)
+    ///             .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId })), "MenuList")
+    ///     ... ...
+    ///     .NextWithRecursive((f, cte) =&gt; f.From&lt;Page, Menu&gt;()
+    ///             .Where((a, b) =&gt; a.Id == b.PageId)
+    ///             .Select((x, y) =&gt; new { y.Id, y.ParentId, x.Url })
+    ///         .UnionAll(x =&gt; x.From&lt;Menu&gt;()
+    ///             .LeftJoin&lt;Page&gt;((a, b) =&gt; a.PageId == b.Id)
+    ///             .Where((a, b) =&gt; a.Id &gt; 1)
+    ///             .Select((x, y) =&gt; new { x.Id, x.ParentId, y.Url })), "MenuPageList")
+    ///     ... ...
+    ///     .Select((<#=tableAlias#>) =&gt; new { ... ... })
+    ///     .ToList();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// WITH RECURSIVE MenuList(Id,Name,ParentId) AS 
+    /// (
+    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
+    ///     SELECT a.`Id`, a.`Name`, a.`ParentId` FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id`
+    /// ),
+    /// ... ...
+    /// MenuPageList(Id,ParentId,Url) AS
+    /// (
+    ///     SELECT a.`Id`,a.`ParentId`,b.`Url` FROM `sys_menu` a,`sys_page` b WHERE a.`PageId`=b.Id UNION ALL
+    ///     SELECT a.`Id`,a.`ParentId`,b.`Url` FROM `sys_menu` a INNER JOIN MenuList b ON a.`Id`=b.`ParentId`
+    /// ),
+    /// ... ...
+    /// SELECT ... FROM MenuList a INNER JOIN ... INNER JOIN MenuPageList f ON ... .... WHERE ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TTarget">当前CTE With子句临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <code>
+    /// f.From&lt;Page&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
+    ///     .Where((a, b) =&gt; a.Id == 1)
+    ///     .Select((x, y) =&gt; new { y.Id, x.Url })
+    /// </code>
+    /// </param>
+    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>, TTarget> NextWithRecursive<TTarget>(Func<IFromQuery, string, IFromQuery<TTarget>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    #endregion
+
+    #region WithTable
+    /// <summary>
+    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository
+    ///     ... ...
+    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;()
+    ///         .Where((a, b) =&gt; a.Id == b.PageId)
+    ///         .Select((x, y) =&gt; new { y.Id, y.ParentId, x.Url }))
+    ///     .InnerJoin((<#=tableAlias#>) =&gt; ...)
+    /// </code>
+    /// 生成的SQL：
+    /// <code>
+    /// ... (SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE c.`Id`=d.`PageId`) <#=currentAlias#> INNER JOIN ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQuery">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery);
+    #endregion
+
+    #region Include
+    /// <summary>
+    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
+    /// 可以通过使用InnerJoin(Expression&lt;Func&lt;<#=tables#>, bool&gt;&gt; joinOn)、RightJoin(Expression&lt;Func&lt;<#=tables#>, bool&gt;&gt; joinOn)方法改变默认关联方式。
+    /// 1:1关联关系，随主表一起查询，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// </summary>
+    /// <example>
+    /// 1:1关联关系导航属性
+    /// <code>
+    /// repository.From&lt;Product&gt;()
+    ///   .Include(f =&gt; f.Brand)
+    ///   .Where(f =&gt; f.ProductNo.Contains("PN-00"))
+    ///   .ToSql(out _);
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`Price`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
+    /// </code>
+    /// </example>
+    /// <example>
+    /// 1:1关联关系导航属性
+    /// <code>
+    /// repository.From&lt;Product&gt;()
+    ///   .Include(f =&gt; f.Brand)
+    ///   .Where(f =&gt; f.ProductNo.Contains("PN-00"))
+    ///   .ToSql(out _);
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`Price`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
+    /// </code>
+    /// </example>
+    /// <typeparam name="TMember">导航属性泛型类型</typeparam>
+    /// <param name="memberSelector">导航属性选择表达式</param>
+    /// <returns>返回实体对象，带有导航属性</returns>
+    IIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector);
+    /// <summary>
+    /// 单表查询，包含1:N关联方式的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系。
+    /// 可以通过使用InnerJoin(Expression&lt;Func&lt;T, bool&gt;&gt; joinOn)、RightJoin(Expression&lt;Func&lt;T, bool&gt;&gt; joinOn)方法改变默认关联方式
+    /// </summary>
+    /// <typeparam name="TElment">导航属性泛型类型</typeparam>
+    /// <param name="memberSelector">导航属性选择表达式</param>
+    /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
+    /// <returns>返回实体对象，带有导航属性</returns>
+    IIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
+    #endregion
+
+    #region Join
+    /// <summary>
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>
+    /// repository.From&lt;<#=tables#>&gt;()
+    ///     ... ...
+    ///     .InnerJoin((<#=tableAlias#>) =&gt; ...)
+    ///     ... ...
+     /// </code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>
+    /// repository.From&lt;<#=tables#>&gt;()
+    ///     ... ...
+    ///     .LeftJoin((<#=tableAlias#>) =&gt; ...)
+    ///     ... ...
+    /// </code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>
+    /// repository.From&lt;<#=tables#>&gt;()
+    ///     ... ...
+    ///     .RightJoin((<#=tableAlias#>) =&gt; ...)
+    ///     ... ...
+    /// </code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
+    /// <code>
+    /// repository.From&lt;<#=tables#>&gt;()
+    ///     ... ...
+    ///     .InnerJoin&lt;TOther&gt;((<#=tableAlias#>) =&gt; ...)
+    ///     ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// repository.From&lt;<#=tables#>&gt;()
+    ///     ... ...
+    ///     .LeftJoin&lt;TOther&gt;((<#=tableAlias#>) =&gt; ...)
+    ///     ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// repository.From&lt;<#=tables#>&gt;()
+    ///     ... ...
+    ///     .RightJoin&lt;<#=currentTable#>&gt;((<#=tableAlias#>) =&gt; ...)
+    ///     ... ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+
+    /// <summary>
+    /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，用法:
+    /// <code>
+    /// repository.From&lt;<#=tables#>&gt;()
+    ///     ... ...
+    ///     .InnerJoin((<#=tableAlias#>) =&gt; f.From&lt;OrderDetail&gt;()
+    ///         .GroupBy(x =&gt; x.OrderId)
+    ///         .Select((x, y) =&gt; new
+    ///         {
+    ///             y.OrderId,
+    ///             ProductCount = x.CountDistinct(y.ProductId)
+    ///         }), (<#=tableAlias#>) =&gt; ...)
+    ///     ... ...
+    /// </code>
+    /// 生成的SQL：
+    /// <code>
+    /// ... INNER JOIN (SELECT a.`OrderId`,COUNT(DISTINCT a.`ProductId`) AS ProductCount FROM `sys_order_detail` a GROUP BY a.`OrderId`) <#=currentAlias#> ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQuery">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQuery子查询作为临时表，并与现有表做LEFT JOIN关联，用法:
+    /// <code>
+    /// repository.From&lt;<#=tables#>&gt;()
+    ///     ... ...
+    ///     .LeftJoin((<#=tableAlias#>) =&gt; f.From&lt;OrderDetail&gt;()
+    ///         .GroupBy(x =&gt; x.OrderId)
+    ///         .Select((x, y) =&gt; new
+    ///         {
+    ///             y.OrderId,
+    ///             ProductCount = x.CountDistinct(y.ProductId)
+    ///         }), (<#=tableAlias#>) =&gt; ...)
+    ///     ... ...
+    /// </code>
+    /// 生成的SQL：
+    /// <code>
+    /// ... INNER JOIN (SELECT a.`OrderId`,COUNT(DISTINCT a.`ProductId`) AS ProductCount FROM `sys_order_detail` a GROUP BY a.`OrderId`) <#=currentAlias#> ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQuery">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQuery子查询作为临时表，并与现有表做RIGHT JOIN关联，用法:
+    /// <code>
+    /// repository.From&lt;<#=tables#>&gt;()
+    ///     ... ...
+    ///     .RightJoin((<#=tableAlias#>) =&gt; f.From&lt;OrderDetail&gt;()
+    ///         .GroupBy(x =&gt; x.OrderId)
+    ///         .Select((x, y) =&gt; new
+    ///         {
+    ///             y.OrderId,
+    ///             ProductCount = x.CountDistinct(y.ProductId)
+    ///         }), (<#=tableAlias#>) =&gt; ...)
+    ///     ... ...
+    /// </code>
+    /// 生成的SQL：
+    /// <code>
+    /// ... INNER JOIN (SELECT a.`OrderId`,COUNT(DISTINCT a.`ProductId`) AS ProductCount FROM `sys_order_detail` a GROUP BY a.`OrderId`) <#=currentAlias#> ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQuery">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    #endregion
+
+    #region Where/And
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
+    #endregion
+    
+    #region GroupBy/OrderBy
+    /// <summary>
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// <example>
+    /// <code>
+    /// repository.From&lt;User&gt;()
+    ///    .InnerJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
+    ///    .GroupBy((a, b) =&gt; new { a.Id, a.Name, b.CreatedAt.Date })
+    ///    .OrderBy((x, a, b) =&gt; x.Grouping)
+    ///    .Select((x, a, b) =&gt; new
+    ///    {
+    ///        x.Grouping,
+    ///        OrderCount = x.Count(b.Id),
+    ///        TotalAmount = x.Sum(b.TotalAmount)
+    ///    })
+    ///    .ToSql(out _);
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ORDER BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE)
+    /// </code>
+    /// </example>
+    /// </summary>
+    /// <typeparam name="TGrouping">分组后的实体对象类型，可以是单个字段类型或是匿名类型</typeparam>
+    /// <param name="groupingExpr">分组表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr);
+    /// <summary>
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderBy((a, b) => new { a.Id, b.Id }) 或是 OrderBy(x => x.CreatedAt.Date)
+    /// </summary>
+    /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
+    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderBy(true, (a, b) => new { a.Id, b.Id }) 或是 OrderBy(true, x => x.CreatedAt.Date)
+    /// </summary>
+    /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
+    /// <param name="condition">排序表达式生效条件，为true生效</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+    /// <summary>
+    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
+    /// OrderByDescending((a, b) => new { a.Id, b.Id }) 或是 OrderByDescending(x => x.CreatedAt.Date)
+    /// </summary>
+    /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
+    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending(true, (a, b) => new { a.Id, b.Id }) 或是 OrderByDescending(true, x => x.CreatedAt.Date)
+    /// </summary>
+    /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
+    /// <param name="condition">排序表达式生效条件，为true生效</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+    #endregion
+
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>    
+    IMultiQuery<<#=tables#>> Take(int limit);
+
+    #region Select
+    /// <summary>
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// Select((<#=tableAlias#>) => new { f.Id, f.Name }) 或是 Select((<#=tableAlias#>) => x.CreatedAt.Date)
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fieldsExpr">字段选择表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);
+    /// <summary>
+    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
+    /// <code>
+    /// repository.From&lt;Order&gt;()
+    ///    ... ...
+    ///    .SelectAggregate((x, <#=tableAlias#>) =&gt; new
+    ///    {
+    ///        OrderCount = x.Count(a.Id),
+    ///        TotalAmount = x.Sum(a.TotalAmount)
+    ///    })
+    ///    .ToSql(out _);
+    /// </code>
+    /// 生成的SQL:
+    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` FROM ... `sys_order` ... </code>
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
+    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, <#=tables#>, TTarget>> fieldsExpr);
+    #endregion
+
+    #region Aggregate
+    #region Count
+    /// <summary>
+    /// 返回数据条数
+    /// </summary>
+    /// <param name="result">返回数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Count(out int result);
+    /// <summary>
+    /// 返回数据条数
+    /// </summary>
+    /// <param name="result">返回数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery LongCount(out long result);
+    /// <summary>
+    /// 返回某个字段的数据条数，用法：
+    /// <code>repository.From&lt;Order&gt;().Count(f =&gt; f.BuyerId);</code>
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Count<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, out int result);
+    /// <summary>
+    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// <code>repository.From&lt;Order&gt;().CountDistinct(f =&gt; f.BuyerId);</code>
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段去重后的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery CountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, out int result);
+    /// <summary>
+    /// 返回某个字段的数据条数，用法：
+    /// <code>repository.From&lt;Order&gt;().LongCount(f =&gt; f.BuyerId);</code>
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery LongCount<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, out long result);
+    /// <summary>
+    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// <code>repository.From&lt;Order&gt;().LongCountDistinct(f =&gt; f.BuyerId);</code>
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段去重后的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery LongCountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, out long result);
+    #endregion
+
+    /// <summary>
+    /// 计算指定字段的求和值
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段的求和值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, out TField result);
+    /// <summary>
+    /// 计算指定字段的平均值
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段的平均值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Avg<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, out TField result);
+    /// <summary>
+    /// 计算指定字段的最大值
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段的最大值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Max<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, out TField result);
+    /// <summary>
+    /// 计算指定字段的最小值
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段的最小值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Min<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, out TField result);
+    #endregion
+
+    /// <summary>
+    /// 返回当前查询的SQL和参数列表
+    /// </summary>
+    /// <param name="dbParameters">参数列表</param>
+    /// <returns>当前查询的SQL</returns>
+    string ToSql(out List<IDbDataParameter> dbParameters);
+}
+<#  }
+    tables += $", T{count}";
+#>
+public interface IMultiQuery<<#=tables#>>
+{
+    #region Include
+    /// <summary>
+    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
+    /// 可以通过使用InnerJoin(Expression&lt;Func&lt;<#=tables#>, bool&gt;&gt; joinOn)、RightJoin(Expression&lt;Func&lt;<#=tables#>, bool&gt;&gt; joinOn)方法改变默认关联方式。
+    /// 1:1关联关系，随主表一起查询，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// </summary>
+    /// <example>
+    /// 1:1关联关系导航属性
+    /// <code>
+    /// repository.From&lt;Product&gt;()
+    ///   .Include(f =&gt; f.Brand)
+    ///   .Where(f =&gt; f.ProductNo.Contains("PN-00"))
+    ///   .ToSql(out _);
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`Price`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
+    /// </code>
+    /// </example>
+    /// <example>
+    /// 1:1关联关系导航属性
+    /// <code>
+    /// repository.From&lt;Product&gt;()
+    ///   .Include(f =&gt; f.Brand)
+    ///   .Where(f =&gt; f.ProductNo.Contains("PN-00"))
+    ///   .ToSql(out _);
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`Price`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
+    /// </code>
+    /// </example>
+    /// <typeparam name="TMember">导航属性泛型类型</typeparam>
+    /// <param name="memberSelector">导航属性选择表达式</param>
+    /// <returns>返回实体对象，带有导航属性</returns>
+    IIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector);
+    /// <summary>
+    /// 单表查询，包含1:N关联方式的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系。
+    /// 可以通过使用InnerJoin(Expression&lt;Func&lt;T, bool&gt;&gt; joinOn)、RightJoin(Expression&lt;Func&lt;T, bool&gt;&gt; joinOn)方法改变默认关联方式
+    /// </summary>
+    /// <typeparam name="TElment">导航属性泛型类型</typeparam>
+    /// <param name="memberSelector">导航属性选择表达式</param>
+    /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
+    /// <returns>返回实体对象，带有导航属性</returns>
+    IIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
+    #endregion
+
+    #region Where/And
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
+    #endregion
+    
+    #region GroupBy/OrderBy
+    /// <summary>
+    /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// <example>
+    /// <code>
+    /// repository.From&lt;User&gt;()
+    ///    .InnerJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
+    ///    .GroupBy((a, b) =&gt; new { a.Id, a.Name, b.CreatedAt.Date })
+    ///    .OrderBy((x, a, b) =&gt; x.Grouping)
+    ///    .Select((x, a, b) =&gt; new
+    ///    {
+    ///        x.Grouping,
+    ///        OrderCount = x.Count(b.Id),
+    ///        TotalAmount = x.Sum(b.TotalAmount)
+    ///    })
+    ///    .ToSql(out _);
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ORDER BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE)
+    /// </code>
+    /// </example>
+    /// </summary>
+    /// <typeparam name="TGrouping">分组后的实体对象类型，可以是单个字段类型或是匿名类型</typeparam>
+    /// <param name="groupingExpr">分组表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr);
+    /// <summary>
+    /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderBy((a, b) => new { a.Id, b.Id }) 或是 OrderBy(x => x.CreatedAt.Date)
+    /// </summary>
+    /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
+    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderBy(true, (a, b) => new { a.Id, b.Id }) 或是 OrderBy(true, x => x.CreatedAt.Date)
+    /// </summary>
+    /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
+    /// <param name="condition">排序表达式生效条件，为true生效</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+    /// <summary>
+    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
+    /// OrderByDescending((a, b) => new { a.Id, b.Id }) 或是 OrderByDescending(x => x.CreatedAt.Date)
+    /// </summary>
+    /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
+    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending(true, (a, b) => new { a.Id, b.Id }) 或是 OrderByDescending(true, x => x.CreatedAt.Date)
+    /// </summary>
+    /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
+    /// <param name="condition">排序表达式生效条件，为true生效</param>
+    /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+    #endregion
+
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>    
+    IMultiQuery<<#=tables#>> Take(int limit);
+
+    #region Select
+    /// <summary>
+    /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
+    /// Select((<#=tableAlias#>) => new { f.Id, f.Name }) 或是 Select((<#=tableAlias#>) => x.CreatedAt.Date)
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fieldsExpr">字段选择表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);
+    #endregion
+
+    #region Aggregate
+    #region Count
+    /// <summary>
+    /// 返回数据条数
+    /// </summary>
+    /// <param name="result">返回数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Count(out int result);
+    /// <summary>
+    /// 返回数据条数
+    /// </summary>
+    /// <param name="result">返回数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery LongCount(out long result);
+    /// <summary>
+    /// 返回某个字段的数据条数，用法：
+    /// <code>repository.From&lt;Order&gt;().Count(f =&gt; f.BuyerId);</code>
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Count<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, out int result);
+    /// <summary>
+    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// <code>repository.From&lt;Order&gt;().CountDistinct(f =&gt; f.BuyerId);</code>
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段去重后的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery CountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, out int result);
+    /// <summary>
+    /// 返回某个字段的数据条数，用法：
+    /// <code>repository.From&lt;Order&gt;().LongCount(f =&gt; f.BuyerId);</code>
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery LongCount<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, out long result);
+    /// <summary>
+    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// <code>repository.From&lt;Order&gt;().LongCountDistinct(f =&gt; f.BuyerId);</code>
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段去重后的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery LongCountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, out long result);
+    #endregion
+
+    /// <summary>
+    /// 计算指定字段的求和值
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段的求和值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, out TField result);
+    /// <summary>
+    /// 计算指定字段的平均值
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段的平均值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Avg<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, out TField result);
+    /// <summary>
+    /// 计算指定字段的最大值
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段的最大值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Max<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, out TField result);
+    /// <summary>
+    /// 计算指定字段的最小值
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldExpr">字段表达式</param>
+    /// <param name="result">返回该字段的最小值</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Min<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, out TField result);
+    #endregion
+
+    /// <summary>
+    /// 返回当前查询的SQL和参数列表
+    /// </summary>
+    /// <param name="dbParameters">参数列表</param>
+    /// <returns>当前查询的SQL</returns>
+    string ToSql(out List<IDbDataParameter> dbParameters);
+}

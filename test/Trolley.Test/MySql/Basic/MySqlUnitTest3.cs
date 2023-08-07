@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using Trolley.MySqlConnector;
 using Xunit;
 
@@ -411,7 +412,27 @@ public class MySqlUnitTest3 : UnitTestBase
     [Fact]
     public void Update_Enum_Fields()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
+        var sql = repository.Update<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .Set((x, y) => new
+            {
+                TotalAmount = 200.56,
+                OrderNo = x.OrderNo + "-111",
+                BuyerSource = y.SourceType
+            })
+            .SetValue(x => x.Products, new List<int> { 1, 2, 3 })
+            .Where((a, b) => a.BuyerId == 1)
+            .ToSql(out var parameters);
+        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1");
+        Assert.True(parameters[0].ParameterName == "@TotalAmount");
+        Assert.True(parameters[0].Value.GetType() == typeof(double));
+        Assert.True((double)parameters[0].Value == 200.56);
+        Assert.True(parameters[1].ParameterName == "@Products");
+        Assert.True(parameters[1].Value.GetType() == typeof(string));
+        Assert.True((string)parameters[1].Value == JsonSerializer.Serialize(new List<int> { 1, 2, 3 }));
+
         var sql1 = repository.Update<User>()
             .WithBy(new
             {

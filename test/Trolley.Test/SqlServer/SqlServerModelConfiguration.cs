@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using MySqlConnector;
+using System.Data;
 
 namespace Trolley.Test;
 
@@ -16,6 +17,7 @@ class SqlServerModelConfiguration : IModelConfiguration
             f.Member(t => t.CompanyId).Field(nameof(User.CompanyId)).NativeDbType(SqlDbType.Int);
             f.Member(t => t.GuidField).Field(nameof(User.GuidField)).NativeDbType(SqlDbType.UniqueIdentifier);
             f.Member(t => t.SomeTimes).Field(nameof(User.SomeTimes)).NativeDbType(SqlDbType.Time);
+            f.Member(t => t.SourceType).Field(nameof(User.SourceType)).NativeDbType(SqlDbType.NVarChar);
             f.Member(t => t.IsEnabled).Field(nameof(User.IsEnabled)).NativeDbType(SqlDbType.Bit);
             f.Member(t => t.CreatedAt).Field(nameof(User.CreatedAt)).NativeDbType(SqlDbType.DateTime);
             f.Member(t => t.CreatedBy).Field(nameof(User.CreatedBy)).NativeDbType(SqlDbType.Int);
@@ -49,6 +51,7 @@ class SqlServerModelConfiguration : IModelConfiguration
             f.Member(t => t.ProductCount).Field(nameof(Order.ProductCount)).NativeDbType(SqlDbType.Int);
             f.Member(t => t.TotalAmount).Field(nameof(Order.TotalAmount)).NativeDbType(SqlDbType.Float);
             f.Member(t => t.BuyerId).Field(nameof(Order.BuyerId)).NativeDbType(SqlDbType.Int);
+            f.Member(t => t.BuyerSource).Field(nameof(Order.BuyerSource)).NativeDbType(SqlDbType.NVarChar);
             f.Member(t => t.SellerId).Field(nameof(Order.SellerId)).NativeDbType(SqlDbType.Int);
             //特殊类型JSON
             f.Member(t => t.Products).Field(nameof(Order.Products)).NativeDbType(SqlDbType.NText).TypeHandler<JsonTypeHandler>();

@@ -16,6 +16,7 @@ class MySqlModelConfiguration : IModelConfiguration
             f.Member(t => t.CompanyId).Field(nameof(User.CompanyId)).NativeDbType(MySqlDbType.Int32);
             f.Member(t => t.GuidField).Field(nameof(User.GuidField)).NativeDbType(MySqlDbType.Guid);
             f.Member(t => t.SomeTimes).Field(nameof(User.SomeTimes)).NativeDbType(MySqlDbType.Time);
+            f.Member(t => t.SourceType).Field(nameof(User.SourceType)).NativeDbType(MySqlDbType.VarChar);
             f.Member(t => t.IsEnabled).Field(nameof(User.IsEnabled)).NativeDbType(MySqlDbType.Bool);
             f.Member(t => t.CreatedAt).Field(nameof(User.CreatedAt)).NativeDbType(MySqlDbType.DateTime);
             f.Member(t => t.CreatedBy).Field(nameof(User.CreatedBy)).NativeDbType(MySqlDbType.Int32);
@@ -49,6 +50,7 @@ class MySqlModelConfiguration : IModelConfiguration
             f.Member(t => t.ProductCount).Field(nameof(Order.ProductCount)).NativeDbType(MySqlDbType.Int32);
             f.Member(t => t.TotalAmount).Field(nameof(Order.TotalAmount)).NativeDbType(MySqlDbType.Double);
             f.Member(t => t.BuyerId).Field(nameof(Order.BuyerId)).NativeDbType(MySqlDbType.Int32);
+            f.Member(t => t.BuyerSource).Field(nameof(Order.BuyerSource)).NativeDbType(MySqlDbType.VarChar);
             f.Member(t => t.SellerId).Field(nameof(Order.SellerId)).NativeDbType(MySqlDbType.Int32);
             //特殊类型JSON
             f.Member(t => t.Products).Field(nameof(Order.Products)).NativeDbType(MySqlDbType.JSON).TypeHandler<JsonTypeHandler>();

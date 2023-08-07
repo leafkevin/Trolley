@@ -11,7 +11,7 @@ namespace Trolley;
 /// 删除数据
 /// </summary>
 /// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
-public interface IDelete<TEntity>
+public interface IMultiDelete<TEntity>
 {
     /// <summary>
     /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，用法：
@@ -26,13 +26,13 @@ public interface IDelete<TEntity>
     /// </summary>
     /// <param name="predicate">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
     /// <returns>返回删除对象</returns>
-    IDeleted<TEntity> Where(object keys);
+    IMultiDeleted<TEntity> Where(object keys);
     /// <summary>
     /// 使用predicate表达式删除数据，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回删除对象</returns>
-    IDeleting<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
+    IMultiDeleting<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -41,9 +41,9 @@ public interface IDelete<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回更新对象</returns>
-    IDeleting<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
+    IMultiDeleting<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
 }
-public interface IDeleted<TEntity>
+public interface IMultiDeleted<TEntity>
 {
     /// <summary>
     /// 执行删除动作，并返回删除行数
@@ -63,14 +63,14 @@ public interface IDeleted<TEntity>
     /// <returns>当前查询的SQL</returns>
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
-public interface IDeleting<TEntity> : IDeleted<TEntity>
+public interface IMultiDeleting<TEntity> : IMultiDeleted<TEntity>
 {
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IDeleting<TEntity> And(Expression<Func<TEntity, bool>> predicate);
+    IMultiDeleting<TEntity> And(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -79,5 +79,5 @@ public interface IDeleting<TEntity> : IDeleted<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回更新对象</returns>
-    IDeleting<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
+    IMultiDeleting<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
 }

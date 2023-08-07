@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq.Expressions;
+using System.Reflection.PortableExecutable;
+using System.Runtime.CompilerServices;
+using System.Security.AccessControl;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -14,9 +17,9 @@ namespace Trolley;
 public class Repository : IRepository
 {
     #region 字段
-    private static ConcurrentDictionary<int, string> sqlCache = new();
-    private static ConcurrentDictionary<int, object> queryCommandInitializerCache = new();
-    private static ConcurrentDictionary<int, object> sqlCommandInitializerCache = new();
+    private static ConcurrentDictionary<int, string> sqlCache = RepositoryHelper.sqlCache;
+    private static ConcurrentDictionary<int, object> queryCommandInitializerCache = RepositoryHelper.queryCommandInitializerCache;
+    private static ConcurrentDictionary<int, object> sqlCommandInitializerCache = RepositoryHelper.sqlCommandInitializerCache;
     private bool isParameterized = false;
     private TheaConnection connection;
     #endregion
@@ -140,55 +143,11 @@ public class Repository : IRepository
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
+        var entityType = typeof(TEntity);
         Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
         if (parameters != null)
-        {
-            if (parameters is Dictionary<string, object>)
-            {
-                commandInitializer = (command, ormProvider, parameter) =>
-                {
-                    var dict = parameter as Dictionary<string, object>;
-                    foreach (var item in dict)
-                    {
-                        var parameterName = this.OrmProvider.ParameterPrefix + item.Key;
-                        if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                            continue;
-                        var dbParameter = this.OrmProvider.CreateParameter(parameterName, dict[item.Key]);
-                        command.Parameters.Add(dbParameter);
-                    }
-                };
-            }
-            else
-            {
-                var parameterType = parameters.GetType();
-                var cacheKey = HashCode.Combine("Execute", this.connection, rawSql, parameterType);
-                if (!sqlCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
-                {
-                    var parameterMapper = this.MapProvider.GetEntityMap(parameterType);
-                    var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
-                    var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-                    var parameterExpr = Expression.Parameter(typeof(object), "parameter");
+            commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.connection, this.OrmProvider, this.MapProvider, rawSql, parameters);
 
-                    var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
-                    var blockParameters = new List<ParameterExpression>();
-                    var blockBodies = new List<Expression>();
-                    blockParameters.Add(typedParameterExpr);
-                    blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
-
-                    foreach (var memberMapper in parameterMapper.MemberMaps)
-                    {
-                        var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-                        if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                            continue;
-                        var parameterNameExpr = Expression.Constant(parameterName);
-                        RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, memberMapper, this.OrmProvider, blockBodies);
-                    }
-                    commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
-                    sqlCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
-                }
-                commandInitializer = commandInitializerDelegate as Action<IDbCommand, IOrmProvider, object>;
-            }
-        }
         using var command = this.connection.CreateCommand();
         command.CommandText = rawSql;
         command.CommandType = CommandType.Text;
@@ -202,7 +161,6 @@ public class Repository : IRepository
         using var reader = command.ExecuteReader(behavior);
         if (reader.Read())
         {
-            var entityType = typeof(TEntity);
             if (entityType.IsEntityType())
                 result = reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
             else result = reader.To<TEntity>();
@@ -214,61 +172,13 @@ public class Repository : IRepository
     }
     public async Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
     {
-        if (parameters == null)
-            throw new ArgumentNullException(nameof(parameters));
-
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
+        var entityType = typeof(TEntity);
         Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
         if (parameters != null)
-        {
-            if (parameters is Dictionary<string, object>)
-            {
-                commandInitializer = (command, ormProvider, parameter) =>
-                {
-                    var dict = parameter as Dictionary<string, object>;
-                    foreach (var item in dict)
-                    {
-                        var parameterName = this.OrmProvider.ParameterPrefix + item.Key;
-                        if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                            continue;
-                        var dbParameter = this.OrmProvider.CreateParameter(parameterName, dict[item.Key]);
-                        command.Parameters.Add(dbParameter);
-                    }
-                };
-            }
-            else
-            {
-                var parameterType = parameters.GetType();
-                var cacheKey = HashCode.Combine("QueryRaw", this.connection, rawSql, parameterType);
-                if (!sqlCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
-                {
-                    var parameterMapper = this.MapProvider.GetEntityMap(parameterType);
-                    var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
-                    var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-                    var parameterExpr = Expression.Parameter(typeof(object), "parameter");
-
-                    var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
-                    var blockParameters = new List<ParameterExpression>();
-                    var blockBodies = new List<Expression>();
-                    blockParameters.Add(typedParameterExpr);
-                    blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
-
-                    foreach (var memberMapper in parameterMapper.MemberMaps)
-                    {
-                        var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-                        if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                            continue;
-                        var parameterNameExpr = Expression.Constant(parameterName);
-                        RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, memberMapper, this.OrmProvider, blockBodies);
-                    }
-                    commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
-                    sqlCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
-                }
-                commandInitializer = commandInitializerDelegate as Action<IDbCommand, IOrmProvider, object>;
-            }
-        }
+            commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.connection, this.OrmProvider, this.MapProvider, rawSql, parameters);
 
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = rawSql;
@@ -287,7 +197,6 @@ public class Repository : IRepository
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
         {
-            var entityType = typeof(TEntity);
             if (entityType.IsEntityType())
                 result = reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
             else result = reader.To<TEntity>();
@@ -303,108 +212,11 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var whereObjType = whereObj.GetType();
-        var sqlCacheKey = HashCode.Combine("Query", this.connection, entityType, typeof(object));
-        if (!sqlCache.TryGetValue(sqlCacheKey, out var sql))
-        {
-            var index = 0;
-            var entityMapper = this.MapProvider.GetEntityMap(entityType);
-            var builder = new StringBuilder("SELECT ");
-            foreach (var propMapper in entityMapper.MemberMaps)
-            {
-                if (propMapper.IsIgnore || propMapper.IsNavigation
-                    || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
-                    continue;
-
-                if (index > 0) builder.Append(',');
-                builder.Append(this.OrmProvider.GetFieldName(propMapper.FieldName));
-                if (propMapper.FieldName != propMapper.MemberName)
-                    builder.Append(" AS " + this.OrmProvider.GetFieldName(propMapper.MemberName));
-                index++;
-            }
-            builder.Append($" FROM {this.OrmProvider.GetTableName(entityMapper.TableName)}");
-            sql = builder.ToString();
-            sqlCache.TryAdd(sqlCacheKey, sql);
-        }
-
-        Func<IDbCommand, IOrmProvider, string, object, string> commandSqlInitializer = null;
-        if (whereObj is Dictionary<string, object> dict)
-        {
-            commandSqlInitializer = (command, ormProvider, sql, whereObj) =>
-            {
-                var dict = whereObj as Dictionary<string, object>;
-                var entityMapper = this.MapProvider.GetEntityMap(entityType);
-                var builder = new StringBuilder(" WHERE ");
-                int index = 0;
-                foreach (var item in dict)
-                {
-                    if (!entityMapper.TryGetMemberMap(item.Key, out var memberMapper)
-                        || memberMapper.IsIgnore || memberMapper.IsNavigation
-                        || (memberMapper.MemberType.IsEntityType() && memberMapper.TypeHandler == null))
-                        continue;
-
-                    var parameterName = this.OrmProvider.ParameterPrefix + item.Key;
-                    if (index > 0) builder.Append(" AND ");
-                    builder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
-
-                    if (memberMapper.NativeDbType != null)
-                        command.Parameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, item.Value));
-                    else command.Parameters.Add(this.OrmProvider.CreateParameter(parameterName, item.Value));
-                    index++;
-                }
-                builder.Insert(0, sql);
-                return builder.ToString();
-            };
-        }
-        else
-        {
-            var cacheKey = HashCode.Combine("Query", this.connection, entityType, whereObjType);
-            if (!queryCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
-            {
-                var entityMapper = this.MapProvider.GetEntityMap(entityType);
-                var whereObjMapper = this.MapProvider.GetEntityMap(whereObjType);
-                var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
-                var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-                var sqlExpr = Expression.Parameter(typeof(string), "sql");
-                var whereObjExpr = Expression.Parameter(typeof(object), "whereObj");
-
-                var typedWhereObjExpr = Expression.Variable(whereObjType, "typedWhereObj");
-                var blockParameters = new List<ParameterExpression>();
-                var blockBodies = new List<Expression>();
-                blockParameters.Add(typedWhereObjExpr);
-                blockBodies.Add(Expression.Assign(typedWhereObjExpr, Expression.Convert(whereObjExpr, whereObjType)));
-
-                var index = 0;
-                var builder = new StringBuilder(" WHERE ");
-                foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
-                {
-                    if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper)
-                        || propMapper.IsIgnore || propMapper.IsNavigation
-                        || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
-                        continue;
-
-                    var parameterName = this.OrmProvider.ParameterPrefix + propMapper.MemberName;
-                    var parameterNameExpr = Expression.Constant(parameterName, typeof(string));
-                    RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedWhereObjExpr, propMapper, this.OrmProvider, blockBodies);
-                    if (index > 0) builder.Append(" AND ");
-                    builder.Append($"{this.OrmProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
-                    index++;
-                }
-                var methodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
-                var returnExpr = Expression.Call(methodInfo, sqlExpr, Expression.Constant(builder.ToString(), typeof(string)));
-
-                var resultLabelExpr = Expression.Label(typeof(string));
-                blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
-                blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Constant(null, typeof(string))));
-
-                commandInitializerDelegate = Expression.Lambda<Func<IDbCommand, IOrmProvider, string, object, string>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, sqlExpr, whereObjExpr).Compile();
-                queryCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
-            }
-            commandSqlInitializer = (Func<IDbCommand, IOrmProvider, string, object, string>)commandInitializerDelegate;
-        }
+        var sql = RepositoryHelper.BuildQuerySqlPart(this.connection, this.OrmProvider, this.MapProvider, entityType);
+        var commandInitializer = RepositoryHelper.BuildQuerySqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
 
         using var command = this.connection.CreateCommand();
-        command.CommandText = commandSqlInitializer?.Invoke(command, this.OrmProvider, sql, whereObj);
+        command.CommandText = commandInitializer?.Invoke(command, this.OrmProvider, sql, whereObj);
         command.CommandType = CommandType.Text;
         command.Transaction = this.Transaction;
 
@@ -429,109 +241,11 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var whereObjType = whereObj.GetType();
-        var sqlCacheKey = HashCode.Combine("Query", this.connection, entityType, typeof(object));
-        if (!sqlCache.TryGetValue(sqlCacheKey, out var sql))
-        {
-            var index = 0;
-            var entityMapper = this.MapProvider.GetEntityMap(entityType);
-            var builder = new StringBuilder("SELECT ");
-            foreach (var propMapper in entityMapper.MemberMaps)
-            {
-                if (propMapper.IsIgnore || propMapper.IsNavigation
-                    || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
-                    continue;
-
-                if (index > 0) builder.Append(',');
-                builder.Append(this.OrmProvider.GetFieldName(propMapper.FieldName));
-                if (propMapper.FieldName != propMapper.MemberName)
-                    builder.Append(" AS " + this.OrmProvider.GetFieldName(propMapper.MemberName));
-                index++;
-            }
-            builder.Append($" FROM {this.OrmProvider.GetTableName(entityMapper.TableName)}");
-            sql = builder.ToString();
-            sqlCache.TryAdd(sqlCacheKey, sql);
-        }
-
-        Func<IDbCommand, IOrmProvider, string, object, string> commandSqlInitializer = null;
-        if (whereObj is Dictionary<string, object> dict)
-        {
-            commandSqlInitializer = (command, ormProvider, sql, whereObj) =>
-            {
-                var dict = whereObj as Dictionary<string, object>;
-                var entityMapper = this.MapProvider.GetEntityMap(entityType);
-                var builder = new StringBuilder(" WHERE ");
-                int index = 0;
-                foreach (var item in dict)
-                {
-                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper)
-                        || propMapper.IsIgnore || propMapper.IsNavigation
-                        || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
-                        continue;
-
-                    var parameterName = this.OrmProvider.ParameterPrefix + item.Key;
-                    if (index > 0) builder.Append(" AND ");
-                    builder.Append($"{this.OrmProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
-
-                    if (propMapper.NativeDbType != null)
-                        command.Parameters.Add(this.OrmProvider.CreateParameter(parameterName, propMapper.NativeDbType, item.Value));
-                    else command.Parameters.Add(this.OrmProvider.CreateParameter(parameterName, item.Value));
-                    index++;
-                }
-                builder.Insert(0, sql);
-                return builder.ToString();
-            };
-        }
-        else
-        {
-            var cacheKey = HashCode.Combine("Query", this.connection, entityType, whereObjType);
-            if (!queryCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
-            {
-                var entityMapper = this.MapProvider.GetEntityMap(entityType);
-                var whereObjMapper = this.MapProvider.GetEntityMap(whereObjType);
-                var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
-                var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-                var sqlExpr = Expression.Parameter(typeof(string), "sql");
-                var whereObjExpr = Expression.Parameter(typeof(object), "whereObj");
-
-                var typedWhereObjExpr = Expression.Variable(whereObjType, "typedWhereObj");
-                var blockParameters = new List<ParameterExpression>();
-                var blockBodies = new List<Expression>();
-                blockParameters.Add(typedWhereObjExpr);
-                blockBodies.Add(Expression.Assign(typedWhereObjExpr, Expression.Convert(whereObjExpr, whereObjType)));
-
-                var index = 0;
-                var builder = new StringBuilder(" WHERE ");
-                foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
-                {
-                    if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper)
-                        || propMapper.IsIgnore || propMapper.IsNavigation
-                        || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
-                        continue;
-
-                    var parameterName = this.OrmProvider.ParameterPrefix + propMapper.MemberName;
-                    var parameterNameExpr = Expression.Constant(parameterName, typeof(string));
-                    RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedWhereObjExpr, propMapper, this.OrmProvider, blockBodies);
-
-                    if (index > 0) builder.Append(" AND ");
-                    builder.Append($"{this.OrmProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
-                    index++;
-                }
-                var methodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
-                var returnExpr = Expression.Call(methodInfo, sqlExpr, Expression.Constant(builder.ToString(), typeof(string)));
-
-                var resultLabelExpr = Expression.Label(typeof(string));
-                blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
-                blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Constant(null, typeof(string))));
-
-                commandInitializerDelegate = Expression.Lambda<Func<IDbCommand, IOrmProvider, string, object, string>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, sqlExpr, whereObjExpr).Compile();
-                queryCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
-            }
-            commandSqlInitializer = (Func<IDbCommand, IOrmProvider, string, object, string>)commandInitializerDelegate;
-        }
+        var sql = RepositoryHelper.BuildQuerySqlPart(this.connection, this.OrmProvider, this.MapProvider, entityType);
+        var commandInitializer = RepositoryHelper.BuildQuerySqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
 
         using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = commandSqlInitializer?.Invoke(cmd, this.OrmProvider, sql, whereObj);
+        cmd.CommandText = commandInitializer?.Invoke(cmd, this.OrmProvider, sql, whereObj);
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.Transaction;
 
@@ -542,12 +256,14 @@ public class Repository : IRepository
         await this.connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+
         if (await reader.ReadAsync(cancellationToken))
         {
             if (entityType.IsEntityType())
                 result = reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
             else result = reader.To<TEntity>();
         }
+
         await reader.CloseAsync();
         await reader.DisposeAsync();
         await command.DisposeAsync();
@@ -558,55 +274,11 @@ public class Repository : IRepository
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
+        var entityType = typeof(TEntity);
         Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
         if (parameters != null)
-        {
-            if (parameters is Dictionary<string, object>)
-            {
-                commandInitializer = (command, ormProvider, parameter) =>
-                {
-                    var dict = parameter as Dictionary<string, object>;
-                    foreach (var item in dict)
-                    {
-                        var parameterName = this.OrmProvider.ParameterPrefix + item.Key;
-                        if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                            continue;
-                        var dbParameter = this.OrmProvider.CreateParameter(parameterName, dict[item.Key]);
-                        command.Parameters.Add(dbParameter);
-                    }
-                };
-            }
-            else
-            {
-                var parameterType = parameters.GetType();
-                var cacheKey = HashCode.Combine("Execute", this.connection, rawSql, parameterType);
-                if (!sqlCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
-                {
-                    var parameterMapper = this.MapProvider.GetEntityMap(parameterType);
-                    var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
-                    var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-                    var parameterExpr = Expression.Parameter(typeof(object), "parameter");
+            commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.connection, this.OrmProvider, this.MapProvider, rawSql, parameters);
 
-                    var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
-                    var blockParameters = new List<ParameterExpression>();
-                    var blockBodies = new List<Expression>();
-                    blockParameters.Add(typedParameterExpr);
-                    blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
-
-                    foreach (var memberMapper in parameterMapper.MemberMaps)
-                    {
-                        var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-                        if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                            continue;
-                        var parameterNameExpr = Expression.Constant(parameterName);
-                        RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, memberMapper, this.OrmProvider, blockBodies);
-                    }
-                    commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
-                    sqlCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
-                }
-                commandInitializer = commandInitializerDelegate as Action<IDbCommand, IOrmProvider, object>;
-            }
-        }
         using var command = this.connection.CreateCommand();
         command.CommandText = rawSql;
         command.CommandType = CommandType.Text;
@@ -618,7 +290,7 @@ public class Repository : IRepository
         this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess;
         using var reader = command.ExecuteReader(behavior);
-        var entityType = typeof(TEntity);
+
         if (entityType.IsEntityType())
         {
             while (reader.Read())
@@ -643,55 +315,10 @@ public class Repository : IRepository
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
+        var entityType = typeof(TEntity);
         Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
         if (parameters != null)
-        {
-            if (parameters is Dictionary<string, object>)
-            {
-                commandInitializer = (command, ormProvider, parameter) =>
-                {
-                    var dict = parameter as Dictionary<string, object>;
-                    foreach (var item in dict)
-                    {
-                        var parameterName = this.OrmProvider.ParameterPrefix + item.Key;
-                        if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                            continue;
-                        var dbParameter = this.OrmProvider.CreateParameter(parameterName, dict[item.Key]);
-                        command.Parameters.Add(dbParameter);
-                    }
-                };
-            }
-            else
-            {
-                var parameterType = parameters.GetType();
-                var cacheKey = HashCode.Combine("QueryRaw", this.connection, rawSql, parameterType);
-                if (!sqlCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
-                {
-                    var parameterMapper = this.MapProvider.GetEntityMap(parameterType);
-                    var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
-                    var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-                    var parameterExpr = Expression.Parameter(typeof(object), "parameter");
-
-                    var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
-                    var blockParameters = new List<ParameterExpression>();
-                    var blockBodies = new List<Expression>();
-                    blockParameters.Add(typedParameterExpr);
-                    blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
-
-                    foreach (var memberMapper in parameterMapper.MemberMaps)
-                    {
-                        var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-                        if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                            continue;
-                        var parameterNameExpr = Expression.Constant(parameterName);
-                        RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, memberMapper, this.OrmProvider, blockBodies);
-                    }
-                    commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
-                    sqlCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
-                }
-                commandInitializer = commandInitializerDelegate as Action<IDbCommand, IOrmProvider, object>;
-            }
-        }
+            commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.connection, this.OrmProvider, this.MapProvider, rawSql, parameters);
 
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = rawSql;
@@ -707,7 +334,6 @@ public class Repository : IRepository
         await this.connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess;
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        var entityType = typeof(TEntity);
         if (entityType.IsEntityType())
         {
             while (await reader.ReadAsync(cancellationToken))
@@ -1008,107 +634,8 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var sqlCacheKey = HashCode.Combine("Get", this.connection, entityType, entityType);
-        if (!sqlCache.TryGetValue(sqlCacheKey, out var sql))
-        {
-            var index = 0;
-            var entityMapper = this.MapProvider.GetEntityMap(entityType);
-
-            var builder = new StringBuilder("SELECT ");
-            foreach (var propMapper in entityMapper.MemberMaps)
-            {
-                if (propMapper.IsIgnore || propMapper.IsNavigation
-                    || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
-                    continue;
-
-                if (index > 0) builder.Append(',');
-                builder.Append(this.OrmProvider.GetFieldName(propMapper.FieldName));
-                if (propMapper.FieldName != propMapper.MemberName)
-                    builder.Append(" AS " + this.OrmProvider.GetFieldName(propMapper.MemberName));
-                index++;
-            }
-            builder.Append($" FROM {this.OrmProvider.GetTableName(entityMapper.TableName)} WHERE ");
-            index = 0;
-            foreach (var keyMapper in entityMapper.KeyMembers)
-            {
-                if (index > 0)
-                    builder.Append(" AND ");
-                var parameterName = this.OrmProvider.ParameterPrefix + keyMapper.MemberName;
-                builder.Append($"{this.OrmProvider.GetFieldName(keyMapper.FieldName)}={parameterName}");
-                index++;
-            }
-            sql = builder.ToString();
-            sqlCache.TryAdd(sqlCacheKey, sql);
-        }
-        Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
-
-        if (whereObj is Dictionary<string, object>)
-        {
-            commandInitializer = (command, ormProvider, whereObj) =>
-            {
-                var dict = whereObj as Dictionary<string, object>;
-                var entityMapper = this.MapProvider.GetEntityMap(entityType);
-                foreach (var item in dict)
-                {
-                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || !propMapper.IsKey)
-                        continue;
-
-                    var parameterName = this.OrmProvider.ParameterPrefix + item.Key;
-                    if (propMapper.NativeDbType != null)
-                        command.Parameters.Add(this.OrmProvider.CreateParameter(parameterName, propMapper.NativeDbType, item.Value));
-                    else command.Parameters.Add(this.OrmProvider.CreateParameter(parameterName, item.Value));
-                }
-            };
-        }
-        else
-        {
-            var whereObjType = whereObj.GetType();
-            var cacheKey = HashCode.Combine("Get", this.connection, entityType, whereObjType);
-            if (!queryCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
-            {
-                var entityMapper = this.MapProvider.GetEntityMap(entityType);
-                var whereObjMapper = this.MapProvider.GetEntityMap(whereObjType);
-                var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
-                var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-                var whereObjExpr = Expression.Parameter(typeof(object), "whereObj");
-                ParameterExpression typedWhereObjExpr = null;
-
-                var blockParameters = new List<ParameterExpression>();
-                var blockBodies = new List<Expression>();
-                bool isEntityType = false;
-
-                if (whereObjType.IsEntityType())
-                {
-                    isEntityType = true;
-                    typedWhereObjExpr = Expression.Variable(whereObjType, "typedWhereObj");
-                    blockParameters.Add(typedWhereObjExpr);
-                    blockBodies.Add(Expression.Assign(typedWhereObjExpr, Expression.Convert(whereObjExpr, whereObjType)));
-                }
-                else
-                {
-                    if (entityMapper.KeyMembers.Count > 1)
-                        throw new NotSupportedException($"模型{entityType.FullName}有多个主键字段，不能使用单个值类型{whereObjType.FullName}作为参数");
-                }
-
-                var index = 0;
-                foreach (var keyMapper in entityMapper.KeyMembers)
-                {
-                    if (isEntityType && !whereObjMapper.TryGetMemberMap(keyMapper.MemberName, out var whereObjPropMapper))
-                        throw new ArgumentNullException($"参数类型{whereObjType.FullName}缺少主键字段{keyMapper.MemberName}", "whereObj");
-
-                    var parameterName = $"{this.OrmProvider.ParameterPrefix}{keyMapper.MemberName}";
-                    var parameterNameExpr = Expression.Constant(parameterName, typeof(string));
-
-                    if (isEntityType)
-                        RepositoryHelper.AddKeyMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedWhereObjExpr, keyMapper, this.OrmProvider, blockBodies);
-                    else RepositoryHelper.AddKeyValueParameter(commandExpr, ormProviderExpr, parameterNameExpr, whereObjExpr, keyMapper, this.OrmProvider, blockBodies);
-                    index++;
-                }
-                commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, whereObjExpr).Compile();
-                queryCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
-            }
-            commandInitializer = (Action<IDbCommand, IOrmProvider, object>)commandInitializerDelegate;
-        }
+        var sql = RepositoryHelper.BuildGetSql(this.connection, this.OrmProvider, this.MapProvider, entityType);
+        var commandInitializer = RepositoryHelper.BuildGetParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
 
         using var command = this.connection.CreateCommand();
         command.CommandText = sql;
@@ -1132,106 +659,8 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var sqlCacheKey = HashCode.Combine("Get", this.connection, entityType, entityType);
-        if (!sqlCache.TryGetValue(sqlCacheKey, out var sql))
-        {
-            var index = 0;
-            var entityMapper = this.MapProvider.GetEntityMap(entityType);
-
-            var builder = new StringBuilder("SELECT ");
-            foreach (var propMapper in entityMapper.MemberMaps)
-            {
-                if (propMapper.IsIgnore || propMapper.IsNavigation
-                    || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
-                    continue;
-
-                if (index > 0) builder.Append(',');
-                builder.Append(this.OrmProvider.GetFieldName(propMapper.FieldName));
-                if (propMapper.FieldName != propMapper.MemberName)
-                    builder.Append(" AS " + this.OrmProvider.GetFieldName(propMapper.MemberName));
-                index++;
-            }
-            builder.Append($" FROM {this.OrmProvider.GetTableName(entityMapper.TableName)} WHERE ");
-            index = 0;
-            foreach (var keyMapper in entityMapper.KeyMembers)
-            {
-                if (index > 0)
-                    builder.Append(" AND ");
-                var parameterName = this.OrmProvider.ParameterPrefix + keyMapper.MemberName;
-                builder.Append($"{this.OrmProvider.GetFieldName(keyMapper.FieldName)}={parameterName}");
-                index++;
-            }
-            sql = builder.ToString();
-            sqlCache.TryAdd(sqlCacheKey, sql);
-        }
-        Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
-
-        if (whereObj is Dictionary<string, object>)
-        {
-            commandInitializer = (command, ormProvider, whereObj) =>
-            {
-                var dict = whereObj as Dictionary<string, object>;
-                var entityMapper = this.MapProvider.GetEntityMap(entityType);
-                foreach (var item in dict)
-                {
-                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper) || !propMapper.IsKey)
-                        continue;
-
-                    var parameterName = this.OrmProvider.ParameterPrefix + item.Key;
-                    if (propMapper.NativeDbType != null)
-                        command.Parameters.Add(this.OrmProvider.CreateParameter(parameterName, propMapper.NativeDbType, item.Value));
-                    else command.Parameters.Add(this.OrmProvider.CreateParameter(parameterName, item.Value));
-                }
-            };
-        }
-        else
-        {
-            var whereObjType = whereObj.GetType();
-            var cacheKey = HashCode.Combine("Get", this.connection, entityType, whereObjType);
-            if (!queryCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
-            {
-                var entityMapper = this.MapProvider.GetEntityMap(entityType);
-                var whereObjMapper = this.MapProvider.GetEntityMap(whereObjType);
-                var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
-                var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-                var whereObjExpr = Expression.Parameter(typeof(object), "whereObj");
-                ParameterExpression typedWhereObjExpr = null;
-
-                var blockParameters = new List<ParameterExpression>();
-                var blockBodies = new List<Expression>();
-                bool isEntityType = false;
-
-                if (whereObjType.IsEntityType())
-                {
-                    isEntityType = true;
-                    typedWhereObjExpr = Expression.Variable(whereObjType, "typedWhereObj");
-                    blockParameters.Add(typedWhereObjExpr);
-                    blockBodies.Add(Expression.Assign(typedWhereObjExpr, Expression.Convert(whereObjExpr, whereObjType)));
-                }
-                else
-                {
-                    if (entityMapper.KeyMembers.Count > 1)
-                        throw new NotSupportedException($"模型{entityType.FullName}有多个主键字段，不能使用单个值类型{whereObjType.FullName}作为参数");
-                }
-
-                var index = 0;
-                foreach (var keyMapper in entityMapper.KeyMembers)
-                {
-                    if (isEntityType && !whereObjMapper.TryGetMemberMap(keyMapper.MemberName, out var whereObjPropMapper))
-                        throw new ArgumentNullException($"参数类型{whereObjType.FullName}缺少主键字段{keyMapper.MemberName}", "whereObj");
-
-                    var parameterName = $"{this.OrmProvider.ParameterPrefix}{keyMapper.MemberName}";
-                    var parameterNameExpr = Expression.Constant(parameterName, typeof(string));
-                    if (isEntityType)
-                        RepositoryHelper.AddKeyMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedWhereObjExpr, keyMapper, this.OrmProvider, blockBodies);
-                    else RepositoryHelper.AddKeyValueParameter(commandExpr, ormProviderExpr, parameterNameExpr, whereObjExpr, keyMapper, this.OrmProvider, blockBodies);
-                    index++;
-                }
-                commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, whereObjExpr).Compile();
-                queryCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
-            }
-            commandInitializer = (Action<IDbCommand, IOrmProvider, object>)commandInitializerDelegate;
-        }
+        var sql = RepositoryHelper.BuildGetSql(this.connection, this.OrmProvider, this.MapProvider, entityType);
+        var commandInitializer = RepositoryHelper.BuildGetParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
 
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = sql;
@@ -1274,82 +703,11 @@ public class Repository : IRepository
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
-        var whereObjType = whereObj.GetType();
-        Func<IDbCommand, IOrmProvider, object, string> commandSqlInitializer = null;
-        if (whereObj is Dictionary<string, object> dict)
-        {
-            commandSqlInitializer = (command, ormProvider, whereObj) =>
-            {
-                var dict = whereObj as Dictionary<string, object>;
-                var entityMapper = this.MapProvider.GetEntityMap(whereObjType);
-                var builder = new StringBuilder($"SELECT COUNT(1) FROM {this.OrmProvider.GetTableName(entityMapper.TableName)} WHERE ");
-                int index = 0;
-                foreach (var item in dict)
-                {
-                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper)
-                        || propMapper.IsIgnore || propMapper.IsNavigation
-                        || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
-                        continue;
-
-                    var parameterName = this.OrmProvider.ParameterPrefix + item.Key;
-                    if (index > 0) builder.Append(" AND ");
-                    builder.Append($"{this.OrmProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
-
-                    if (propMapper.NativeDbType != null)
-                        command.Parameters.Add(this.OrmProvider.CreateParameter(parameterName, propMapper.NativeDbType, item.Value));
-                    else command.Parameters.Add(this.OrmProvider.CreateParameter(parameterName, item.Value));
-                    index++;
-                }
-                return builder.ToString();
-            };
-        }
-        else
-        {
-            var entityType = typeof(TEntity);
-            var cacheKey = HashCode.Combine("Exists", this.connection, entityType, whereObjType);
-            if (!queryCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
-            {
-                var entityMapper = this.MapProvider.GetEntityMap(entityType);
-                var whereObjMapper = this.MapProvider.GetEntityMap(whereObjType);
-                var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
-                var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-                var whereObjExpr = Expression.Parameter(typeof(object), "whereObj");
-
-                var typedWhereObjExpr = Expression.Variable(whereObjType, "typedWhereObj");
-                var blockParameters = new List<ParameterExpression>();
-                var blockBodies = new List<Expression>();
-                blockParameters.Add(typedWhereObjExpr);
-                blockBodies.Add(Expression.Assign(typedWhereObjExpr, Expression.Convert(whereObjExpr, whereObjType)));
-
-                var index = 0;
-                var builder = new StringBuilder(" WHERE ");
-                foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
-                {
-                    if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper)
-                        || propMapper.IsIgnore || propMapper.IsNavigation
-                        || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
-                        continue;
-
-                    var parameterName = this.OrmProvider.ParameterPrefix + propMapper.MemberName;
-                    var parameterNameExpr = Expression.Constant(parameterName, typeof(string));
-                    RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedWhereObjExpr, propMapper, this.OrmProvider, blockBodies);
-                    if (index > 0) builder.Append(" AND ");
-                    builder.Append($"{this.OrmProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
-                    index++;
-                }
-                var returnExpr = Expression.Constant(builder.ToString());
-                var resultLabelExpr = Expression.Label(typeof(string));
-                blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
-                blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Constant(null, typeof(string))));
-
-                commandInitializerDelegate = Expression.Lambda<Func<IDbCommand, IOrmProvider, object, string>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, whereObjExpr).Compile();
-                queryCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
-            }
-            commandSqlInitializer = (Func<IDbCommand, IOrmProvider, object, string>)commandInitializerDelegate;
-        }
+        var entityType = typeof(TEntity);
+        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
 
         using var command = this.connection.CreateCommand();
-        command.CommandText = commandSqlInitializer.Invoke(command, this.OrmProvider, whereObj);
+        command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, whereObj);
         command.CommandType = CommandType.Text;
         command.Transaction = this.Transaction;
 
@@ -1368,82 +726,11 @@ public class Repository : IRepository
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
-        var whereObjType = whereObj.GetType();
-        Func<IDbCommand, IOrmProvider, object, string> commandSqlInitializer = null;
-        if (whereObj is Dictionary<string, object> dict)
-        {
-            commandSqlInitializer = (command, ormProvider, whereObj) =>
-            {
-                var dict = whereObj as Dictionary<string, object>;
-                var entityMapper = this.MapProvider.GetEntityMap(whereObjType);
-                var builder = new StringBuilder($"SELECT COUNT(1) FROM {this.OrmProvider.GetTableName(entityMapper.TableName)} WHERE ");
-                int index = 0;
-                foreach (var item in dict)
-                {
-                    if (!entityMapper.TryGetMemberMap(item.Key, out var propMapper)
-                        || propMapper.IsIgnore || propMapper.IsNavigation
-                        || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
-                        continue;
-
-                    var parameterName = this.OrmProvider.ParameterPrefix + item.Key;
-                    if (index > 0) builder.Append(" AND ");
-                    builder.Append($"{this.OrmProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
-
-                    if (propMapper.NativeDbType != null)
-                        command.Parameters.Add(this.OrmProvider.CreateParameter(parameterName, propMapper.NativeDbType, item.Value));
-                    else command.Parameters.Add(this.OrmProvider.CreateParameter(parameterName, item.Value));
-                    index++;
-                }
-                return builder.ToString();
-            };
-        }
-        else
-        {
-            var entityType = typeof(TEntity);
-            var cacheKey = HashCode.Combine("Exists", this.connection, entityType, whereObjType);
-            if (!queryCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
-            {
-                var entityMapper = this.MapProvider.GetEntityMap(entityType);
-                var whereObjMapper = this.MapProvider.GetEntityMap(whereObjType);
-                var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
-                var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-                var whereObjExpr = Expression.Parameter(typeof(object), "whereObj");
-
-                var typedWhereObjExpr = Expression.Variable(whereObjType, "typedWhereObj");
-                var blockParameters = new List<ParameterExpression>();
-                var blockBodies = new List<Expression>();
-                blockParameters.Add(typedWhereObjExpr);
-                blockBodies.Add(Expression.Assign(typedWhereObjExpr, Expression.Convert(whereObjExpr, whereObjType)));
-
-                var index = 0;
-                var builder = new StringBuilder(" WHERE ");
-                foreach (var whereObjPropMapper in whereObjMapper.MemberMaps)
-                {
-                    if (!entityMapper.TryGetMemberMap(whereObjPropMapper.MemberName, out var propMapper)
-                        || propMapper.IsIgnore || propMapper.IsNavigation
-                        || (propMapper.MemberType.IsEntityType() && propMapper.TypeHandler == null))
-                        continue;
-
-                    var parameterName = this.OrmProvider.ParameterPrefix + propMapper.MemberName;
-                    var parameterNameExpr = Expression.Constant(parameterName, typeof(string));
-                    RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedWhereObjExpr, propMapper, this.OrmProvider, blockBodies);
-                    if (index > 0) builder.Append(" AND ");
-                    builder.Append($"{this.OrmProvider.GetFieldName(propMapper.FieldName)}={parameterName}");
-                    index++;
-                }
-                var returnExpr = Expression.Constant(builder.ToString());
-                var resultLabelExpr = Expression.Label(typeof(string));
-                blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
-                blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Constant(null, typeof(string))));
-
-                commandInitializerDelegate = Expression.Lambda<Func<IDbCommand, IOrmProvider, object, string>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, whereObjExpr).Compile();
-                queryCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
-            }
-            commandSqlInitializer = (Func<IDbCommand, IOrmProvider, object, string>)commandInitializerDelegate;
-        }
+        var entityType = typeof(TEntity);
+        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
 
         using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = commandSqlInitializer.Invoke(cmd, this.OrmProvider, whereObj);
+        cmd.CommandText = commandInitializer.Invoke(cmd, this.OrmProvider, whereObj);
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.Transaction;
 
@@ -1472,53 +759,8 @@ public class Repository : IRepository
 
         Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
         if (parameters != null)
-        {
-            if (parameters is Dictionary<string, object>)
-            {
-                commandInitializer = (command, ormProvider, parameter) =>
-                {
-                    var dict = parameter as Dictionary<string, object>;
-                    foreach (var item in dict)
-                    {
-                        var parameterName = this.OrmProvider.ParameterPrefix + item.Key;
-                        if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                            continue;
-                        var dbParameter = this.OrmProvider.CreateParameter(parameterName, dict[item.Key]);
-                        command.Parameters.Add(dbParameter);
-                    }
-                };
-            }
-            else
-            {
-                var parameterType = parameters.GetType();
-                var cacheKey = HashCode.Combine("Execute", this.connection, rawSql, parameterType);
-                if (!sqlCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
-                {
-                    var parameterMapper = this.MapProvider.GetEntityMap(parameterType);
-                    var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
-                    var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-                    var parameterExpr = Expression.Parameter(typeof(object), "parameter");
+            commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.connection, this.OrmProvider, this.MapProvider, rawSql, parameters);
 
-                    var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
-                    var blockParameters = new List<ParameterExpression>();
-                    var blockBodies = new List<Expression>();
-                    blockParameters.Add(typedParameterExpr);
-                    blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
-
-                    foreach (var memberMapper in parameterMapper.MemberMaps)
-                    {
-                        var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-                        if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                            continue;
-                        var parameterNameExpr = Expression.Constant(parameterName);
-                        RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, memberMapper, this.OrmProvider, blockBodies);
-                    }
-                    commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
-                    sqlCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
-                }
-                commandInitializer = commandInitializerDelegate as Action<IDbCommand, IOrmProvider, object>;
-            }
-        }
         using var command = this.connection.CreateCommand();
         command.CommandText = rawSql;
         command.CommandType = CommandType.Text;
@@ -1538,53 +780,7 @@ public class Repository : IRepository
 
         Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
         if (parameters != null)
-        {
-            if (parameters is Dictionary<string, object>)
-            {
-                commandInitializer = (command, ormProvider, parameter) =>
-                {
-                    var dict = parameter as Dictionary<string, object>;
-                    foreach (var item in dict)
-                    {
-                        var parameterName = this.OrmProvider.ParameterPrefix + item.Key;
-                        if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                            continue;
-                        var dbParameter = this.OrmProvider.CreateParameter(parameterName, dict[item.Key]);
-                        command.Parameters.Add(dbParameter);
-                    }
-                };
-            }
-            else
-            {
-                var parameterType = parameters.GetType();
-                var cacheKey = HashCode.Combine("Execute", this.connection, rawSql, parameterType);
-                if (!sqlCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
-                {
-                    var parameterMapper = this.MapProvider.GetEntityMap(parameterType);
-                    var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
-                    var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-                    var parameterExpr = Expression.Parameter(typeof(object), "parameter");
-
-                    var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
-                    var blockParameters = new List<ParameterExpression>();
-                    var blockBodies = new List<Expression>();
-                    blockParameters.Add(typedParameterExpr);
-                    blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
-
-                    foreach (var memberMapper in parameterMapper.MemberMaps)
-                    {
-                        var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-                        if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
-                            continue;
-                        var parameterNameExpr = Expression.Constant(parameterName);
-                        RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, memberMapper, this.OrmProvider, blockBodies);
-                    }
-                    commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
-                    sqlCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
-                }
-                commandInitializer = commandInitializerDelegate as Action<IDbCommand, IOrmProvider, object>;
-            }
-        }
+            commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.connection, this.OrmProvider, this.MapProvider, rawSql, parameters);
 
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = rawSql;
@@ -1601,6 +797,178 @@ public class Repository : IRepository
         await command.DisposeAsync();
         return result;
     }
+    #endregion
+
+    #region QueryMultiple
+    //public IMultiQueryReader QueryMultiple(string rawSql, object parameters = null)
+    //{
+    //    if (string.IsNullOrEmpty(rawSql))
+    //        throw new ArgumentNullException(nameof(rawSql));
+
+    //    Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
+    //    if (parameters != null)
+    //    {
+    //        if (parameters is Dictionary<string, object>)
+    //        {
+    //            commandInitializer = (command, ormProvider, parameter) =>
+    //            {
+    //                var dict = parameter as Dictionary<string, object>;
+    //                foreach (var item in dict)
+    //                {
+    //                    var parameterName = this.OrmProvider.ParameterPrefix + item.Key;
+    //                    if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
+    //                        continue;
+    //                    var dbParameter = this.OrmProvider.CreateParameter(parameterName, dict[item.Key]);
+    //                    command.Parameters.Add(dbParameter);
+    //                }
+    //            };
+    //        }
+    //        else
+    //        {
+    //            var parameterType = parameters.GetType();
+    //            var cacheKey = HashCode.Combine("Execute", this.connection, rawSql, parameterType);
+    //            if (!sqlCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
+    //            {
+    //                var parameterMapper = this.MapProvider.GetEntityMap(parameterType);
+    //                var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
+    //                var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
+    //                var parameterExpr = Expression.Parameter(typeof(object), "parameter");
+
+    //                var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
+    //                var blockParameters = new List<ParameterExpression>();
+    //                var blockBodies = new List<Expression>();
+    //                blockParameters.Add(typedParameterExpr);
+    //                blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
+
+    //                foreach (var memberMapper in parameterMapper.MemberMaps)
+    //                {
+    //                    var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
+    //                    if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
+    //                        continue;
+    //                    var parameterNameExpr = Expression.Constant(parameterName);
+    //                    RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, memberMapper, this.OrmProvider, blockBodies);
+    //                }
+    //                commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
+    //                sqlCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
+    //            }
+    //            commandInitializer = commandInitializerDelegate as Action<IDbCommand, IOrmProvider, object>;
+    //        }
+    //    }
+
+    //    var command = this.connection.CreateCommand();
+    //    command.CommandText = rawSql;
+    //    command.CommandType = CommandType.Text;
+    //    command.Transaction = this.Transaction;
+    //    if (parameters != null)
+    //        commandInitializer.Invoke(command, this.OrmProvider, parameters);
+
+    //    this.connection.Open();
+    //    var reader = command.ExecuteReader();
+    //    return new MultiQueryReader(this.DbKey, command, reader, this.OrmProvider);
+    //}
+    //public async Task<IMultiQueryReader> QueryMultipleAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
+    //{
+    //    if (string.IsNullOrEmpty(rawSql))
+    //        throw new ArgumentNullException(nameof(rawSql));
+
+    //    Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
+    //    if (parameters != null)
+    //    {
+    //        if (parameters is Dictionary<string, object>)
+    //        {
+    //            commandInitializer = (command, ormProvider, parameter) =>
+    //            {
+    //                var dict = parameter as Dictionary<string, object>;
+    //                foreach (var item in dict)
+    //                {
+    //                    var parameterName = this.OrmProvider.ParameterPrefix + item.Key;
+    //                    if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
+    //                        continue;
+    //                    var dbParameter = this.OrmProvider.CreateParameter(parameterName, dict[item.Key]);
+    //                    command.Parameters.Add(dbParameter);
+    //                }
+    //            };
+    //        }
+    //        else
+    //        {
+    //            var parameterType = parameters.GetType();
+    //            var cacheKey = HashCode.Combine("Execute", this.connection, rawSql, parameterType);
+    //            if (!sqlCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
+    //            {
+    //                var parameterMapper = this.MapProvider.GetEntityMap(parameterType);
+    //                var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
+    //                var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
+    //                var parameterExpr = Expression.Parameter(typeof(object), "parameter");
+
+    //                var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
+    //                var blockParameters = new List<ParameterExpression>();
+    //                var blockBodies = new List<Expression>();
+    //                blockParameters.Add(typedParameterExpr);
+    //                blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
+
+    //                foreach (var memberMapper in parameterMapper.MemberMaps)
+    //                {
+    //                    var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
+    //                    if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))
+    //                        continue;
+    //                    var parameterNameExpr = Expression.Constant(parameterName);
+    //                    RepositoryHelper.AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, memberMapper, this.OrmProvider, blockBodies);
+    //                }
+    //                commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
+    //                sqlCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
+    //            }
+    //            commandInitializer = commandInitializerDelegate as Action<IDbCommand, IOrmProvider, object>;
+    //        }
+    //    }
+
+    //    var cmd = this.connection.CreateCommand();
+    //    cmd.CommandText = rawSql;
+    //    cmd.CommandType = CommandType.Text;
+    //    cmd.Transaction = this.Transaction;
+    //    if (parameters != null)
+    //        commandInitializer.Invoke(cmd, this.OrmProvider, parameters);
+
+    //    if (cmd is not DbCommand command)
+    //        throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+
+    //    await this.connection.OpenAsync(cancellationToken);
+    //    var reader = await command.ExecuteReaderAsync(cancellationToken);
+    //    return new MultiQueryReader(this.DbKey, command, reader, this.OrmProvider);
+    //}
+    //public IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries)
+    //{
+    //    if (subQueries == null)
+    //        throw new ArgumentNullException(nameof(subQueries));
+
+    //    using var command = this.connection.CreateCommand();
+    //    var multiQuery = new MultipleQuery(this.DbKey, this.connection, this.OrmProvider, this.MapProvider, command);
+    //    subQueries.Invoke(multiQuery);
+    //    command.CommandText = multiQuery.BuildSql();
+    //    command.CommandType = CommandType.Text;
+    //    command.Transaction = this.Transaction;
+
+    //    this.connection.Open();
+    //    var reader = command.ExecuteReader();
+    //    return new MultiQueryReader(this.DbKey, command, reader, this.OrmProvider);
+    //}
+    //public async Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default)
+    //{
+    //    if (subQueries == null)
+    //        throw new ArgumentNullException(nameof(subQueries));
+
+    //    var cmd = this.connection.CreateCommand();
+    //    var multiQuery = new MultipleQuery(this.DbKey, this.connection, this.OrmProvider, this.MapProvider, cmd);
+    //    subQueries.Invoke(multiQuery);
+    //    cmd.CommandText = multiQuery.BuildSql();
+    //    cmd.CommandType = CommandType.Text;
+    //    cmd.Transaction = this.Transaction;
+
+    //    if (cmd is not DbCommand command)
+    //        throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+    //    await this.connection.OpenAsync(cancellationToken);
+    //    var reader = await command.ExecuteReaderAsync(cancellationToken);
+    //    return new MultiQueryReader(this.DbKey, command, reader, this.OrmProvider);
+    //}
     #endregion
 
     #region Others
