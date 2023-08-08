@@ -16,6 +16,17 @@ public interface IMultiCreate<TEntity>
     /// 使用原始SQL插入数据，用法：
     /// <code>
     /// repository.Insert&lt;Order&gt;()
+    ///     .RawSql("INSERT INTO Table(Field1,Field2) VALUES(1,'xxx')");
+    /// </code>
+    /// </summary>
+    /// <param name="rawSql">原始SQL</param>
+    /// </param>
+    /// <returns>返回插入对象</returns>
+    IMultiCreated<TEntity> RawSql(string rawSql);
+    /// <summary>
+    /// 使用原始SQL和参数插入数据，用法：
+    /// <code>
+    /// repository.Insert&lt;Order&gt;()
     ///     .RawSql("INSERT INTO Table(Field1,Field2) VALUES(@Value1,@Value2)", new { Value1 = 1, Value2 = "xxx" });
     /// </code>
     /// </summary>
@@ -54,15 +65,14 @@ public interface IMultiCreate<TEntity>
     /// <returns>返回插入对象</returns>
     IMultiContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     /// <summary>
-    /// 批量插入,采用多表值方式，生成的SQL:
+    /// 批量插入,一次性插入所有数据，不做分批处理，采用多表值方式，生成的SQL:
     /// <code>
     /// INSERT INTO [sys_product] ([ProductNo],[Name],[BrandId],[CategoryId],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) VALUES (@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)
     /// </code>
     /// </summary>
     /// <param name="insertObjs">插入的对象集合</param>
-    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值</param>
     /// <returns></returns>
-    IMultiCreated<TEntity> WithBulkBy(IEnumerable insertObjs, int bulkCount = 500);
+    IMultiCreated<TEntity> WithBulkBy(IEnumerable insertObjs);
     /// <summary>
     /// 从<paramref>TSource</paramref>表查询数据，并插入当前表中,用法：
     /// <code>
@@ -285,9 +295,8 @@ public interface IMultiContinuedCreate<TEntity>
     /// <summary>
     /// 执行插入动作，并返回插入行数
     /// </summary>
-    /// <param name="result">返回插入行数</param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery Execute(out int result);
+    IMultipleQuery Execute();
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
@@ -304,9 +313,8 @@ public interface IMultiCreated<TEntity>
     /// <summary>
     /// 执行插入动作，并返回插入行数
     /// </summary>
-    /// <param name="result">返回插入行数</param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery Execute(out int result);
+    IMultipleQuery Execute();
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
@@ -317,8 +325,8 @@ public interface IMultiCreated<TEntity>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
-/// <typeparam name="TSource">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要插入数据表TEntity实体类型</typeparam>
+/// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
 public interface IMultiContinuedCreate<TEntity, TSource>
 {
     /// <summary>
@@ -352,11 +360,10 @@ public interface IMultiContinuedCreate<TEntity, TSource>
     /// <returns>返回查询对象</returns>
     IMultiContinuedCreate<TEntity, TSource> And(bool condition, Expression<Func<TSource, bool>> ifPredicate = null, Expression<Func<TSource, bool>> elsePredicate = null);
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
-    /// <param name="result">返回插入行数</param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery Execute(out int result);
+    IMultipleQuery Execute();
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
@@ -367,7 +374,7 @@ public interface IMultiContinuedCreate<TEntity, TSource>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">要插入数据的表实体类型</typeparam>
+/// <typeparam name="TEntity">要插入数据的实体类型</typeparam>
 /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
 /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
 public interface IMultiContinuedCreate<TEntity, T1, T2>
@@ -403,11 +410,10 @@ public interface IMultiContinuedCreate<TEntity, T1, T2>
     /// <returns>返回查询对象</returns>
     IMultiContinuedCreate<TEntity, T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null);
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
-    /// <param name="result">返回插入行数</param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery Execute(out int result);
+    IMultipleQuery Execute();
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
@@ -418,7 +424,7 @@ public interface IMultiContinuedCreate<TEntity, T1, T2>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">要插入数据的表实体类型</typeparam>
+/// <typeparam name="TEntity">要插入数据的实体类型</typeparam>
 /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
 /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
 /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
@@ -455,11 +461,10 @@ public interface IMultiContinuedCreate<TEntity, T1, T2, T3>
     /// <returns>返回查询对象</returns>
     IMultiContinuedCreate<TEntity, T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null);
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
-    /// <param name="result">返回插入行数</param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery Execute(out int result);
+    IMultipleQuery Execute();
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
@@ -470,7 +475,7 @@ public interface IMultiContinuedCreate<TEntity, T1, T2, T3>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">要插入数据的表实体类型</typeparam>
+/// <typeparam name="TEntity">要插入数据的实体类型</typeparam>
 /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
 /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
 /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
@@ -508,11 +513,10 @@ public interface IMultiContinuedCreate<TEntity, T1, T2, T3, T4>
     /// <returns>返回查询对象</returns>
     IMultiContinuedCreate<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null);
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
-    /// <param name="result">返回插入行数</param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery Execute(out int result);
+    IMultipleQuery Execute();
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
@@ -523,7 +527,7 @@ public interface IMultiContinuedCreate<TEntity, T1, T2, T3, T4>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">要插入数据的表实体类型</typeparam>
+/// <typeparam name="TEntity">要插入数据的实体类型</typeparam>
 /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
 /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
 /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
@@ -562,11 +566,10 @@ public interface IMultiContinuedCreate<TEntity, T1, T2, T3, T4, T5>
     /// <returns>返回查询对象</returns>
     IMultiContinuedCreate<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null);
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
-    /// <param name="result">返回插入行数</param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery Execute(out int result);
+    IMultipleQuery Execute();
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>

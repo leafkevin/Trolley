@@ -7,11 +7,47 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
+public interface IQueryBase
+{
+    #region Count
+    /// <summary>
+    /// 返回数据条数
+    /// </summary>
+    /// <returns>返回数据条数</returns>
+    int Count();
+    /// <summary>
+    /// 返回数据条数
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns>返回数据条数</returns>
+    Task<int> CountAsync(CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 返回数据条数
+    /// </summary>
+    /// <returns>返回数据条数</returns>
+    long LongCount();
+    /// <summary>
+    /// 返回数据条数
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns>返回数据条数</returns>
+    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToSql
+    /// <summary>
+    /// 返回当前查询的SQL和参数列表
+    /// </summary>
+    /// <param name="dbParameters">参数列表</param>
+    /// <returns>当前查询的SQL</returns>
+    string ToSql(out List<IDbDataParameter> dbParameters);
+    #endregion
+}
 /// <summary>
 /// 查询数据
 /// </summary>
 /// <typeparam name="T">实体类型</typeparam>
-public interface IQuery<T>
+public interface IQuery<T> : IQueryBase
 {
     #region Union/UnionAll
     /// <summary>
@@ -59,7 +95,7 @@ public interface IQuery<T>
     /// <returns>返回查询对象</returns>
     IQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery);
     /// <summary>
-    /// Union All操作，不去重复记录，用法：
+    /// Union All操作，所有记录不去掉重复记录，用法：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .Where(x =&gt; x.Id == 1)
@@ -512,11 +548,15 @@ public interface IQuery<T>
     IQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
     #endregion
 
+    #region Distinct
     /// <summary>
     /// 生成DISTINCT语句，去掉重复数据
     /// </summary>
     /// <returns>返回查询对象</returns>
     IQuery<T> Distinct();
+    #endregion
+
+    #region Skip/Take/Page
     /// <summary>
     /// 跳过offset条数据
     /// </summary>
@@ -536,6 +576,7 @@ public interface IQuery<T>
     /// <param name="pageSize">每页显示条数</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> Page(int pageIndex, int pageSize);
+    #endregion
 
     #region Select
     /// <summary>
@@ -574,28 +615,6 @@ public interface IQuery<T>
     #region Aggregate
     #region Count
     /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    int Count();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    long LongCount();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
     /// 返回某个字段的数据条数，用法：
     /// <code>repository.From&lt;Order&gt;().Count(f =&gt; f.BuyerId);</code>
     /// </summary>
@@ -613,7 +632,7 @@ public interface IQuery<T>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;Order&gt;().CountDistinct(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -621,7 +640,7 @@ public interface IQuery<T>
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;Order&gt;().CountDistinctAsync(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -647,7 +666,7 @@ public interface IQuery<T>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;Order&gt;().LongCountDistinct(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -655,7 +674,7 @@ public interface IQuery<T>
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;Order&gt;().LongCountDistinctAsync(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -752,50 +771,43 @@ public interface IQuery<T>
     /// <returns>返回T实体列表或没有任何元素的空列表</returns>
     Task<List<T>> ToListAsync(CancellationToken cancellationToken = default);
     /// <summary>
-    /// 按照指定的分页设置执行SQL查询，返回T实体所有字段的指定条数IPagedList&lt;T&gt;列表，记录不存在时返回没有任何元素的空IPagedList&lt;T&gt;类型列表
+    /// 按照指定的分页设置执行SQL查询，返回T实体所有字段的指定条数IPagedList&lt;T&gt;列表，记录不存在时返回没有任何元素的IPagedList&lt;T&gt;空列表
     /// </summary>
-    /// <returns>返回IPagedList&lt;T&gt;列表或没有任何元素的空IPagedList&lt;T&gt;列表</returns>
+    /// <returns>返回IPagedList&lt;T&gt;列表或没有任何元素的空IPagedList&lt;T&gt;空列表</returns>
     IPagedList<T> ToPageList();
     /// <summary>
-    /// 按照指定的分页设置执行SQL查询，返回 T 实体所有字段的指定条数IPagedList&lt;T&gt;列表，记录不存在时返回没有任何元素的空IPagedList&lt;T&gt;类型列表
+    /// 按照指定的分页设置执行SQL查询，返回T实体所有字段的指定条数IPagedList&lt;T&gt;列表，记录不存在时返回没有任何元素的IPagedList&lt;T&gt;空列表
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <returns>返回IPagedList&lt;T&gt;列表或没有任何元素的空IPagedList&lt;T&gt;列表</returns>
+    /// <returns>返回IPagedList&lt;T&gt;列表或没有任何元素的空IPagedList&lt;T&gt;空列表</returns>
     Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default);
     /// <summary>
-    /// 执行SQL查询，返回 T 实体所有字段的记录并转化为Dictionary&lt;TKey, TValue&gt;字典，记录不存在时返回没有任何元素的Dictionary&lt;TKey, TValue&gt;字典
+    /// 执行SQL查询，返回T实体所有字段的记录并转化为Dictionary&lt;TKey, TValue&gt;字典，记录不存在时返回没有任何元素的Dictionary&lt;TKey, TValue&gt;空字典
     /// </summary>
     /// <typeparam name="TKey">字典Key类型</typeparam>
     /// <typeparam name="TValue">字典Value类型</typeparam>
     /// <param name="keySelector">字典Key选择委托</param>
     /// <param name="valueSelector">字典Value选择委托</param>
-    /// <returns>返回Dictionary&lt;TKey, TValue&gt;字典或没有任何元素的空Dictionary&lt;TKey, TValue&gt;字典</returns>
+    /// <returns>返回Dictionary&lt;TKey, TValue&gt;字典或没有任何元素的空Dictionary&lt;TKey, TValue&gt;空字典</returns>
     Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull;
     /// <summary>
-    /// 执行SQL查询，返回 T 实体所有字段的记录并转化为Dictionary&lt;TKey, TValue&gt;字典，记录不存在时返回没有任何元素的Dictionary&lt;TKey, TValue&gt;字典
+    /// 执行SQL查询，返回T实体所有字段的记录并转化为Dictionary&lt;TKey, TValue&gt;字典，记录不存在时返回没有任何元素的Dictionary&lt;TKey, TValue&gt;空字典
     /// </summary>
     /// <typeparam name="TKey">字典Key类型</typeparam>
     /// <typeparam name="TValue">字典Value类型</typeparam>
     /// <param name="keySelector">字典Key选择委托</param>
     /// <param name="valueSelector">字典Value选择委托</param>
     /// <param name="cancellationToken"></param>
-    /// <returns>返回Dictionary&lt;TKey, TValue&gt;字典或没有任何元素的空Dictionary&lt;TKey, TValue&gt;字典</returns>
+    /// <returns>返回Dictionary&lt;TKey, TValue&gt;字典或没有任何元素的Dictionary&lt;TKey, TValue&gt;空字典</returns>
     Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull;
     #endregion
-
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 /// <summary>
 /// 多表T1, T2查询
 /// </summary>
 /// <typeparam name="T1">表T1实体类型</typeparam>
 /// <typeparam name="T2">表T2实体类型</typeparam>
-public interface IQuery<T1, T2>
+public interface IQuery<T1, T2> : IQueryBase
 {
     #region CTE NextWith/NextWithRecursive
     /// <summary>
@@ -1206,19 +1218,6 @@ public interface IQuery<T1, T2>
     IQuery<T1, T2> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, TFields>> fieldsExpr);
     #endregion
 
-    /// <summary>
-    /// 跳过offset条数据
-    /// </summary>
-    /// <param name="offset">要跳过查询的数据条数</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2> Skip(int offset);
-    /// <summary>
-    /// 只返回limit条数据
-    /// </summary>
-    /// <param name="limit">返回的数据条数</param>
-    /// <returns>返回查询对象</returns>    
-    IQuery<T1, T2> Take(int limit);
-
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -1252,28 +1251,6 @@ public interface IQuery<T1, T2>
     #region Aggregate
     #region Count
     /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    int Count();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    long LongCount();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
     /// 返回某个字段的数据条数，用法：
     /// <code>repository.From&lt;T1, T2&gt;().Count((a, b) =&gt; f.BuyerId);</code>
     /// </summary>
@@ -1291,7 +1268,7 @@ public interface IQuery<T1, T2>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2&gt;().CountDistinct((a, b) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1299,7 +1276,7 @@ public interface IQuery<T1, T2>
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2&gt;().CountDistinctAsync((a, b) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1325,7 +1302,7 @@ public interface IQuery<T1, T2>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2&gt;().LongCountDistinct((a, b) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1333,7 +1310,7 @@ public interface IQuery<T1, T2>
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2&gt;().LongCountDistinctAsync((a, b) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1412,13 +1389,6 @@ public interface IQuery<T1, T2>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 /// <summary>
 /// 多表T1, T2, T3查询
@@ -1426,7 +1396,7 @@ public interface IQuery<T1, T2>
 /// <typeparam name="T1">表T1实体类型</typeparam>
 /// <typeparam name="T2">表T2实体类型</typeparam>
 /// <typeparam name="T3">表T3实体类型</typeparam>
-public interface IQuery<T1, T2, T3>
+public interface IQuery<T1, T2, T3> : IQueryBase
 {
     #region CTE NextWith/NextWithRecursive
     /// <summary>
@@ -1837,19 +1807,6 @@ public interface IQuery<T1, T2, T3>
     IQuery<T1, T2, T3> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr);
     #endregion
 
-    /// <summary>
-    /// 跳过offset条数据
-    /// </summary>
-    /// <param name="offset">要跳过查询的数据条数</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3> Skip(int offset);
-    /// <summary>
-    /// 只返回limit条数据
-    /// </summary>
-    /// <param name="limit">返回的数据条数</param>
-    /// <returns>返回查询对象</returns>    
-    IQuery<T1, T2, T3> Take(int limit);
-
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -1883,28 +1840,6 @@ public interface IQuery<T1, T2, T3>
     #region Aggregate
     #region Count
     /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    int Count();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    long LongCount();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
     /// 返回某个字段的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3&gt;().Count((a, b, c) =&gt; f.BuyerId);</code>
     /// </summary>
@@ -1922,7 +1857,7 @@ public interface IQuery<T1, T2, T3>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3&gt;().CountDistinct((a, b, c) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1930,7 +1865,7 @@ public interface IQuery<T1, T2, T3>
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3&gt;().CountDistinctAsync((a, b, c) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1956,7 +1891,7 @@ public interface IQuery<T1, T2, T3>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3&gt;().LongCountDistinct((a, b, c) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1964,7 +1899,7 @@ public interface IQuery<T1, T2, T3>
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3&gt;().LongCountDistinctAsync((a, b, c) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2043,13 +1978,6 @@ public interface IQuery<T1, T2, T3>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 /// <summary>
 /// 多表T1, T2, T3, T4查询
@@ -2058,7 +1986,7 @@ public interface IQuery<T1, T2, T3>
 /// <typeparam name="T2">表T2实体类型</typeparam>
 /// <typeparam name="T3">表T3实体类型</typeparam>
 /// <typeparam name="T4">表T4实体类型</typeparam>
-public interface IQuery<T1, T2, T3, T4>
+public interface IQuery<T1, T2, T3, T4> : IQueryBase
 {
     #region CTE NextWith/NextWithRecursive
     /// <summary>
@@ -2469,19 +2397,6 @@ public interface IQuery<T1, T2, T3, T4>
     IQuery<T1, T2, T3, T4> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr);
     #endregion
 
-    /// <summary>
-    /// 跳过offset条数据
-    /// </summary>
-    /// <param name="offset">要跳过查询的数据条数</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4> Skip(int offset);
-    /// <summary>
-    /// 只返回limit条数据
-    /// </summary>
-    /// <param name="limit">返回的数据条数</param>
-    /// <returns>返回查询对象</returns>    
-    IQuery<T1, T2, T3, T4> Take(int limit);
-
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -2515,28 +2430,6 @@ public interface IQuery<T1, T2, T3, T4>
     #region Aggregate
     #region Count
     /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    int Count();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    long LongCount();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
     /// 返回某个字段的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4&gt;().Count((a, b, c, d) =&gt; f.BuyerId);</code>
     /// </summary>
@@ -2554,7 +2447,7 @@ public interface IQuery<T1, T2, T3, T4>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4&gt;().CountDistinct((a, b, c, d) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2562,7 +2455,7 @@ public interface IQuery<T1, T2, T3, T4>
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4&gt;().CountDistinctAsync((a, b, c, d) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2588,7 +2481,7 @@ public interface IQuery<T1, T2, T3, T4>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4&gt;().LongCountDistinct((a, b, c, d) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2596,7 +2489,7 @@ public interface IQuery<T1, T2, T3, T4>
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4&gt;().LongCountDistinctAsync((a, b, c, d) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -2675,13 +2568,6 @@ public interface IQuery<T1, T2, T3, T4>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5查询
@@ -2691,7 +2577,7 @@ public interface IQuery<T1, T2, T3, T4>
 /// <typeparam name="T3">表T3实体类型</typeparam>
 /// <typeparam name="T4">表T4实体类型</typeparam>
 /// <typeparam name="T5">表T5实体类型</typeparam>
-public interface IQuery<T1, T2, T3, T4, T5>
+public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
 {
     #region CTE NextWith/NextWithRecursive
     /// <summary>
@@ -3102,19 +2988,6 @@ public interface IQuery<T1, T2, T3, T4, T5>
     IQuery<T1, T2, T3, T4, T5> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     #endregion
 
-    /// <summary>
-    /// 跳过offset条数据
-    /// </summary>
-    /// <param name="offset">要跳过查询的数据条数</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5> Skip(int offset);
-    /// <summary>
-    /// 只返回limit条数据
-    /// </summary>
-    /// <param name="limit">返回的数据条数</param>
-    /// <returns>返回查询对象</returns>    
-    IQuery<T1, T2, T3, T4, T5> Take(int limit);
-
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -3148,28 +3021,6 @@ public interface IQuery<T1, T2, T3, T4, T5>
     #region Aggregate
     #region Count
     /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    int Count();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    long LongCount();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
     /// 返回某个字段的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5&gt;().Count((a, b, c, d, e) =&gt; f.BuyerId);</code>
     /// </summary>
@@ -3187,7 +3038,7 @@ public interface IQuery<T1, T2, T3, T4, T5>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5&gt;().CountDistinct((a, b, c, d, e) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3195,7 +3046,7 @@ public interface IQuery<T1, T2, T3, T4, T5>
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5&gt;().CountDistinctAsync((a, b, c, d, e) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3221,7 +3072,7 @@ public interface IQuery<T1, T2, T3, T4, T5>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5&gt;().LongCountDistinct((a, b, c, d, e) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3229,7 +3080,7 @@ public interface IQuery<T1, T2, T3, T4, T5>
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5&gt;().LongCountDistinctAsync((a, b, c, d, e) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3308,13 +3159,6 @@ public interface IQuery<T1, T2, T3, T4, T5>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6查询
@@ -3325,7 +3169,7 @@ public interface IQuery<T1, T2, T3, T4, T5>
 /// <typeparam name="T4">表T4实体类型</typeparam>
 /// <typeparam name="T5">表T5实体类型</typeparam>
 /// <typeparam name="T6">表T6实体类型</typeparam>
-public interface IQuery<T1, T2, T3, T4, T5, T6>
+public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
 {
     #region CTE NextWith/NextWithRecursive
     /// <summary>
@@ -3736,19 +3580,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6>
     IQuery<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     #endregion
 
-    /// <summary>
-    /// 跳过offset条数据
-    /// </summary>
-    /// <param name="offset">要跳过查询的数据条数</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6> Skip(int offset);
-    /// <summary>
-    /// 只返回limit条数据
-    /// </summary>
-    /// <param name="limit">返回的数据条数</param>
-    /// <returns>返回查询对象</returns>    
-    IQuery<T1, T2, T3, T4, T5, T6> Take(int limit);
-
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -3782,28 +3613,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6>
     #region Aggregate
     #region Count
     /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    int Count();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    long LongCount();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
     /// 返回某个字段的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6&gt;().Count((a, b, c, d, e, f) =&gt; f.BuyerId);</code>
     /// </summary>
@@ -3821,7 +3630,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6&gt;().CountDistinct((a, b, c, d, e, f) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3829,7 +3638,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6>
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6&gt;().CountDistinctAsync((a, b, c, d, e, f) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3855,7 +3664,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6&gt;().LongCountDistinct((a, b, c, d, e, f) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3863,7 +3672,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6>
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6&gt;().LongCountDistinctAsync((a, b, c, d, e, f) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -3942,13 +3751,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7查询
@@ -3960,7 +3762,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6>
 /// <typeparam name="T5">表T5实体类型</typeparam>
 /// <typeparam name="T6">表T6实体类型</typeparam>
 /// <typeparam name="T7">表T7实体类型</typeparam>
-public interface IQuery<T1, T2, T3, T4, T5, T6, T7>
+public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
 {
     #region CTE NextWith/NextWithRecursive
     /// <summary>
@@ -4371,19 +4173,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7>
     IQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     #endregion
 
-    /// <summary>
-    /// 跳过offset条数据
-    /// </summary>
-    /// <param name="offset">要跳过查询的数据条数</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7> Skip(int offset);
-    /// <summary>
-    /// 只返回limit条数据
-    /// </summary>
-    /// <param name="limit">返回的数据条数</param>
-    /// <returns>返回查询对象</returns>    
-    IQuery<T1, T2, T3, T4, T5, T6, T7> Take(int limit);
-
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -4417,28 +4206,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7>
     #region Aggregate
     #region Count
     /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    int Count();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    long LongCount();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
     /// 返回某个字段的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().Count((a, b, c, d, e, f, g) =&gt; f.BuyerId);</code>
     /// </summary>
@@ -4456,7 +4223,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().CountDistinct((a, b, c, d, e, f, g) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -4464,7 +4231,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7>
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().CountDistinctAsync((a, b, c, d, e, f, g) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -4490,7 +4257,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().LongCountDistinct((a, b, c, d, e, f, g) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -4498,7 +4265,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7>
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -4577,13 +4344,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8查询
@@ -4596,7 +4356,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7>
 /// <typeparam name="T6">表T6实体类型</typeparam>
 /// <typeparam name="T7">表T7实体类型</typeparam>
 /// <typeparam name="T8">表T8实体类型</typeparam>
-public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
+public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
 {
     #region CTE NextWith/NextWithRecursive
     /// <summary>
@@ -5007,19 +4767,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     #endregion
 
-    /// <summary>
-    /// 跳过offset条数据
-    /// </summary>
-    /// <param name="offset">要跳过查询的数据条数</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Skip(int offset);
-    /// <summary>
-    /// 只返回limit条数据
-    /// </summary>
-    /// <param name="limit">返回的数据条数</param>
-    /// <returns>返回查询对象</returns>    
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Take(int limit);
-
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -5053,28 +4800,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
     #region Aggregate
     #region Count
     /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    int Count();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    long LongCount();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
     /// 返回某个字段的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().Count((a, b, c, d, e, f, g, h) =&gt; f.BuyerId);</code>
     /// </summary>
@@ -5092,7 +4817,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().CountDistinct((a, b, c, d, e, f, g, h) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5100,7 +4825,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5126,7 +4851,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().LongCountDistinct((a, b, c, d, e, f, g, h) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5134,7 +4859,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5213,13 +4938,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8, T9查询
@@ -5233,7 +4951,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
 /// <typeparam name="T7">表T7实体类型</typeparam>
 /// <typeparam name="T8">表T8实体类型</typeparam>
 /// <typeparam name="T9">表T9实体类型</typeparam>
-public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
+public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
 {
     #region CTE NextWith/NextWithRecursive
     /// <summary>
@@ -5644,19 +5362,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     #endregion
 
-    /// <summary>
-    /// 跳过offset条数据
-    /// </summary>
-    /// <param name="offset">要跳过查询的数据条数</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Skip(int offset);
-    /// <summary>
-    /// 只返回limit条数据
-    /// </summary>
-    /// <param name="limit">返回的数据条数</param>
-    /// <returns>返回查询对象</returns>    
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Take(int limit);
-
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -5690,28 +5395,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
     #region Aggregate
     #region Count
     /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    int Count();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    long LongCount();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
     /// 返回某个字段的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().Count((a, b, c, d, e, f, g, h, i) =&gt; f.BuyerId);</code>
     /// </summary>
@@ -5729,7 +5412,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().CountDistinct((a, b, c, d, e, f, g, h, i) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5737,7 +5420,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h, i) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5763,7 +5446,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().LongCountDistinct((a, b, c, d, e, f, g, h, i) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5771,7 +5454,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h, i) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -5850,13 +5533,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8, T9, T10查询
@@ -5871,7 +5547,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
 /// <typeparam name="T8">表T8实体类型</typeparam>
 /// <typeparam name="T9">表T9实体类型</typeparam>
 /// <typeparam name="T10">表T10实体类型</typeparam>
-public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
+public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
 {
     #region CTE NextWith/NextWithRecursive
     /// <summary>
@@ -6282,19 +5958,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     #endregion
 
-    /// <summary>
-    /// 跳过offset条数据
-    /// </summary>
-    /// <param name="offset">要跳过查询的数据条数</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Skip(int offset);
-    /// <summary>
-    /// 只返回limit条数据
-    /// </summary>
-    /// <param name="limit">返回的数据条数</param>
-    /// <returns>返回查询对象</returns>    
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Take(int limit);
-
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -6328,28 +5991,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
     #region Aggregate
     #region Count
     /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    int Count();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    long LongCount();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
     /// 返回某个字段的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().Count((a, b, c, d, e, f, g, h, i, j) =&gt; f.BuyerId);</code>
     /// </summary>
@@ -6367,7 +6008,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -6375,7 +6016,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h, i, j) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -6401,7 +6042,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().LongCountDistinct((a, b, c, d, e, f, g, h, i, j) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -6409,7 +6050,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h, i, j) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -6488,13 +6129,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11查询
@@ -6510,7 +6144,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
 /// <typeparam name="T9">表T9实体类型</typeparam>
 /// <typeparam name="T10">表T10实体类型</typeparam>
 /// <typeparam name="T11">表T11实体类型</typeparam>
-public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
+public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBase
 {
     #region CTE NextWith/NextWithRecursive
     /// <summary>
@@ -6921,19 +6555,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     #endregion
 
-    /// <summary>
-    /// 跳过offset条数据
-    /// </summary>
-    /// <param name="offset">要跳过查询的数据条数</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Skip(int offset);
-    /// <summary>
-    /// 只返回limit条数据
-    /// </summary>
-    /// <param name="limit">返回的数据条数</param>
-    /// <returns>返回查询对象</returns>    
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Take(int limit);
-
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -6967,28 +6588,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
     #region Aggregate
     #region Count
     /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    int Count();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    long LongCount();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
     /// 返回某个字段的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().Count((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.BuyerId);</code>
     /// </summary>
@@ -7006,7 +6605,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7014,7 +6613,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7040,7 +6639,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().LongCountDistinct((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7048,7 +6647,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7127,13 +6726,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12查询
@@ -7150,7 +6742,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
 /// <typeparam name="T10">表T10实体类型</typeparam>
 /// <typeparam name="T11">表T11实体类型</typeparam>
 /// <typeparam name="T12">表T12实体类型</typeparam>
-public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
+public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQueryBase
 {
     #region CTE NextWith/NextWithRecursive
     /// <summary>
@@ -7561,19 +7153,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     #endregion
 
-    /// <summary>
-    /// 跳过offset条数据
-    /// </summary>
-    /// <param name="offset">要跳过查询的数据条数</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Skip(int offset);
-    /// <summary>
-    /// 只返回limit条数据
-    /// </summary>
-    /// <param name="limit">返回的数据条数</param>
-    /// <returns>返回查询对象</returns>    
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Take(int limit);
-
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -7607,28 +7186,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
     #region Aggregate
     #region Count
     /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    int Count();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    long LongCount();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
     /// 返回某个字段的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().Count((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.BuyerId);</code>
     /// </summary>
@@ -7646,7 +7203,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7654,7 +7211,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7680,7 +7237,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().LongCountDistinct((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7688,7 +7245,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -7767,13 +7324,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13查询
@@ -7791,7 +7341,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
 /// <typeparam name="T11">表T11实体类型</typeparam>
 /// <typeparam name="T12">表T12实体类型</typeparam>
 /// <typeparam name="T13">表T13实体类型</typeparam>
-public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
+public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQueryBase
 {
     #region CTE NextWith/NextWithRecursive
     /// <summary>
@@ -8202,19 +7752,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     #endregion
 
-    /// <summary>
-    /// 跳过offset条数据
-    /// </summary>
-    /// <param name="offset">要跳过查询的数据条数</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Skip(int offset);
-    /// <summary>
-    /// 只返回limit条数据
-    /// </summary>
-    /// <param name="limit">返回的数据条数</param>
-    /// <returns>返回查询对象</returns>    
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Take(int limit);
-
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -8248,28 +7785,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
     #region Aggregate
     #region Count
     /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    int Count();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    long LongCount();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
     /// 返回某个字段的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().Count((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.BuyerId);</code>
     /// </summary>
@@ -8287,7 +7802,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8295,7 +7810,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8321,7 +7836,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().LongCountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8329,7 +7844,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8408,13 +7923,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14查询
@@ -8433,7 +7941,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
 /// <typeparam name="T12">表T12实体类型</typeparam>
 /// <typeparam name="T13">表T13实体类型</typeparam>
 /// <typeparam name="T14">表T14实体类型</typeparam>
-public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
+public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQueryBase
 {
     #region CTE NextWith/NextWithRecursive
     /// <summary>
@@ -8844,19 +8352,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     #endregion
 
-    /// <summary>
-    /// 跳过offset条数据
-    /// </summary>
-    /// <param name="offset">要跳过查询的数据条数</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Skip(int offset);
-    /// <summary>
-    /// 只返回limit条数据
-    /// </summary>
-    /// <param name="limit">返回的数据条数</param>
-    /// <returns>返回查询对象</returns>    
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Take(int limit);
-
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -8890,28 +8385,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     #region Aggregate
     #region Count
     /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    int Count();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    long LongCount();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
     /// 返回某个字段的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().Count((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.BuyerId);</code>
     /// </summary>
@@ -8929,7 +8402,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8937,7 +8410,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8963,7 +8436,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().LongCountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -8971,7 +8444,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的数据条数，用法：
     /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -9050,15 +8523,26 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }
-public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
+/// <summary>
+/// 多表T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15查询
+/// </summary>
+/// <typeparam name="T1">表T1实体类型</typeparam>
+/// <typeparam name="T2">表T2实体类型</typeparam>
+/// <typeparam name="T3">表T3实体类型</typeparam>
+/// <typeparam name="T4">表T4实体类型</typeparam>
+/// <typeparam name="T5">表T5实体类型</typeparam>
+/// <typeparam name="T6">表T6实体类型</typeparam>
+/// <typeparam name="T7">表T7实体类型</typeparam>
+/// <typeparam name="T8">表T8实体类型</typeparam>
+/// <typeparam name="T9">表T9实体类型</typeparam>
+/// <typeparam name="T10">表T10实体类型</typeparam>
+/// <typeparam name="T11">表T11实体类型</typeparam>
+/// <typeparam name="T12">表T12实体类型</typeparam>
+/// <typeparam name="T13">表T13实体类型</typeparam>
+/// <typeparam name="T14">表T14实体类型</typeparam>
+/// <typeparam name="T15">表T15实体类型</typeparam>
+public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : IQueryBase
 {
     #region Include
     /// <summary>
@@ -9105,6 +8589,45 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回实体对象，带有导航属性</returns>
     IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
+    #endregion
+
+    #region Join
+    /// <summary>
+    /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>
+    /// repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;()
+    ///     ... ...
+    ///     .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
+    ///     ... ...
+    /// </code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>
+    /// repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;()
+    ///     ... ...
+    ///     .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
+    ///     ... ...
+    /// </code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>
+    /// repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;()
+    ///     ... ...
+    ///     .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
+    ///     ... ...
+    /// </code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
     #endregion
 
     #region Where/And
@@ -9203,57 +8726,41 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     #endregion
 
-    /// <summary>
-    /// 跳过offset条数据
-    /// </summary>
-    /// <param name="offset">要跳过查询的数据条数</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Skip(int offset);
-    /// <summary>
-    /// 只返回limit条数据
-    /// </summary>
-    /// <param name="limit">返回的数据条数</param>
-    /// <returns>返回查询对象</returns>    
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Take(int limit);
-
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
-    /// Select((a, b, c, d, e, f, g, h, i, j, k, l, m, n) => new { f.Id, f.Name }) 或是 Select((a, b, c, d, e, f, g, h, i, j, k, l, m, n) => x.CreatedAt.Date)
+    /// Select((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) => new { f.Id, f.Name }) 或是 Select((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) => x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr);
+    /// <summary>
+    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
+    /// <code>
+    /// repository.From&lt;Order&gt;()
+    ///    ... ...
+    ///    .SelectAggregate((x, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; new
+    ///    {
+    ///        OrderCount = x.Count(a.Id),
+    ///        TotalAmount = x.Sum(a.TotalAmount)
+    ///    })
+    ///    .ToSql(out _);
+    /// </code>
+    /// 生成的SQL:
+    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` FROM ... `sys_order` ... </code>
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
+    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr);
     #endregion
 
     #region Aggregate
     #region Count
     /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    int Count();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <returns>返回数据条数</returns>
-    long LongCount();
-    /// <summary>
-    /// 返回数据条数
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回数据条数</returns>
-    Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    /// <summary>
     /// 返回某个字段的数据条数，用法：
-    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().Count((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.BuyerId);</code>
+    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().Count((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -9261,7 +8768,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr);
     /// <summary>
     /// 返回某个字段的数据条数，用法：
-    /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().CountAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.BuyerId);</code>
+    /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().CountAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -9269,16 +8776,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
-    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.BuyerId);</code>
+    /// 返回某个字段去重后的数据条数，用法：
+    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().CountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段的数据条数</returns>
     int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
-    /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.BuyerId);</code>
+    /// 返回某个字段去重后的数据条数，用法：
+    /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().CountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -9287,7 +8794,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
     /// 返回某个字段的数据条数，用法：
-    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().LongCount((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.BuyerId);</code>
+    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().LongCount((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -9295,7 +8802,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr);
     /// <summary>
     /// 返回某个字段的数据条数，用法：
-    /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().LongCountAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.BuyerId);</code>
+    /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().LongCountAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -9303,16 +8810,16 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的数据条数</returns>
     Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
-    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().LongCountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.BuyerId);</code>
+    /// 返回某个字段去重后的数据条数，用法：
+    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().LongCountDistinct((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
     /// <returns>返回该字段的数据条数</returns>
     long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的数据条数，这个更有实际意义，用法：
-    /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.BuyerId);</code>
+    /// 返回某个字段去重后的数据条数，用法：
+    /// <code>await repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().LongCountDistinctAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -9323,7 +8830,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 
     /// <summary>
     /// 计算指定字段的求和值
-    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().Sum((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.TotalAmount);</code>
+    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().Sum((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.TotalAmount);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -9331,7 +8838,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr);
     /// <summary>
     /// 计算指定字段的求和值
-    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().SumAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.TotalAmount);</code>
+    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().SumAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.TotalAmount);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -9340,7 +8847,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
     /// 计算指定字段的平均值
-    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().Avg((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.TotalAmount);</code>
+    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().Avg((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.TotalAmount);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -9348,7 +8855,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr);
     /// <summary>
     /// 计算指定字段的平均值
-    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().AvgAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.TotalAmount);</code>
+    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().AvgAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.TotalAmount);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -9357,7 +8864,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
     /// 计算指定字段的最大值
-    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().Max((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.TotalAmount);</code>
+    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().Max((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.TotalAmount);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -9365,7 +8872,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     TField Max<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr);
     /// <summary>
     /// 计算指定字段的最大值
-    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().MaxAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.TotalAmount);</code>
+    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().MaxAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.TotalAmount);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -9374,7 +8881,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
     /// 计算指定字段的最小值
-    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().Min((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.TotalAmount);</code>
+    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().Min((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.TotalAmount);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -9382,7 +8889,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr);
     /// <summary>
     /// 计算指定字段的最小值
-    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().MinAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.TotalAmount);</code>
+    /// <code>repository.From&lt;T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15&gt;().MinAsync((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.TotalAmount);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -9390,11 +8897,4 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
 }

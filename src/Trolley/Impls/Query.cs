@@ -12,20 +12,89 @@ namespace Trolley;
 class QueryAnonymousObject : IQueryAnonymousObject
 {
     private readonly IQueryVisitor visitor;
-    public QueryAnonymousObject(IQueryVisitor visitor)
-        => this.visitor = visitor;
+    public QueryAnonymousObject(IQueryVisitor visitor) => this.visitor = visitor;
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(out dbParameters, out _);
 }
-class Query<T> : IQuery<T>
+class QueryBase : IQueryBase
 {
-    private int unionIndex = 0;
-    protected int withIndex = 0;
-    protected readonly string dbKey;
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IQueryVisitor visitor;
+    protected string dbKey;
+    protected TheaConnection connection;
+    protected IDbTransaction transaction;
+    protected IQueryVisitor visitor;
+    protected int unionIndex;
+    protected int withIndex;
 
+    #region Count
+    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
+    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    #endregion
+
+    #region ToSql
+    public virtual string ToSql(out List<IDbDataParameter> dbParameters)
+        => this.visitor.BuildSql(out dbParameters, out _);
+    #endregion
+
+    #region QueryFirstValue
+    protected TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
+    {
+        this.visitor.Select(sqlFormat, fieldExpr);
+        var sql = this.visitor.BuildSql(out var dbParameters, out _);
+        using var command = this.connection.CreateCommand();
+        command.CommandText = sql;
+        command.CommandType = CommandType.Text;
+        command.Transaction = this.transaction;
+
+        if (dbParameters != null && dbParameters.Count > 0)
+            dbParameters.ForEach(f => command.Parameters.Add(f));
+
+        this.connection.Open();
+        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        TTarget result = default;
+        using var reader = command.ExecuteReader(behavior);
+        if (reader.Read()) result = reader.To<TTarget>();
+        reader.Close();
+        reader.Dispose();
+        command.Dispose();
+        return result;
+    }
+    protected async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
+    {
+        this.visitor.Select(sqlFormat, fieldExpr);
+        var sql = this.visitor.BuildSql(out var dbParameters, out _);
+        using var cmd = this.connection.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.CommandType = CommandType.Text;
+        cmd.Transaction = this.transaction;
+
+        if (dbParameters != null && dbParameters.Count > 0)
+            dbParameters.ForEach(f => cmd.Parameters.Add(f));
+
+        if (cmd is not DbCommand command)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+
+        TTarget result = default;
+        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        await this.connection.OpenAsync(cancellationToken);
+        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
+            result = reader.To<TTarget>();
+        await reader.CloseAsync();
+        await reader.DisposeAsync();
+        await command.DisposeAsync();
+        return result;
+    }
+    #endregion
+}
+class Query<T> : QueryBase, IQuery<T>
+{
+    private int? offset;
+    private int pageIndex;
+    private int pageSize;
     public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
@@ -297,35 +366,42 @@ class Query<T> : IQuery<T>
     }
     #endregion
 
+    #region Distinct
     public IQuery<T> Distinct()
     {
         this.visitor.Distinct();
         return this;
     }
+    #endregion
+
+    #region Skip/Take/Page
     public IQuery<T> Skip(int offset)
     {
+        this.offset = offset;
+        if (this.pageSize > 0)
+            this.pageIndex = (int)Math.Ceiling((double)offset / this.pageSize);
         this.visitor.Skip(offset);
         return this;
     }
     public IQuery<T> Take(int limit)
     {
+        this.pageSize = limit;
+        if (this.offset.HasValue)
+            this.pageIndex = (int)Math.Ceiling((double)this.offset.Value / limit);
         this.visitor.Take(limit);
         return this;
     }
     public IQuery<T> Page(int pageIndex, int pageSize)
     {
+        this.pageIndex = pageIndex;
+        this.pageSize = pageSize;
         this.visitor.Page(pageIndex, pageSize);
         return this;
     }
+    #endregion
 
     #region Aggregate
     #region Count
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -630,24 +706,33 @@ class Query<T> : IQuery<T>
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        int recordsTotal = 0;
         var result = new PagedList<T>();
-        result.Items = new List<T>();
-
         this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess;
         using var reader = command.ExecuteReader(behavior);
         if (reader.Read())
-            recordsTotal = reader.To<int>();
+            result.TotalCount = reader.To<int>();
+        result.PageIndex = this.pageIndex;
+        result.PageSize = this.pageSize;
 
         reader.NextResult();
-        while (reader.Read())
+        var entityType = typeof(T);
+        if (entityType.IsEntityType())
         {
-            result.Items.Add(reader.To<T>(this.dbKey, this.visitor.OrmProvider, readerFields));
+            while (reader.Read())
+            {
+                result.Data.Add(reader.To<T>(this.dbKey, this.visitor.OrmProvider, readerFields));
+            }
+        }
+        else
+        {
+            while (reader.Read())
+            {
+                result.Data.Add(reader.To<T>());
+            }
         }
         reader.Close();
         reader.Dispose();
-        result.RecordsTotal = recordsTotal;
 
         if (this.visitor.BuildIncludeSql(result, out sql))
         {
@@ -675,31 +760,40 @@ class Query<T> : IQuery<T>
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
-        int recordsTotal = 0;
         var result = new PagedList<T>();
-        result.Items = new List<T>();
-
         await this.connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess;
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
         if (await reader.ReadAsync())
-            recordsTotal = reader.To<int>();
+            result.TotalCount = reader.To<int>();
+        result.PageIndex = this.pageIndex;
+        result.PageSize = this.pageSize;
 
-        await reader.NextResultAsync();
-        while (await reader.ReadAsync())
+        await reader.NextResultAsync(cancellationToken);
+        var entityType = typeof(T);
+        if (entityType.IsEntityType())
         {
-            result.Items.Add(reader.To<T>(this.dbKey, this.visitor.OrmProvider, readerFields));
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                result.Data.Add(reader.To<T>(this.dbKey, this.visitor.OrmProvider, readerFields));
+            }
+        }
+        else
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                result.Data.Add(reader.To<T>());
+            }
         }
         await reader.CloseAsync();
         await reader.DisposeAsync();
-        result.RecordsTotal = recordsTotal;
 
-        if (this.visitor.BuildIncludeSql(result, out sql))
+        if (this.visitor.BuildIncludeSql(result.Data, out sql))
         {
             command.CommandText = sql;
             command.Parameters.Clear();
             using var includeReader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-            this.visitor.SetIncludeValues(result, includeReader);
+            this.visitor.SetIncludeValues(result.Data, includeReader);
         }
         await command.DisposeAsync();
         return result;
@@ -725,61 +819,10 @@ class Query<T> : IQuery<T>
     }
     #endregion
 
-    public string ToSql(out List<IDbDataParameter> dbParameters)
+    public override string ToSql(out List<IDbDataParameter> dbParameters)
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.visitor.SelectDefault(defaultExpr);
         return this.visitor.BuildSql(out dbParameters, out _);
     }
-
-    #region QueryFirstValue
-    private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-        this.connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        TTarget result = default;
-        using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.To<TTarget>();
-        reader.Close();
-        reader.Dispose();
-        command.Dispose();
-        return result;
-    }
-    private async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        TTarget result = default;
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await this.connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
-            result = reader.To<TTarget>();
-        await reader.CloseAsync();
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        return result;
-    }
-    #endregion
 }

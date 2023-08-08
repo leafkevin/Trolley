@@ -8,13 +8,9 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-class Query<T1, T2> : IQuery<T1, T2>
+class Query<T1, T2> : QueryBase, IQuery<T1, T2>
 {
-    protected int withIndex = 0;
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IQueryVisitor visitor;
-
+    #region Constructor
     public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
@@ -22,6 +18,7 @@ class Query<T1, T2> : IQuery<T1, T2>
         this.visitor = visitor;
         this.withIndex = withIndex;
     }
+    #endregion
 
     #region CTE NextWith/NextWithRecursive
     public IQuery<T1, T2, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
@@ -271,25 +268,8 @@ class Query<T1, T2> : IQuery<T1, T2>
     }
     #endregion
 
-    public IQuery<T1, T2> Skip(int offset)
-    {
-        this.visitor.Skip(offset);
-        return this;
-    }
-    public IQuery<T1, T2> Take(int limit)
-    {
-        this.visitor.Take(limit);
-        return this;
-    }
-
     #region Aggregate
     #region Count
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T1, T2, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -406,70 +386,10 @@ class Query<T1, T2> : IQuery<T1, T2>
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
     #endregion
-
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
-
-    #region QueryFirstValue
-    private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-        this.connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        object result = null;
-        using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.GetValue(0);
-        reader.Close();
-        reader.Dispose();
-        command.Dispose();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    private async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        object result = null;
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await this.connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
-            result = reader.GetValue(0);
-        await reader.CloseAsync();
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    #endregion
 }
-class Query<T1, T2, T3> : IQuery<T1, T2, T3>
+class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
 {
-    protected int withIndex = 0;
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IQueryVisitor visitor;
-
+    #region Constructor
     public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
@@ -477,6 +397,7 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
         this.visitor = visitor;
         this.withIndex = withIndex;
     }
+    #endregion
 
     #region CTE NextWith/NextWithRecursive
     public IQuery<T1, T2, T3, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
@@ -726,25 +647,8 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
     }
     #endregion
 
-    public IQuery<T1, T2, T3> Skip(int offset)
-    {
-        this.visitor.Skip(offset);
-        return this;
-    }
-    public IQuery<T1, T2, T3> Take(int limit)
-    {
-        this.visitor.Take(limit);
-        return this;
-    }
-
     #region Aggregate
     #region Count
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -861,70 +765,10 @@ class Query<T1, T2, T3> : IQuery<T1, T2, T3>
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
     #endregion
-
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
-
-    #region QueryFirstValue
-    private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-        this.connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        object result = null;
-        using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.GetValue(0);
-        reader.Close();
-        reader.Dispose();
-        command.Dispose();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    private async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        object result = null;
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await this.connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
-            result = reader.GetValue(0);
-        await reader.CloseAsync();
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    #endregion
 }
-class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
+class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
 {
-    protected int withIndex = 0;
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IQueryVisitor visitor;
-
+    #region Constructor
     public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
@@ -932,6 +776,7 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
         this.visitor = visitor;
         this.withIndex = withIndex;
     }
+    #endregion
 
     #region CTE NextWith/NextWithRecursive
     public IQuery<T1, T2, T3, T4, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
@@ -1181,25 +1026,8 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     }
     #endregion
 
-    public IQuery<T1, T2, T3, T4> Skip(int offset)
-    {
-        this.visitor.Skip(offset);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4> Take(int limit)
-    {
-        this.visitor.Take(limit);
-        return this;
-    }
-
     #region Aggregate
     #region Count
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -1316,70 +1144,10 @@ class Query<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
     #endregion
-
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
-
-    #region QueryFirstValue
-    private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-        this.connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        object result = null;
-        using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.GetValue(0);
-        reader.Close();
-        reader.Dispose();
-        command.Dispose();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    private async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        object result = null;
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await this.connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
-            result = reader.GetValue(0);
-        await reader.CloseAsync();
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    #endregion
 }
-class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
+class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
 {
-    protected int withIndex = 0;
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IQueryVisitor visitor;
-
+    #region Constructor
     public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
@@ -1387,6 +1155,7 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
         this.visitor = visitor;
         this.withIndex = withIndex;
     }
+    #endregion
 
     #region CTE NextWith/NextWithRecursive
     public IQuery<T1, T2, T3, T4, T5, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
@@ -1636,25 +1405,8 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
     }
     #endregion
 
-    public IQuery<T1, T2, T3, T4, T5> Skip(int offset)
-    {
-        this.visitor.Skip(offset);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5> Take(int limit)
-    {
-        this.visitor.Take(limit);
-        return this;
-    }
-
     #region Aggregate
     #region Count
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -1771,70 +1523,10 @@ class Query<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T5>
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
     #endregion
-
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
-
-    #region QueryFirstValue
-    private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-        this.connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        object result = null;
-        using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.GetValue(0);
-        reader.Close();
-        reader.Dispose();
-        command.Dispose();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    private async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        object result = null;
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await this.connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
-            result = reader.GetValue(0);
-        await reader.CloseAsync();
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
+class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
 {
-    protected int withIndex = 0;
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IQueryVisitor visitor;
-
+    #region Constructor
     public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
@@ -1842,6 +1534,7 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
         this.visitor = visitor;
         this.withIndex = withIndex;
     }
+    #endregion
 
     #region CTE NextWith/NextWithRecursive
     public IQuery<T1, T2, T3, T4, T5, T6, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
@@ -2091,25 +1784,8 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
     }
     #endregion
 
-    public IQuery<T1, T2, T3, T4, T5, T6> Skip(int offset)
-    {
-        this.visitor.Skip(offset);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6> Take(int limit)
-    {
-        this.visitor.Take(limit);
-        return this;
-    }
-
     #region Aggregate
     #region Count
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -2226,70 +1902,10 @@ class Query<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T4, T5, T6>
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
     #endregion
-
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
-
-    #region QueryFirstValue
-    private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-        this.connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        object result = null;
-        using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.GetValue(0);
-        reader.Close();
-        reader.Dispose();
-        command.Dispose();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    private async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        object result = null;
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await this.connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
-            result = reader.GetValue(0);
-        await reader.CloseAsync();
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
+class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7>
 {
-    protected int withIndex = 0;
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IQueryVisitor visitor;
-
+    #region Constructor
     public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
@@ -2297,6 +1913,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
         this.visitor = visitor;
         this.withIndex = withIndex;
     }
+    #endregion
 
     #region CTE NextWith/NextWithRecursive
     public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
@@ -2546,25 +2163,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
     }
     #endregion
 
-    public IQuery<T1, T2, T3, T4, T5, T6, T7> Skip(int offset)
-    {
-        this.visitor.Skip(offset);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7> Take(int limit)
-    {
-        this.visitor.Take(limit);
-        return this;
-    }
-
     #region Aggregate
     #region Count
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -2681,70 +2281,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T3, T4, T5, T6, T7>
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
     #endregion
-
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
-
-    #region QueryFirstValue
-    private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-        this.connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        object result = null;
-        using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.GetValue(0);
-        reader.Close();
-        reader.Dispose();
-        command.Dispose();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    private async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        object result = null;
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await this.connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
-            result = reader.GetValue(0);
-        await reader.CloseAsync();
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
+class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
 {
-    protected int withIndex = 0;
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IQueryVisitor visitor;
-
+    #region Constructor
     public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
@@ -2752,6 +2292,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
         this.visitor = visitor;
         this.withIndex = withIndex;
     }
+    #endregion
 
     #region CTE NextWith/NextWithRecursive
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
@@ -3001,25 +2542,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
     }
     #endregion
 
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Skip(int offset)
-    {
-        this.visitor.Skip(offset);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Take(int limit)
-    {
-        this.visitor.Take(limit);
-        return this;
-    }
-
     #region Aggregate
     #region Count
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -3136,70 +2660,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T2, T3, T4, T5, T6, T7,
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
     #endregion
-
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
-
-    #region QueryFirstValue
-    private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-        this.connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        object result = null;
-        using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.GetValue(0);
-        reader.Close();
-        reader.Dispose();
-        command.Dispose();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    private async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        object result = null;
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await this.connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
-            result = reader.GetValue(0);
-        await reader.CloseAsync();
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
+class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
 {
-    protected int withIndex = 0;
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IQueryVisitor visitor;
-
+    #region Constructor
     public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
@@ -3207,6 +2671,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
         this.visitor = visitor;
         this.withIndex = withIndex;
     }
+    #endregion
 
     #region CTE NextWith/NextWithRecursive
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
@@ -3456,25 +2921,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
     }
     #endregion
 
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Skip(int offset)
-    {
-        this.visitor.Skip(offset);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Take(int limit)
-    {
-        this.visitor.Take(limit);
-        return this;
-    }
-
     #region Aggregate
     #region Count
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -3591,70 +3039,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T1, T2, T3, T4, T5, T6,
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
     #endregion
-
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
-
-    #region QueryFirstValue
-    private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-        this.connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        object result = null;
-        using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.GetValue(0);
-        reader.Close();
-        reader.Dispose();
-        command.Dispose();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    private async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        object result = null;
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await this.connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
-            result = reader.GetValue(0);
-        await reader.CloseAsync();
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
+class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
 {
-    protected int withIndex = 0;
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IQueryVisitor visitor;
-
+    #region Constructor
     public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
@@ -3662,6 +3050,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
         this.visitor = visitor;
         this.withIndex = withIndex;
     }
+    #endregion
 
     #region CTE NextWith/NextWithRecursive
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
@@ -3911,25 +3300,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
     }
     #endregion
 
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Skip(int offset)
-    {
-        this.visitor.Skip(offset);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Take(int limit)
-    {
-        this.visitor.Take(limit);
-        return this;
-    }
-
     #region Aggregate
     #region Count
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -4046,70 +3418,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQuery<T1, T2, T3, T4, T5
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
     #endregion
-
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
-
-    #region QueryFirstValue
-    private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-        this.connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        object result = null;
-        using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.GetValue(0);
-        reader.Close();
-        reader.Dispose();
-        command.Dispose();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    private async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        object result = null;
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await this.connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
-            result = reader.GetValue(0);
-        await reader.CloseAsync();
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
+class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
 {
-    protected int withIndex = 0;
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IQueryVisitor visitor;
-
+    #region Constructor
     public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
@@ -4117,6 +3429,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
         this.visitor = visitor;
         this.withIndex = withIndex;
     }
+    #endregion
 
     #region CTE NextWith/NextWithRecursive
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
@@ -4366,25 +3679,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
     }
     #endregion
 
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Skip(int offset)
-    {
-        this.visitor.Skip(offset);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Take(int limit)
-    {
-        this.visitor.Take(limit);
-        return this;
-    }
-
     #region Aggregate
     #region Count
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -4501,70 +3797,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQuery<T1, T2, T3, T
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
     #endregion
-
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
-
-    #region QueryFirstValue
-    private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-        this.connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        object result = null;
-        using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.GetValue(0);
-        reader.Close();
-        reader.Dispose();
-        command.Dispose();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    private async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        object result = null;
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await this.connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
-            result = reader.GetValue(0);
-        await reader.CloseAsync();
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
+class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
 {
-    protected int withIndex = 0;
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IQueryVisitor visitor;
-
+    #region Constructor
     public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
@@ -4572,6 +3808,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
         this.visitor = visitor;
         this.withIndex = withIndex;
     }
+    #endregion
 
     #region CTE NextWith/NextWithRecursive
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
@@ -4821,25 +4058,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
     }
     #endregion
 
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Skip(int offset)
-    {
-        this.visitor.Skip(offset);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Take(int limit)
-    {
-        this.visitor.Take(limit);
-        return this;
-    }
-
     #region Aggregate
     #region Count
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -4956,70 +4176,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQuery<T1, T2, 
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
     #endregion
-
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
-
-    #region QueryFirstValue
-    private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-        this.connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        object result = null;
-        using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.GetValue(0);
-        reader.Close();
-        reader.Dispose();
-        command.Dispose();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    private async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        object result = null;
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await this.connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
-            result = reader.GetValue(0);
-        await reader.CloseAsync();
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
+class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
 {
-    protected int withIndex = 0;
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IQueryVisitor visitor;
-
+    #region Constructor
     public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
@@ -5027,6 +4187,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
         this.visitor = visitor;
         this.withIndex = withIndex;
     }
+    #endregion
 
     #region CTE NextWith/NextWithRecursive
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
@@ -5276,25 +4437,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
     }
     #endregion
 
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Skip(int offset)
-    {
-        this.visitor.Skip(offset);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Take(int limit)
-    {
-        this.visitor.Take(limit);
-        return this;
-    }
-
     #region Aggregate
     #region Count
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -5411,70 +4555,10 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IQuery<T1,
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
     #endregion
-
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
-
-    #region QueryFirstValue
-    private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-        this.connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        object result = null;
-        using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.GetValue(0);
-        reader.Close();
-        reader.Dispose();
-        command.Dispose();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    private async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        object result = null;
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await this.connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
-            result = reader.GetValue(0);
-        await reader.CloseAsync();
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
+class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
 {
-    protected int withIndex = 0;
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IQueryVisitor visitor;
-
+    #region Constructor
     public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
@@ -5482,6 +4566,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         this.visitor = visitor;
         this.withIndex = withIndex;
     }
+    #endregion
 
     #region CTE NextWith/NextWithRecursive
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
@@ -5493,7 +4578,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         cteSubQuery.Invoke(new FromQuery(newVisitor));
         var rawSql = newVisitor.BuildSql(out var dbDataParameters, out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, dbDataParameters, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor, this.withIndex);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> NextWithRecursive<TOther>(Func<IFromQuery, string, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
     {
@@ -5504,7 +4589,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
         var rawSql = newVisitor.BuildSql(out var dbDataParameters, out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, dbDataParameters, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor, this.withIndex);
     }
     #endregion
 
@@ -5518,7 +4603,26 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         subQuery.Invoke(new FromQuery(newVisitor));
         var sql = newVisitor.BuildSql(out var dbDataParameters, out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, dbDataParameters, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor, this.withIndex);
+    }
+    #endregion
+
+    #region Include
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>> memberSelector)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(this.connection, this.transaction, this.visitor, this.withIndex);
+    }
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector, true, filter);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment>(this.connection, this.transaction, this.visitor, this.withIndex);
     }
     #endregion
 
@@ -5553,7 +4657,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor, this.withIndex);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
@@ -5561,7 +4665,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor, this.withIndex);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
@@ -5569,7 +4673,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor, this.withIndex);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
@@ -5581,7 +4685,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         var sql = newVisitor.BuildSql(out var dbDataParameters, out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, dbDataParameters, readerFields);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor, this.withIndex);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
@@ -5593,7 +4697,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         var sql = newVisitor.BuildSql(out var dbDataParameters, out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, dbDataParameters, readerFields);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor, this.withIndex);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
@@ -5605,26 +4709,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         var sql = newVisitor.BuildSql(out var dbDataParameters, out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, dbDataParameters, readerFields);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor);
-    }
-    #endregion
-
-    #region Include
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>> memberSelector)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(this.connection, this.transaction, this.visitor, this.withIndex);
-    }
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment>(this.connection, this.transaction, this.visitor, this.withIndex);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.visitor, this.withIndex);
     }
     #endregion
 
@@ -5712,7 +4797,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
     }
     #endregion
 
-    #region Select
+    #region Select 
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -5731,25 +4816,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
     }
     #endregion
 
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Skip(int offset)
-    {
-        this.visitor.Skip(offset);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Take(int limit)
-    {
-        this.visitor.Take(limit);
-        return this;
-    }
-
     #region Aggregate
     #region Count
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -5866,101 +4934,16 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IQuer
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
     #endregion
-
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
-
-    #region QueryFirstValue
-    private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-        this.connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        object result = null;
-        using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.GetValue(0);
-        reader.Close();
-        reader.Dispose();
-        command.Dispose();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    private async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        object result = null;
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await this.connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
-            result = reader.GetValue(0);
-        await reader.CloseAsync();
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
+class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
 {
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IQueryVisitor visitor;
-
-    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
+    #region Constructor
+    public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
-    }
-
-    #region Join
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.visitor.Join("INNER JOIN", joinOn);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
-    {
-
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.visitor.Join("LEFT JOIN", joinOn);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.visitor.Join("RIGHT JOIN", joinOn);
-        return this;
+        this.withIndex = withIndex;
     }
     #endregion
 
@@ -5980,6 +4963,33 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
 
         this.visitor.Include(memberSelector, true, filter);
         return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment>(this.connection, this.transaction, this.visitor);
+    }
+    #endregion
+
+    #region Join
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("INNER JOIN", joinOn);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("LEFT JOIN", joinOn);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("RIGHT JOIN", joinOn);
+        return this;
     }
     #endregion
 
@@ -6067,8 +5077,16 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     }
     #endregion
 
-    #region Select
+    #region Select 
     public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        this.visitor.Select(null, fieldsExpr);
+        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
+    }
+    public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -6078,29 +5096,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     }
     #endregion
 
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Skip(int offset)
-    {
-        this.visitor.Skip(offset);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Take(int limit)
-    {
-        this.visitor.Take(limit);
-        return this;
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> ToChunk(int size)
-    {
-        throw new NotImplementedException();
-    }
-
     #region Aggregate
     #region Count
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -6215,62 +5212,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
-    }
-    #endregion
-
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
-
-    #region QueryFirstValue
-    private TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-        this.connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        object result = null;
-        using var reader = command.ExecuteReader(behavior);
-        if (reader.Read()) result = reader.GetValue(0);
-        reader.Close();
-        reader.Dispose();
-        command.Dispose();
-        if (result is DBNull) return default;
-        return (TTarget)result;
-    }
-    private async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
-    {
-        this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        object result = null;
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        await this.connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
-            result = reader.GetValue(0);
-        await reader.CloseAsync();
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (result is DBNull) return default;
-        return (TTarget)result;
     }
     #endregion
 }

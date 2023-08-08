@@ -14,9 +14,17 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
 {
     #region 属性
     /// <summary>
+    /// 数据库链接串Key
+    /// </summary>
+    string DbKey { get; }
+    /// <summary>
     /// 驱动提供者
     /// </summary>
     IOrmProvider OrmProvider { get; }
+    /// <summary>
+    /// 实体映射提供者
+    /// </summary>
+    IEntityMapProvider MapProvider { get; }
     /// <summary>
     /// 数据库连接
     /// </summary>
@@ -441,7 +449,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回影响行数</returns>
-    Task<int> ExecuteAsync(string sql, object parameters = null, CancellationToken cancellationToken = default);
+    Task<int> ExecuteAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
     #endregion
 
     #region QueryMultiple

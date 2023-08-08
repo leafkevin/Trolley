@@ -17,6 +17,7 @@ public interface IQueryVisitor
     /// <param name="readerFields"></param>
     /// <returns></returns>
     string BuildSql(out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields, bool isUnion = false, char unionAlias = 'a');
+    bool HasIncludeTables();
     bool BuildIncludeSql(object parameter, out string sql);
     void SetIncludeValues(object parameter, IDataReader reader);
     IQueryVisitor From(params Type[] entityTypes);

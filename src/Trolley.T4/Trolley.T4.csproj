@@ -168,9 +168,17 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IQuery.cs</LastGenOutput>
     </Content>
+    <Content Include="Trolley\IRepository.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>IRepository.cs</LastGenOutput>
+    </Content>
     <Content Include="Trolley\IUpdate.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IUpdate.cs</LastGenOutput>
+    </Content>
+    <Content Include="Trolley\MultiQuery`.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>MultiQuery`.cs</LastGenOutput>
     </Content>
     <Content Include="Trolley\Query`.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
@@ -199,6 +207,18 @@
     <Content Include="Trolley\MultipleQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>MultipleQuery.cs</LastGenOutput>
+    </Content>
+    <Content Include="Trolley\MultiIncludableQuery.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>MultiIncludableQuery.cs</LastGenOutput>
+    </Content>
+    <Content Include="Trolley\MultiGroupingQuery.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>MultiGroupingQuery.cs</LastGenOutput>
+    </Content>
+    <Content Include="Trolley\Repository.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Repository.cs</LastGenOutput>
     </Content>
     <Content Include="Trolley\Update.tt">
       <Generator>TextTemplatingFileGenerator</Generator>

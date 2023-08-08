@@ -8,40 +8,42 @@ namespace Trolley;
 
 class MultipleQuery : IMultipleQuery
 {
-    #region 字段
+    #region Fields
     private StringBuilder sqlBuilder = new();
     #endregion
 
-    #region 公共属性
-    public bool IsParameterized { get; private set; }
+    #region Properties
     public string DbKey { get; private set; }
-    public TheaConnection Connection { get; private set; }
     public IOrmProvider OrmProvider { get; private set; }
     public IEntityMapProvider MapProvider { get; private set; }
+    public bool IsParameterized { get; private set; }
+    public TheaConnection Connection { get; private set; }
     public IDbCommand Command { get; private set; }
-    public List<Func<IDataReader, object>> ReaderGetters { get; private set; }
+    public List<ReaderAfter> ReaderAfters { get; private set; }
     #endregion
 
-    #region 构造方法
-    public MultipleQuery(string dbKey, TheaConnection connection, IOrmProvider ormProvider, IEntityMapProvider entityMapProvider, IDbCommand command)
+    #region Constructor
+    public MultipleQuery(string dbKey, IDbConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IDbCommand command, bool isParameterized)
     {
         this.DbKey = dbKey;
         this.Connection = new TheaConnection { DbKey = dbKey, BaseConnection = connection };
         this.OrmProvider = ormProvider;
-        this.MapProvider = entityMapProvider;
+        this.MapProvider = mapProvider;
         this.Command = command;
-        this.ReaderGetters = new();
+        this.IsParameterized = isParameterized;
+        this.ReaderAfters = new();
     }
-    public MultipleQuery(TheaConnection connection, IOrmProvider ormProvider, IEntityMapProvider entityMapProvider, IDbCommand command)
+    public MultipleQuery(TheaConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IDbCommand command, bool isParameterized)
     {
         this.DbKey = connection.DbKey;
         this.Connection = connection;
         this.OrmProvider = ormProvider;
-        this.MapProvider = entityMapProvider;
+        this.MapProvider = mapProvider;
         this.Command = command;
-        this.ReaderGetters = new();
+        this.IsParameterized = isParameterized;
+        this.ReaderAfters = new();
     }
-    #endregion   
+    #endregion
 
     #region Query 
     public IMultiQuery<T> From<T>(char tableAsStart = 'a', string suffixRawSql = null)
@@ -136,9 +138,9 @@ class MultipleQuery : IMultipleQuery
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        var entityType = typeof(TEntity);
+        var targetType = typeof(TEntity);
         Func<IDataReader, object> readerGetter;
-        if (entityType.IsEntityType())
+        if (targetType.IsEntityType())
             readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         else readerGetter = reader => reader.To<TEntity>();
         this.AddReader(rawSql, readerGetter);
@@ -151,12 +153,12 @@ class MultipleQuery : IMultipleQuery
         if (parameters == null)
             throw new ArgumentNullException(nameof(parameters));
 
-        var entityType = typeof(TEntity);
         var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, rawSql, parameters);
         commandInitializer.Invoke(this.Command, this.OrmProvider, parameters);
 
+        var targetType = typeof(TEntity);
         Func<IDataReader, object> readerGetter;
-        if (entityType.IsEntityType())
+        if (targetType.IsEntityType())
             readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         else readerGetter = reader => reader.To<TEntity>();
         this.AddReader(rawSql, readerGetter);
@@ -172,10 +174,7 @@ class MultipleQuery : IMultipleQuery
         var commandInitializer = RepositoryHelper.BuildQuerySqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
         sql = commandInitializer?.Invoke(this.Command, this.OrmProvider, sql, whereObj);
 
-        Func<IDataReader, object> readerGetter;
-        if (entityType.IsEntityType())
-            readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
-        else readerGetter = reader => reader.To<TEntity>();
+        Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         this.AddReader(sql, readerGetter);
         return this;
     }
@@ -184,9 +183,9 @@ class MultipleQuery : IMultipleQuery
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        var entityType = typeof(TEntity);
+        var targetType = typeof(TEntity);
         Func<IDataReader, object> readerGetter;
-        if (entityType.IsEntityType())
+        if (targetType.IsEntityType())
             readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         else readerGetter = reader => reader.To<TEntity>();
         this.AddReader(rawSql, readerGetter);
@@ -199,12 +198,12 @@ class MultipleQuery : IMultipleQuery
         if (parameters == null)
             throw new ArgumentNullException(nameof(parameters));
 
-        var entityType = typeof(TEntity);
         var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, rawSql, parameters);
         commandInitializer.Invoke(this.Command, this.OrmProvider, parameters);
 
+        var targetType = typeof(TEntity);
         Func<IDataReader, object> readerGetter;
-        if (entityType.IsEntityType())
+        if (targetType.IsEntityType())
             readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         else readerGetter = reader => reader.To<TEntity>();
         this.AddReader(rawSql, readerGetter);
@@ -220,10 +219,7 @@ class MultipleQuery : IMultipleQuery
         var commandInitializer = RepositoryHelper.BuildQuerySqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
         sql = commandInitializer?.Invoke(this.Command, this.OrmProvider, sql, whereObj);
 
-        Func<IDataReader, object> readerGetter;
-        if (entityType.IsEntityType())
-            readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
-        else readerGetter = reader => reader.To<TEntity>();
+        Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         this.AddReader(sql, readerGetter);
         return this;
     }
@@ -244,12 +240,9 @@ class MultipleQuery : IMultipleQuery
         this.AddReader(sql, readerGetter);
         return this;
     }
-    public IMultiCreate<TEntity> Create<TEntity>()
-        => new MultiCreate<TEntity>(this);
-    public IMultiUpdate<TEntity> Update<TEntity>()
-        => new MultiUpdate<TEntity>(this);
-    public IMultiDelete<TEntity> Delete<TEntity>()
-        => new MultiDelete<TEntity>(this);
+    public IMultiCreate<TEntity> Create<TEntity>() => new MultiCreate<TEntity>(this);
+    public IMultiUpdate<TEntity> Update<TEntity>() => new MultiUpdate<TEntity>(this);
+    public IMultiDelete<TEntity> Delete<TEntity>() => new MultiDelete<TEntity>(this);
     public IMultipleQuery Exists<TEntity>(object whereObj)
     {
         if (whereObj == null)
@@ -257,7 +250,7 @@ class MultipleQuery : IMultipleQuery
 
         var entityType = typeof(TEntity);
         var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
-        var sql = commandInitializer.Invoke(Command, this.OrmProvider, whereObj);
+        var sql = commandInitializer.Invoke(this.Command, this.OrmProvider, whereObj);
 
         Func<IDataReader, object> readerGetter = reader => reader.To<int>() > 0;
         this.AddReader(sql, readerGetter);
@@ -299,19 +292,28 @@ class MultipleQuery : IMultipleQuery
     }
     #endregion
 
-    #region Others
-    public void AddReader(string sql, Func<IDataReader, object> readerGetter, List<IDbDataParameter> dbParameters = null)
+    #region AddReader/BuildSql
+    public void AddReader(string sql, Func<IDataReader, object> readerGetter, List<IDbDataParameter> dbParameters = null, IQueryVisitor queryVisitor = null, int pageIndex = 0, int pageSize = 0)
     {
         if (this.sqlBuilder.Length > 0)
             this.sqlBuilder.Append(';');
         this.sqlBuilder.Append(sql);
-        this.ReaderGetters.Add(readerGetter);
+        this.ReaderAfters.Add(new ReaderAfter
+        {
+            ReaderGetter = readerGetter,
+            QueryVisitor = queryVisitor,
+            PageIndex = pageIndex,
+            PageSize = pageSize
+        });
         if (dbParameters != null && dbParameters.Count > 0)
         {
             dbParameters.ForEach(f =>
             {
-                if (!this.Command.Parameters.Contains(f.ParameterName))
-                    this.Command.Parameters.Add(f);
+                if (this.Command.Parameters.Contains(f.ParameterName)
+                    && this.Command.Parameters[f.ParameterName] is IDbDataParameter dbParameter
+                    && dbParameter.Value != f.Value)
+                    throw new Exception($"名为{f.ParameterName}的参数已存在并与当前参数值不同，Value1:{dbParameter.Value},Value2:{f.Value}");
+                this.Command.Parameters.Add(f);
             });
         }
     }
@@ -322,4 +324,11 @@ class MultipleQuery : IMultipleQuery
         return sql;
     }
     #endregion
+}
+class ReaderAfter
+{
+    public Func<IDataReader, object> ReaderGetter { get; set; }
+    public IQueryVisitor QueryVisitor { get; set; }
+    public int PageIndex { get; set; }
+    public int PageSize { get; set; }
 }

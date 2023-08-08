@@ -1,11 +1,4 @@
-﻿<#@ template debug="false" hostspecific="false" language="C#" #>
-<#@ assembly name="System.Core" #>
-<#@ import namespace="System.Linq" #>
-<#@ import namespace="System.Text" #>
-<#@ import namespace="System.Collections.Generic" #>
-<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
-<#@ output extension=".cs" #>
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
@@ -42,7 +35,7 @@ class MultiCreate<TEntity> : IMultiCreate<TEntity>
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
-        if (parameters==null)
+        if (parameters == null)
             throw new ArgumentNullException(nameof(parameters));
 
         return new MultiCreated<TEntity>(this.multiQuery).RawSql(rawSql, parameters);
@@ -72,23 +65,42 @@ class MultiCreate<TEntity> : IMultiCreate<TEntity>
         var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
         return new MultiContinuedCreate<TEntity, TSource>(this.multiQuery, visitor);
     }
-<#
-    var count = 6;
-    var tables = "T1";
-    for (int i = 2; i < count; i++)
-    {
-        tables += $", T{i}";
-#>
-    public IMultiContinuedCreate<TEntity, <#=tables#>> From<<#=tables#>>(Expression<Func<<#=tables#>, object>> fieldSelector)
+    public IMultiContinuedCreate<TEntity, T1, T2> From<T1, T2>(Expression<Func<T1, T2, object>> fieldSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
 
         var entityType = typeof(TEntity);
         var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
-        return new MultiContinuedCreate<TEntity, <#=tables#>>(this.multiQuery, visitor);
+        return new MultiContinuedCreate<TEntity, T1, T2>(this.multiQuery, visitor);
     }
-<#  }#>
+    public IMultiContinuedCreate<TEntity, T1, T2, T3> From<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> fieldSelector)
+    {
+        if (fieldSelector == null)
+            throw new ArgumentNullException(nameof(fieldSelector));
+
+        var entityType = typeof(TEntity);
+        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
+        return new MultiContinuedCreate<TEntity, T1, T2, T3>(this.multiQuery, visitor);
+    }
+    public IMultiContinuedCreate<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, object>> fieldSelector)
+    {
+        if (fieldSelector == null)
+            throw new ArgumentNullException(nameof(fieldSelector));
+
+        var entityType = typeof(TEntity);
+        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
+        return new MultiContinuedCreate<TEntity, T1, T2, T3, T4>(this.multiQuery, visitor);
+    }
+    public IMultiContinuedCreate<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, object>> fieldSelector)
+    {
+        if (fieldSelector == null)
+            throw new ArgumentNullException(nameof(fieldSelector));
+
+        var entityType = typeof(TEntity);
+        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
+        return new MultiContinuedCreate<TEntity, T1, T2, T3, T4, T5>(this.multiQuery, visitor);
+    }
 }
 class MultiContinuedCreate<TEntity> : IMultiContinuedCreate<TEntity>
 {
@@ -344,18 +356,11 @@ class MultiContinuedCreate<TEntity, TSource> : MultiContinuedCreateBase, IMultiC
         return this;
     }
 }
-<#
-    count = 6;
-    tables = "T1";
-    for (int i = 2; i < count; i++)
-    {
-        tables += $", T{i}";
-#>
-class MultiContinuedCreate<TEntity, <#=tables#>> : MultiContinuedCreateBase, IMultiContinuedCreate<TEntity, <#=tables#>>
+class MultiContinuedCreate<TEntity, T1, T2> : MultiContinuedCreateBase, IMultiContinuedCreate<TEntity, T1, T2>
 {
     public MultiContinuedCreate(MultipleQuery multiQuery, ICreateVisitor visitor)
         : base(multiQuery, visitor) { }
-    public IMultiContinuedCreate<TEntity, <#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
+    public IMultiContinuedCreate<TEntity, T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -363,7 +368,7 @@ class MultiContinuedCreate<TEntity, <#=tables#>> : MultiContinuedCreateBase, IMu
         this.visitor.Where(predicate);
         return this;
     }
-    public IMultiContinuedCreate<TEntity, <#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    public IMultiContinuedCreate<TEntity, T1, T2> Where(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -373,7 +378,7 @@ class MultiContinuedCreate<TEntity, <#=tables#>> : MultiContinuedCreateBase, IMu
         else if (elsePredicate != null) this.visitor.Where(elsePredicate);
         return this;
     }
-    public IMultiContinuedCreate<TEntity, <#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
+    public IMultiContinuedCreate<TEntity, T1, T2> And(Expression<Func<T1, T2, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -381,7 +386,7 @@ class MultiContinuedCreate<TEntity, <#=tables#>> : MultiContinuedCreateBase, IMu
         this.visitor.And(predicate);
         return this;
     }
-    public IMultiContinuedCreate<TEntity, <#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    public IMultiContinuedCreate<TEntity, T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -392,4 +397,126 @@ class MultiContinuedCreate<TEntity, <#=tables#>> : MultiContinuedCreateBase, IMu
         return this;
     }
 }
-<#  }#>
+class MultiContinuedCreate<TEntity, T1, T2, T3> : MultiContinuedCreateBase, IMultiContinuedCreate<TEntity, T1, T2, T3>
+{
+    public MultiContinuedCreate(MultipleQuery multiQuery, ICreateVisitor visitor)
+        : base(multiQuery, visitor) { }
+    public IMultiContinuedCreate<TEntity, T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
+    {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.visitor.Where(predicate);
+        return this;
+    }
+    public IMultiContinuedCreate<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
+    {
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+        return this;
+    }
+    public IMultiContinuedCreate<TEntity, T1, T2, T3> And(Expression<Func<T1, T2, T3, bool>> predicate)
+    {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.visitor.And(predicate);
+        return this;
+    }
+    public IMultiContinuedCreate<TEntity, T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
+    {
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+        return this;
+    }
+}
+class MultiContinuedCreate<TEntity, T1, T2, T3, T4> : MultiContinuedCreateBase, IMultiContinuedCreate<TEntity, T1, T2, T3, T4>
+{
+    public MultiContinuedCreate(MultipleQuery multiQuery, ICreateVisitor visitor)
+        : base(multiQuery, visitor) { }
+    public IMultiContinuedCreate<TEntity, T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
+    {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.visitor.Where(predicate);
+        return this;
+    }
+    public IMultiContinuedCreate<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
+    {
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+        return this;
+    }
+    public IMultiContinuedCreate<TEntity, T1, T2, T3, T4> And(Expression<Func<T1, T2, T3, T4, bool>> predicate)
+    {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.visitor.And(predicate);
+        return this;
+    }
+    public IMultiContinuedCreate<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
+    {
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+        return this;
+    }
+}
+class MultiContinuedCreate<TEntity, T1, T2, T3, T4, T5> : MultiContinuedCreateBase, IMultiContinuedCreate<TEntity, T1, T2, T3, T4, T5>
+{
+    public MultiContinuedCreate(MultipleQuery multiQuery, ICreateVisitor visitor)
+        : base(multiQuery, visitor) { }
+    public IMultiContinuedCreate<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
+    {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.visitor.Where(predicate);
+        return this;
+    }
+    public IMultiContinuedCreate<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
+    {
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+        return this;
+    }
+    public IMultiContinuedCreate<TEntity, T1, T2, T3, T4, T5> And(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
+    {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.visitor.And(predicate);
+        return this;
+    }
+    public IMultiContinuedCreate<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
+    {
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+        return this;
+    }
+}

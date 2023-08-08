@@ -1,9 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Data.Common;
+﻿using System;
+using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
-using System;
 
 namespace Trolley;
 
@@ -15,29 +15,26 @@ class MultiQueryReader : IMultiQueryReader
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
     private int readerIndex = 0;
-    private readonly List<Func<IDataReader, object>> readerGetters;
-    public MultiQueryReader(string dbKey, IDbCommand command, IDataReader reader, IOrmProvider ormProvider, IEntityMapProvider mapProvider, List<Func<IDataReader, object>> readerGetters = null)
+    private readonly List<ReaderAfter> readerAfters;
+    public MultiQueryReader(string dbKey, IDbCommand command, IDataReader reader, IOrmProvider ormProvider, IEntityMapProvider mapProvider, List<ReaderAfter> readerAfters = null)
     {
         this.dbKey = dbKey;
         this.command = command;
         this.reader = reader;
         this.ormProvider = ormProvider;
         this.mapProvider = mapProvider;
-        this.readerGetters = readerGetters;
+        this.readerAfters = readerAfters;
     }
     public dynamic ReadFirst()
     {
         dynamic result = default;
         if (this.reader.Read())
         {
-            if (this.readerGetters != null)
-                result = (dynamic)this.readerGetters[readerIndex].Invoke(this.reader);
+            if (this.readerAfters != null)
+                result = this.readerAfters[this.readerIndex].Invoke(this.reader);
             else
             {
-                var entityType = typeof(T);
-                if (entityType.IsEntityType())
-                    result = reader.To<T>(this.dbKey, this.ormProvider, this.mapProvider);
-                else result = reader.To<T>();
+
             }
         }
         this.ReadNextResult();
@@ -48,18 +45,17 @@ class MultiQueryReader : IMultiQueryReader
         T result = default;
         if (this.reader.Read())
         {
-            if (this.readerGetters != null)
-                result = (T)this.readerGetters[readerIndex].Invoke(this.reader);
+            if (this.readerAfters != null)
+                result = (T)this.readerAfters[this.readerIndex].Invoke(this.reader);
             else
             {
-                var entityType = typeof(T);
-                if (entityType.IsEntityType())
-                    result = reader.To<T>(this.dbKey, this.ormProvider, this.mapProvider);
-                else result = reader.To<T>();
+                var targetType = typeof(T);
+                if (targetType.IsEntityType())
+                    result = this.reader.To<T>(this.dbKey, this.ormProvider, this.mapProvider);
+                else result = this.reader.To<T>();
             }
         }
         this.ReadNextResult();
-        this.readerIndex++;
         return result;
     }
     public List<dynamic> Read()
@@ -68,7 +64,35 @@ class MultiQueryReader : IMultiQueryReader
     }
     public List<T> Read<T>()
     {
-        return null;
+        var result = new List<T>();
+        if (this.readerAfters != null)
+        {
+            var readerAfter = this.readerAfters[this.readerIndex];
+            while (this.reader.Read())
+            {
+                result.Add((T)readerAfter.Invoke(this.reader));
+            }
+        }
+        else
+        {
+            var targetType = typeof(T);
+            if (targetType.IsEntityType())
+            {
+                while (this.reader.Read())
+                {
+                    result.Add(this.reader.To<T>(this.dbKey, this.ormProvider, this.mapProvider));
+                }
+            }
+            else
+            {
+                while (this.reader.Read())
+                {
+                    result.Add(this.reader.To<T>());
+                }
+            }
+        }
+        this.ReadNextResult();
+        return result;
     }
     public IPagedList<dynamic> ReadPageList()
     {
@@ -116,34 +140,45 @@ class MultiQueryReader : IMultiQueryReader
     private void ReadNextResult()
     {
         if (!this.reader.NextResult())
-        {
-            var conn = this.command.Connection;
-            this.reader.Dispose();
-            this.command.Dispose();
-            conn.Dispose();
-        }
+            this.Dispose();
+        else this.readerIndex++;
     }
-    private async Task ReadNextResultAsync()
+    private async Task ReadNextResultAsync(CancellationToken cancellationToken)
     {
-        if (!this.reader.NextResult())
-        {
-            if (this.command is not DbCommand dbCommand)
-                throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-            if (this.reader is not DbDataReader dbReader)
-                throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+        if (this.command is not DbCommand dbCommand)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+        if (this.reader is not DbDataReader dbReader)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
+        if (!await dbReader.NextResultAsync(cancellationToken))
+        {
             var conn = dbCommand.Connection;
             await dbReader.DisposeAsync();
             await dbCommand.DisposeAsync();
             await conn.DisposeAsync();
         }
+        else this.readerIndex++;
     }
     public void Dispose()
     {
-        throw new System.NotImplementedException();
+        var connection = this.command?.Connection;
+        this.reader?.Dispose();
+        this.command?.Dispose();
+        connection?.Dispose();
     }
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        throw new System.NotImplementedException();
+        if (this.command is not DbCommand dbCommand)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+        if (this.reader is not DbDataReader dbReader)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+
+        var connection = dbCommand?.Connection;
+        if (dbReader != null)
+            await dbReader.DisposeAsync();
+        if (dbCommand != null)
+            await dbCommand.DisposeAsync();
+        if (connection != null)
+            await connection.DisposeAsync();
     }
 }

@@ -149,6 +149,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         return builder.ToString();
     }
+    public virtual bool HasIncludeTables() => this.includeSegments != null && this.includeSegments.Count > 0;
     public virtual bool BuildIncludeSql(object parameter, out string sql)
     {
         if (parameter == null || this.includeSegments == null || this.includeSegments.Count <= 0)
