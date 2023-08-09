@@ -16,7 +16,7 @@ namespace Trolley;
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface IMultiCreate<TEntity>
 {
     /// <summary>
@@ -157,7 +157,7 @@ public interface IMultiCreate<TEntity>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface IMultiContinuedCreate<TEntity>
 {
     /// <summary>
@@ -218,7 +218,7 @@ public interface IMultiContinuedCreate<TEntity>
     /// <returns>返回插入对象</returns>
     IMultiContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <returns>返回查询对象</returns>
     IMultipleQuery Execute();
@@ -232,11 +232,11 @@ public interface IMultiContinuedCreate<TEntity>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface IMultiCreated<TEntity>
 {
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <returns>返回查询对象</returns>
     IMultipleQuery Execute();

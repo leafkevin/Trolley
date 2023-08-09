@@ -274,125 +274,146 @@ class Created<TEntity> : ICreated<TEntity>
     }
     public int Execute()
     {
+        int result = 0;
+        string sql = null;
         var entityType = typeof(TEntity);
-        if (!string.IsNullOrEmpty(this.rawSql))
+        var entityMapper = this.mapProvider.GetEntityMap(entityType);
+        bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not Dictionary<string, object>;
+        using var command = this.connection.CreateCommand();
+        if (isMulti)
         {
-            int result = 0;
-            using var command = this.connection.CreateCommand();
-            if (this.parameters != null)
+            var commandInitializer = RepositoryHelper.BuildCreateBatchCommandInitializer(
+                   this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
+
+            int index = 0;
+            this.bulkCount ??= 500;
+            command.CommandType = CommandType.Text;
+            command.Transaction = this.transaction;
+            var sqlBuilder = new StringBuilder();
+            var entities = this.parameters as IEnumerable;
+
+            foreach (var entity in entities)
             {
-                var commandInitializer = RepositoryHelper.BuildCreateRawSqlParameters(this.connection,
-                    this.ormProvider, this.mapProvider, entityType, this.rawSql, this.parameters);
-                commandInitializer.Invoke(command, this.ormProvider, this.parameters);
+                commandInitializer.Invoke(command, this.ormProvider, sqlBuilder, index, entity);
+                if (index >= this.bulkCount)
+                {
+                    command.CommandText = sqlBuilder.ToString();
+                    this.connection.Open();
+                    result += command.ExecuteNonQuery();
+                    command.Parameters.Clear();
+                    sqlBuilder.Clear();
+                    index = 0;
+                    continue;
+                }
+                index++;
             }
-            command.CommandText = this.rawSql;
+            if (index > 0)
+            {
+                command.CommandText = sqlBuilder.ToString();
+                this.connection.Open();
+                result += command.ExecuteNonQuery();
+            }
+        }
+        else
+        {
+            if (!string.IsNullOrEmpty(this.rawSql))
+            {
+                sql = this.rawSql;
+                if (this.parameters != null)
+                {
+                    var commandInitializer = RepositoryHelper.BuildCreateRawSqlParameters(this.connection,
+                        this.ormProvider, this.mapProvider, entityType, this.rawSql, this.parameters);
+                    commandInitializer.Invoke(command, this.ormProvider, this.parameters);
+                }
+            }
+            else
+            {
+                var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(
+                   this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
+                sql = commandInitializer.Invoke(command, this.ormProvider, this.parameters);
+            }
+            command.CommandText = sql;
             command.CommandType = CommandType.Text;
             command.Transaction = this.transaction;
             this.connection.Open();
-            var entityMapper = this.mapProvider.GetEntityMap(entityType);
+
             if (entityMapper.IsAutoIncrement)
             {
                 using var reader = command.ExecuteReader();
                 if (reader.Read()) result = reader.To<int>();
                 reader.Close();
                 reader.Dispose();
-                command.Dispose();
-                return result;
             }
-            result = command.ExecuteNonQuery();
-            command.Dispose();
-            return result;
+            else result = command.ExecuteNonQuery();
         }
-        else
+        command.Dispose();
+        return result;
+    }
+    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
+    {
+        int result = 0;
+        string sql = null;
+        var entityType = typeof(TEntity);
+        var entityMapper = this.mapProvider.GetEntityMap(entityType);
+        bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not Dictionary<string, object>;
+        using var cmd = this.connection.CreateCommand();
+        cmd.Transaction = this.transaction;
+        if (cmd is not DbCommand command)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+
+        if (isMulti)
         {
-            int result = 0;
-            bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not Dictionary<string, object>;
-            if (isMulti)
+            var commandInitializer = RepositoryHelper.BuildCreateBatchCommandInitializer(
+                   this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
+            int index = 0;
+            this.bulkCount ??= 500;
+            var sqlBuilder = new StringBuilder();
+            var entities = this.parameters as IEnumerable;
+            foreach (var entity in entities)
             {
-                var commandInitializer = RepositoryHelper.BuildCreateBatchCommandInitializer(
-                    this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
-
-                int index = 0;
-                this.bulkCount ??= 500;
-                using var command = this.connection.CreateCommand();
-                command.Transaction = this.transaction;
-                var entities = this.parameters as IEnumerable;
-                var sqlBuilder = new StringBuilder();
-
-                foreach (var entity in entities)
-                {
-                    commandInitializer.Invoke(command, this.ormProvider, sqlBuilder, index, entity);
-                    if (index >= this.bulkCount)
-                    {
-                        command.CommandText = sqlBuilder.ToString();
-                        command.CommandType = CommandType.Text;
-                        this.connection.Open();
-                        result += command.ExecuteNonQuery();
-                        command.Parameters.Clear();
-                        sqlBuilder.Clear();
-                        index = 0;
-                        continue;
-                    }
-                    index++;
-                }
-                if (index > 0)
+                commandInitializer.Invoke(command, this.ormProvider, sqlBuilder, index, entity);
+                if (index >= this.bulkCount)
                 {
                     command.CommandText = sqlBuilder.ToString();
                     command.CommandType = CommandType.Text;
-                    this.connection.Open();
-                    result += command.ExecuteNonQuery();
+                    await this.connection.OpenAsync(cancellationToken);
+                    result += await command.ExecuteNonQueryAsync(cancellationToken);
+                    command.Parameters.Clear();
+                    sqlBuilder.Clear();
+                    index = 0;
+                    continue;
                 }
-                command.Dispose();
+                index++;
+            }
+            if (index > 0)
+            {
+                command.CommandText = sqlBuilder.ToString();
+                command.CommandType = CommandType.Text;
+                await this.connection.OpenAsync(cancellationToken);
+                result += await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            if (!string.IsNullOrEmpty(this.rawSql))
+            {
+                sql = this.rawSql;
+                if (this.parameters != null)
+                {
+                    var commandInitializer = RepositoryHelper.BuildCreateRawSqlParameters(this.connection,
+                        this.ormProvider, this.mapProvider, entityType, this.rawSql, this.parameters);
+                    commandInitializer.Invoke(cmd, this.ormProvider, this.parameters);
+                }
             }
             else
             {
                 var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(
-                    this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
-                using var command = this.connection.CreateCommand();
-                var sql = commandInitializer.Invoke(command, this.ormProvider, this.parameters);
-
-                command.CommandText = sql;
-                command.CommandType = CommandType.Text;
-                command.Transaction = this.transaction;
-                this.connection.Open();
-                var entityMapper = this.mapProvider.GetEntityMap(entityType);
-                if (entityMapper.IsAutoIncrement)
-                {
-                    using var reader = command.ExecuteReader();
-                    if (reader.Read()) result = reader.To<int>();
-                    reader.Close();
-                    reader.Dispose();
-                    command.Dispose();
-                    return result;
-                }
-                result = command.ExecuteNonQuery();
-                command.Dispose();
+                   this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
+                sql = commandInitializer.Invoke(cmd, this.ormProvider, this.parameters);
             }
-            return result;
-        }
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var entityType = typeof(TEntity);
-        if (!string.IsNullOrEmpty(this.rawSql))
-        {
-            int result = 0;
-            using var cmd = this.connection.CreateCommand();
-            if (this.parameters != null)
-            {
-                var commandInitializer = RepositoryHelper.BuildCreateRawSqlParameters(
-                    this.connection, this.ormProvider, this.mapProvider, entityType, this.rawSql, this.parameters);
-                commandInitializer.Invoke(cmd, this.ormProvider, this.parameters);
-            }
-
             cmd.CommandText = this.rawSql;
             cmd.CommandType = CommandType.Text;
-            cmd.Transaction = this.transaction;
-            if (cmd is not DbCommand command)
-                throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
             await this.connection.OpenAsync(cancellationToken);
-            var entityMapper = this.mapProvider.GetEntityMap(entityType);
             if (entityMapper.IsAutoIncrement)
             {
                 using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -400,127 +421,58 @@ class Created<TEntity> : ICreated<TEntity>
                     result = reader.To<int>();
                 await reader.CloseAsync();
                 await reader.DisposeAsync();
-                await command.DisposeAsync();
-                return result;
             }
-            result = await command.ExecuteNonQueryAsync(cancellationToken);
-            await command.DisposeAsync();
-            return result;
+            else result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
-        else
-        {
-            int result = 0;
-            bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not Dictionary<string, object>;
-            if (isMulti)
-            {
-                var commandInitializer = RepositoryHelper.BuildCreateBatchCommandInitializer(
-                    this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
-
-                int index = 0;
-                this.bulkCount ??= 500;
-                using var cmd = this.connection.CreateCommand();
-                cmd.Transaction = this.transaction;
-                if (cmd is not DbCommand command)
-                    throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-                var entities = this.parameters as IEnumerable;
-                var sqlBuilder = new StringBuilder();
-
-                foreach (var entity in entities)
-                {
-                    commandInitializer.Invoke(command, this.ormProvider, sqlBuilder, index, entity);
-                    if (index >= this.bulkCount)
-                    {
-                        command.CommandText = sqlBuilder.ToString();
-                        command.CommandType = CommandType.Text;
-                        await this.connection.OpenAsync(cancellationToken);
-                        result += await command.ExecuteNonQueryAsync(cancellationToken);
-                        command.Parameters.Clear();
-                        sqlBuilder.Clear();
-                        index = 0;
-                        continue;
-                    }
-                    index++;
-                }
-                if (index > 0)
-                {
-                    command.CommandText = sqlBuilder.ToString();
-                    command.CommandType = CommandType.Text;
-                    await this.connection.OpenAsync(cancellationToken);
-                    result += await command.ExecuteNonQueryAsync(cancellationToken);
-                }
-                await command.DisposeAsync();
-            }
-            else
-            {
-                var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(
-                    this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
-                using var cmd = this.connection.CreateCommand();
-                var sql = commandInitializer.Invoke(cmd, this.ormProvider, this.parameters);
-                cmd.Transaction = this.transaction;
-                if (cmd is not DbCommand command)
-                    throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-                command.CommandText = sql;
-                command.CommandType = CommandType.Text;
-                await this.connection.OpenAsync(cancellationToken);
-                var entityMapper = this.mapProvider.GetEntityMap(entityType);
-                if (entityMapper.IsAutoIncrement)
-                {
-                    using var reader = await command.ExecuteReaderAsync(cancellationToken);
-                    if (await reader.ReadAsync(cancellationToken))
-                        result = reader.To<int>();
-                    await reader.CloseAsync();
-                    await reader.DisposeAsync();
-                    await command.DisposeAsync();
-                    return result;
-                }
-                result = await command.ExecuteNonQueryAsync(cancellationToken);
-                await command.DisposeAsync();
-            }
-            return result;
-        }
+        await command.DisposeAsync();
+        return result;
     }
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        string sql = null;
         dbParameters = null;
+        string sql = null;
         var entityType = typeof(TEntity);
+        var entityMapper = this.mapProvider.GetEntityMap(entityType);
+        bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not Dictionary<string, object>;
         using var command = this.connection.CreateCommand();
-        if (!string.IsNullOrEmpty(this.rawSql))
+        if (isMulti)
         {
-            sql = this.rawSql;
-            if (this.parameters != null)
+            var commandInitializer = RepositoryHelper.BuildCreateBatchCommandInitializer(
+                   this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
+
+            int index = 0;
+            this.bulkCount ??= 500;
+            command.CommandType = CommandType.Text;
+            command.Transaction = this.transaction;
+            var sqlBuilder = new StringBuilder();
+            var entities = this.parameters as IEnumerable;
+
+            foreach (var entity in entities)
             {
-                var commandInitializer = RepositoryHelper.BuildCreateRawSqlParameters(
-                    this.connection, this.ormProvider, this.mapProvider, entityType, this.rawSql, this.parameters);
-                commandInitializer.Invoke(command, this.ormProvider, this.parameters);
+                commandInitializer.Invoke(command, this.ormProvider, sqlBuilder, index, entity);
+                if (index >= this.bulkCount)
+                    break;
+                index++;
             }
+            if (index > 0)
+                sql = sqlBuilder.ToString();
         }
         else
         {
-            bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not Dictionary<string, object>;
-            if (isMulti)
+            if (!string.IsNullOrEmpty(this.rawSql))
             {
-                var commandInitializer = RepositoryHelper.BuildCreateBatchCommandInitializer(
-                    this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
-
-                int index = 0;
-                var entities = this.parameters as IEnumerable;
-                var sqlBuilder = new StringBuilder();
-                foreach (var entity in entities)
+                sql = this.rawSql;
+                if (this.parameters != null)
                 {
-                    commandInitializer.Invoke(command, this.ormProvider, sqlBuilder, index, entity);
-                    if (index >= this.bulkCount)
-                        break;
-                    index++;
+                    var commandInitializer = RepositoryHelper.BuildCreateRawSqlParameters(this.connection,
+                        this.ormProvider, this.mapProvider, entityType, this.rawSql, this.parameters);
+                    commandInitializer.Invoke(command, this.ormProvider, this.parameters);
                 }
-                if (index > 0)
-                    sql = sqlBuilder.ToString();
             }
             else
             {
                 var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(
-                    this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
+                   this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
                 sql = commandInitializer.Invoke(command, this.ormProvider, this.parameters);
             }
         }

@@ -19,45 +19,6 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-/// <summary>
-/// PostgreSql:
-/// UPDATE sys_order a 
-/// SET "TotalAmount"=a."TotalAmount"+b."TotalAmount"+50
-/// FROM sys_order_detail b
-/// WHERE a."Id"=b."OrderId";
-/// 
-/// MSSql:
-/// UPDATE sys_order
-/// SET [TotalAmount]=sys_order.[TotalAmount]+b.[TotalAmount]+50
-/// FROM sys_order_detail b
-/// WHERE sys_order.[Id]=b.[OrderId];
-///
-/// MySql:
-/// UPDATE sys_order a 
-/// INNER JOIN sys_order_detail b ON a.`Id` = b.`OrderId`
-/// SET `TotalAmount`=a.`TotalAmount`+b.`TotalAmount`+50
-/// WHERE a.`Id`=1;
-/// 
-/// UPDATE sys_order a 
-/// INNER JOIN sys_order_detail b ON a.`Id` = b.`OrderId`
-/// SET a.`TotalAmount`=a.`TotalAmount`+b.`TotalAmount`+50
-/// WHERE a.`Id`=1;
-/// 
-/// UPDATE sys_order a 
-/// LEFT JOIN sys_order_detail b ON a.`Id` = b.`OrderId`
-/// SET a.`TotalAmount`=a.`TotalAmount`+b.`TotalAmount`+50
-/// WHERE a.`TotalAmount` IS NULL;
-/// 
-/// Oracle
-/// UPDATE sys_order a 
-/// SET a.TotalAmount=(SELECT a.TotalAmount+b.TotalAmount+50 FROM sys_order_detail b WHERE a.Id=b.OrderId)
-/// WHERE a.`Id`=1;
-/// 
-/// UPDATE sys_order a 
-/// SET (a.OrderNo,a.TotalAmount)=(SELECT 'ON_'||a.OrderNo,a.`TotalAmount`+b.`TotalAmount`+50 FROM sys_order_detail b WHERE a.Id=b.OrderId)
-/// WHERE a.`Id`=1;
-/// </summary>
-/// <typeparam name="TEntity"></typeparam>
 class Update<TEntity> : IUpdate<TEntity>
 {
     private readonly TheaConnection connection;
@@ -198,37 +159,28 @@ class Update<TEntity> : IUpdate<TEntity>
         if (condition) visitor.Set(fieldExpr, fieldValue);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
-
     public IUpdateFrom<TEntity, T> From<T>()
     {
         var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
             .From(typeof(T));
         return new UpdateFrom<TEntity, T>(this.connection, this.transaction, visitor);
     }
-    public IUpdateFrom<TEntity, T1, T2> From<T1, T2>()
+<#
+    var count = 6;
+    var tables = "T1";
+    var typeOfTables = "typeof(T1)";
+    for (int i = 2; i < count; i++)
+    {
+        tables += $", T{i}";
+        typeOfTables += $", typeof(T{i})";
+#>
+    public IUpdateFrom<TEntity, <#=tables#>> From<<#=tables#>>()
     {
         var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
-            .From(typeof(T1), typeof(T2));
-        return new UpdateFrom<TEntity, T1, T2>(this.connection, this.transaction, visitor);
+            .From(<#=typeOfTables#>);
+        return new UpdateFrom<TEntity, <#=tables#>>(this.connection, this.transaction, visitor);
     }
-    public IUpdateFrom<TEntity, T1, T2, T3> From<T1, T2, T3>()
-    {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
-             .From(typeof(T1), typeof(T2), typeof(T3));
-        return new UpdateFrom<TEntity, T1, T2, T3>(this.connection, this.transaction, visitor);
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>()
-    {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
-             .From(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-        return new UpdateFrom<TEntity, T1, T2, T3, T4>(this.connection, this.transaction, visitor);
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
-    {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
-             .From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
-        return new UpdateFrom<TEntity, T1, T2, T3, T4, T5>(this.connection, this.transaction, visitor);
-    }
+<#  }#>
 
     public IUpdateJoin<TEntity, T> InnerJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
     {
@@ -950,8 +902,8 @@ class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
     #endregion
 }
 <#
-    var count = 5;
-    var tables = "TEntity";    
+    count = 6;
+    tables = "TEntity";    
     for (int i = 1; i < count; i++)
     {
         tables += $", T{i}";

@@ -22,6 +22,8 @@ class RepositoryHelper
     public static ConcurrentDictionary<int, object> createCommandInitializerCache = new();
     public static ConcurrentDictionary<int, object> createWithBiesCommandInitializerCache = new();
 
+    public static ConcurrentDictionary<int, object> deleteBatchCommandInitializerCache = new();
+    public static ConcurrentDictionary<int, object> deleteCommandInitializerCache = new();
     public static void AddKeyValueParameter(ParameterExpression commandExpr, ParameterExpression ormProviderExpr, Expression parameterNameExpr,
         Expression parameterValueExpr, MemberMap memberMapper, IOrmProvider ormProvider, List<Expression> blockBodies)
     {
@@ -599,7 +601,6 @@ class RepositoryHelper
         return commandInitializer;
     }
 
-
     public static Action<IDbCommand, IOrmProvider, object> BuildCreateRawSqlParameters(IDbConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, string rawSql, object parameters)
     {
         Action<IDbCommand, IOrmProvider, object> commandInitializer = null;
@@ -968,6 +969,216 @@ class RepositoryHelper
         return commandInitializer;
     }
 
+    public static Action<IDbCommand, IOrmProvider, StringBuilder, int, object> BuildDeleteBatchCommandInitializer(IDbConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object parameters)
+    {
+        Action<IDbCommand, IOrmProvider, StringBuilder, int, object> commandInitializer = null;
+        if (parameters is Dictionary<string, object>)
+        {
+            var entityMapper = mapProvider.GetEntityMap(entityType);
+            if (entityMapper.KeyMembers.Count > 1)
+            {
+                commandInitializer = (command, ormProvider, builder, index, parameter) =>
+                {
+                    var dict = parameter as Dictionary<string, object>;
+                    if (index > 0) builder.Append(';');
+                    else builder.Append($"DELETE FROM {ormProvider.GetFieldName(entityMapper.TableName)} WHERE ");
+                    int keyIndex = 0;
+                    foreach (var keyMapper in entityMapper.KeyMembers)
+                    {
+                        if (keyIndex > 0) builder.Append(" AND ");
+                        var fieldName = ormProvider.GetFieldName(keyMapper.FieldName);
+                        string parameterName = ormProvider.ParameterPrefix + keyMapper.MemberName + index.ToString();
+                        builder.Append($"{fieldName}={parameterName}");
+
+                        if (keyMapper.NativeDbType != null)
+                            command.Parameters.Add(ormProvider.CreateParameter(parameterName, keyMapper.NativeDbType, dict[keyMapper.MemberName]));
+                        else command.Parameters.Add(ormProvider.CreateParameter(parameterName, dict[keyMapper.MemberName]));
+                    }
+                };
+            }
+            else
+            {
+                commandInitializer = (command, ormProvider, builder, index, parameter) =>
+                {
+                    var dict = parameter as Dictionary<string, object>;
+                    if (index > 0) builder.Append(',');
+                    else builder.Append($"DELETE FROM {ormProvider.GetFieldName(entityMapper.TableName)} WHERE {ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (");
+                    var keyMapper = entityMapper.KeyMembers[0];
+                    string parameterName = ormProvider.ParameterPrefix + keyMapper.MemberName + index.ToString();
+                    builder.Append(parameterName);
+
+                    if (keyMapper.NativeDbType != null)
+                        command.Parameters.Add(ormProvider.CreateParameter(parameterName, keyMapper.NativeDbType, dict[keyMapper.MemberName]));
+                    else command.Parameters.Add(ormProvider.CreateParameter(parameterName, dict[keyMapper.MemberName]));
+                };
+            }
+        }
+        else
+        {
+            var parameterType = parameters.GetType();
+            var cacheKey = HashCode.Combine(connection, ormProvider, entityType, parameterType);
+            if (!deleteBatchCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
+            {
+                var entityMapper = mapProvider.GetEntityMap(entityType);
+                var parameterMapper = mapProvider.GetEntityMap(parameterType);
+                var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
+                var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
+                var builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
+                var indexExpr = Expression.Parameter(typeof(int), "index");
+                var parameterExpr = Expression.Parameter(typeof(object), "parameter");
+
+                var blockParameters = new List<ParameterExpression>();
+                var blockBodies = new List<Expression>();
+                ParameterExpression typedParameterExpr = null;
+                var parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
+                bool isEntityType = false;
+
+                if (parameterType.IsEntityType())
+                {
+                    isEntityType = true;
+                    typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
+                    blockParameters.Add(typedParameterExpr);
+                    blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
+                }
+                else
+                {
+                    if (entityMapper.KeyMembers.Count > 1)
+                        throw new NotSupportedException($"模型{entityType.FullName}有多个主键字段，不能使用单个值类型{parameterType.FullName}作为参数");
+                }
+                blockParameters.Add(parameterNameExpr);
+
+                var methodInfo1 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(char) });
+                var methodInfo2 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
+                var methodInfo3 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
+
+                var addCommaExpr = Expression.Call(builderExpr, methodInfo1, Expression.Constant(';'));
+                var greatThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0, typeof(int)));
+                blockBodies.Add(Expression.IfThen(greatThenExpr, addCommaExpr));
+                var sql = $"DELETE FROM {ormProvider.GetFieldName(entityMapper.TableName)} WHERE ";
+                blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant(sql)));
+
+                int index = 0;
+                foreach (var keyMapper in entityMapper.KeyMembers)
+                {
+                    if (index > 0)
+                        blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant(" AND ")));
+
+                    var parameterName = ormProvider.ParameterPrefix + keyMapper.MemberName;
+                    var suffixExpr = Expression.Call(indexExpr, typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes));
+                    var concatExpr = Expression.Call(methodInfo3, Expression.Constant(parameterName), suffixExpr);
+                    blockBodies.Add(Expression.Assign(parameterNameExpr, concatExpr));
+
+                    var constantExpr = Expression.Constant(ormProvider.GetFieldName(keyMapper.FieldName) + "=");
+                    blockBodies.Add(Expression.Call(builderExpr, methodInfo2, constantExpr));
+                    blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
+
+                    if (isEntityType)
+                        RepositoryHelper.AddKeyMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, keyMapper, ormProvider, blockBodies);
+                    else RepositoryHelper.AddKeyValueParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, keyMapper, ormProvider, blockBodies);
+                }
+                commandInitializerDelegate = Expression.Lambda<Action<IDbCommand, IOrmProvider, StringBuilder, int, object>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, builderExpr, indexExpr, parameterExpr).Compile();
+                deleteBatchCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
+            }
+            commandInitializer = (Action<IDbCommand, IOrmProvider, StringBuilder, int, object>)commandInitializerDelegate;
+        }
+        return commandInitializer;
+    }
+    public static Func<IDbCommand, IOrmProvider, object, string> BuildDeleteCommandInitializer(IDbConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object parameters)
+    {
+        Func<IDbCommand, IOrmProvider, object, string> commandInitializer = null;
+        if (parameters is Dictionary<string, object>)
+        {
+            commandInitializer = (command, ormProvider, parameter) =>
+            {
+                int index = 0;
+                var dict = parameter as Dictionary<string, object>;
+                var entityMapper = mapProvider.GetEntityMap(entityType);
+                var builder = new StringBuilder($"DELETE FROM {ormProvider.GetTableName(entityMapper.TableName)} WHERE ");
+
+                foreach (var keyMapper in entityMapper.KeyMembers)
+                {
+                    if (!dict.TryGetValue(keyMapper.MemberName, out var fieldValue))
+                        throw new ArgumentNullException($"字典参数中缺少主键字段{keyMapper.MemberName}", "keys");
+
+                    if (index > 0)
+                        builder.Append(',');
+                    var parameterName = ormProvider.ParameterPrefix + keyMapper.MemberName;
+
+                    builder.Append($"{ormProvider.GetFieldName(keyMapper.MemberName)}={parameterName}");
+
+                    if (keyMapper.NativeDbType != null)
+                        command.Parameters.Add(ormProvider.CreateParameter(parameterName, keyMapper.NativeDbType, fieldValue));
+                    else command.Parameters.Add(ormProvider.CreateParameter(parameterName, fieldValue));
+                    index++;
+                }
+                return builder.ToString();
+            };
+        }
+        else
+        {
+            var parameterType = parameters.GetType();
+            var cacheKey = HashCode.Combine(connection, ormProvider, entityType, parameterType);
+            if (!deleteCommandInitializerCache.TryGetValue(cacheKey, out var commandInitializerDelegate))
+            {
+                int index = 0;
+                var entityMapper = mapProvider.GetEntityMap(entityType);
+                var commandExpr = Expression.Parameter(typeof(IDbCommand), "cmd");
+                var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
+                var parameterExpr = Expression.Parameter(typeof(object), "parameter");
+                var blockParameters = new List<ParameterExpression>();
+                var blockBodies = new List<Expression>();
+                var localParameters = new Dictionary<string, int>();
+
+                EntityMap parameterMapper = null;
+                ParameterExpression typedParameterExpr = null;
+                bool isEntityType = false;
+                if (parameterType.IsEntityType())
+                {
+                    isEntityType = true;
+                    parameterMapper = mapProvider.GetEntityMap(parameterType);
+                    typedParameterExpr = Expression.Parameter(parameterType, "typedParameter");
+                    blockParameters.Add(typedParameterExpr);
+                    blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
+                }
+                else
+                {
+                    if (entityMapper.KeyMembers.Count > 1)
+                        throw new NotSupportedException($"模型{entityType.FullName}有多个主键字段，不能使用单个值类型{parameterType.FullName}作为参数");
+                }
+
+                var methodInfo1 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(char) });
+                var methodInfo2 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
+                var methodInfo3 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
+
+                var builder = new StringBuilder($"DELETE FROM {ormProvider.GetTableName(entityMapper.TableName)} WHERE ");
+                foreach (var keyMapper in entityMapper.KeyMembers)
+                {
+                    if (isEntityType && !parameterMapper.TryGetMemberMap(keyMapper.MemberName, out var propMapper))
+                        throw new ArgumentNullException($"参数类型{parameterType.FullName}缺少主键字段{keyMapper.MemberName}", "keys");
+
+                    var parameterName = ormProvider.ParameterPrefix + keyMapper.MemberName;
+                    if (index > 0)
+                        builder.Append(" AND ");
+                    builder.Append($"{ormProvider.GetFieldName(keyMapper.FieldName)}={parameterName}");
+                    var parameterNameExpr = Expression.Constant(parameterName);
+
+                    if (isEntityType)
+                        RepositoryHelper.AddKeyMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, keyMapper, ormProvider, blockBodies);
+                    else RepositoryHelper.AddKeyValueParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, keyMapper, ormProvider, blockBodies);
+                    index++;
+                }
+                var resultLabelExpr = Expression.Label(typeof(string));
+                var returnExpr = Expression.Constant(builder.ToString());
+                blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
+                blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Constant(null, typeof(string))));
+
+                commandInitializerDelegate = Expression.Lambda<Func<IDbCommand, IOrmProvider, object, string>>(Expression.Block(blockParameters, blockBodies), commandExpr, ormProviderExpr, parameterExpr).Compile();
+                deleteCommandInitializerCache.TryAdd(cacheKey, commandInitializerDelegate);
+            }
+            commandInitializer = (Func<IDbCommand, IOrmProvider, object, string>)commandInitializerDelegate;
+        }
+        return commandInitializer;
+    }
     private static ParameterExpression DefineLocalParameter(string namePrefix, Type localVariableType, Dictionary<string, int> localParameters, List<ParameterExpression> blockParameters)
     {
         if (!localParameters.TryGetValue(namePrefix, out var index))

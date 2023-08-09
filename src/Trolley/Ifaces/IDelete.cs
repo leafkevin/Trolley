@@ -10,7 +10,7 @@ namespace Trolley;
 /// <summary>
 /// 删除数据
 /// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要删除的实体类型</typeparam>
 public interface IDelete<TEntity>
 {
     /// <summary>
@@ -24,7 +24,7 @@ public interface IDelete<TEntity>
     /// repository.Delete&lt;User&gt;(new[] { new { Id = 1 }, new { Id = 2 } });
     /// </code>
     /// </summary>
-    /// <param name="predicate">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
+    /// <param name="keys">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
     /// <returns>返回删除对象</returns>
     IDeleted<TEntity> Where(object keys);
     /// <summary>
@@ -43,15 +43,19 @@ public interface IDelete<TEntity>
     /// <returns>返回更新对象</returns>
     IDeleting<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
 }
+/// <summary>
+/// 删除数据
+/// </summary>
+/// <typeparam name="TEntity">要删除的实体类型</typeparam>
 public interface IDeleted<TEntity>
 {
     /// <summary>
-    /// 执行删除动作，并返回删除行数
+    /// 执行删除操作，并返回删除行数
     /// </summary>
     /// <returns>返回删除行数</returns>
     int Execute();
     /// <summary>
-    /// 执行删除动作，并返回删除行数
+    /// 执行删除操作，并返回删除行数
     /// </summary>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回删除行数</returns>
@@ -63,6 +67,10 @@ public interface IDeleted<TEntity>
     /// <returns>当前查询的SQL</returns>
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
+/// <summary>
+/// 删除数据
+/// </summary>
+/// <typeparam name="TEntity">要删除的实体类型</typeparam>
 public interface IDeleting<TEntity> : IDeleted<TEntity>
 {
     /// <summary>

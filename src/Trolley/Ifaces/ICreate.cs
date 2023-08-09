@@ -11,7 +11,7 @@ namespace Trolley;
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface ICreate<TEntity>
 {
     /// <summary>
@@ -224,7 +224,7 @@ public interface ICreate<TEntity>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface IContinuedCreate<TEntity>
 {
     /// <summary>
@@ -285,12 +285,12 @@ public interface IContinuedCreate<TEntity>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <returns>返回插入行数</returns>
     int Execute();
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
@@ -305,16 +305,16 @@ public interface IContinuedCreate<TEntity>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface ICreated<TEntity>
 {
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <returns>返回插入行数</returns>
     int Execute();
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
@@ -364,12 +364,12 @@ public interface IContinuedCreate<TEntity, TSource>
     /// <returns>返回查询对象</returns>
     IContinuedCreate<TEntity, TSource> And(bool condition, Expression<Func<TSource, bool>> ifPredicate = null, Expression<Func<TSource, bool>> elsePredicate = null);
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <returns>返回插入行数</returns>
     int Execute();
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
@@ -384,7 +384,7 @@ public interface IContinuedCreate<TEntity, TSource>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">要插入数据的表实体类型</typeparam>
+/// <typeparam name="TEntity">要插入数据表的实体类型</typeparam>
 /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
 /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
 public interface IContinuedCreate<TEntity, T1, T2>
@@ -420,12 +420,12 @@ public interface IContinuedCreate<TEntity, T1, T2>
     /// <returns>返回查询对象</returns>
     IContinuedCreate<TEntity, T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null);
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <returns>返回插入行数</returns>
     int Execute();
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
@@ -440,7 +440,7 @@ public interface IContinuedCreate<TEntity, T1, T2>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">要插入数据的表实体类型</typeparam>
+/// <typeparam name="TEntity">要插入数据表的实体类型</typeparam>
 /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
 /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
 /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
@@ -477,12 +477,12 @@ public interface IContinuedCreate<TEntity, T1, T2, T3>
     /// <returns>返回查询对象</returns>
     IContinuedCreate<TEntity, T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null);
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <returns>返回插入行数</returns>
     int Execute();
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
@@ -497,7 +497,7 @@ public interface IContinuedCreate<TEntity, T1, T2, T3>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">要插入数据的表实体类型</typeparam>
+/// <typeparam name="TEntity">要插入数据表的实体类型</typeparam>
 /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
 /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
 /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
@@ -535,12 +535,12 @@ public interface IContinuedCreate<TEntity, T1, T2, T3, T4>
     /// <returns>返回查询对象</returns>
     IContinuedCreate<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null);
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <returns>返回插入行数</returns>
     int Execute();
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
@@ -555,7 +555,7 @@ public interface IContinuedCreate<TEntity, T1, T2, T3, T4>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">要插入数据的表实体类型</typeparam>
+/// <typeparam name="TEntity">要插入数据表的实体类型</typeparam>
 /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
 /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
 /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
@@ -594,12 +594,12 @@ public interface IContinuedCreate<TEntity, T1, T2, T3, T4, T5>
     /// <returns>返回查询对象</returns>
     IContinuedCreate<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null);
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <returns>返回插入行数</returns>
     int Execute();
     /// <summary>
-    /// 执行插入动作，并返回插入行数
+    /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>

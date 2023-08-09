@@ -2,15 +2,13 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Trolley;
 
 /// <summary>
 /// 删除数据
 /// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要删除的实体类型</typeparam>
 public interface IMultiDelete<TEntity>
 {
     /// <summary>
@@ -24,7 +22,7 @@ public interface IMultiDelete<TEntity>
     /// repository.Delete&lt;User&gt;(new[] { new { Id = 1 }, new { Id = 2 } });
     /// </code>
     /// </summary>
-    /// <param name="predicate">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
+    /// <param name="keys">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
     /// <returns>返回删除对象</returns>
     IMultiDeleted<TEntity> Where(object keys);
     /// <summary>
@@ -43,19 +41,17 @@ public interface IMultiDelete<TEntity>
     /// <returns>返回更新对象</returns>
     IMultiDeleting<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
 }
+/// <summary>
+/// 删除数据
+/// </summary>
+/// <typeparam name="TEntity">要删除的实体类型</typeparam>
 public interface IMultiDeleted<TEntity>
 {
     /// <summary>
-    /// 执行删除动作，并返回删除行数
+    /// 执行删除操作，并返回删除行数
     /// </summary>
-    /// <returns>返回删除行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行删除动作，并返回删除行数
-    /// </summary>
-    /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回删除行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery Execute();
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
@@ -63,6 +59,10 @@ public interface IMultiDeleted<TEntity>
     /// <returns>当前查询的SQL</returns>
     string ToSql(out List<IDbDataParameter> dbParameters);
 }
+/// <summary>
+/// 删除数据
+/// </summary>
+/// <typeparam name="TEntity">要删除的实体类型</typeparam>
 public interface IMultiDeleting<TEntity> : IMultiDeleted<TEntity>
 {
     /// <summary>

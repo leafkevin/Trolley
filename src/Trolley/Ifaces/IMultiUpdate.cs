@@ -9,7 +9,7 @@ namespace Trolley;
 /// <summary>
 /// 更新数据
 /// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要更新的实体类型</typeparam>
 public interface IMultiUpdate<TEntity>
 {
     /// <summary>
@@ -335,14 +335,14 @@ public interface IMultiUpdate<TEntity>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateFrom<TEntity, TSource> From<TSource>();
     /// <summary>
-    /// 连接表T1, T2获取更新数据
+    /// 使用表T1, T2字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
     /// </summary>
     /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
     /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateFrom<TEntity, T1, T2> From<T1, T2>();
     /// <summary>
-    /// 连接表T1, T2, T3获取更新数据
+    /// 使用表T1, T2, T3字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
     /// </summary>
     /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
     /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
@@ -350,7 +350,7 @@ public interface IMultiUpdate<TEntity>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateFrom<TEntity, T1, T2, T3> From<T1, T2, T3>();
     /// <summary>
-    /// 连接表T1, T2, T3, T4获取更新数据
+    /// 使用表T1, T2, T3, T4字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
     /// </summary>
     /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
     /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
@@ -359,7 +359,7 @@ public interface IMultiUpdate<TEntity>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateFrom<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>();
     /// <summary>
-    /// 连接表T1, T2, T3, T4, T5获取更新数据
+    /// 使用表T1, T2, T3, T4, T5字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
     /// </summary>
     /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
     /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
@@ -369,14 +369,14 @@ public interface IMultiUpdate<TEntity>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
     /// <summary>
-    /// InnerJoin连接表TSource获取更新数据
+    /// InnerJoin内连接表TSource字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
     /// </summary>
     /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateJoin<TEntity, TSource> InnerJoin<TSource>(Expression<Func<TEntity, TSource, bool>> joinOn);
     /// <summary>
-    /// LeftJoin连接表TSource获取更新数据
+    /// LeftJoin左连接表TSource字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
     /// </summary>
     /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -386,15 +386,14 @@ public interface IMultiUpdate<TEntity>
 /// <summary>
 /// 更新数据
 /// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要更新的实体类型</typeparam>
 public interface IMultiUpdateSet<TEntity>
 {
     /// <summary>
-    /// 执行更新动作，并返回更新行数
+    /// 执行更新操作，并返回更新行数
     /// </summary>
-    /// <param name="result">返回更新行数</param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery Execute(out int result);
+    IMultipleQuery Execute();
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
@@ -405,7 +404,7 @@ public interface IMultiUpdateSet<TEntity>
 /// <summary>
 /// 更新数据
 /// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要更新的实体类型</typeparam>
 public interface IMultiUpdateSetting<TEntity> : IMultiUpdateSet<TEntity>
 {
     #region Set/SetIf/SetValue/SetValueIf
@@ -666,9 +665,10 @@ public interface IMultiUpdateSetting<TEntity> : IMultiUpdateSet<TEntity>
     #endregion
 }
 /// <summary>
-/// 更新数据，仅限SQL SERVER数据库使用
+/// 使用表T1字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
 /// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
+/// <typeparam name="T1">更新值来源表T1实体类型</typeparam>
 public interface IMultiUpdateFrom<TEntity, T1> : IMultiUpdateSet<TEntity>
 {
     #region Set/SetIf/SetValue/SetValueIf
@@ -915,276 +915,9 @@ public interface IMultiUpdateFrom<TEntity, T1> : IMultiUpdateSet<TEntity>
     #endregion
 }
 /// <summary>
-/// 更新数据，仅限MySql,Mariadb,PostgreSQL数据库使用
+/// 使用表T1, T2字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
 /// </summary>
-/// <typeparam name="TEntity">更新数据库表TEntity实体类型，需要有模型映射</typeparam>
-/// <typeparam name="T1">获取更新值表T1实体类型，需要有模型映射</typeparam>
-public interface IMultiUpdateJoin<TEntity, T1> : IMultiUpdateSet<TEntity>
-{
-    #region Join
-    /// <summary>
-    /// InnerJoin连接表T获取更新数据
-    /// </summary>
-    /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回数据更新来源对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2> InnerJoin<T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn);
-    /// <summary>
-    /// LeftJoin连接表T获取更新数据
-    /// </summary>
-    /// <typeparam name="T2">数据来源表T实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回数据更新来源对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2> LeftJoin<T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn);
-    #endregion
-
-    #region Set/SetIf/SetValue/SetValueIf
-    /// <summary>
-    /// 使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
-    ///     .Set(f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .Set((x, y) =&gt; new
-    ///     {
-    ///         OrderNo = x.OrderNo + "_111",
-    ///         BuyerId = DBNull.Value
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TFields">一个或是多个字段</typeparam>
-    /// <param name="fieldsExpr">更新字段表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1> Set<TFields>(Expression<Func<TEntity, T1, TFields>> fieldsExpr);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
-    /// 如果为false，则不生成更新语句，用法：   
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
-    ///     .SetIf(condition, f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .SetIf(condition, (x, y) =&gt; new
-    ///     {
-    ///         OrderNo = x.OrderNo + "_111",
-    ///         BuyerId = DBNull.Value
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TFields">一个或是多个字段</typeparam>
-    /// <param name="condition">更新条件</param>
-    /// <param name="fieldsExpr">更新字段表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, TFields>> fieldsExpr);
-    /// <summary>
-    /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((a, b) =&gt; a.BuyerId == b.Id)
-    ///     .Set((x, y) =&gt; new
-    ///     {
-    ///         TotalAmount = 200.56,
-    ///         OrderNo = x.OrderNo + "-111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .SetValue(x =&gt; x.Products, new List&lt;int&gt; { 1, 2, 3 })
-    ///     .Where((a, b) =&gt; a.BuyerId == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
-    /// <param name="fieldsExpr">子查询表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsExpr);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((a, b) =&gt; a.BuyerId == b.Id)
-    ///     .SetIf(condition, (x, y) =&gt; new
-    ///     {
-    ///         TotalAmount = 200.56,
-    ///         OrderNo = x.OrderNo + "-111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .SetValueIf(condition, x =&gt; x.Products, new List&lt;int&gt; { 1, 2, 3 })
-    ///     .Where((a, b) =&gt; a.BuyerId == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
-    /// <param name="fieldsExpr">子查询表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsExpr);
-    /// <summary>
-    /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .Set(f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .Set((x, y) =&gt; new
-    ///     {
-    ///         OrderNo = x.OrderNo + "_111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
-    /// <param name="fieldExpr">单个字段筛选表达式</param>
-    /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .SetIf(condition, f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .SetIf(condition, (x, y) =&gt; new
-    ///     {
-    ///         OrderNo = x.OrderNo + "_111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
-    /// <param name="fieldExpr">单个字段筛选表达式</param>
-    /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
-    /// <summary>
-    /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .SetValue(x =&gt; x.TotalAmount, 200.56)
-    ///     .Set((a, b) =&gt; new
-    ///     {
-    ///         OrderNo = a.OrderNo + "_111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TField">更新字段类型</typeparam>
-    /// <param name="fieldExpr">筛选单个字段表达式</param>
-    /// <param name="fieldValue">字段值，固定值</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .SetValueIf(condition, x =&gt; x.TotalAmount, 200.56)
-    ///     .SetIf(condition, (a, b) =&gt; new
-    ///     {
-    ///         OrderNo = a.OrderNo + "_111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TField">更新字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
-    /// <param name="fieldExpr">筛选单个字段表达式</param>
-    /// <param name="fieldValue">字段值，固定值</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
-    #endregion
-
-    #region Where/And
-    /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
-    /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
-    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
-    /// </summary>
-    /// <param name="condition">根据condition的值进行判断使用表达式</param>
-    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
-    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1> Where(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate, Expression<Func<TEntity, T1, bool>> elsePredicate = null);
-    /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
-    /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1> And(Expression<Func<TEntity, T1, bool>> predicate);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
-    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
-    /// </summary>
-    /// <param name="condition">根据condition的值进行判断使用表达式</param>
-    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
-    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1> And(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate = null, Expression<Func<TEntity, T1, bool>> elsePredicate = null);
-    #endregion
-}
-/// <summary>
-/// 更新数据，仅限SQL SERVER数据库使用
-/// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
 /// <typeparam name="T2">更新值来源表TT2实体类型</typeparam>
 public interface IMultiUpdateFrom<TEntity, T1, T2> : IMultiUpdateSet<TEntity>
@@ -1433,277 +1166,9 @@ public interface IMultiUpdateFrom<TEntity, T1, T2> : IMultiUpdateSet<TEntity>
     #endregion
 }
 /// <summary>
-/// 更新数据，仅限MySql,Mariadb,PostgreSQL数据库使用
+/// 使用表T1, T2, T3字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
 /// </summary>
-/// <typeparam name="TEntity">更新数据库表TEntity实体类型，需要有模型映射</typeparam>
-/// <typeparam name="T1">获取更新值表T1实体类型，需要有模型映射/typeparam>
-/// <typeparam name="T2">获取更新值表T2实体类型，需要有模型映射/typeparam>
-public interface IMultiUpdateJoin<TEntity, T1, T2> : IMultiUpdateSet<TEntity>
-{
-    #region Join
-    /// <summary>
-    /// InnerJoin连接表T3获取更新数据
-    /// </summary>
-    /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回数据更新来源对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3> InnerJoin<T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn);
-    /// <summary>
-    /// LeftJoin连接表T获取更新数据
-    /// </summary>
-    /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回数据更新来源对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3> LeftJoin<T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn);
-    #endregion
-
-    #region Set/SetIf/SetValue/SetValueIf
-    /// <summary>
-    /// 使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
-    ///     .Set(f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .Set((x, y) =&gt; new
-    ///     {
-    ///         OrderNo = x.OrderNo + "_111",
-    ///         BuyerId = DBNull.Value
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TFields">一个或是多个字段</typeparam>
-    /// <param name="fieldsExpr">更新字段表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2> Set<TFields>(Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
-    /// 如果为false，则不生成更新语句，用法：   
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
-    ///     .SetIf(condition, f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .SetIf(condition, (x, y) =&gt; new
-    ///     {
-    ///         OrderNo = x.OrderNo + "_111",
-    ///         BuyerId = DBNull.Value
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TFields">一个或是多个字段</typeparam>
-    /// <param name="condition">更新条件</param>
-    /// <param name="fieldsExpr">更新字段表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr);
-    /// <summary>
-    /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((a, b) =&gt; a.BuyerId == b.Id)
-    ///     .Set((x, y) =&gt; new
-    ///     {
-    ///         TotalAmount = 200.56,
-    ///         OrderNo = x.OrderNo + "-111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .SetValue(x =&gt; x.Products, new List&lt;int&gt; { 1, 2, 3 })
-    ///     .Where((a, b) =&gt; a.BuyerId == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
-    /// <param name="fieldsExpr">子查询表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsExpr);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((a, b) =&gt; a.BuyerId == b.Id)
-    ///     .SetIf(condition, (x, y) =&gt; new
-    ///     {
-    ///         TotalAmount = 200.56,
-    ///         OrderNo = x.OrderNo + "-111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .SetValueIf(condition, x =&gt; x.Products, new List&lt;int&gt; { 1, 2, 3 })
-    ///     .Where((a, b) =&gt; a.BuyerId == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
-    /// <param name="fieldsExpr">子查询表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsExpr);
-    /// <summary>
-    /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .Set(f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .Set((x, y) =&gt; new
-    ///     {
-    ///         OrderNo = x.OrderNo + "_111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
-    /// <param name="fieldExpr">单个字段筛选表达式</param>
-    /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .SetIf(condition, f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .SetIf(condition, (x, y) =&gt; new
-    ///     {
-    ///         OrderNo = x.OrderNo + "_111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
-    /// <param name="fieldExpr">单个字段筛选表达式</param>
-    /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
-    /// <summary>
-    /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .SetValue(x =&gt; x.TotalAmount, 200.56)
-    ///     .Set((a, b) =&gt; new
-    ///     {
-    ///         OrderNo = a.OrderNo + "_111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TField">更新字段类型</typeparam>
-    /// <param name="fieldExpr">筛选单个字段表达式</param>
-    /// <param name="fieldValue">字段值，固定值</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .SetValueIf(condition, x =&gt; x.TotalAmount, 200.56)
-    ///     .SetIf(condition, (a, b) =&gt; new
-    ///     {
-    ///         OrderNo = a.OrderNo + "_111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TField">更新字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
-    /// <param name="fieldExpr">筛选单个字段表达式</param>
-    /// <param name="fieldValue">字段值，固定值</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
-    #endregion
-
-    #region Where/And
-    /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
-    /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2> Where(Expression<Func<TEntity, T1, T2, bool>> predicate);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
-    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
-    /// </summary>
-    /// <param name="condition">根据condition的值进行判断使用表达式</param>
-    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
-    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2> Where(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null);
-    /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
-    /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2> And(Expression<Func<TEntity, T1, T2, bool>> predicate);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
-    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
-    /// </summary>
-    /// <param name="condition">根据condition的值进行判断使用表达式</param>
-    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
-    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2> And(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null);
-    #endregion
-}
-/// <summary>
-/// 更新数据，仅限SQL SERVER数据库使用
-/// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
 /// <typeparam name="T2">更新值来源表TT2实体类型</typeparam>
 /// <typeparam name="T3">更新值来源表TT3实体类型</typeparam>
@@ -1953,278 +1418,9 @@ public interface IMultiUpdateFrom<TEntity, T1, T2, T3> : IMultiUpdateSet<TEntity
     #endregion
 }
 /// <summary>
-/// 更新数据，仅限MySql,Mariadb,PostgreSQL数据库使用
+/// 使用表T1, T2, T3, T4字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
 /// </summary>
-/// <typeparam name="TEntity">更新数据库表TEntity实体类型，需要有模型映射</typeparam>
-/// <typeparam name="T1">获取更新值表T1实体类型，需要有模型映射/typeparam>
-/// <typeparam name="T2">获取更新值表T2实体类型，需要有模型映射/typeparam>
-/// <typeparam name="T3">获取更新值表T3实体类型，需要有模型映射/typeparam>
-public interface IMultiUpdateJoin<TEntity, T1, T2, T3> : IMultiUpdateSet<TEntity>
-{
-    #region Join
-    /// <summary>
-    /// InnerJoin连接表T4获取更新数据
-    /// </summary>
-    /// <typeparam name="T4">数据来源表T4实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回数据更新来源对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> InnerJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn);
-    /// <summary>
-    /// LeftJoin连接表T获取更新数据
-    /// </summary>
-    /// <typeparam name="T4">数据来源表T4实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回数据更新来源对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> LeftJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn);
-    #endregion
-
-    #region Set/SetIf/SetValue/SetValueIf
-    /// <summary>
-    /// 使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
-    ///     .Set(f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .Set((x, y) =&gt; new
-    ///     {
-    ///         OrderNo = x.OrderNo + "_111",
-    ///         BuyerId = DBNull.Value
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TFields">一个或是多个字段</typeparam>
-    /// <param name="fieldsExpr">更新字段表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
-    /// 如果为false，则不生成更新语句，用法：   
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
-    ///     .SetIf(condition, f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .SetIf(condition, (x, y) =&gt; new
-    ///     {
-    ///         OrderNo = x.OrderNo + "_111",
-    ///         BuyerId = DBNull.Value
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TFields">一个或是多个字段</typeparam>
-    /// <param name="condition">更新条件</param>
-    /// <param name="fieldsExpr">更新字段表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr);
-    /// <summary>
-    /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((a, b) =&gt; a.BuyerId == b.Id)
-    ///     .Set((x, y) =&gt; new
-    ///     {
-    ///         TotalAmount = 200.56,
-    ///         OrderNo = x.OrderNo + "-111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .SetValue(x =&gt; x.Products, new List&lt;int&gt; { 1, 2, 3 })
-    ///     .Where((a, b) =&gt; a.BuyerId == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
-    /// <param name="fieldsExpr">子查询表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsExpr);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((a, b) =&gt; a.BuyerId == b.Id)
-    ///     .SetIf(condition, (x, y) =&gt; new
-    ///     {
-    ///         TotalAmount = 200.56,
-    ///         OrderNo = x.OrderNo + "-111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .SetValueIf(condition, x =&gt; x.Products, new List&lt;int&gt; { 1, 2, 3 })
-    ///     .Where((a, b) =&gt; a.BuyerId == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
-    /// <param name="fieldsExpr">子查询表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsExpr);
-    /// <summary>
-    /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .Set(f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .Set((x, y) =&gt; new
-    ///     {
-    ///         OrderNo = x.OrderNo + "_111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
-    /// <param name="fieldExpr">单个字段筛选表达式</param>
-    /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .SetIf(condition, f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .SetIf(condition, (x, y) =&gt; new
-    ///     {
-    ///         OrderNo = x.OrderNo + "_111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
-    /// <param name="fieldExpr">单个字段筛选表达式</param>
-    /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
-    /// <summary>
-    /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .SetValue(x =&gt; x.TotalAmount, 200.56)
-    ///     .Set((a, b) =&gt; new
-    ///     {
-    ///         OrderNo = a.OrderNo + "_111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TField">更新字段类型</typeparam>
-    /// <param name="fieldExpr">筛选单个字段表达式</param>
-    /// <param name="fieldValue">字段值，固定值</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .SetValueIf(condition, x =&gt; x.TotalAmount, 200.56)
-    ///     .SetIf(condition, (a, b) =&gt; new
-    ///     {
-    ///         OrderNo = a.OrderNo + "_111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TField">更新字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
-    /// <param name="fieldExpr">筛选单个字段表达式</param>
-    /// <param name="fieldValue">字段值，固定值</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
-    #endregion
-
-    #region Where/And
-    /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
-    /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3> Where(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
-    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
-    /// </summary>
-    /// <param name="condition">根据condition的值进行判断使用表达式</param>
-    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
-    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null);
-    /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
-    /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3> And(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
-    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
-    /// </summary>
-    /// <param name="condition">根据condition的值进行判断使用表达式</param>
-    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
-    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3> And(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null);
-    #endregion
-}
-/// <summary>
-/// 更新数据，仅限SQL SERVER数据库使用
-/// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
 /// <typeparam name="T2">更新值来源表TT2实体类型</typeparam>
 /// <typeparam name="T3">更新值来源表TT3实体类型</typeparam>
@@ -2475,279 +1671,9 @@ public interface IMultiUpdateFrom<TEntity, T1, T2, T3, T4> : IMultiUpdateSet<TEn
     #endregion
 }
 /// <summary>
-/// 更新数据，仅限MySql,Mariadb,PostgreSQL数据库使用
+/// 使用表T1, T2, T3, T4, T5字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
 /// </summary>
-/// <typeparam name="TEntity">更新数据库表TEntity实体类型，需要有模型映射</typeparam>
-/// <typeparam name="T1">获取更新值表T1实体类型，需要有模型映射/typeparam>
-/// <typeparam name="T2">获取更新值表T2实体类型，需要有模型映射/typeparam>
-/// <typeparam name="T3">获取更新值表T3实体类型，需要有模型映射/typeparam>
-/// <typeparam name="T4">获取更新值表T4实体类型，需要有模型映射/typeparam>
-public interface IMultiUpdateJoin<TEntity, T1, T2, T3, T4> : IMultiUpdateSet<TEntity>
-{
-    #region Join
-    /// <summary>
-    /// InnerJoin连接表T5获取更新数据
-    /// </summary>
-    /// <typeparam name="T5">数据来源表T5实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回数据更新来源对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> InnerJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn);
-    /// <summary>
-    /// LeftJoin连接表T获取更新数据
-    /// </summary>
-    /// <typeparam name="T5">数据来源表T5实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回数据更新来源对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> LeftJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn);
-    #endregion
-
-    #region Set/SetIf/SetValue/SetValueIf
-    /// <summary>
-    /// 使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
-    ///     .Set(f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .Set((x, y) =&gt; new
-    ///     {
-    ///         OrderNo = x.OrderNo + "_111",
-    ///         BuyerId = DBNull.Value
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TFields">一个或是多个字段</typeparam>
-    /// <param name="fieldsExpr">更新字段表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
-    /// 如果为false，则不生成更新语句，用法：   
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
-    ///     .SetIf(condition, f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .SetIf(condition, (x, y) =&gt; new
-    ///     {
-    ///         OrderNo = x.OrderNo + "_111",
-    ///         BuyerId = DBNull.Value
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TFields">一个或是多个字段</typeparam>
-    /// <param name="condition">更新条件</param>
-    /// <param name="fieldsExpr">更新字段表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
-    /// <summary>
-    /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((a, b) =&gt; a.BuyerId == b.Id)
-    ///     .Set((x, y) =&gt; new
-    ///     {
-    ///         TotalAmount = 200.56,
-    ///         OrderNo = x.OrderNo + "-111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .SetValue(x =&gt; x.Products, new List&lt;int&gt; { 1, 2, 3 })
-    ///     .Where((a, b) =&gt; a.BuyerId == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
-    /// <param name="fieldsExpr">子查询表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((a, b) =&gt; a.BuyerId == b.Id)
-    ///     .SetIf(condition, (x, y) =&gt; new
-    ///     {
-    ///         TotalAmount = 200.56,
-    ///         OrderNo = x.OrderNo + "-111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .SetValueIf(condition, x =&gt; x.Products, new List&lt;int&gt; { 1, 2, 3 })
-    ///     .Where((a, b) =&gt; a.BuyerId == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
-    /// <param name="fieldsExpr">子查询表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
-    /// <summary>
-    /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .Set(f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .Set((x, y) =&gt; new
-    ///     {
-    ///         OrderNo = x.OrderNo + "_111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
-    /// <param name="fieldExpr">单个字段筛选表达式</param>
-    /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .SetIf(condition, f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .SetIf(condition, (x, y) =&gt; new
-    ///     {
-    ///         OrderNo = x.OrderNo + "_111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
-    /// <param name="fieldExpr">单个字段筛选表达式</param>
-    /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
-    /// <summary>
-    /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .SetValue(x =&gt; x.TotalAmount, 200.56)
-    ///     .Set((a, b) =&gt; new
-    ///     {
-    ///         OrderNo = a.OrderNo + "_111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TField">更新字段类型</typeparam>
-    /// <param name="fieldExpr">筛选单个字段表达式</param>
-    /// <param name="fieldValue">字段值，固定值</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .SetValueIf(condition, x =&gt; x.TotalAmount, 200.56)
-    ///     .SetIf(condition, (a, b) =&gt; new
-    ///     {
-    ///         OrderNo = a.OrderNo + "_111",
-    ///         BuyerSource = y.SourceType
-    ///     })
-    ///     .Where((x, y) =&gt; x.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TField">更新字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
-    /// <param name="fieldExpr">筛选单个字段表达式</param>
-    /// <param name="fieldValue">字段值，固定值</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
-    #endregion
-
-    #region Where/And
-    /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
-    /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> Where(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
-    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
-    /// </summary>
-    /// <param name="condition">根据condition的值进行判断使用表达式</param>
-    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
-    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null);
-    /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
-    /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> And(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
-    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
-    /// </summary>
-    /// <param name="condition">根据condition的值进行判断使用表达式</param>
-    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
-    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
-    /// <returns>返回更新对象</returns>
-    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null);
-    #endregion
-}
-/// <summary>
-/// 更新数据，仅限SQL SERVER数据库使用
-/// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
 /// <typeparam name="T2">更新值来源表TT2实体类型</typeparam>
 /// <typeparam name="T3">更新值来源表TT3实体类型</typeparam>
@@ -2999,14 +1925,1088 @@ public interface IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IMultiUpdateSet
     #endregion
 }
 /// <summary>
-/// 更新数据，仅限MySql,Mariadb,PostgreSQL数据库使用
+/// 使用表T1字段数据更新表TEntity数据，仅限MySql,Mariadb,PostgreSQL数据库使用
 /// </summary>
-/// <typeparam name="TEntity">更新数据库表TEntity实体类型，需要有模型映射</typeparam>
-/// <typeparam name="T1">获取更新值表T1实体类型，需要有模型映射/typeparam>
-/// <typeparam name="T2">获取更新值表T2实体类型，需要有模型映射/typeparam>
-/// <typeparam name="T3">获取更新值表T3实体类型，需要有模型映射/typeparam>
-/// <typeparam name="T4">获取更新值表T4实体类型，需要有模型映射/typeparam>
-/// <typeparam name="T5">获取更新值表T5实体类型，需要有模型映射/typeparam>
+/// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
+/// <typeparam name="T1">要更新数据表T1实体类型</typeparam>
+public interface IMultiUpdateJoin<TEntity, T1> : IMultiUpdateSet<TEntity>
+{
+    #region Join
+    /// <summary>
+    /// 追加表T2字段数据InnerJoin内连接更新表TEntity数据
+    /// </summary>
+    /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回数据更新来源对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2> InnerJoin<T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn);
+    /// <summary>
+    /// 追加表T2字段数据LeftJoin左连接更新表TEntity数据
+    /// </summary>
+    /// <typeparam name="T2">数据来源表T实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回数据更新来源对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2> LeftJoin<T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn);
+    #endregion
+
+    #region Set/SetIf/SetValue/SetValueIf
+    /// <summary>
+    /// 使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
+    /// <code>
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
+    ///     .Set(f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
+    ///     .Set((x, y) =&gt; new
+    ///     {
+    ///         OrderNo = x.OrderNo + "_111",
+    ///         BuyerId = DBNull.Value
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">一个或是多个字段</typeparam>
+    /// <param name="fieldsExpr">更新字段表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1> Set<TFields>(Expression<Func<TEntity, T1, TFields>> fieldsExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
+    /// 如果为false，则不生成更新语句，用法：   
+    /// <code>
+    /// var condition = true;
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
+    ///     .SetIf(condition, f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
+    ///     .SetIf(condition, (x, y) =&gt; new
+    ///     {
+    ///         OrderNo = x.OrderNo + "_111",
+    ///         BuyerId = DBNull.Value
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">一个或是多个字段</typeparam>
+    /// <param name="condition">更新条件</param>
+    /// <param name="fieldsExpr">更新字段表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, TFields>> fieldsExpr);
+    /// <summary>
+    /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
+    /// <code>
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((a, b) =&gt; a.BuyerId == b.Id)
+    ///     .Set((x, y) =&gt; new
+    ///     {
+    ///         TotalAmount = 200.56,
+    ///         OrderNo = x.OrderNo + "-111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .SetValue(x =&gt; x.Products, new List&lt;int&gt; { 1, 2, 3 })
+    ///     .Where((a, b) =&gt; a.BuyerId == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
+    /// <param name="fieldsExpr">子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// <code>
+    /// var condition = true;
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((a, b) =&gt; a.BuyerId == b.Id)
+    ///     .SetIf(condition, (x, y) =&gt; new
+    ///     {
+    ///         TotalAmount = 200.56,
+    ///         OrderNo = x.OrderNo + "-111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .SetValueIf(condition, x =&gt; x.Products, new List&lt;int&gt; { 1, 2, 3 })
+    ///     .Where((a, b) =&gt; a.BuyerId == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldsExpr">子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsExpr);
+    /// <summary>
+    /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
+    /// <code>
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .Set(f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
+    ///     .Set((x, y) =&gt; new
+    ///     {
+    ///         OrderNo = x.OrderNo + "_111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
+    /// <param name="fieldExpr">单个字段筛选表达式</param>
+    /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
+    /// <code>
+    /// var condition = true;
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .SetIf(condition, f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
+    ///     .SetIf(condition, (x, y) =&gt; new
+    ///     {
+    ///         OrderNo = x.OrderNo + "_111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldExpr">单个字段筛选表达式</param>
+    /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    /// <summary>
+    /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
+    /// <code>
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .SetValue(x =&gt; x.TotalAmount, 200.56)
+    ///     .Set((a, b) =&gt; new
+    ///     {
+    ///         OrderNo = a.OrderNo + "_111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">更新字段类型</typeparam>
+    /// <param name="fieldExpr">筛选单个字段表达式</param>
+    /// <param name="fieldValue">字段值，固定值</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
+    /// <code>
+    /// var condition = true;
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .SetValueIf(condition, x =&gt; x.TotalAmount, 200.56)
+    ///     .SetIf(condition, (a, b) =&gt; new
+    ///     {
+    ///         OrderNo = a.OrderNo + "_111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">更新字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldExpr">筛选单个字段表达式</param>
+    /// <param name="fieldValue">字段值，固定值</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    #endregion
+
+    #region Where/And
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1> Where(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate, Expression<Func<TEntity, T1, bool>> elsePredicate = null);
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1> And(Expression<Func<TEntity, T1, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1> And(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate = null, Expression<Func<TEntity, T1, bool>> elsePredicate = null);
+    #endregion
+}
+/// <summary>
+/// 使用表T1, T2字段数据更新表TEntity数据，仅限MySql,Mariadb,PostgreSQL数据库使用
+/// </summary>
+/// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
+/// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
+/// <typeparam name="T2">更新值来源表TT2实体类型</typeparam>
+public interface IMultiUpdateJoin<TEntity, T1, T2> : IMultiUpdateSet<TEntity>
+{
+    #region Join
+    /// <summary>
+    /// InnerJoin内连接表T3字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// </summary>
+    /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回数据更新来源对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3> InnerJoin<T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn);
+    /// <summary>
+    /// LeftJoin左连接表T3字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// </summary>
+    /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回数据更新来源对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3> LeftJoin<T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn);
+    #endregion
+
+    #region Set/SetIf/SetValue/SetValueIf
+    /// <summary>
+    /// 使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
+    /// <code>
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
+    ///     .Set(f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
+    ///     .Set((x, y) =&gt; new
+    ///     {
+    ///         OrderNo = x.OrderNo + "_111",
+    ///         BuyerId = DBNull.Value
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">一个或是多个字段</typeparam>
+    /// <param name="fieldsExpr">更新字段表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2> Set<TFields>(Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
+    /// 如果为false，则不生成更新语句，用法：   
+    /// <code>
+    /// var condition = true;
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
+    ///     .SetIf(condition, f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
+    ///     .SetIf(condition, (x, y) =&gt; new
+    ///     {
+    ///         OrderNo = x.OrderNo + "_111",
+    ///         BuyerId = DBNull.Value
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">一个或是多个字段</typeparam>
+    /// <param name="condition">更新条件</param>
+    /// <param name="fieldsExpr">更新字段表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, TFields>> fieldsExpr);
+    /// <summary>
+    /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
+    /// <code>
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((a, b) =&gt; a.BuyerId == b.Id)
+    ///     .Set((x, y) =&gt; new
+    ///     {
+    ///         TotalAmount = 200.56,
+    ///         OrderNo = x.OrderNo + "-111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .SetValue(x =&gt; x.Products, new List&lt;int&gt; { 1, 2, 3 })
+    ///     .Where((a, b) =&gt; a.BuyerId == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
+    /// <param name="fieldsExpr">子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// <code>
+    /// var condition = true;
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((a, b) =&gt; a.BuyerId == b.Id)
+    ///     .SetIf(condition, (x, y) =&gt; new
+    ///     {
+    ///         TotalAmount = 200.56,
+    ///         OrderNo = x.OrderNo + "-111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .SetValueIf(condition, x =&gt; x.Products, new List&lt;int&gt; { 1, 2, 3 })
+    ///     .Where((a, b) =&gt; a.BuyerId == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldsExpr">子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsExpr);
+    /// <summary>
+    /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
+    /// <code>
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .Set(f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
+    ///     .Set((x, y) =&gt; new
+    ///     {
+    ///         OrderNo = x.OrderNo + "_111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
+    /// <param name="fieldExpr">单个字段筛选表达式</param>
+    /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
+    /// <code>
+    /// var condition = true;
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .SetIf(condition, f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
+    ///     .SetIf(condition, (x, y) =&gt; new
+    ///     {
+    ///         OrderNo = x.OrderNo + "_111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldExpr">单个字段筛选表达式</param>
+    /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    /// <summary>
+    /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
+    /// <code>
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .SetValue(x =&gt; x.TotalAmount, 200.56)
+    ///     .Set((a, b) =&gt; new
+    ///     {
+    ///         OrderNo = a.OrderNo + "_111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">更新字段类型</typeparam>
+    /// <param name="fieldExpr">筛选单个字段表达式</param>
+    /// <param name="fieldValue">字段值，固定值</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
+    /// <code>
+    /// var condition = true;
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .SetValueIf(condition, x =&gt; x.TotalAmount, 200.56)
+    ///     .SetIf(condition, (a, b) =&gt; new
+    ///     {
+    ///         OrderNo = a.OrderNo + "_111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">更新字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldExpr">筛选单个字段表达式</param>
+    /// <param name="fieldValue">字段值，固定值</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    #endregion
+
+    #region Where/And
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2> Where(Expression<Func<TEntity, T1, T2, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2> Where(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null);
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2> And(Expression<Func<TEntity, T1, T2, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2> And(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null);
+    #endregion
+}
+/// <summary>
+/// 使用表T1, T2, T3字段数据更新表TEntity数据，仅限MySql,Mariadb,PostgreSQL数据库使用
+/// </summary>
+/// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
+/// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
+/// <typeparam name="T2">更新值来源表TT2实体类型</typeparam>
+/// <typeparam name="T3">更新值来源表TT3实体类型</typeparam>
+public interface IMultiUpdateJoin<TEntity, T1, T2, T3> : IMultiUpdateSet<TEntity>
+{
+    #region Join
+    /// <summary>
+    /// InnerJoin内连接表T4字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// </summary>
+    /// <typeparam name="T4">数据来源表T4实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回数据更新来源对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> InnerJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn);
+    /// <summary>
+    /// LeftJoin左连接表T4字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// </summary>
+    /// <typeparam name="T4">数据来源表T4实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回数据更新来源对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> LeftJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn);
+    #endregion
+
+    #region Set/SetIf/SetValue/SetValueIf
+    /// <summary>
+    /// 使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
+    /// <code>
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
+    ///     .Set(f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
+    ///     .Set((x, y) =&gt; new
+    ///     {
+    ///         OrderNo = x.OrderNo + "_111",
+    ///         BuyerId = DBNull.Value
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">一个或是多个字段</typeparam>
+    /// <param name="fieldsExpr">更新字段表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
+    /// 如果为false，则不生成更新语句，用法：   
+    /// <code>
+    /// var condition = true;
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
+    ///     .SetIf(condition, f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
+    ///     .SetIf(condition, (x, y) =&gt; new
+    ///     {
+    ///         OrderNo = x.OrderNo + "_111",
+    ///         BuyerId = DBNull.Value
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">一个或是多个字段</typeparam>
+    /// <param name="condition">更新条件</param>
+    /// <param name="fieldsExpr">更新字段表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsExpr);
+    /// <summary>
+    /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
+    /// <code>
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((a, b) =&gt; a.BuyerId == b.Id)
+    ///     .Set((x, y) =&gt; new
+    ///     {
+    ///         TotalAmount = 200.56,
+    ///         OrderNo = x.OrderNo + "-111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .SetValue(x =&gt; x.Products, new List&lt;int&gt; { 1, 2, 3 })
+    ///     .Where((a, b) =&gt; a.BuyerId == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
+    /// <param name="fieldsExpr">子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// <code>
+    /// var condition = true;
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((a, b) =&gt; a.BuyerId == b.Id)
+    ///     .SetIf(condition, (x, y) =&gt; new
+    ///     {
+    ///         TotalAmount = 200.56,
+    ///         OrderNo = x.OrderNo + "-111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .SetValueIf(condition, x =&gt; x.Products, new List&lt;int&gt; { 1, 2, 3 })
+    ///     .Where((a, b) =&gt; a.BuyerId == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldsExpr">子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsExpr);
+    /// <summary>
+    /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
+    /// <code>
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .Set(f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
+    ///     .Set((x, y) =&gt; new
+    ///     {
+    ///         OrderNo = x.OrderNo + "_111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
+    /// <param name="fieldExpr">单个字段筛选表达式</param>
+    /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
+    /// <code>
+    /// var condition = true;
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .SetIf(condition, f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
+    ///     .SetIf(condition, (x, y) =&gt; new
+    ///     {
+    ///         OrderNo = x.OrderNo + "_111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldExpr">单个字段筛选表达式</param>
+    /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    /// <summary>
+    /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
+    /// <code>
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .SetValue(x =&gt; x.TotalAmount, 200.56)
+    ///     .Set((a, b) =&gt; new
+    ///     {
+    ///         OrderNo = a.OrderNo + "_111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">更新字段类型</typeparam>
+    /// <param name="fieldExpr">筛选单个字段表达式</param>
+    /// <param name="fieldValue">字段值，固定值</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
+    /// <code>
+    /// var condition = true;
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .SetValueIf(condition, x =&gt; x.TotalAmount, 200.56)
+    ///     .SetIf(condition, (a, b) =&gt; new
+    ///     {
+    ///         OrderNo = a.OrderNo + "_111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">更新字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldExpr">筛选单个字段表达式</param>
+    /// <param name="fieldValue">字段值，固定值</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    #endregion
+
+    #region Where/And
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3> Where(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null);
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3> And(Expression<Func<TEntity, T1, T2, T3, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3> And(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null);
+    #endregion
+}
+/// <summary>
+/// 使用表T1, T2, T3, T4字段数据更新表TEntity数据，仅限MySql,Mariadb,PostgreSQL数据库使用
+/// </summary>
+/// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
+/// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
+/// <typeparam name="T2">更新值来源表TT2实体类型</typeparam>
+/// <typeparam name="T3">更新值来源表TT3实体类型</typeparam>
+/// <typeparam name="T4">更新值来源表TT4实体类型</typeparam>
+public interface IMultiUpdateJoin<TEntity, T1, T2, T3, T4> : IMultiUpdateSet<TEntity>
+{
+    #region Join
+    /// <summary>
+    /// InnerJoin内连接表T5字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// </summary>
+    /// <typeparam name="T5">数据来源表T5实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回数据更新来源对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> InnerJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn);
+    /// <summary>
+    /// LeftJoin左连接表T5字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// </summary>
+    /// <typeparam name="T5">数据来源表T5实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回数据更新来源对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> LeftJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn);
+    #endregion
+
+    #region Set/SetIf/SetValue/SetValueIf
+    /// <summary>
+    /// 使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
+    /// <code>
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
+    ///     .Set(f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
+    ///     .Set((x, y) =&gt; new
+    ///     {
+    ///         OrderNo = x.OrderNo + "_111",
+    ///         BuyerId = DBNull.Value
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">一个或是多个字段</typeparam>
+    /// <param name="fieldsExpr">更新字段表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，
+    /// 如果为false，则不生成更新语句，用法：   
+    /// <code>
+    /// var condition = true;
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
+    ///     .SetIf(condition, f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
+    ///     .SetIf(condition, (x, y) =&gt; new
+    ///     {
+    ///         OrderNo = x.OrderNo + "_111",
+    ///         BuyerId = DBNull.Value
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">一个或是多个字段</typeparam>
+    /// <param name="condition">更新条件</param>
+    /// <param name="fieldsExpr">更新字段表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> SetIf<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
+    /// <summary>
+    /// 使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，用法：
+    /// <code>
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((a, b) =&gt; a.BuyerId == b.Id)
+    ///     .Set((x, y) =&gt; new
+    ///     {
+    ///         TotalAmount = 200.56,
+    ///         OrderNo = x.OrderNo + "-111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .SetValue(x =&gt; x.Products, new List&lt;int&gt; { 1, 2, 3 })
+    ///     .Where((a, b) =&gt; a.BuyerId == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
+    /// <param name="fieldsExpr">子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// <code>
+    /// var condition = true;
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((a, b) =&gt; a.BuyerId == b.Id)
+    ///     .SetIf(condition, (x, y) =&gt; new
+    ///     {
+    ///         TotalAmount = 200.56,
+    ///         OrderNo = x.OrderNo + "-111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .SetValueIf(condition, x =&gt; x.Products, new List&lt;int&gt; { 1, 2, 3 })
+    ///     .Where((a, b) =&gt; a.BuyerId == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldsExpr">子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> SetIf<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsExpr);
+    /// <summary>
+    /// 使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新单个栏位，用法：
+    /// <code>
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .Set(f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
+    ///     .Set((x, y) =&gt; new
+    ///     {
+    ///         OrderNo = x.OrderNo + "_111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
+    /// <param name="fieldExpr">单个字段筛选表达式</param>
+    /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> Set<TField>(Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式fieldsExpr筛选单个栏位，子查询表达式fieldValueExpr作为更新值，更新指定栏位，如果为false，则不生成更新语句，用法：
+    /// <code>
+    /// var condition = true;
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .SetIf(condition, f =&gt; f.TotalAmount, (x, y) =&gt; x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
+    ///     .SetIf(condition, (x, y) =&gt; new
+    ///     {
+    ///         OrderNo = x.OrderNo + "_111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldExpr">单个字段筛选表达式</param>
+    /// <param name="fieldValueExpr">获取单个字段值的子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> SetIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> fieldValueExpr);
+    /// <summary>
+    /// 使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，用法：
+    /// <code>
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .SetValue(x =&gt; x.TotalAmount, 200.56)
+    ///     .Set((a, b) =&gt; new
+    ///     {
+    ///         OrderNo = a.OrderNo + "_111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">更新字段类型</typeparam>
+    /// <param name="fieldExpr">筛选单个字段表达式</param>
+    /// <param name="fieldValue">字段值，固定值</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> SetValue<TField>(Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式fieldExpr筛选单个字段，使用固定值fieldValue进行更新，否则不生成更新语句，用法：
+    /// <code>
+    /// var condition = true;
+    /// repository.Update&lt;Order&gt;()
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .SetValueIf(condition, x =&gt; x.TotalAmount, 200.56)
+    ///     .SetIf(condition, (a, b) =&gt; new
+    ///     {
+    ///         OrderNo = a.OrderNo + "_111",
+    ///         BuyerSource = y.SourceType
+    ///     })
+    ///     .Where((x, y) =&gt; x.Id == 1)
+    ///     .Execute();
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerSource`=b.`SourceType` WHERE a.`Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">更新字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldExpr">筛选单个字段表达式</param>
+    /// <param name="fieldValue">字段值，固定值</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> SetValueIf<TField>(bool condition, Expression<Func<TEntity, TField>> fieldExpr, TField fieldValue);
+    #endregion
+
+    #region Where/And
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> Where(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null);
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> And(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回更新对象</returns>
+    IMultiUpdateJoin<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null);
+    #endregion
+}
+/// <summary>
+/// 使用表T1, T2, T3, T4, T5字段数据更新表TEntity数据，仅限MySql,Mariadb,PostgreSQL数据库使用
+/// </summary>
+/// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
+/// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
+/// <typeparam name="T2">更新值来源表TT2实体类型</typeparam>
+/// <typeparam name="T3">更新值来源表TT3实体类型</typeparam>
+/// <typeparam name="T4">更新值来源表TT4实体类型</typeparam>
+/// <typeparam name="T5">更新值来源表TT5实体类型</typeparam>
 public interface IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IMultiUpdateSet<TEntity>
 {
     #region Set/SetIf/SetValue/SetValueIf
