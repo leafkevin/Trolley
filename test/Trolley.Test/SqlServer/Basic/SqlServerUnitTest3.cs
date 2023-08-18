@@ -110,7 +110,7 @@ public class SqlServerUnitTest3 : UnitTestBase
         Initialize();
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
-        var result = repository.Update<Order>().WithBy(new
+        var result = repository.Update<Order>().SetWith(new
         {
             ProductCount = 10,
             Id = 1
@@ -132,7 +132,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             .Where(f => new int[] { 1, 2, 3, 4, 5, 6 }.Contains(f.Id))
             .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
             .ToListAsync();
-        var sql = repository.Update<OrderDetail>().WithBulkBy(parameters).ToSql(out _);
+        var sql = repository.Update<OrderDetail>().WithBulk(parameters).ToSql(out _);
         Assert.True(sql == "UPDATE [sys_order_detail] SET [Price]=@Price0,[Quantity]=@Quantity0,[Amount]=@Amount0 WHERE [Id]=@kId0;UPDATE [sys_order_detail] SET [Price]=@Price1,[Quantity]=@Quantity1,[Amount]=@Amount1 WHERE [Id]=@kId1;UPDATE [sys_order_detail] SET [Price]=@Price2,[Quantity]=@Quantity2,[Amount]=@Amount2 WHERE [Id]=@kId2;UPDATE [sys_order_detail] SET [Price]=@Price3,[Quantity]=@Quantity3,[Amount]=@Amount3 WHERE [Id]=@kId3;UPDATE [sys_order_detail] SET [Price]=@Price4,[Quantity]=@Quantity4,[Amount]=@Amount4 WHERE [Id]=@kId4;UPDATE [sys_order_detail] SET [Price]=@Price5,[Quantity]=@Quantity5,[Amount]=@Amount5 WHERE [Id]=@kId5");
     }
     [Fact]
@@ -150,7 +150,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             })
             .ToListAsync();
         var sql = repository.Update<OrderDetail>()
-            .WithBulkBy(f => new
+            .WithBulk(f => new
             {
                 Price = 200,
                 f.Quantity,
@@ -169,7 +169,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             .Where(f => new int[] { 1, 2, 3 }.Contains(f.Id))
             .ToListAsync();
         var sql = repository.Update<Order>()
-            .WithBulkBy(f => new
+            .WithBulk(f => new
             {
                 BuyerId = DBNull.Value,
                 OrderNo = "ON_" + f.OrderNo,
@@ -185,13 +185,13 @@ public class SqlServerUnitTest3 : UnitTestBase
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
             .From<User>()
-            .SetIf(true, (x, y) => new
+            .Set(true, (x, y) => new
             {
                 TotalAmount = 200.56,
                 OrderNo = x.OrderNo + "-111",
                 BuyerSource = y.SourceType
             })
-            .SetValue(x => x.Products, new List<int> { 1, 2, 3 })
+            .Set(x => x.Products, new List<int> { 1, 2, 3 })
             .Where((a, b) => a.BuyerId == b.Id && a.BuyerId == 1)
           .ToSql(out _);
         Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(b.[Amount]) FROM [sys_order_detail] b WHERE b.[OrderId]=[sys_order].[Id]),[OrderNo]=([sys_order].[OrderNo]+'_111'),[BuyerId]=NULL WHERE [sys_order].[BuyerId]=1");
@@ -411,7 +411,7 @@ public class SqlServerUnitTest3 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         var sql1 = repository.Update<User>()
-            .WithBy(new
+            .SetWith(new
             {
                 Id = 1,
                 Gender = Gender.Male
@@ -450,7 +450,7 @@ public class SqlServerUnitTest3 : UnitTestBase
         Assert.True((byte)parameters7[0].Value == (byte)Gender.Male);
 
         var sql4 = repository.Update<Company>()
-             .WithBy(new
+             .SetWith(new
              {
                  Id = 1,
                  Nature = CompanyNature.Internet
@@ -490,7 +490,7 @@ public class SqlServerUnitTest3 : UnitTestBase
 
         //批量表达式部分栏位更新
         var sql9 = repository.Update<Company>()
-            .WithBulkBy(f => new { f.Name, company.Nature }, new[] { new { Id = 1, Name = "google" }, new { Id = 2, Name = "facebook" } })
+            .WithBulk(f => new { f.Name, company.Nature }, new[] { new { Id = 1, Name = "google" }, new { Id = 2, Name = "facebook" } })
             .ToSql(out var parameters9);
         Assert.True(sql9 == "UPDATE [sys_company] SET [Name]=@Name0,[Nature]=@Nature WHERE [Id]=@kId0;UPDATE [sys_company] SET [Name]=@Name1,[Nature]=@Nature WHERE [Id]=@kId1");
         Assert.True(parameters9[parameters9.Count - 1].ParameterName == "@Nature");
@@ -499,7 +499,7 @@ public class SqlServerUnitTest3 : UnitTestBase
 
         CompanyNature? nature = CompanyNature.Production;
         var sql10 = repository.Update<Company>()
-            .WithBulkBy(f => new { f.Nature, company.Name }, new[] { new { Id = 1, company.Nature }, new { Id = 2, Nature = nature } })
+            .WithBulk(f => new { f.Nature, company.Name }, new[] { new { Id = 1, company.Nature }, new { Id = 2, Nature = nature } })
             .ToSql(out var parameters10);
         Assert.True(sql10 == "UPDATE [sys_company] SET [Nature]=@Nature0,[Name]=@Name WHERE [Id]=@kId0;UPDATE [sys_company] SET [Nature]=@Nature1,[Name]=@Name WHERE [Id]=@kId1");
         Assert.True(parameters10[0].ParameterName == "@Nature0");
@@ -517,7 +517,7 @@ public class SqlServerUnitTest3 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         var sql1 = repository.Update<User>()
-            .WithBy(new
+            .SetWith(new
             {
                 Id = 1,
                 SomeTimes = TimeSpan.FromMinutes(1455)
@@ -549,7 +549,7 @@ public class SqlServerUnitTest3 : UnitTestBase
         //TODO:SQL SERVER不支持超过1天的时间类型
         repository.BeginTransaction();
         await repository.Update<User>()
-            .WithBy(new
+            .SetWith(new
             {
                 Id = 1,
                 SomeTimes = TimeSpan.FromMinutes(55)

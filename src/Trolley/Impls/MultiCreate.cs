@@ -49,12 +49,12 @@ class MultiCreate<TEntity> : IMultiCreate<TEntity>
 
         return new MultiContinuedCreate<TEntity>(this.multiQuery).WithBy(insertObj);
     }
-    public IMultiCreated<TEntity> WithBulkBy(IEnumerable insertObjs)
+    public IMultiCreated<TEntity> WithBulk<TInsertObject>(IEnumerable<TInsertObject> insertObjs)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
 
-        return new MultiCreated<TEntity>(this.multiQuery).WithBulkBy(insertObjs);
+        return new MultiCreated<TEntity>(this.multiQuery).WithBulk(insertObjs);
     }
     public IMultiContinuedCreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector)
     {
@@ -128,8 +128,7 @@ class MultiContinuedCreate<TEntity> : IMultiContinuedCreate<TEntity>
 
         var entityType = typeof(TEntity);
         var commandInitializer = RepositoryHelper.BuildCreateWithBiesCommandInitializer(
-            this.connection, this.ormProvider, this.mapProvider, entityType, insertObj);
-
+              this.connection, this.ormProvider, this.mapProvider, entityType, insertObj);
         this.builders.Add(new WithByBuilderCache
         {
             CommandInitializer = commandInitializer,
@@ -185,7 +184,7 @@ class MultiContinuedCreate<TEntity> : IMultiContinuedCreate<TEntity>
                 insertBuilder.Append(',');
                 valuesBuilder.Append(',');
             }
-            builder.CommandInitializer.Invoke(command, this.ormProvider, builder.Parameters, insertBuilder, valuesBuilder);
+            builder.CommandInitializer.Invoke(command, this.ormProvider, this.mapProvider, builder.Parameters, insertBuilder, valuesBuilder);
             index++;
         }
         insertBuilder.Append(')');
@@ -198,7 +197,7 @@ class MultiContinuedCreate<TEntity> : IMultiContinuedCreate<TEntity>
     struct WithByBuilderCache
     {
         public object Parameters { get; set; }
-        public Action<IDbCommand, IOrmProvider, object, StringBuilder, StringBuilder> CommandInitializer { get; set; }
+        public Action<IDbCommand, IOrmProvider, IEntityMapProvider, object, StringBuilder, StringBuilder> CommandInitializer { get; set; }
     }
 }
 class MultiCreated<TEntity> : IMultiCreated<TEntity>
@@ -227,7 +226,7 @@ class MultiCreated<TEntity> : IMultiCreated<TEntity>
         this.parameters = parameters;
         return this;
     }
-    public IMultiCreated<TEntity> WithBulkBy(IEnumerable insertObjs)
+    public IMultiCreated<TEntity> WithBulk(IEnumerable insertObjs)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
@@ -261,36 +260,23 @@ class MultiCreated<TEntity> : IMultiCreated<TEntity>
         {
             if (this.parameters != null)
             {
-                var commandInitializer = RepositoryHelper.BuildCreateRawSqlParameters(this.connection,
-                    this.ormProvider, this.mapProvider, entityType, this.rawSql, this.parameters);
+                var commandInitializer = RepositoryHelper.BuildCreateRawSqlParameters(this.connection, this.ormProvider, this.mapProvider, entityType, this.rawSql, this.parameters);
                 commandInitializer.Invoke(command, this.ormProvider, this.parameters);
             }
             sql = this.rawSql;
         }
         else
         {
-            bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not Dictionary<string, object>;
-            if (isMulti)
+            int index = 0;
+            var entities = this.parameters as IEnumerable;
+            var commandInitializer = RepositoryHelper.BuildCreateBatchCommandInitializer(this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
+            var sqlBuilder = new StringBuilder();
+            foreach (var entity in entities)
             {
-                var commandInitializer = RepositoryHelper.BuildCreateBatchCommandInitializer(
-                    this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
-
-                int index = 0;
-                var entities = this.parameters as IEnumerable;
-                var sqlBuilder = new StringBuilder();
-                foreach (var entity in entities)
-                {
-                    commandInitializer.Invoke(command, this.ormProvider, sqlBuilder, index, entity);
-                    index++;
-                }
-                sql = sqlBuilder.ToString();
+                commandInitializer.Invoke(command, this.ormProvider, this.mapProvider, sqlBuilder, index, entity);
+                index++;
             }
-            else
-            {
-                var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(
-                    this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
-                sql = commandInitializer.Invoke(command, this.ormProvider, this.parameters);
-            }
+            sql = sqlBuilder.ToString();
         }
         return sql;
     }

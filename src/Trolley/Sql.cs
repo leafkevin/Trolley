@@ -14,9 +14,7 @@ public static class Sql
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
     public static T Deferred<T>(this T obj)
-    {
-        throw new NotImplementedException();
-    }
+        => throw new NotImplementedException();
     /// <summary>
     /// 当前字段或是表达式是否为NULL，只做条件解析，不实现
     /// </summary>
@@ -25,9 +23,7 @@ public static class Sql
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
     public static bool IsNull<TField>(this TField field)
-    {
-        throw new NotImplementedException();
-    }
+        => throw new NotImplementedException();
     /// <summary>
     /// 把当前对象类型转换为TTarget类型，相同名字的成员直接赋值，不存在的成员不做处理，只做实体赋值解析，不实现
     /// </summary>

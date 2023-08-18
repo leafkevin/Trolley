@@ -58,7 +58,6 @@ class Delete<TEntity> : IDelete<TEntity>
 }
 class Deleted<TEntity> : IDeleted<TEntity>
 {
-    private static ConcurrentDictionary<int, object> commandInitializerCache = new();
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
     private readonly IOrmProvider ormProvider;
@@ -81,16 +80,17 @@ class Deleted<TEntity> : IDeleted<TEntity>
         using var command = this.connection.CreateCommand();
         if (isMulti)
         {
-            var commandInitializer = RepositoryHelper.BuildDeleteBatchCommandInitializer(
-                this.connection, this.ormProvider, this.mapProvider, entityType, parameters);
+            var commandInitializer = RepositoryHelper.BuildDeleteBatchCommandInitializer(this.connection,
+                 this.ormProvider, this.mapProvider, entityType, this.parameters, out var isNeedEndParenthesis);
             int index = 0;
             var sqlBuilder = new StringBuilder();
             var entities = this.parameters as IEnumerable;
             foreach (var entity in entities)
             {
-                commandInitializer.Invoke(command, this.ormProvider, sqlBuilder, index, entity);
+                commandInitializer.Invoke(command, this.ormProvider, this.mapProvider, sqlBuilder, index, entity);
                 index++;
             }
+            if (isNeedEndParenthesis) sqlBuilder.Append(')');
             sql = sqlBuilder.ToString();
         }
         else
@@ -115,16 +115,17 @@ class Deleted<TEntity> : IDeleted<TEntity>
         using var cmd = this.connection.CreateCommand();
         if (isMulti)
         {
-            var commandInitializer = RepositoryHelper.BuildDeleteBatchCommandInitializer(
-                this.connection, this.ormProvider, this.mapProvider, entityType, parameters);
+            var commandInitializer = RepositoryHelper.BuildDeleteBatchCommandInitializer(this.connection,
+                this.ormProvider, this.mapProvider, entityType, this.parameters, out var isNeedEndParenthesis);
             int index = 0;
             var sqlBuilder = new StringBuilder();
             var entities = this.parameters as IEnumerable;
             foreach (var entity in entities)
             {
-                commandInitializer.Invoke(cmd, this.ormProvider, sqlBuilder, index, entity);
+                commandInitializer.Invoke(cmd, this.ormProvider, this.mapProvider, sqlBuilder, index, entity);
                 index++;
             }
+            if (isNeedEndParenthesis) sqlBuilder.Append(')');
             sql = sqlBuilder.ToString();
         }
         else
@@ -154,16 +155,17 @@ class Deleted<TEntity> : IDeleted<TEntity>
         using var command = this.connection.CreateCommand();
         if (isMulti)
         {
-            var commandInitializer = RepositoryHelper.BuildDeleteBatchCommandInitializer(
-                this.connection, this.ormProvider, this.mapProvider, entityType, parameters);
+            var commandInitializer = RepositoryHelper.BuildDeleteBatchCommandInitializer(this.connection,
+                 this.ormProvider, this.mapProvider, entityType, this.parameters, out var isNeedEndParenthesis);
             int index = 0;
             var sqlBuilder = new StringBuilder();
             var entities = this.parameters as IEnumerable;
             foreach (var entity in entities)
             {
-                commandInitializer.Invoke(command, this.ormProvider, sqlBuilder, index, entity);
+                commandInitializer.Invoke(command, this.ormProvider, this.mapProvider, sqlBuilder, index, entity);
                 index++;
             }
+            if (isNeedEndParenthesis) sqlBuilder.Append(')');
             sql = sqlBuilder.ToString();
         }
         else

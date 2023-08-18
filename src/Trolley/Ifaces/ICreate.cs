@@ -15,7 +15,7 @@ namespace Trolley;
 public interface ICreate<TEntity>
 {
     /// <summary>
-    /// 使用原始SQL插入数据，用法：
+    /// 使用原始SQL和参数插入数据，用法：
     /// <code>
     /// repository.Insert&lt;Order&gt;()
     ///     .RawSql("INSERT INTO Table(Field1,Field2) VALUES(@Value1,@Value2)", new { Value1 = 1, Value2 = "xxx" });
@@ -62,11 +62,11 @@ public interface ICreate<TEntity>
     /// </code>
     /// </summary>
     /// <param name="insertObjs">插入的对象集合</param>
-    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值</param>
-    /// <returns></returns>
-    ICreated<TEntity> WithBulkBy(IEnumerable insertObjs, int bulkCount = 500);
+    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
+    /// <returns>返回插入对象</returns>
+    ICreated<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
     /// <summary>
-    /// 从<paramref>TSource</paramref>表查询数据，并插入当前表中,用法：
+    /// 从表TSource中捞取部分字段数据，并插入当前表TEntity中，用法：
     /// <code>
     /// repository.Create&lt;Product&gt;()
     ///     .From&lt;Brand&gt;(f =&gt; new
@@ -95,7 +95,7 @@ public interface ICreate<TEntity>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector);
     /// <summary>
-    /// 从表T1, T2表查询数据，并插入当前TEntity表中,用法：
+    /// 从表T1, T2中捞取部分字段数据，并插入当前表TEntity中，用法：
     /// <code>
     /// repository.Create&lt;Product&gt;()
     ///     .From&lt;Brand&gt;(f =&gt; new
@@ -125,7 +125,7 @@ public interface ICreate<TEntity>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity, T1, T2> From<T1, T2>(Expression<Func<T1, T2, object>> fieldSelector);
     /// <summary>
-    /// 从表T1, T2, T3表查询数据，并插入当前TEntity表中,用法：
+    /// 从表T1, T2, T3中捞取部分字段数据，并插入当前表TEntity中，用法：
     /// <code>
     /// repository.Create&lt;Product&gt;()
     ///     .From&lt;Brand&gt;(f =&gt; new
@@ -156,7 +156,7 @@ public interface ICreate<TEntity>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity, T1, T2, T3> From<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> fieldSelector);
     /// <summary>
-    /// 从表T1, T2, T3, T4表查询数据，并插入当前TEntity表中,用法：
+    /// 从表T1, T2, T3, T4中捞取部分字段数据，并插入当前表TEntity中，用法：
     /// <code>
     /// repository.Create&lt;Product&gt;()
     ///     .From&lt;Brand&gt;(f =&gt; new
@@ -188,7 +188,7 @@ public interface ICreate<TEntity>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, object>> fieldSelector);
     /// <summary>
-    /// 从表T1, T2, T3, T4, T5表查询数据，并插入当前TEntity表中,用法：
+    /// 从表T1, T2, T3, T4, T5中捞取部分字段数据，并插入当前表TEntity中，用法：
     /// <code>
     /// repository.Create&lt;Product&gt;()
     ///     .From&lt;Brand&gt;(f =&gt; new
@@ -251,8 +251,8 @@ public interface IContinuedCreate<TEntity>
     /// INSERT INTO `sys_user` (`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)
     /// </code>
     /// </summary>
-    /// <typeparam name="TInsertObject">插入对象类型</typeparam>
-    /// <param name="insertObj">插入对象，包含想要插入的必需栏位值</param>
+    /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
+    /// <param name="insertObj">插入数据对象，包含想要插入的必需栏位值</param>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     /// <summary>
@@ -279,9 +279,9 @@ public interface IContinuedCreate<TEntity>
     /// INSERT INTO `sys_user` (`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)
     /// </code>
     /// </summary>
-    /// <typeparam name="TInsertObject">插入对象类型</typeparam>
+    /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
     /// <param name="condition">判断条件</param>
-    /// <param name="insertObj">插入对象，包含想要插入的必需栏位值</param>
+    /// <param name="insertObj">插入数据对象，包含想要插入的必需栏位值</param>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
@@ -329,8 +329,8 @@ public interface ICreated<TEntity>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">实体类型，需要有模型映射</typeparam>
-/// <typeparam name="TSource">实体类型，需要有模型映射</typeparam>
+/// <typeparam name="TEntity">要插入的实体类型</typeparam>
+/// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
 public interface IContinuedCreate<TEntity, TSource>
 {
     /// <summary>

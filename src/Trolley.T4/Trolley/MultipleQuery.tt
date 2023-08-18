@@ -109,7 +109,7 @@ class MultipleQuery : IMultipleQuery
 
         var targetType = typeof(TEntity);
         Func<IDataReader, object> readerGetter;
-        if (targetType.IsEntityType())
+        if (targetType.IsEntityType(out _))
             readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         else readerGetter = reader => reader.To<TEntity>();
         this.AddReader(rawSql, readerGetter);
@@ -122,12 +122,12 @@ class MultipleQuery : IMultipleQuery
         if (parameters == null)
             throw new ArgumentNullException(nameof(parameters));
 
-        var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, rawSql, parameters);
+        var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.Connection, this.OrmProvider, rawSql, parameters);
         commandInitializer.Invoke(this.Command, this.OrmProvider, parameters);
 
         var targetType = typeof(TEntity);
         Func<IDataReader, object> readerGetter;
-        if (targetType.IsEntityType())
+        if (targetType.IsEntityType(out _))
             readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         else readerGetter = reader => reader.To<TEntity>();
         this.AddReader(rawSql, readerGetter);
@@ -154,7 +154,7 @@ class MultipleQuery : IMultipleQuery
 
         var targetType = typeof(TEntity);
         Func<IDataReader, object> readerGetter;
-        if (targetType.IsEntityType())
+        if (targetType.IsEntityType(out _))
             readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         else readerGetter = reader => reader.To<TEntity>();
         this.AddReader(rawSql, readerGetter);
@@ -167,12 +167,12 @@ class MultipleQuery : IMultipleQuery
         if (parameters == null)
             throw new ArgumentNullException(nameof(parameters));
 
-        var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, rawSql, parameters);
+        var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.Connection, this.OrmProvider, rawSql, parameters);
         commandInitializer.Invoke(this.Command, this.OrmProvider, parameters);
 
         var targetType = typeof(TEntity);
         Func<IDataReader, object> readerGetter;
-        if (targetType.IsEntityType())
+        if (targetType.IsEntityType(out _))
             readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         else readerGetter = reader => reader.To<TEntity>();
         this.AddReader(rawSql, readerGetter);
@@ -252,7 +252,7 @@ class MultipleQuery : IMultipleQuery
         if (parameters == null)
             throw new ArgumentNullException(nameof(parameters));
 
-        var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, rawSql, parameters);
+        var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.Connection, this.OrmProvider, rawSql, parameters);
         commandInitializer.Invoke(this.Command, this.OrmProvider, parameters);
 
         Func<IDataReader, object> readerGetter = reader => reader.To<int>();

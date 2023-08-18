@@ -657,7 +657,7 @@ public interface IMultiQuery<T>
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> Where(Expression<Func<T, bool>> predicate);
     /// <summary>
@@ -672,7 +672,7 @@ public interface IMultiQuery<T>
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> And(Expression<Func<T, bool>> predicate);
     /// <summary>
@@ -1306,7 +1306,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
@@ -1321,7 +1321,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>

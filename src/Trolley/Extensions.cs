@@ -15,10 +15,7 @@ public static class Extensions
     private static Type[] valueTypes = new Type[] {typeof(byte),typeof(sbyte),typeof(short),typeof(ushort),
         typeof(int),typeof(uint),typeof(long),typeof(ulong),typeof(float),typeof(double),typeof(decimal),
         typeof(bool),typeof(string),typeof(char),typeof(Guid),typeof(DateTime),typeof(DateTimeOffset),
-        typeof(TimeSpan),typeof(TimeOnly),typeof(DateOnly),typeof(byte[]),typeof(byte?),typeof(sbyte?),
-        typeof(short?),typeof(ushort?),typeof(int?),typeof(uint?),typeof(long?),typeof(ulong?),typeof(float?),
-        typeof(double?),typeof(decimal?),typeof(bool?),typeof(char?),typeof(Guid?) ,typeof(DateTime?),
-        typeof(DateTimeOffset?),typeof(TimeSpan?),typeof(TimeOnly?),typeof(DateOnly?)};
+        typeof(TimeSpan),typeof(TimeOnly),typeof(DateOnly),typeof(DBNull)};
     private static readonly ConcurrentDictionary<int, Delegate> typeReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> valueTupleReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
@@ -86,8 +83,25 @@ public static class Extensions
         }
         return mapper;
     }
+
+
+    public static IDbDataParameter CreateParameter(this IOrmProvider ormProvider, MemberMap memberMapper, string parameterName, object fieldValue)
+    {
+        IDbDataParameter dbParameter = null;
+        if (memberMapper.NativeDbType != null)
+        {
+            var dbTypeValue = ormProvider.ToFieldValue(memberMapper, fieldValue);
+            dbParameter = ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbTypeValue);
+        }
+        else dbParameter = ormProvider.CreateParameter(parameterName, fieldValue);
+
+        if (memberMapper.TypeHandler != null)
+            memberMapper.TypeHandler.SetValue(ormProvider, dbParameter, fieldValue);
+        return dbParameter;
+    }
+
     public static T Parse<T>(this ITypeHandler typeHandler, IOrmProvider ormProvider, object value)
-       => (T)typeHandler.Parse(ormProvider, typeof(T), value);
+        => (T)typeHandler.Parse(ormProvider, typeof(T), value);
     public static bool IsNullableType(this Type type, out Type underlyingType)
     {
         if (type.IsValueType)
@@ -169,40 +183,39 @@ public static class Extensions
             return content;
         return content.Replace(oldValue, newValue);
     }
-    public static bool IsEntityType(this Type type)
+    /// <summary>
+    /// 只要当前对象是存在多个成员(字段或是属性)的结构或是类对象，都属于属于实体类型
+    /// </summary>
+    /// <param name="type"></param>
+    /// <param name="underlyingType"></param>
+    /// <returns></returns>
+    public static bool IsEntityType(this Type type, out Type underlyingType)
     {
-        if (type.IsEnum || valueTypes.Contains(type)) return false;
-        if (type.FullName == "System.Data.Linq.Binary")
+        underlyingType = type;
+        if (valueTypes.Contains(type) || type.FullName == "System.Data.Linq.Binary")
             return false;
-        if (type.IsValueType)
-        {
-            var underlyingType = Nullable.GetUnderlyingType(type);
-            if (underlyingType != null && underlyingType.IsEnum)
-                return false;
-        }
+        underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+        if (valueTypes.Contains(underlyingType) || underlyingType.FullName == "System.Data.Linq.Binary" || underlyingType.IsEnum)
+            return false;
         if (type.IsArray)
         {
             var elementType = type.GetElementType();
-            if (valueTypes.Contains(elementType) || elementType.IsEnum) return false;
-            if (elementType.IsValueType)
-            {
-                var underlyingType = Nullable.GetUnderlyingType(elementType);
-                if (underlyingType != null && underlyingType.IsEnum)
-                    return false;
-            }
+            return elementType!.IsEntityType(out underlyingType);
         }
-        if (typeof(IEnumerable).IsAssignableFrom(type))
+        if (type.IsGenericType)
         {
-            foreach (var elementType in type.GenericTypeArguments)
+            if (type.FullName.StartsWith("System.ValueTuple`") && type.GenericTypeArguments.Length == 1)
+                return false;
+            if (typeof(IEnumerable).IsAssignableFrom(type))
             {
-                if (elementType.IsEnum || valueTypes.Contains(elementType))
-                    return false;
-                if (elementType.IsValueType)
+                if (typeof(IDictionary).IsAssignableFrom(type))
+                    return true;
+                foreach (var elementType in type.GenericTypeArguments)
                 {
-                    var underlyingType = Nullable.GetUnderlyingType(elementType);
-                    if (underlyingType != null && underlyingType.IsEnum)
-                        return false;
+                    if (elementType.IsEntityType(out underlyingType))
+                        return true;
                 }
+                return false;
             }
         }
         return true;
@@ -214,7 +227,7 @@ public static class Extensions
     /// <param name="reader"></param>
     /// <param name="columnIndex"></param>
     /// <returns></returns>
-    internal static TValue To<TValue>(this IDataReader reader, int columnIndex = 0)
+    public static TValue To<TValue>(this IDataReader reader, int columnIndex = 0)
     {
         var targetType = typeof(TValue);
         var fieldType = reader.GetFieldType(columnIndex);
@@ -233,7 +246,7 @@ public static class Extensions
     /// <param name="ormProvider"></param>
     /// <param name="mapProvider"></param>
     /// <returns></returns>
-    internal static TEntity To<TEntity>(this IDataReader reader, string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
+    public static TEntity To<TEntity>(this IDataReader reader, string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
     {
         var entityType = typeof(TEntity);
         var ormProviderType = ormProvider.GetType();
@@ -267,7 +280,7 @@ public static class Extensions
     /// <param name="ormProvider"></param>
     /// <param name="readerFields"></param>
     /// <returns></returns>
-    internal static TEntity To<TEntity>(this IDataReader reader, string dbKey, IOrmProvider ormProvider, List<ReaderField> readerFields)
+    public static TEntity To<TEntity>(this IDataReader reader, string dbKey, IOrmProvider ormProvider, List<ReaderField> readerFields)
     {
         var entityType = typeof(TEntity);
         var ormProviderType = ormProvider.GetType();

@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Trolley;
 
-public class CreateVisitor : SqlVisitor, ICreateVisitor
+class CreateVisitor : SqlVisitor, ICreateVisitor
 {
     private string selectSql = null;
     private string whereSql = null;
@@ -21,7 +21,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.tables.Add(new TableSegment
         {
             EntityType = entityType,
-            Mapper = this.mapProvider.GetEntityMap(entityType)
+            Mapper = this.MapProvider.GetEntityMap(entityType)
         });
     }
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
@@ -34,7 +34,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             var tableName = tableSegment.Body;
             if (string.IsNullOrEmpty(tableName))
             {
-                tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
+                tableSegment.Mapper ??= this.MapProvider.GetEntityMap(tableSegment.EntityType);
                 tableName = this.OrmProvider.GetTableName(tableSegment.Mapper.TableName);
             }
             if (i > 1) builder.Append(',');
@@ -54,7 +54,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             var tableSegment = new TableSegment
             {
                 EntityType = parameterExpr.Type,
-                Mapper = this.mapProvider.GetEntityMap(parameterExpr.Type),
+                Mapper = this.MapProvider.GetEntityMap(parameterExpr.Type),
                 AliasName = $"{(char)(this.TableAsStart + i)}"
             };
             this.tables.Add(tableSegment);
@@ -145,21 +145,24 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 //OrderBy(f=>new {f.Order.OrderId, ...})
                 //OrderBy(f=>f.Order.OrderId)
                 var tableSegment = this.tableAlias[parameterName];
-                tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
+                tableSegment.Mapper ??= this.MapProvider.GetEntityMap(tableSegment.EntityType);
                 var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
 
                 if (memberMapper.IsIgnore)
                     throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
-                if (memberMapper.MemberType.IsEntityType() && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
+                if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                     throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
 
-                //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
-                //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
-                if (this.isWhere && memberMapper.MemberType.IsEnumType(out var expectType, out _))
+                //.NET枚举类型总是解析成对应的UnderlyingType数值类型，如：a.Gender ?? Gender.Male == Gender.Male
+                //如果枚举类型对应的数据库类型是字符串就会有问题，需要把数字变为枚举，再把枚举的名字字符串完成后续操作。
+                if (memberMapper.MemberType.IsEnumType(out var expectType, out _))
                 {
                     var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
-                    sqlSegment.ExpectType = expectType;
-                    sqlSegment.TargetType = targetType;
+                    if (targetType == typeof(string))
+                    {
+                        sqlSegment.ExpectType = expectType;
+                        sqlSegment.TargetType = targetType;
+                    }
                 }
 
                 var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
@@ -208,10 +211,10 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             for (int i = 0; i < newExpr.Arguments.Count; i++)
             {
                 var memberInfo = newExpr.Members[i];
-                if (!entityMapper.TryGetMemberMap(memberInfo.Name, out _))
+                if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
                     continue;
 
-                this.AddMemberElement(i, new SqlSegment { Expression = newExpr.Arguments[i] }, memberInfo, insertBuilder, fromBuilder);
+                this.AddMemberElement(i, new SqlSegment { Expression = newExpr.Arguments[i] }, memberMapper, insertBuilder, fromBuilder);
             }
             insertBuilder.Append(fromBuilder);
             return sqlSegment.ChangeValue(insertBuilder.ToString());
@@ -229,9 +232,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)
                 throw new NotImplementedException($"不支持除MemberBindingType.Assignment类型外的成员绑定表达式, {memberInitExpr.Bindings[i]}");
             var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-            if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out _))
+            if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
                 continue;
-            this.AddMemberElement(i, new SqlSegment { Expression = memberAssignment.Expression }, memberAssignment.Member, insertBuilder, fromBuilder);
+            this.AddMemberElement(i, new SqlSegment { Expression = memberAssignment.Expression }, memberMapper, insertBuilder, fromBuilder);
         }
         insertBuilder.Append(fromBuilder);
         return sqlSegment.ChangeValue(insertBuilder.ToString());
@@ -248,11 +251,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             this.tableAlias.Add(parameterExpr.Name, this.tables[i + 1]);
         }
     }
-    private void AddMemberElement(int index, SqlSegment sqlSegment, MemberInfo memberInfo, StringBuilder insertBuilder, StringBuilder fromBuilder)
+    private void AddMemberElement(int index, SqlSegment sqlSegment, MemberMap memberMapper, StringBuilder insertBuilder, StringBuilder fromBuilder)
     {
         sqlSegment = this.VisitAndDeferred(sqlSegment);
-        var entityMapper = this.tables[0].Mapper;
-        var memberMapper = entityMapper.GetMemberMap(memberInfo.Name);
         if (index > 0)
         {
             insertBuilder.Append(',');
@@ -263,20 +264,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             fromBuilder.Append("NULL");
         else
         {
-            if (sqlSegment.IsConstant || sqlSegment.IsVariable)
-            {
-                this.dbParameters ??= new();
-                var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-                if (this.dbParameters.Exists(f => f.ParameterName == parameterName))
-                    parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
-
-                if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
-                    sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
-                var dbParameter = this.CreateParameter(memberMapper, parameterName, sqlSegment.Value);
-                this.dbParameters.Add(dbParameter);
-                fromBuilder.Append(parameterName);
-            }
-            else fromBuilder.Append(sqlSegment.ToString());
+            if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
+                sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
+            fromBuilder.Append(this.GetQuotedValue(sqlSegment));
         }
     }
 }

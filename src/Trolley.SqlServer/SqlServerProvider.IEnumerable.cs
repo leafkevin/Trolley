@@ -37,8 +37,8 @@ partial class SqlServerProvider
                                 builder.Append(',');
                             string sqlArgument = null;
                             if (item is SqlSegment sqlSegment)
-                                sqlArgument = visitor.GetQuotedValue(visitor.Change(sqlSegment), nullValue: "");
-                            else sqlArgument = visitor.GetQuotedValue(item, arraySegment, nullValue: "");
+                                sqlArgument = visitor.GetQuotedValue(sqlSegment);
+                            else sqlArgument = visitor.GetQuotedValue(item, arraySegment);
                             builder.Append(sqlArgument);
                         }
 
@@ -61,7 +61,7 @@ partial class SqlServerProvider
                         string notString = notIndex % 2 > 0 ? "NOT " : "";
                         if (builder.Length > 0)
                         {
-                            var elementArgument = visitor.GetQuotedValue(visitor.Change(elementSegment));
+                            var elementArgument = visitor.GetQuotedValue(elementSegment);
                             return visitor.Merge(elementSegment, arraySegment.ToParameter(visitor), $"{elementArgument} {notString}IN ({builder})", true, false);
                         }
                         else return visitor.Change(elementSegment, "1<>0", true, false);
@@ -87,8 +87,8 @@ partial class SqlServerProvider
                                 builder.Append(',');
                             string sqlArgument = null;
                             if (item is SqlSegment sqlSegment)
-                                sqlArgument = visitor.GetQuotedValue(visitor.Change(sqlSegment), nullValue: "");
-                            else sqlArgument = visitor.GetQuotedValue(item, targetSegment, nullValue: "");
+                                sqlArgument = visitor.GetQuotedValue(sqlSegment);
+                            else sqlArgument = visitor.GetQuotedValue(item, targetSegment);
                             builder.Append(sqlArgument);
                         }
 
@@ -111,7 +111,7 @@ partial class SqlServerProvider
                         string notString = notIndex % 2 > 0 ? "NOT " : "";
                         if (builder.Length > 0)
                         {
-                            string elementArgument = visitor.GetQuotedValue(visitor.Change(elementSegment));
+                            string elementArgument = visitor.GetQuotedValue(elementSegment);
                             return visitor.Merge(elementSegment, targetSegment.ToParameter(visitor), $"{elementArgument} {notString}IN ({builder})", true, false);
                         }
                         else return visitor.Change(elementSegment, "1<>0", true, false);

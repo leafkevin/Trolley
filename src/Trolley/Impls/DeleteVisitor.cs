@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Trolley;
 
-public class DeleteVisitor : SqlVisitor, IDeleteVisitor
+class DeleteVisitor : SqlVisitor, IDeleteVisitor
 {
     private readonly TableSegment tableSegment;
     private string whereSql = string.Empty;
@@ -19,7 +19,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         this.tableSegment = new TableSegment
         {
             EntityType = entityType,
-            Mapper = this.mapProvider.GetEntityMap(entityType)
+            Mapper = this.MapProvider.GetEntityMap(entityType)
         };
     }
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
@@ -111,16 +111,19 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 
                 if (memberMapper.IsIgnore)
                     throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
-                if (memberMapper.MemberType.IsEntityType() && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
+                if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                     throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
 
-                //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
-                //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
-                if (this.isWhere && memberMapper.MemberType.IsEnumType(out var expectType, out _))
+                //.NET枚举类型总是解析成对应的UnderlyingType数值类型，如：a.Gender ?? Gender.Male == Gender.Male
+                //如果枚举类型对应的数据库类型是字符串就会有问题，需要把数字变为枚举，再把枚举的名字字符串完成后续操作。
+                if (memberMapper.MemberType.IsEnumType(out var expectType, out _))
                 {
                     var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
-                    sqlSegment.ExpectType = expectType;
-                    sqlSegment.TargetType = targetType;
+                    if (targetType == typeof(string))
+                    {
+                        sqlSegment.ExpectType = expectType;
+                        sqlSegment.TargetType = targetType;
+                    }
                 }
 
                 var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
@@ -165,9 +168,9 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             for (int i = 0; i < newExpr.Arguments.Count; i++)
             {
                 var memberInfo = newExpr.Members[i];
-                if (!entityMapper.TryGetMemberMap(memberInfo.Name, out _))
+                if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
                     continue;
-                this.AddMemberElement(sqlSegment.Next(newExpr.Arguments[i]), memberInfo, builder);
+                this.AddMemberElement(sqlSegment.Next(newExpr.Arguments[i]), memberMapper, builder);
             }
             return sqlSegment.ChangeValue(builder.ToString());
         }
@@ -183,17 +186,15 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)
                 throw new NotImplementedException($"不支持除MemberBindingType.Assignment类型外的成员绑定表达式, {memberInitExpr.Bindings[i]}");
             var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-            if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out _))
+            if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
                 continue;
-            this.AddMemberElement(sqlSegment.Next(memberAssignment.Expression), memberAssignment.Member, builder);
+            this.AddMemberElement(sqlSegment.Next(memberAssignment.Expression), memberMapper, builder);
         }
         return sqlSegment.ChangeValue(builder.ToString());
     }
-    private void AddMemberElement(SqlSegment sqlSegment, MemberInfo memberInfo, StringBuilder builder)
+    private void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper, StringBuilder builder)
     {
         sqlSegment = this.VisitAndDeferred(sqlSegment);
-        var entityMapper = this.tableSegment.Mapper;
-        var memberMapper = entityMapper.GetMemberMap(memberInfo.Name);
         if (builder.Length > 0)
             builder.Append(',');
         builder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName) + "=");
@@ -201,20 +202,9 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             builder.Append("NULL");
         else
         {
-            if (sqlSegment.IsConstant || sqlSegment.IsVariable)
-            {
-                this.dbParameters ??= new();
-                var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
-                if (this.dbParameters.Exists(f => f.ParameterName == parameterName))
-                    parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
-
-                if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
-                    sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
-                var dbParameter = this.CreateParameter(memberMapper, parameterName, sqlSegment.Value);
-                this.dbParameters.Add(dbParameter);
-                builder.Append(parameterName);
-            }
-            else builder.Append(sqlSegment.ToString());
+            if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
+                sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
+            builder.Append(this.GetQuotedValue(sqlSegment));
         }
     }
 }

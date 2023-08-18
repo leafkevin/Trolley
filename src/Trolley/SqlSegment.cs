@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -58,25 +59,21 @@ public class SqlSegment
     /// 是否是字段类型
     /// </summary>
     public bool IsFieldType { get; set; }
-    public Type Type
+    /// <summary>
+    /// 当强制转换时，此字段值为转换后的类型，当枚举类型时，此字段值为枚举类型，其他场景就是当前表达式的类型
+    /// </summary>
+    public Type ExpectType
     {
         get
         {
-            if (this.currentType == null)
-                return this.Expression.Type;
-            return this.currentType;
+            if (this.currentType != null)
+                return this.currentType;
+            return this.Expression.Type;
         }
         set { this.currentType = value; }
     }
     /// <summary>
-    /// string.Concat,string.Format,string.Join，数据库VARCHAR类型的Enum实体成员，此字段会有值
-    /// 做字符串连接时，此值为typeof(string)
-    /// 数据库VARCHAR类型的Enum实体成员时，此值是对应的枚举类型，TargetType类型是typeof(string)
-    /// </summary>
-    public Type ExpectType { get; set; }
-    /// <summary>
-    /// 目标类型，与ExpectType类型，可能一致也可能不一致。
-    /// 如：Enum类型，对应的数据库字段类型是VARCHAR时，就不一致，ExpectType是枚举类型，TargetType是字符串类型
+    /// 当枚举类型成员访问时，且数据库为VARCHAR类型，此字段会有值，值为typeof(string)
     /// </summary>
     public Type TargetType { get; set; }
     public string ParameterName { get; set; }
@@ -106,6 +103,16 @@ public class SqlSegment
         this.IsParameter = this.IsParameter || rightSegment.IsParameter;
         return this;
     }
+    public SqlSegment Merge(SqlSegment rightSegment, object value)
+    {
+        this.IsConstant = this.IsConstant && rightSegment.IsConstant;
+        this.IsVariable = this.IsVariable || rightSegment.IsVariable;
+        this.HasField = this.HasField || rightSegment.HasField;
+        this.IsParameter = this.IsParameter || rightSegment.IsParameter;
+        this.Value = value;
+        return this;
+    }
+
     public SqlSegment Change(object value, bool isConstant = true, bool isExpression = false, bool isMethodCall = false)
     {
         this.isFixValue = false;
@@ -132,17 +139,16 @@ public class SqlSegment
         this.Value = value;
         return this;
     }
-    public SqlSegment Clone(Expression nextExpr)
+    public SqlSegment ToExpectType(IOrmProvider ormProvider)
     {
-        var newSqlSegment = new SqlSegment
+        if (this.ExpectType != this.Expression.Type)
         {
-            Expression = nextExpr,
-            ExpectType = this.ExpectType,
-            TargetType = this.TargetType
-        };
-        if (this.HasField && (!this.IsExpression && !this.IsMethodCall || this.IsFieldType))
-            newSqlSegment.MemberMapper = this.MemberMapper;
-        return newSqlSegment;
+            if (this.HasField || this.IsParameter)
+                this.Value = ormProvider.CastTo(this.ExpectType, this.Value);
+            if (this.IsConstant || this.IsVariable)
+                this.Value = Convert.ChangeType(this.Value, this.ExpectType);
+        }
+        return this;
     }
     public SqlSegment ToParameter(ISqlVisitor visitor)
     {
@@ -180,7 +186,7 @@ public class SqlSegment
     public override string ToString()
     {
         if (this.Value == null)
-            return string.Empty;
+            throw new Exception("SqlSegment.Value值不能为null，使用错误");
         return this.Value.ToString();
     }
     protected bool Equals(SqlSegment other)

@@ -77,22 +77,23 @@ class MultiDeleted<TEntity> : IMultiDeleted<TEntity>
         bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not Dictionary<string, object>;
         if (isMulti)
         {
-            var commandInitializer = RepositoryHelper.BuildDeleteBatchCommandInitializer(
-                this.connection, this.ormProvider, this.mapProvider, entityType, parameters);
+            var commandInitializer = RepositoryHelper.BuildDeleteBatchCommandInitializer(this.connection,
+                this.ormProvider, this.mapProvider, entityType, parameters, out var isNeedEndParenthesis);
             int index = 0;
             var sqlBuilder = new StringBuilder();
             var entities = this.parameters as IEnumerable;
             foreach (var entity in entities)
             {
-                commandInitializer.Invoke(this.command, this.ormProvider, sqlBuilder, index, entity);
+                commandInitializer.Invoke(this.command, this.ormProvider, this.mapProvider, sqlBuilder, index, entity);
                 index++;
             }
+            if (isNeedEndParenthesis) sqlBuilder.Append(')');
             sql = sqlBuilder.ToString();
         }
         else
         {
             var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(
-               this.connection, this.ormProvider, this.mapProvider, entityType, parameters);
+                this.connection, this.ormProvider, this.mapProvider, entityType, parameters);
             sql = commandInitializer.Invoke(this.command, this.ormProvider, this.parameters);
         }
         Func<IDataReader, object> readerGetter = reader => reader.To<int>();
@@ -108,22 +109,23 @@ class MultiDeleted<TEntity> : IMultiDeleted<TEntity>
         using var sqlCommand = this.connection.CreateCommand();
         if (isMulti)
         {
-            var commandInitializer = RepositoryHelper.BuildDeleteBatchCommandInitializer(
-                this.connection, this.ormProvider, this.mapProvider, entityType, parameters);
+            var commandInitializer = RepositoryHelper.BuildDeleteBatchCommandInitializer(this.connection,
+                this.ormProvider, this.mapProvider, entityType, parameters, out var isNeedEndParenthesis);
             int index = 0;
             var sqlBuilder = new StringBuilder();
             var entities = this.parameters as IEnumerable;
             foreach (var entity in entities)
             {
-                commandInitializer.Invoke(sqlCommand, this.ormProvider, sqlBuilder, index, entity);
+                commandInitializer.Invoke(sqlCommand, this.ormProvider, this.mapProvider, sqlBuilder, index, entity);
                 index++;
             }
+            if (isNeedEndParenthesis) sqlBuilder.Append(')');
             sql = sqlBuilder.ToString();
         }
         else
         {
             var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(
-               this.connection, this.ormProvider, this.mapProvider, entityType, parameters);
+                this.connection, this.ormProvider, this.mapProvider, entityType, parameters);
             sql = commandInitializer.Invoke(sqlCommand, this.ormProvider, this.parameters);
         }
         if (sqlCommand.Parameters != null && sqlCommand.Parameters.Count > 0)

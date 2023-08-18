@@ -350,7 +350,7 @@ public interface IMultiUpdate<TEntity>
         tables += $", T{i}";
 #>
     /// <summary>
-    /// 使用表<#=tables#>字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
+    /// 使用表<#=tables#>部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
     /// </summary>
 <#
         for(int j = 1; j <= i; j++)
@@ -363,14 +363,14 @@ public interface IMultiUpdate<TEntity>
     IMultiUpdateFrom<TEntity, <#=tables#>> From<<#=tables#>>();
 <#  }#>
     /// <summary>
-    /// InnerJoin内连接表TSource字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// InnerJoin内连接表TSource部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
     /// </summary>
     /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateJoin<TEntity, TSource> InnerJoin<TSource>(Expression<Func<TEntity, TSource, bool>> joinOn);
     /// <summary>
-    /// LeftJoin左连接表TSource字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// LeftJoin左连接表TSource部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
     /// </summary>
     /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -629,9 +629,9 @@ public interface IMultiUpdateSetting<TEntity> : IMultiUpdateSet<TEntity>
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IMultiUpdateSetting<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
+    IMultiUpdateSetting<TEntity> Where(Expression<Func<TEntity, bool>> wherePredicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -644,7 +644,7 @@ public interface IMultiUpdateSetting<TEntity> : IMultiUpdateSet<TEntity>
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
     IMultiUpdateSetting<TEntity> And(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
@@ -659,7 +659,7 @@ public interface IMultiUpdateSetting<TEntity> : IMultiUpdateSet<TEntity>
     #endregion
 }
 /// <summary>
-/// 使用表T1字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
+/// 使用表T1部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表T1实体类型</typeparam>
@@ -879,7 +879,7 @@ public interface IMultiUpdateFrom<TEntity, T1> : IMultiUpdateSet<TEntity>
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
     IMultiUpdateFrom<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate);
     /// <summary>
@@ -894,7 +894,7 @@ public interface IMultiUpdateFrom<TEntity, T1> : IMultiUpdateSet<TEntity>
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
     IMultiUpdateFrom<TEntity, T1> And(Expression<Func<TEntity, T1, bool>> predicate);
     /// <summary>
@@ -917,7 +917,7 @@ public interface IMultiUpdateFrom<TEntity, T1> : IMultiUpdateSet<TEntity>
         tables += $", T{i}";
 #>
 /// <summary>
-/// 使用表<#=tables#>字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
+/// 使用表<#=tables#>部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 <#
@@ -1143,7 +1143,7 @@ public interface IMultiUpdateFrom<TEntity, <#=tables#>> : IMultiUpdateSet<TEntit
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
     IMultiUpdateFrom<TEntity, <#=tables#>> Where(Expression<Func<TEntity, <#=tables#>, bool>> predicate);
     /// <summary>
@@ -1158,7 +1158,7 @@ public interface IMultiUpdateFrom<TEntity, <#=tables#>> : IMultiUpdateSet<TEntit
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
     IMultiUpdateFrom<TEntity, <#=tables#>> And(Expression<Func<TEntity, <#=tables#>, bool>> predicate);
     /// <summary>
@@ -1174,7 +1174,7 @@ public interface IMultiUpdateFrom<TEntity, <#=tables#>> : IMultiUpdateSet<TEntit
 }
 <#  }#>
 /// <summary>
-/// 使用表T1字段数据更新表TEntity数据，仅限MySql,Mariadb,PostgreSQL数据库使用
+/// 使用表T1部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">要更新数据表T1实体类型</typeparam>
@@ -1411,7 +1411,7 @@ public interface IMultiUpdateJoin<TEntity, T1> : IMultiUpdateSet<TEntity>
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
     IMultiUpdateJoin<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate);
     /// <summary>
@@ -1426,7 +1426,7 @@ public interface IMultiUpdateJoin<TEntity, T1> : IMultiUpdateSet<TEntity>
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
     IMultiUpdateJoin<TEntity, T1> And(Expression<Func<TEntity, T1, bool>> predicate);
     /// <summary>
@@ -1449,7 +1449,7 @@ public interface IMultiUpdateJoin<TEntity, T1> : IMultiUpdateSet<TEntity>
         tables += $", T{i}";
 #>
 /// <summary>
-/// 使用表<#=tables#>字段数据更新表TEntity数据，仅限MySql,Mariadb,PostgreSQL数据库使用
+/// 使用表<#=tables#>部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 <#
@@ -1468,14 +1468,14 @@ public interface IMultiUpdateJoin<TEntity, <#=tables#>> : IMultiUpdateSet<TEntit
 #>
     #region Join
     /// <summary>
-    /// InnerJoin内连接表<#=nextTable#>字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// InnerJoin内连接表<#=nextTable#>部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
     /// </summary>
     /// <typeparam name="<#=nextTable#>">数据来源表<#=nextTable#>实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateJoin<TEntity, <#=tables#>, <#=nextTable#>> InnerJoin<<#=nextTable#>>(Expression<Func<TEntity, <#=tables#>, <#=nextTable#>, bool>> joinOn);
     /// <summary>
-    /// LeftJoin左连接表<#=nextTable#>字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// LeftJoin左连接表<#=nextTable#>部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
     /// </summary>
     /// <typeparam name="<#=nextTable#>">数据来源表<#=nextTable#>实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -1698,7 +1698,7 @@ public interface IMultiUpdateJoin<TEntity, <#=tables#>> : IMultiUpdateSet<TEntit
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
     IMultiUpdateJoin<TEntity, <#=tables#>> Where(Expression<Func<TEntity, <#=tables#>, bool>> predicate);
     /// <summary>
@@ -1713,7 +1713,7 @@ public interface IMultiUpdateJoin<TEntity, <#=tables#>> : IMultiUpdateSet<TEntit
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
     IMultiUpdateJoin<TEntity, <#=tables#>> And(Expression<Func<TEntity, <#=tables#>, bool>> predicate);
     /// <summary>

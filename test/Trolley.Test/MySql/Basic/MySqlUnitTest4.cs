@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using Trolley.MySqlConnector;
 using Xunit;
@@ -10,6 +12,11 @@ public class MySqlUnitTest4 : UnitTestBase
 {
     enum Sex { Male, Female }
     struct Studuent
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+    }
+    class Teacher
     {
         public int Id { get; set; }
         public string Name { get; set; }
@@ -35,18 +42,48 @@ public class MySqlUnitTest4 : UnitTestBase
     [Fact]
     public void IsEntityType()
     {
-        Assert.False(typeof(Sex).IsEntityType());
-        Assert.False(typeof(Sex?).IsEntityType());
-        Assert.True(typeof(Studuent).IsEntityType());
-        Assert.False(typeof(string).IsEntityType());
-        Assert.False(typeof(int).IsEntityType());
-        Assert.False(typeof(int?).IsEntityType());
-        Assert.False(typeof(Guid).IsEntityType());
-        Assert.False(typeof(Guid?).IsEntityType());
-        Assert.False(typeof(DateTime).IsEntityType());
-        Assert.False(typeof(DateTime?).IsEntityType());
-        Assert.False(typeof(byte[]).IsEntityType());
-        Assert.False(typeof(int[]).IsEntityType());
+        Assert.False(typeof(Sex).IsEntityType(out _));
+        Assert.False(typeof(Sex?).IsEntityType(out _));
+        Assert.False(typeof(string).IsEntityType(out _));
+        Assert.False(typeof(int).IsEntityType(out _));
+        Assert.False(typeof(int?).IsEntityType(out _));
+        Assert.False(typeof(Guid).IsEntityType(out _));
+        Assert.False(typeof(Guid?).IsEntityType(out _));
+        Assert.False(typeof(DateTime).IsEntityType(out _));
+        Assert.False(typeof(DateTime?).IsEntityType(out _));
+        Assert.False(typeof(byte[]).IsEntityType(out _));
+        Assert.False(typeof(int[]).IsEntityType(out _));
+        Assert.False(typeof(List<int>).IsEntityType(out _));
+        Assert.False(typeof(List<int[]>).IsEntityType(out _));
+        Assert.False(typeof(Collection<string>).IsEntityType(out _));
+        Assert.False(typeof(DBNull).IsEntityType(out _));
+
+        var vt1 = ValueTuple.Create("kevin");
+        Assert.False(vt1.GetType().IsEntityType(out _));
+        var vt2 = ValueTuple.Create(1, "kevin", 25, 30000.00d);
+        Assert.True(vt2.GetType().IsEntityType(out _));
+        Assert.True(typeof((string Name, int Age)).IsEntityType(out _));
+        Assert.True(typeof(Dictionary<string, int>).IsEntityType(out _));
+        Assert.True(typeof(Studuent).IsEntityType(out _));
+        Assert.True(typeof(Teacher).IsEntityType(out _));
+
+        Assert.True(typeof(Dictionary<string, int>[]).IsEntityType(out _));
+        Assert.True(typeof(List<Dictionary<string, int>>).IsEntityType(out _));
+        Assert.True(typeof(List<Dictionary<string, int>[]>).IsEntityType(out _));
+        Assert.True(typeof(Collection<Dictionary<string, int>>).IsEntityType(out _));
+        Assert.True(typeof(Dictionary<string, Dictionary<string, int>>).IsEntityType(out _));
+
+        Assert.True(typeof(Teacher[]).IsEntityType(out _));
+        Assert.True(typeof(List<Teacher>).IsEntityType(out _));
+        Assert.True(typeof(List<Teacher[]>).IsEntityType(out _));
+        Assert.True(typeof(Collection<Teacher>).IsEntityType(out _));
+        Assert.True(typeof(Dictionary<string, Teacher>).IsEntityType(out _));
+
+        Assert.True(typeof(Studuent[]).IsEntityType(out _));
+        Assert.True(typeof(List<Studuent>).IsEntityType(out _));
+        Assert.True(typeof(List<Studuent[]>).IsEntityType(out _));
+        Assert.True(typeof(Collection<Studuent>).IsEntityType(out _));
+        Assert.True(typeof(Dictionary<string, Studuent>).IsEntityType(out _));
     }
     [Fact]
     public async void Delete()
@@ -228,8 +265,8 @@ public class MySqlUnitTest4 : UnitTestBase
         //Assert.True((int)parameters[0].Value == 1);
         //Assert.True((int)parameters[1].Value == 2);
     }
-	[Fact]
-	public void Delete_Where_And()
+    [Fact]
+    public void Delete_Where_And()
     {
         using var repository = dbFactory.Create();
         bool? isMale = true;
@@ -271,7 +308,7 @@ public class MySqlUnitTest4 : UnitTestBase
         Assert.True(parameters2[0].Value.GetType() == typeof(string));
         Assert.True((string)parameters2[0].Value == CompanyNature.Internet.ToString());
     }
-	[Fact]
+    [Fact]
     public void Transation()
     {
         using var repository = dbFactory.Create();
@@ -279,7 +316,7 @@ public class MySqlUnitTest4 : UnitTestBase
         repository.Timeout(60);
         repository.BeginTransaction();
         repository.Update<User>()
-            .WithBy(new { Name = "leafkevin1", Id = 1 })
+            .SetWith(new { Name = "leafkevin1", Id = 1 })
             .Execute();
         repository.Delete<User>()
             .Where(f => f.Name.Contains("kevin"))

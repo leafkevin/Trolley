@@ -538,7 +538,7 @@ class Query<T> : QueryBase, IQuery<T>
         if (reader.Read())
         {
             var entityType = typeof(T);
-            if (entityType.IsEntityType())
+            if (entityType.IsEntityType(out _))
                 result = reader.To<T>(this.connection.DbKey, this.visitor.OrmProvider, readerFields);
             else result = reader.To<T>();
         }
@@ -579,7 +579,7 @@ class Query<T> : QueryBase, IQuery<T>
         if (await reader.ReadAsync(cancellationToken))
         {
             var entityType = typeof(T);
-            if (entityType.IsEntityType())
+            if (entityType.IsEntityType(out _))
                 result = reader.To<T>(this.dbKey, this.visitor.OrmProvider, readerFields);
             else result = reader.To<T>();
         }
@@ -615,7 +615,7 @@ class Query<T> : QueryBase, IQuery<T>
         var behavior = CommandBehavior.SequentialAccess;
         using var reader = command.ExecuteReader(behavior);
         var entityType = typeof(T);
-        if (entityType.IsEntityType())
+        if (entityType.IsEntityType(out _))
         {
             while (reader.Read())
             {
@@ -665,7 +665,7 @@ class Query<T> : QueryBase, IQuery<T>
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
 
         var entityType = typeof(T);
-        if (entityType.IsEntityType())
+        if (entityType.IsEntityType(out _))
         {
             while (await reader.ReadAsync(cancellationToken))
             {
@@ -717,7 +717,7 @@ class Query<T> : QueryBase, IQuery<T>
 
         reader.NextResult();
         var entityType = typeof(T);
-        if (entityType.IsEntityType())
+        if (entityType.IsEntityType(out _))
         {
             while (reader.Read())
             {
@@ -771,7 +771,7 @@ class Query<T> : QueryBase, IQuery<T>
 
         await reader.NextResultAsync(cancellationToken);
         var entityType = typeof(T);
-        if (entityType.IsEntityType())
+        if (entityType.IsEntityType(out _))
         {
             while (await reader.ReadAsync(cancellationToken))
             {

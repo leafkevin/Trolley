@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
@@ -72,7 +71,7 @@ public interface IMultiCreate<TEntity>
     /// </summary>
     /// <param name="insertObjs">插入的对象集合</param>
     /// <returns></returns>
-    IMultiCreated<TEntity> WithBulkBy(IEnumerable insertObjs);
+    IMultiCreated<TEntity> WithBulk<TInsertObject>(IEnumerable<TInsertObject> insertObjs);
     /// <summary>
     /// 从<paramref>TSource</paramref>表查询数据，并插入当前表中,用法：
     /// <code>
@@ -103,7 +102,7 @@ public interface IMultiCreate<TEntity>
     /// <returns>返回插入对象</returns>
     IMultiContinuedCreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector);
     /// <summary>
-    /// 从表T1, T2表查询数据，并插入当前TEntity表中,用法：
+    /// 从表T1, T2中捞取部分字段数据，并插入当前表TEntity中，用法：
     /// <code>
     /// repository.Create&lt;Product&gt;()
     ///     .From&lt;Brand&gt;(f =&gt; new
@@ -133,7 +132,7 @@ public interface IMultiCreate<TEntity>
     /// <returns>返回插入对象</returns>
     IMultiContinuedCreate<TEntity, T1, T2> From<T1, T2>(Expression<Func<T1, T2, object>> fieldSelector);
     /// <summary>
-    /// 从表T1, T2, T3表查询数据，并插入当前TEntity表中,用法：
+    /// 从表T1, T2, T3中捞取部分字段数据，并插入当前表TEntity中，用法：
     /// <code>
     /// repository.Create&lt;Product&gt;()
     ///     .From&lt;Brand&gt;(f =&gt; new
@@ -164,7 +163,7 @@ public interface IMultiCreate<TEntity>
     /// <returns>返回插入对象</returns>
     IMultiContinuedCreate<TEntity, T1, T2, T3> From<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> fieldSelector);
     /// <summary>
-    /// 从表T1, T2, T3, T4表查询数据，并插入当前TEntity表中,用法：
+    /// 从表T1, T2, T3, T4中捞取部分字段数据，并插入当前表TEntity中，用法：
     /// <code>
     /// repository.Create&lt;Product&gt;()
     ///     .From&lt;Brand&gt;(f =&gt; new
@@ -196,7 +195,7 @@ public interface IMultiCreate<TEntity>
     /// <returns>返回插入对象</returns>
     IMultiContinuedCreate<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, object>> fieldSelector);
     /// <summary>
-    /// 从表T1, T2, T3, T4, T5表查询数据，并插入当前TEntity表中,用法：
+    /// 从表T1, T2, T3, T4, T5中捞取部分字段数据，并插入当前表TEntity中，用法：
     /// <code>
     /// repository.Create&lt;Product&gt;()
     ///     .From&lt;Brand&gt;(f =&gt; new
@@ -259,8 +258,8 @@ public interface IMultiContinuedCreate<TEntity>
     /// INSERT INTO `sys_user` (`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)
     /// </code>
     /// </summary>
-    /// <typeparam name="TInsertObject">插入对象类型</typeparam>
-    /// <param name="insertObj">插入对象，包含想要插入的必需栏位值</param>
+    /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
+    /// <param name="insertObj">插入数据对象，包含想要插入的必需栏位值</param>
     /// <returns>返回插入对象</returns>
     IMultiContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     /// <summary>
@@ -287,9 +286,9 @@ public interface IMultiContinuedCreate<TEntity>
     /// INSERT INTO `sys_user` (`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)
     /// </code>
     /// </summary>
-    /// <typeparam name="TInsertObject">插入对象类型</typeparam>
+    /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
     /// <param name="condition">判断条件</param>
-    /// <param name="insertObj">插入对象，包含想要插入的必需栏位值</param>
+    /// <param name="insertObj">插入数据对象，包含想要插入的必需栏位值</param>
     /// <returns>返回插入对象</returns>
     IMultiContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
@@ -374,7 +373,7 @@ public interface IMultiContinuedCreate<TEntity, TSource>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">要插入数据的实体类型</typeparam>
+/// <typeparam name="TEntity">要插入数据表的实体类型</typeparam>
 /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
 /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
 public interface IMultiContinuedCreate<TEntity, T1, T2>
@@ -424,7 +423,7 @@ public interface IMultiContinuedCreate<TEntity, T1, T2>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">要插入数据的实体类型</typeparam>
+/// <typeparam name="TEntity">要插入数据表的实体类型</typeparam>
 /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
 /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
 /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
@@ -475,7 +474,7 @@ public interface IMultiContinuedCreate<TEntity, T1, T2, T3>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">要插入数据的实体类型</typeparam>
+/// <typeparam name="TEntity">要插入数据表的实体类型</typeparam>
 /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
 /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
 /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
@@ -527,7 +526,7 @@ public interface IMultiContinuedCreate<TEntity, T1, T2, T3, T4>
 /// <summary>
 /// 插入数据
 /// </summary>
-/// <typeparam name="TEntity">要插入数据的实体类型</typeparam>
+/// <typeparam name="TEntity">要插入数据表的实体类型</typeparam>
 /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
 /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
 /// <typeparam name="T3">数据来源表T3实体类型</typeparam>

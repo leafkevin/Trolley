@@ -35,18 +35,18 @@ public class SqlServerUnitTest4 : UnitTestBase
     [Fact]
     public void IsEntityType()
     {
-        Assert.False(typeof(Sex).IsEntityType());
-        Assert.False(typeof(Sex?).IsEntityType());
-        Assert.True(typeof(Studuent).IsEntityType());
-        Assert.False(typeof(string).IsEntityType());
-        Assert.False(typeof(int).IsEntityType());
-        Assert.False(typeof(int?).IsEntityType());
-        Assert.False(typeof(Guid).IsEntityType());
-        Assert.False(typeof(Guid?).IsEntityType());
-        Assert.False(typeof(DateTime).IsEntityType());
-        Assert.False(typeof(DateTime?).IsEntityType());
-        Assert.False(typeof(byte[]).IsEntityType());
-        Assert.False(typeof(int[]).IsEntityType());
+        Assert.False(typeof(Sex).IsEntityType(out _));
+        Assert.False(typeof(Sex?).IsEntityType(out _));
+        Assert.True(typeof(Studuent).IsEntityType(out _));
+        Assert.False(typeof(string).IsEntityType(out _));
+        Assert.False(typeof(int).IsEntityType(out _));
+        Assert.False(typeof(int?).IsEntityType(out _));
+        Assert.False(typeof(Guid).IsEntityType(out _));
+        Assert.False(typeof(Guid?).IsEntityType(out _));
+        Assert.False(typeof(DateTime).IsEntityType(out _));
+        Assert.False(typeof(DateTime?).IsEntityType(out _));
+        Assert.False(typeof(byte[]).IsEntityType(out _));
+        Assert.False(typeof(int[]).IsEntityType(out _));
     }
     [Fact]
     public async void Delete()
@@ -279,7 +279,7 @@ public class SqlServerUnitTest4 : UnitTestBase
         repository.Timeout(60);
         repository.BeginTransaction();
         repository.Update<User>()
-            .WithBy(new { Name = "leafkevin1", Id = 1 })
+            .SetWith(new { Name = "leafkevin1", Id = 1 })
             .Execute();
         repository.Delete<User>()
             .Where(f => f.Name.Contains("kevin"))

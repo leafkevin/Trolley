@@ -59,79 +59,77 @@ public abstract class BaseOrmProvider : IOrmProvider
             if (sqlSegment == SqlSegment.Null || !sqlSegment.IsConstant)
                 return sqlSegment.ToString();
             //此处不应出现变量的情况，应该在此之前把变量都已经变成了参数
-            if (sqlSegment.IsVariable) throw new Exception("此处不应出现变量的情况，在调用IOrmProvider.GetQuotedValue方法之前，先调用ISqlVisitor.Change方法把变量都变成参数");
+            if (sqlSegment.IsVariable) throw new Exception("此处不应出现变量的情况，先调用ISqlVisitor.Change方法把变量都变成参数后，再调用本方法");
             return this.GetQuotedValue(sqlSegment.Value);
         }
         return value.ToString();
     }
     public virtual object ToFieldValue(MemberMap memberMapper, object fieldValue)
     {
-        if (fieldValue == null)
-            return DBNull.Value;
+        if (fieldValue == null) return null;
+        if (memberMapper.TypeHandler != null)
+            return memberMapper.TypeHandler.ToFieldValue(this, fieldValue);
 
         var result = fieldValue;
         memberMapper.MemberType.IsNullableType(out var underlyingType);
-        if (memberMapper.NativeDbType != null)
-        {
-            //模型类型与数据库默认映射类型一致，如：bool,数字，浮点数，String，DateTime，TimeSpan，DateOnly，TimeOnly，Guid等
-            //通常fieldValue和memberMapper的类型是一致的，不一致表达式无法书写出来
-            var defaultType = this.MapDefaultType(memberMapper.NativeDbType);
-            if (defaultType == underlyingType)
-                return result;
 
-            //模型类型与数据库默认映射类型不一致的情况，如：数字，浮点数，TimeSpan，DateOnly，TimeOnly，枚举，Guid
-            //Gender? gender = Gender.Male;
-            //(int)gender.Value;
-            if (underlyingType.IsEnum)
+        //模型类型与数据库默认映射类型一致，如：bool,数字，浮点数，String，DateTime，TimeSpan，DateOnly，TimeOnly，Guid等
+        //通常fieldValue和memberMapper的类型是一致的，不一致表达式无法书写出来
+        if (memberMapper.DbDefaultType == underlyingType)
+            return result;
+
+        //模型类型与数据库默认映射类型不一致的情况，如：数字，浮点数，TimeSpan，DateOnly，TimeOnly，枚举，Guid
+        //Gender? gender = Gender.Male;
+        //(int)gender.Value;
+        if (underlyingType.IsEnum)
+        {
+            if (memberMapper.DbDefaultType == typeof(string))
             {
-                if (defaultType == typeof(string))
-                {
-                    if (result.GetType() != underlyingType)
-                        result = Enum.Parse(underlyingType, result.ToString());
-                    result = result.ToString();
-                }
-                else result = Convert.ChangeType(result, defaultType);
+                if (result.GetType() != underlyingType)
+                    result = Enum.Parse(underlyingType, result.ToString());
+                result = result.ToString();
             }
-            else if (underlyingType == typeof(Guid))
-            {
-                if (defaultType == typeof(string))
-                    result = result.ToString();
-                if (defaultType == typeof(byte[]))
-                    result = ((Guid)result).ToByteArray();
-            }
-            else if (underlyingType == typeof(DateTime))
-            {
-                if (defaultType == typeof(long))
-                    result = ((DateTime)result).Ticks;
-                if (defaultType == typeof(string))
-                    result = ((DateTime)result).ToString("yyyy-MM-dd HH:mm:ss.fffffff");
-            }
-            else if (underlyingType == typeof(DateOnly))
-            {
-                if (defaultType == typeof(string))
-                    result = ((DateOnly)result).ToString("yyyy-MM-dd");
-            }
-            else if (underlyingType == typeof(TimeSpan))
-            {
-                var timeSpan = (TimeSpan)result;
-                if (defaultType == typeof(long))
-                    result = timeSpan.Ticks;
-                if (defaultType == typeof(string))
-                {
-                    if (timeSpan.TotalDays > 1)
-                        result = timeSpan.ToString("d\\.hh\\:mm\\:ss\\.fffffff");
-                    else result = ((DateOnly)result).ToString("hh\\:mm\\:ss\\.fffffff");
-                }
-            }
-            else if (underlyingType == typeof(TimeOnly))
-            {
-                if (defaultType == typeof(long))
-                    result = ((TimeSpan)result).Ticks;
-                if (defaultType == typeof(string))
-                    result = ((DateOnly)result).ToString("hh\\:mm\\:ss\\.fffffff");
-            }
-            else result = Convert.ChangeType(result, defaultType);
+            else result = Convert.ChangeType(result, memberMapper.DbDefaultType);
         }
+        else if (underlyingType == typeof(Guid))
+        {
+            if (memberMapper.DbDefaultType == typeof(string))
+                result = result.ToString();
+            if (memberMapper.DbDefaultType == typeof(byte[]))
+                result = ((Guid)result).ToByteArray();
+        }
+        else if (underlyingType == typeof(DateTime))
+        {
+            if (memberMapper.DbDefaultType == typeof(long))
+                result = ((DateTime)result).Ticks;
+            if (memberMapper.DbDefaultType == typeof(string))
+                result = ((DateTime)result).ToString("yyyy-MM-dd HH:mm:ss.fffffff");
+        }
+        else if (underlyingType == typeof(DateOnly))
+        {
+            if (memberMapper.DbDefaultType == typeof(string))
+                result = ((DateOnly)result).ToString("yyyy-MM-dd");
+        }
+        else if (underlyingType == typeof(TimeSpan))
+        {
+            var timeSpan = (TimeSpan)result;
+            if (memberMapper.DbDefaultType == typeof(long))
+                result = timeSpan.Ticks;
+            if (memberMapper.DbDefaultType == typeof(string))
+            {
+                if (timeSpan.TotalDays > 1)
+                    result = timeSpan.ToString("d\\.hh\\:mm\\:ss\\.fffffff");
+                else result = ((DateOnly)result).ToString("hh\\:mm\\:ss\\.fffffff");
+            }
+        }
+        else if (underlyingType == typeof(TimeOnly))
+        {
+            if (memberMapper.DbDefaultType == typeof(long))
+                result = ((TimeSpan)result).Ticks;
+            if (memberMapper.DbDefaultType == typeof(string))
+                result = ((DateOnly)result).ToString("hh\\:mm\\:ss\\.fffffff");
+        }
+        else result = Convert.ChangeType(result, memberMapper.DbDefaultType);
         return result;
     }
     public virtual string GetBinaryOperator(ExpressionType nodeType) =>
@@ -165,9 +163,18 @@ public abstract class BaseOrmProvider : IOrmProvider
         if (!memberAccessSqlFormatterCache.TryGetValue(cacheKey, out formatter))
         {
             bool result = false;
+            if (memberInfo.DeclaringType == typeof(DBNull))
+            {
+                formatter = (visitor, target) => SqlSegment.Null;
+                return true;
+            }
+            if (memberInfo.DeclaringType == typeof(string) && this.TryGetStringMemberAccessSqlFormatter(memberExpr, out formatter))
+                return true;
             if (memberInfo.DeclaringType == typeof(DateTime) && this.TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out formatter))
                 return true;
             if (memberInfo.DeclaringType == typeof(TimeSpan) && this.TryGetTimeSpanMemberAccessSqlFormatter(memberExpr, out formatter))
+                return true;
+            if (memberInfo.DeclaringType == typeof(TimeOnly) && this.TryGetTimeOnlyMemberAccessSqlFormatter(memberExpr, out formatter))
                 return true;
             return result;
         }
@@ -203,9 +210,11 @@ public abstract class BaseOrmProvider : IOrmProvider
                         methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                            var rightSegment = visitor.VisitAndDeferred(targetSegment.Clone(args[0]));
-                            var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
-                            var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
+                            var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            visitor.ChangeSameType(targetSegment, rightSegment);
+                            var targetArgument = this.GetQuotedValue(targetSegment);
+                            var rightArgument = this.GetQuotedValue(rightSegment);
+
                             return visitor.Merge(targetSegment, rightSegment, $"{targetArgument}={rightArgument}", true, false);
                         });
                         result = true;
@@ -217,9 +226,10 @@ public abstract class BaseOrmProvider : IOrmProvider
                         methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                         {
                             var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                            var rightSegment = visitor.VisitAndDeferred(leftSegment.Clone(args[1]));
-                            var leftArgument = this.GetQuotedValue(visitor.Change(leftSegment));
-                            var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
+                            var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                            visitor.ChangeSameType(leftSegment, rightSegment);
+                            var leftArgument = this.GetQuotedValue(leftSegment);
+                            var rightArgument = this.GetQuotedValue(rightSegment);
                             return visitor.Merge(leftSegment, rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END", true, false);
                         });
                         result = true;
@@ -231,9 +241,10 @@ public abstract class BaseOrmProvider : IOrmProvider
                         methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                            var rightSegment = visitor.VisitAndDeferred(targetSegment.Clone(args[0]));
-                            var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
-                            var rightArgument = this.GetQuotedValue(visitor.Change(rightSegment));
+                            var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            visitor.ChangeSameType(targetSegment, rightSegment);
+                            var targetArgument = this.GetQuotedValue(targetSegment);
+                            var rightArgument = this.GetQuotedValue(rightSegment);
                             return visitor.Merge(targetSegment, rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", true, false);
                         });
                         result = true;
@@ -248,8 +259,8 @@ public abstract class BaseOrmProvider : IOrmProvider
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
                                 return visitor.Change(targetSegment, targetSegment.Value.ToString());
 
-                            var targetArgument = this.GetQuotedValue(visitor.Change(targetSegment));
-                            targetSegment.Type = methodInfo.ReturnType;
+                            var targetArgument = this.GetQuotedValue(targetSegment);
+                            targetSegment.ExpectType = methodInfo.ReturnType;
                             return visitor.Change(targetSegment, this.CastTo(typeof(string), targetArgument), false, true);
                         });
                         result = true;
@@ -268,7 +279,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                                 if (args0Segment.IsConstant || args0Segment.IsVariable)
                                     return visitor.Change(args0Segment, Enum.Parse(enumType, args0Segment.Value.ToString()));
 
-                                var args0Argument = this.GetQuotedValue(visitor.Change(args0Segment));
+                                var args0Argument = this.GetQuotedValue(args0Segment);
                                 return visitor.Change(args0Segment, this.CastTo(enumUnderlyingType, args0Argument), false, true);
                             });
                             result = true;
@@ -307,7 +318,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                                     var arguments = argumentSegments.Select(f => f.Value).ToArray();
                                     return visitor.Change(resultSegment, parseDelegate.DynamicInvoke(arguments));
                                 }
-                                var valueArgument = this.GetQuotedValue(visitor.Change(argumentSegments[1]));
+                                var valueArgument = this.GetQuotedValue(argumentSegments[1]);
                                 return visitor.Change(resultSegment, this.CastTo(methodInfo.DeclaringType, valueArgument), false, true);
                             });
                             result = true;
@@ -345,7 +356,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                                 var arguments = argumentSegments.Select(f => f.Value).ToArray();
                                 return visitor.Change(resultSegment, parseDelegate.DynamicInvoke(arguments));
                             }
-                            var valueArgument = this.GetQuotedValue(visitor.Change(argumentSegments[1]));
+                            var valueArgument = this.GetQuotedValue(argumentSegments[1]);
                             return visitor.Change(resultSegment, this.CastTo(methodInfo.DeclaringType, valueArgument), false, true);
                         });
                         result = true;
@@ -364,7 +375,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                                 if (args0Segment.IsConstant || args0Segment.IsVariable)
                                     return visitor.Change(args0Segment, Enum.Parse(enumType, args0Segment.Value.ToString()));
 
-                                var args0Argument = this.GetQuotedValue(visitor.Change(args0Segment));
+                                var args0Argument = this.GetQuotedValue(args0Segment);
                                 return visitor.Change(args0Segment, this.CastTo(enumUnderlyingType, args0Argument), false, true);
                             });
                             result = true;
@@ -406,7 +417,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                                     var arguments = argumentSegments.Select(f => f.Value).ToArray();
                                     return visitor.Change(resultSegment, parseDelegate.DynamicInvoke(arguments));
                                 }
-                                var valueArgument = this.GetQuotedValue(visitor.Change(argumentSegments[1]));
+                                var valueArgument = this.GetQuotedValue(argumentSegments[1]);
                                 return visitor.Change(resultSegment, this.CastTo(enumUnderlyingType, valueArgument), false, true);
                             });
                             result = true;
@@ -447,7 +458,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                                 var arguments = argumentSegments.Select(f => f.Value).ToArray();
                                 return visitor.Change(resultSegment, parseDelegate.DynamicInvoke(arguments));
                             }
-                            var valueArgument = this.GetQuotedValue(visitor.Change(argumentSegments[0]));
+                            var valueArgument = this.GetQuotedValue(argumentSegments[0]);
                             return visitor.Change(resultSegment, this.CastTo(methodInfo.DeclaringType, valueArgument), false, true);
                         });
                         result = true;

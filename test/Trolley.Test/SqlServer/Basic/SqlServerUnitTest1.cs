@@ -247,7 +247,7 @@ public class SqlServerUnitTest1 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         var sql = repository.Create<Product>()
-            .WithBulkBy(new[]
+            .WithBulk(new[]
             {
                 new
                 {
@@ -295,7 +295,7 @@ public class SqlServerUnitTest1 : UnitTestBase
         repository.BeginTransaction();
         await repository.Delete<Product>().Where(new int[] { 1, 2, 3 }).ExecuteAsync();
         var count = repository.Create<Product>()
-            .WithBulkBy(new[]
+            .WithBulk(new[]
             {
                 new
                 {
@@ -347,7 +347,7 @@ public class SqlServerUnitTest1 : UnitTestBase
         repository.BeginTransaction();
         await repository.Delete<Product>().Where(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } }).ExecuteAsync();
         var count = repository.Create<Product>()
-            .WithBulkBy(new[]
+            .WithBulk(new[]
             {
                 new Dictionary<string,object>
                 {

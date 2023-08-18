@@ -162,10 +162,7 @@ public class MySqlUnitTest1 : UnitTestBase
             {
                 Id = 1,
                 Name = "leafkevin",
-                Age = 25
-            })
-            .WithBy(new
-            {
+                Age = 25,
                 CompanyId = 1,
                 Gender = Gender.Male,
                 IsEnabled = true,
@@ -249,7 +246,7 @@ public class MySqlUnitTest1 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         var sql = repository.Create<Product>()
-            .WithBulkBy(new[]
+            .WithBulk(new[]
             {
                 new
                 {
@@ -297,7 +294,7 @@ public class MySqlUnitTest1 : UnitTestBase
         repository.BeginTransaction();
         await repository.Delete<Product>().Where(new int[] { 1, 2, 3 }).ExecuteAsync();
         var count = repository.Create<Product>()
-            .WithBulkBy(new[]
+            .WithBulk(new[]
             {
                 new
                 {
@@ -349,7 +346,7 @@ public class MySqlUnitTest1 : UnitTestBase
         repository.BeginTransaction();
         await repository.Delete<Product>().Where(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } }).ExecuteAsync();
         var count = repository.Create<Product>()
-            .WithBulkBy(new[]
+            .WithBulk(new[]
             {
                 new Dictionary<string,object>
                 {

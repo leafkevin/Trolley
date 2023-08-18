@@ -14,7 +14,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     private static ConcurrentDictionary<int, string> sqlCache = new();
     private static ConcurrentDictionary<int, object> getterCache = new();
     private static ConcurrentDictionary<int, object> setterCache = new();
-    protected string sql = string.Empty;
+    public string sql = string.Empty;
     protected string whereSql = string.Empty;
     protected string groupBySql = string.Empty;
     protected string havingSql = string.Empty;
@@ -75,7 +75,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 var tableName = tableSegment.Body;
                 if (string.IsNullOrEmpty(tableName))
                 {
-                    tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
+                    tableSegment.Mapper ??= this.MapProvider.GetEntityMap(tableSegment.EntityType);
                     tableName = this.OrmProvider.GetTableName(tableSegment.Mapper.TableName);
                 }
 
@@ -219,7 +219,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         var valueSetter = this.BuildIncludeValueSetterInitializer(parameter, this.includeSegments);
         var valueSetterInitiliazer = valueSetter as Action<object, IDataReader, string, IOrmProvider, IEntityMapProvider, List<TableSegment>>;
-        valueSetterInitiliazer.Invoke(parameter, reader, this.dbKey, this.OrmProvider, this.mapProvider, this.includeSegments);
+        valueSetterInitiliazer.Invoke(parameter, reader, this.DbKey, this.OrmProvider, this.MapProvider, this.includeSegments);
     }
     public virtual IQueryVisitor From(params Type[] entityTypes)
     {
@@ -251,7 +251,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.tables.Add(new TableSegment
         {
             EntityType = entityType,
-            Mapper = this.mapProvider.GetEntityMap(entityType),
+            Mapper = this.MapProvider.GetEntityMap(entityType),
             AliasName = $"{(char)tableIndex}",
             SuffixRawSql = suffixRawSql,
             Path = $"{(char)tableIndex}",
@@ -704,7 +704,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //OrderBy(f=>f.Order.OrderId)
                 string path = null;
                 TableSegment tableSegment = null;
-                if (memberExpr.Type.IsEntityType())
+                if (memberExpr.Type.IsEntityType(out _))
                 {
                     if (this.isFromQuery)
                         throw new NotSupportedException("FROM子查询中不支持实体类型成员MemberAccess表达式访问，只支持基础字段访问访问");
@@ -733,7 +733,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         var fromSegment = this.FindTableSegment(parameterName, path);
                         if (fromSegment == null)
                             throw new Exception($"使用导航属性前，要先使用Include方法包含进来，访问路径:{path}");
-                        fromSegment.Mapper ??= this.mapProvider.GetEntityMap(fromSegment.EntityType);
+                        fromSegment.Mapper ??= this.MapProvider.GetEntityMap(fromSegment.EntityType);
 
                         var memberMapper = fromSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
                         if (memberMapper.IsIgnore)
@@ -772,8 +772,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         {
                             if (memberMapper.TypeHandler != null)
                             {
-                                //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
-                                //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
+                                //.NET枚举类型总是解析成对应的UnderlyingType数值类型，如：a.Gender ?? Gender.Male == Gender.Male
+                                //如果枚举类型对应的数据库类型是字符串就会有问题，需要把数字变为枚举，再把枚举的名字字符串完成后续操作。
                                 if (this.isWhere && memberMapper.MemberType.IsEnumType(out var expectType, out _))
                                 {
                                     var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
@@ -836,19 +836,22 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         if (tableSegment == null)
                             throw new Exception($"使用导航属性前，要先使用Include方法包含进来，访问路径:{path}");
 
-                        tableSegment.Mapper ??= this.mapProvider.GetEntityMap(tableSegment.EntityType);
+                        tableSegment.Mapper ??= this.MapProvider.GetEntityMap(tableSegment.EntityType);
                         memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
 
                         if (memberMapper.IsIgnore)
                             throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
 
-                        //.NET 枚举类型有时候会解析错误，解析成对应的数值类型，如：a.Gender ?? Gender.Male == Gender.Male
-                        //如果枚举类型对应的数据库类型是字符串，就会有问题，需要把数字变为枚举，再把枚举的名字入库。
-                        if (this.isWhere && memberMapper.MemberType.IsEnumType(out var expectType, out _))
+                        //.NET枚举类型总是解析成对应的UnderlyingType数值类型，如：a.Gender ?? Gender.Male == Gender.Male
+                        //如果枚举类型对应的数据库类型是字符串就会有问题，需要把数字变为枚举，再把枚举的名字字符串完成后续操作。
+                        if (memberMapper.MemberType.IsEnumType(out var expectType, out _))
                         {
                             var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
-                            sqlSegment.ExpectType = expectType;
-                            sqlSegment.TargetType = targetType;
+                            if (targetType == typeof(string))
+                            {
+                                sqlSegment.ExpectType = expectType;
+                                sqlSegment.TargetType = targetType;
+                            }
                         }
 
                         //有Join时采用别名，如果当前类是IncludeMany的导航类时，没有别名
@@ -870,7 +873,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             }
         }
 
-        //各种静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty        
+        //各种静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty, DBNull.Value     
         if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
             //静态成员访问，理论上没有target对象，为了不再创建sqlSegment对象，此处直接把sqlSegment对象传了进去
             return formatter.Invoke(this, sqlSegment);
@@ -881,6 +884,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //var orderId=10; Select(f=>new {OrderId=orderId,...}
         //Select(f=>new {OrderId=this.Order.Id, ...}
         this.Evaluate(sqlSegment);
+
+        //.NET枚举类型总是解析成对应的UnderlyingType数值类型，如：a.Gender ?? Gender.Male == Gender.Male
+        //如果枚举类型对应的数据库类型是字符串就会有问题，需要把数字变为枚举，再把枚举的名字字符串完成后续操作。
+        //if (sqlSegment.Expression.Type.IsEnumType(out var underlyingType, out _))
+        //    sqlSegment.Type = underlyingType;
 
         //当变量为数组或是IEnumerable时，此处变为参数，方法Sql.In，Contains无法继续解析
         //这里不做参数化，后面统一走参数化处理，在二元操作表达式解析时做参数化处理
@@ -946,7 +954,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         => this.tableAlias.TryAdd(aliasName, tableSegment);
     public virtual IQueryVisitor Clone(char tableAsStart = 'a', string parameterPrefix = "p")
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.dbKey, this.mapProvider, this.IsParameterized, tableAsStart, parameterPrefix);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, parameterPrefix);
         visitor.IsNeedAlias = this.IsNeedAlias;
         return visitor;
     }
@@ -1062,7 +1070,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //为了简化SELECT操作，只支持一次New/MemberInit表达式操作
                 throw new NotSupportedException("不支持的表达式访问，SELECT语句只支持一次New/MemberInit表达式操作");
             case ExpressionType.MemberAccess:
-                if (elementExpr.Type.IsEntityType())
+                if (elementExpr.Type.IsEntityType(out _))
                 {
                     //TODO:访问了1:N关联关系的成员访问，在第二次查询中处理，此处什么也不做
                     //成员访问，一种情况是直接访问参数的成员，另一种情况是临时的匿名对象，
@@ -1204,11 +1212,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 if (readerField.ReaderFields == null || readerField.ReaderFields.Count == 0)
                 {
-                    readerField.TableSegment.Mapper ??= this.mapProvider.GetEntityMap(readerField.TableSegment.EntityType);
+                    readerField.TableSegment.Mapper ??= this.MapProvider.GetEntityMap(readerField.TableSegment.EntityType);
                     foreach (var memberMapper in readerField.TableSegment.Mapper.MemberMaps)
                     {
                         if (memberMapper.IsIgnore || memberMapper.IsNavigation
-                            || (memberMapper.MemberType.IsEntityType() && memberMapper.TypeHandler == null))
+                            || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                             continue;
 
                         if (builder.Length > 0)
@@ -1297,7 +1305,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var memberExprs = new Stack<MemberExpression>();
 
         var memberType = memberExpr.Member.GetMemberType();
-        if (!memberType.IsEntityType())
+        if (!memberType.IsEntityType(out _))
             throw new Exception($"Include方法只支持实体属性，{memberExpr.Member.DeclaringType.FullName}.{memberExpr.Member.Name}不是实体，Path:{memberExpr}");
 
         var currentExpr = memberExpr;
@@ -1318,7 +1326,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         while (memberExprs.TryPop(out currentExpr))
         {
-            fromSegment.Mapper ??= this.mapProvider.GetEntityMap(fromType);
+            fromSegment.Mapper ??= this.MapProvider.GetEntityMap(fromType);
             var fromMapper = fromSegment.Mapper;
             var memberMapper = fromMapper.GetMemberMap(currentExpr.Member.Name);
 
@@ -1338,7 +1346,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             //实体类型是成员的声明类型，映射类型不一定是成员的声明类型，一定是成员的Map类型
             //如：成员是UserInfo类型，对应的模型是User类型，UserInfo类型只是User类型的一个子集，成员名称和映射关系完全一致
             var entityType = memberMapper.NavigationType;
-            var entityMapper = this.mapProvider.GetEntityMap(entityType, memberMapper.MapType);
+            var entityMapper = this.MapProvider.GetEntityMap(entityType, memberMapper.MapType);
             if (entityMapper.KeyMembers.Count > 1)
                 throw new Exception($"导航属性表，暂时不支持多个主键字段，实体：{memberMapper.MapType.FullName}");
 
@@ -1384,7 +1392,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         var targetType = includeSegment.Mapper.EntityType;
         var foreignKey = includeSegment.FromMember.ForeignKey;
-        var cacheKey = HashCode.Combine(this.dbKey, this.OrmProvider, targetType, foreignKey);
+        var cacheKey = HashCode.Combine(this.DbKey, this.OrmProvider, targetType, foreignKey);
         if (!sqlCache.TryGetValue(cacheKey, out var sql))
         {
             int index = 0;
@@ -1392,7 +1400,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             foreach (var memberMapper in includeSegment.Mapper.MemberMaps)
             {
                 if (memberMapper.IsIgnore || memberMapper.IsNavigation
-                    || (memberMapper.MemberType.IsEntityType() && memberMapper.TypeHandler == null))
+                    || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                     continue;
 
                 if (index > 0) builder.Append(',');
@@ -1410,9 +1418,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     private object BuildAddIncludeFetchSqlInitializer(bool isMulti, Type targetType, TableSegment includeSegment)
     {
         var fromType = includeSegment.FromTable.EntityType;
-        includeSegment.FromTable.Mapper ??= this.mapProvider.GetEntityMap(fromType);
+        includeSegment.FromTable.Mapper ??= this.MapProvider.GetEntityMap(fromType);
         var keyMember = includeSegment.FromTable.Mapper.KeyMembers[0];
-        var cacheKey = HashCode.Combine(this.dbKey, this.OrmProvider, targetType, fromType, keyMember.MemberName, isMulti);
+        var cacheKey = HashCode.Combine(this.DbKey, this.OrmProvider, targetType, fromType, keyMember.MemberName, isMulti);
         if (!getterCache.TryGetValue(cacheKey, out var fetchSqlInitializer))
         {
             var readerField = this.readerFields.Find(f => f.TableSegment == includeSegment.FromTable);
@@ -1723,7 +1731,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     private int GetIncludeSetterKey(Type targetType, List<TableSegment> includeSegments, bool isMulti)
     {
         var hashCode = new HashCode();
-        hashCode.Add(this.dbKey);
+        hashCode.Add(this.DbKey);
         hashCode.Add(this.OrmProvider);
         hashCode.Add(targetType);
         hashCode.Add(includeSegments.Count);

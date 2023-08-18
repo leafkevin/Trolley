@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data;
+using System.Text.Json;
 
 namespace Trolley;
 
@@ -50,4 +51,5 @@ public interface ITypeHandler
     /// <param name="value">当前值</param>
     void SetValue(IOrmProvider ormProvider, IDbDataParameter parameter, object value);
     object Parse(IOrmProvider ormProvider, Type TargetType, object value);
+    object ToFieldValue(IOrmProvider ormProvider, object value);
 }

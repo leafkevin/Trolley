@@ -118,7 +118,7 @@ public partial class SqlServerProvider : BaseOrmProvider
     public override IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value)
     {
         var parameter = new SqlParameter(parameterName, (SqlDbType)nativeDbType);
-        parameter.Value = value;
+        parameter.Value = value ?? DBNull.Value;
         return parameter;
     }
     public override IQueryVisitor NewQueryVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")

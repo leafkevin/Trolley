@@ -256,7 +256,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，可以为null</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，parameters可以为null</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     TEntity QueryFirst<TEntity>(string rawSql, object parameters = null);
     /// <summary>
@@ -381,6 +381,33 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <typeparam name="TEntity">更新实体类型</typeparam>
     /// <returns>返回更新对象</returns>
     IUpdate<TEntity> Update<TEntity>();
+    /// <summary>
+    /// 使用更新对象updateObj部分字段更新，updateObj对象内除主键字段外所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，updateObj对象必须包含主键字段，用法：
+    /// <code>
+    /// repository.Update&lt;User&gt;(new { Id = 1, Name = "kevin"});
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@Id
+    /// </code>
+    /// </summary>
+    /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新</param>
+    /// <returns>返回更新对象</returns> 
+    int Update<TEntity>(object updateObj);
+    /// <summary>
+    /// 使用更新对象updateObj部分字段更新，updateObj对象内除主键字段外所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，updateObj对象必须包含主键字段，用法：
+    /// <code>
+    /// await repository.UpdateAsync&lt;User&gt;(new { Id = 1, Name = "kevin"});
+    /// </code>
+    /// 生成的SQL:
+    /// <code>
+    /// UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@Id
+    /// </code>
+    /// </summary>
+    /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回更新行数</returns>
+    Task<int> UpdateAsync<TEntity>(object updateObj, CancellationToken cancellationToken = default);
     #endregion
 
     #region Delete

@@ -28,7 +28,7 @@ partial class MySqlProvider
                     {
                         var builder = new StringBuilder();
                         var elementSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                        var arraySegment = visitor.VisitAndDeferred(elementSegment.Clone(args[0]));
+                        var arraySegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
 
                         var enumerable = arraySegment.Value as IEnumerable;
                         foreach (var item in enumerable)
@@ -37,8 +37,8 @@ partial class MySqlProvider
                                 builder.Append(',');
                             string sqlArgument = null;
                             if (item is SqlSegment sqlSegment)
-                                sqlArgument = visitor.GetQuotedValue(visitor.Change(sqlSegment), nullValue: "");
-                            else sqlArgument = visitor.GetQuotedValue(item, arraySegment, nullValue: "");
+                                sqlArgument = visitor.GetQuotedValue(sqlSegment);
+                            else sqlArgument = visitor.GetQuotedValue(item, arraySegment);
                             builder.Append(sqlArgument);
                         }
 
@@ -61,7 +61,7 @@ partial class MySqlProvider
                         string notString = notIndex % 2 > 0 ? "NOT " : "";
                         if (builder.Length > 0)
                         {
-                            var elementArgument = visitor.GetQuotedValue(visitor.Change(elementSegment));
+                            var elementArgument = visitor.GetQuotedValue(elementSegment);
                             return visitor.Merge(elementSegment, arraySegment.ToParameter(visitor), $"{elementArgument} {notString}IN ({builder})", true, false);
                         }
                         else return visitor.Change(elementSegment, "1<>0", true, false);
@@ -78,7 +78,7 @@ partial class MySqlProvider
                     {
                         var builder = new StringBuilder();
                         var elementSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var targetSegment = visitor.VisitAndDeferred(elementSegment.Clone(target));
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
 
                         var enumerable = targetSegment.Value as IEnumerable;
                         foreach (var item in enumerable)
@@ -87,8 +87,8 @@ partial class MySqlProvider
                                 builder.Append(',');
                             string sqlArgument = null;
                             if (item is SqlSegment sqlSegment)
-                                sqlArgument = visitor.GetQuotedValue(visitor.Change(sqlSegment), nullValue: "");
-                            else sqlArgument = visitor.GetQuotedValue(item, targetSegment, nullValue: "");
+                                sqlArgument = visitor.GetQuotedValue(sqlSegment);
+                            else sqlArgument = visitor.GetQuotedValue(item, targetSegment);
                             builder.Append(sqlArgument);
                         }
 
@@ -111,7 +111,7 @@ partial class MySqlProvider
                         string notString = notIndex % 2 > 0 ? "NOT " : "";
                         if (builder.Length > 0)
                         {
-                            string elementArgument = visitor.GetQuotedValue(visitor.Change(elementSegment));
+                            string elementArgument = visitor.GetQuotedValue(elementSegment);
                             return visitor.Merge(elementSegment, targetSegment.ToParameter(visitor), $"{elementArgument} {notString}IN ({builder})", true, false);
                         }
                         else return visitor.Change(elementSegment, "1<>0", true, false);

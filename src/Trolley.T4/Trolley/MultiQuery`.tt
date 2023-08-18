@@ -427,7 +427,7 @@ class MultiQuery<T> : IMultiQuery<T>
         var sql = this.visitor.BuildSql(out var dbParameters, out var readerFields);
         var targetType = typeof(T);
         Func<IDataReader, object> readerGetter = null;
-        if (targetType.IsEntityType())
+        if (targetType.IsEntityType(out _))
             readerGetter = reader => reader.To<T>(this.dbKey, this.visitor.OrmProvider, readerFields);
         else readerGetter = reader => reader.To<T>();
         IQueryVisitor queryVisitor = null;

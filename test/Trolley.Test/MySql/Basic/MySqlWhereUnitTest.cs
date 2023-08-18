@@ -109,6 +109,18 @@ public class MySqlWhereUnitTest : UnitTestBase
         var result3 = await repository.QueryAsync<Company>(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature);
         Assert.True(result3.Count >= 2);
         Assert.True(result3[0].Nature == localNature);
+
+
+        var sql4 = repository.From<User>()
+            .Where(f => (f.IsEnabled ? f.SourceType : UserSourceType.Website) > UserSourceType.Website)
+            .Select(f=>f.Id )
+            .ToSql(out dbParameters);
+        Assert.True(sql3 == "SELECT `Id` WHERE (CASE WHEN `IsEnabled`=1 THEN `Nature` ELSE 'Internet' END)=@p0");
+        Assert.True((string)dbParameters[0].Value == localNature.ToString());
+        Assert.True(dbParameters[0].Value.GetType() == typeof(string));
+        var result4 = await repository.QueryAsync<Company>(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature);
+        Assert.True(result3.Count >= 2);
+        Assert.True(result3[0].Nature == localNature);
     }
     [Fact]
     public async void WhereIsNull()

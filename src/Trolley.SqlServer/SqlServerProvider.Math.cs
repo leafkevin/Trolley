@@ -18,7 +18,7 @@ partial class SqlServerProvider
                 methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    return visitor.Change(args0Segment, $"ABS({this.GetQuotedValue(visitor.Change(args0Segment))})", false, true);
+                    return visitor.Change(args0Segment, $"ABS({this.GetQuotedValue(args0Segment)})", false, true);
                 });
                 result = true;
                 break;
@@ -26,7 +26,7 @@ partial class SqlServerProvider
                 methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    return visitor.Change(args0Segment, $"SIGN({this.GetQuotedValue(visitor.Change(args0Segment))})", false, true);
+                    return visitor.Change(args0Segment, $"SIGN({this.GetQuotedValue(args0Segment)})", false, true);
                 });
                 result = true;
                 break;
@@ -34,7 +34,7 @@ partial class SqlServerProvider
                 methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    return visitor.Change(args0Segment, $"FLOOR({this.GetQuotedValue(visitor.Change(args0Segment))})", false, true);
+                    return visitor.Change(args0Segment, $"FLOOR({this.GetQuotedValue(args0Segment)})", false, true);
                 });
                 result = true;
                 break;
@@ -42,7 +42,7 @@ partial class SqlServerProvider
                 methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    return visitor.Change(args0Segment, $"CEILING({this.GetQuotedValue(visitor.Change(args0Segment))})", false, true);
+                    return visitor.Change(args0Segment, $"CEILING({this.GetQuotedValue(args0Segment)})", false, true);
                 });
                 result = true;
                 break;
@@ -53,8 +53,8 @@ partial class SqlServerProvider
                     {
                         var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         var args1Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                        var args0Argument = this.GetQuotedValue(visitor.Change(args0Segment));
-                        var args1Argument = this.GetQuotedValue(visitor.Change(args1Segment));
+                        var args0Argument = this.GetQuotedValue(args0Segment);
+                        var args1Argument = this.GetQuotedValue(args1Segment);
                         return visitor.Merge(args0Segment, args1Segment, $"ROUND({args0Argument},{args1Argument})", false, true);
                     });
                     result = true;
@@ -64,7 +64,7 @@ partial class SqlServerProvider
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        return visitor.Change(args0Segment, $"ROUND({this.GetQuotedValue(visitor.Change(args0Segment))})", false, true);
+                        return visitor.Change(args0Segment, $"ROUND({this.GetQuotedValue(args0Segment)})", false, true);
                     });
                     result = true;
                 }
@@ -73,7 +73,7 @@ partial class SqlServerProvider
                 methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    return visitor.Change(args0Segment, $"EXP({this.GetQuotedValue(visitor.Change(args0Segment))})", false, true);
+                    return visitor.Change(args0Segment, $"EXP({this.GetQuotedValue(args0Segment)})", false, true);
                 });
                 result = true;
                 break;
@@ -81,7 +81,7 @@ partial class SqlServerProvider
                 methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    return visitor.Change(args0Segment, $"LOG({this.GetQuotedValue(visitor.Change(args0Segment))})", false, true);
+                    return visitor.Change(args0Segment, $"LOG({this.GetQuotedValue(args0Segment)})", false, true);
                 });
                 result = true;
                 break;
@@ -89,7 +89,7 @@ partial class SqlServerProvider
                 methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    return visitor.Change(args0Segment, $"LOG10({this.GetQuotedValue(visitor.Change(args0Segment))})", false, true);
+                    return visitor.Change(args0Segment, $"LOG10({this.GetQuotedValue(args0Segment)})", false, true);
                 });
                 result = true;
                 break;
@@ -98,8 +98,8 @@ partial class SqlServerProvider
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     var args1Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                    var args0Argument = this.GetQuotedValue(visitor.Change(args0Segment));
-                    var args1Argument = this.GetQuotedValue(visitor.Change(args1Segment));
+                    var args0Argument = this.GetQuotedValue(args0Segment);
+                    var args1Argument = this.GetQuotedValue(args1Segment);
                     return visitor.Merge(args0Segment, args1Segment, $"POW({args0Argument},{args1Argument})", false, true);
                 });
                 result = true;
@@ -108,7 +108,7 @@ partial class SqlServerProvider
                 methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    return visitor.Change(args0Segment, $"SQRT({this.GetQuotedValue(visitor.Change(args0Segment))})", false, true);
+                    return visitor.Change(args0Segment, $"SQRT({this.GetQuotedValue(args0Segment)})", false, true);
                 });
                 result = true;
                 break;
@@ -116,7 +116,7 @@ partial class SqlServerProvider
                 methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    return visitor.Change(args0Segment, $"COS({this.GetQuotedValue(visitor.Change(args0Segment))})", false, true);
+                    return visitor.Change(args0Segment, $"COS({this.GetQuotedValue(args0Segment)})", false, true);
                 });
                 result = true;
                 break;
@@ -124,7 +124,7 @@ partial class SqlServerProvider
                 methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    return visitor.Change(args0Segment, $"SIN({this.GetQuotedValue(visitor.Change(args0Segment))})", false, true);
+                    return visitor.Change(args0Segment, $"SIN({this.GetQuotedValue(args0Segment)})", false, true);
                 });
                 result = true;
                 break;
@@ -132,7 +132,7 @@ partial class SqlServerProvider
                 methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    return visitor.Change(args0Segment, $"TAN({this.GetQuotedValue(visitor.Change(args0Segment))})", false, true);
+                    return visitor.Change(args0Segment, $"TAN({this.GetQuotedValue(args0Segment)})", false, true);
                 });
                 result = true;
                 break;
@@ -140,7 +140,7 @@ partial class SqlServerProvider
                 methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    return visitor.Change(args0Segment, $"ACOS({this.GetQuotedValue(visitor.Change(args0Segment))})", false, true);
+                    return visitor.Change(args0Segment, $"ACOS({this.GetQuotedValue(args0Segment)})", false, true);
                 });
                 result = true;
                 break;
@@ -148,7 +148,7 @@ partial class SqlServerProvider
                 methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    return visitor.Change(args0Segment, $"ASIN({this.GetQuotedValue(visitor.Change(args0Segment))})", false, true);
+                    return visitor.Change(args0Segment, $"ASIN({this.GetQuotedValue(args0Segment)})", false, true);
                 });
                 result = true;
                 break;
@@ -156,7 +156,7 @@ partial class SqlServerProvider
                 methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    return visitor.Change(args0Segment, $"ATAN({this.GetQuotedValue(visitor.Change(args0Segment))})", false, true);
+                    return visitor.Change(args0Segment, $"ATAN({this.GetQuotedValue(args0Segment)})", false, true);
                 });
                 result = true;
                 break;
@@ -165,8 +165,8 @@ partial class SqlServerProvider
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     var args1Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                    var args0Argument = this.GetQuotedValue(visitor.Change(args0Segment));
-                    var args1Argument = this.GetQuotedValue(visitor.Change(args1Segment));
+                    var args0Argument = this.GetQuotedValue(args0Segment);
+                    var args1Argument = this.GetQuotedValue(args1Segment);
                     return visitor.Merge(args0Segment, args1Segment, $"ATAN2({args0Argument},{args1Argument})", false, true);
                 });
                 result = true;
@@ -175,7 +175,7 @@ partial class SqlServerProvider
                 methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    return visitor.Change(args0Segment, $"TRUNCATE({this.GetQuotedValue(visitor.Change(args0Segment))},0)", false, true);
+                    return visitor.Change(args0Segment, $"TRUNCATE({this.GetQuotedValue(args0Segment)},0)", false, true);
                 });
                 result = true;
                 break;

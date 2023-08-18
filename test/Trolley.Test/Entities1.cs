@@ -11,10 +11,10 @@ public enum Gender : byte
 }
 public enum UserSourceType
 {
+    Website,
     Wechat,
     Douyin,
-    Taobao,
-    Website
+    Taobao
 }
 public class User
 {

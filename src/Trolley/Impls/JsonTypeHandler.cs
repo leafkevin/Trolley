@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace Trolley;
 
 public class JsonTypeHandler : ITypeHandler
-{
+{   
     public virtual void SetValue(IOrmProvider ormProvider, IDbDataParameter parameter, object value)
     {
         if (value == null)
@@ -16,5 +16,11 @@ public class JsonTypeHandler : ITypeHandler
     {
         if (value is DBNull) return null;
         return JsonSerializer.Deserialize(value as string, TargetType);
+    }
+    public virtual object ToFieldValue(IOrmProvider ormProvider, object value)
+    {
+        if (value != null)
+            return JsonSerializer.Serialize(value);
+        return null;
     }
 }

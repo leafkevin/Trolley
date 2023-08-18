@@ -78,9 +78,9 @@ public class MySqlUnitTest2 : UnitTestBase
             .ToPageList();
         var count = await repository.From<OrderDetail>().Where(f => f.ProductId == 1).CountAsync();
         Assert.NotNull(result);
-        Assert.NotEmpty(result.Items);
-        Assert.True(result.RecordsTotal == count);
-        Assert.True(result.Items.Count == 1);
+        Assert.NotEmpty(result.Data);
+        Assert.True(result.TotalCount == count);
+        Assert.True(result.Data.Count == 1);
     }
     [Fact]
     public async void QueryDictionary()
@@ -544,11 +544,11 @@ public class MySqlUnitTest2 : UnitTestBase
             .Where(f => f.ProductId == 1)
             .Count();
         Assert.NotNull(result);
-        Assert.NotEmpty(result.Items);
-        Assert.True(result.RecordsTotal == count);
-        Assert.True(result.Items.Count == 1);
-        Assert.NotNull(result.Items[0].Product);
-        Assert.True(result.Items[0].Product.Id == 1);
+        Assert.NotEmpty(result.Data);
+        Assert.True(result.TotalCount == count);
+        Assert.True(result.Data.Count == 1);
+        Assert.NotNull(result.Data[0].Product);
+        Assert.True(result.Data[0].Product.Id == 1);
     }
     [Fact]
     public void FromQuery_Ignore_Include()

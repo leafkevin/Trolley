@@ -6,7 +6,11 @@ namespace Trolley;
 
 public interface ISqlVisitor
 {
+    string DbKey { get; }
+    IOrmProvider OrmProvider { get; }
+    IEntityMapProvider MapProvider { get; }
     bool IsParameterized { get; set; }
+
     SqlSegment VisitAndDeferred(SqlSegment sqlSegment);
     SqlSegment Visit(SqlSegment sqlSegment);
     SqlSegment VisitUnary(SqlSegment sqlSegment);
@@ -25,6 +29,7 @@ public interface ISqlVisitor
     SqlSegment Evaluate(SqlSegment sqlSegment);
     object Evaluate(Expression expr);
     T Evaluate<T>(Expression expr);
+    object EvaluateAndCache(object valueOrEntity, string memberName);
     SqlSegment Merge(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue);
     SqlSegment Merge(SqlSegment sqlSegment, SqlSegment args0Segment, SqlSegment args1Segment, object segmentValue);
     SqlSegment Merge(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue, bool isExpression, bool isMethodCall);
@@ -32,10 +37,9 @@ public interface ISqlVisitor
     SqlSegment Change(SqlSegment sqlSegment);
     SqlSegment Change(SqlSegment sqlSegment, object segmentValue);
     SqlSegment Change(SqlSegment sqlSegment, object segmentValue, bool isExpression, bool isMethodCall);
-    string GetQuotedValue(object fieldValue, MemberMap memberMapper = null, bool? isVariable = null, int? index = null, string nullValue = "NULL");
-    string GetQuotedValue(SqlSegment sqlSegment, int? index = null, string nullValue = "NULL");
-    string GetQuotedValue(object elementValue, SqlSegment arraySegment, int? index = null, string nullValue = "NULL");
-    IDbDataParameter CreateParameter(MemberMap memberMapper, string parameterName, object fieldValue);
+    string GetQuotedValue(SqlSegment sqlSegment, List<IDbDataParameter> dbParameters = null, int? index = null);
+    string GetQuotedValue(object elementValue, SqlSegment arraySegment, int? index = null);
+    //IDbDataParameter CreateParameter(MemberMap memberMapper, string parameterName, object fieldValue);
     SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment);
     bool IsStringConcatOperator(SqlSegment sqlSegment, out SqlSegment result);
     string VisitConditionExpr(Expression conditionExpr);
@@ -43,4 +47,5 @@ public interface ISqlVisitor
     List<Expression> SplitConcatList(Expression[] argsExprs);
     List<ReaderField> AddTableRecursiveReaderFields(int readerIndex, TableSegment fromSegment);
     string VisitFromQuery(LambdaExpression lambdaExpr, out bool isNeedAlias);
+    bool ChangeSameType(SqlSegment leftSegment, SqlSegment rightSegment);
 }

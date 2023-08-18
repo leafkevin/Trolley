@@ -31,7 +31,7 @@ class MultiQueryReader : IMultiQueryReader
         if (this.reader.Read())
         {
             if (this.readerAfters != null)
-                result = this.readerAfters[this.readerIndex].Invoke(this.reader);
+                result = this.readerAfters[this.readerIndex].ReaderGetter.Invoke(this.reader);
             else
             {
 
@@ -46,11 +46,11 @@ class MultiQueryReader : IMultiQueryReader
         if (this.reader.Read())
         {
             if (this.readerAfters != null)
-                result = (T)this.readerAfters[this.readerIndex].Invoke(this.reader);
+                result = (T)this.readerAfters[this.readerIndex].ReaderGetter.Invoke(this.reader);
             else
             {
                 var targetType = typeof(T);
-                if (targetType.IsEntityType())
+                if (targetType.IsEntityType(out _))
                     result = this.reader.To<T>(this.dbKey, this.ormProvider, this.mapProvider);
                 else result = this.reader.To<T>();
             }
@@ -70,13 +70,13 @@ class MultiQueryReader : IMultiQueryReader
             var readerAfter = this.readerAfters[this.readerIndex];
             while (this.reader.Read())
             {
-                result.Add((T)readerAfter.Invoke(this.reader));
+                result.Add((T)readerAfter.ReaderGetter.Invoke(this.reader));
             }
         }
         else
         {
             var targetType = typeof(T);
-            if (targetType.IsEntityType())
+            if (targetType.IsEntityType(out _))
             {
                 while (this.reader.Read())
                 {

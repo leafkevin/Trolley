@@ -16,4 +16,10 @@ public class ToStringTypeHandler : ITypeHandler
         if (value is DBNull) return null;
         return value;
     }
+    public virtual object ToFieldValue(IOrmProvider ormProvider, object value)
+    {
+        if (value != null)
+            return value.ToString();
+        return null;
+    }
 }

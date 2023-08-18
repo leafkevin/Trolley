@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace Trolley;
 
@@ -95,20 +96,26 @@ public class EntityMap
                 this.AddMemberMap(memberInfo.Name, memberMapper);
 
                 //检查导航属性和TypeHandler配置，在Build的时候，就把错误暴漏出来
-                if (memberMapper.MemberType.IsEntityType() && !memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
+                if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                     throw new Exception($"类{this.EntityType.FullName}的成员{memberInfo.Name}不是值类型，未配置为导航属性也没有配置TypeHandler，也不是忽略成员");
             }
             //生成默认的数据库映射类型
             if (memberMapper.NativeDbType == null)
             {
-                if (!memberMapper.MemberType.IsEntityType() && !memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler != null)
+                if (!memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler != null)
                     memberMapper.NativeDbType = ormProvider.GetNativeDbType(memberMapper.MemberType);
             }
             else
             {
                 if (memberMapper.NativeDbType is int nativeDbType)
                     memberMapper.NativeDbType = Enum.ToObject(ormProvider.NativeDbTypeType, nativeDbType);
+                //if (memberMapper.NativeDbType is string strDbType)
+                //{
+                //    memberMapper.NativeDbType = Enum.ToObject(ormProvider.NativeDbTypeType, nativeDbType);
+                //    var m_stringLength = Regex.Match(col.DbTypeTextFull, @"^varchar\s*\((\w+)\)$", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant);
+                //}
             }
+            memberMapper.DbDefaultType = ormProvider.MapDefaultType(memberMapper.NativeDbType);
         }
         if (this.memberMaps.Count > 0)
         {

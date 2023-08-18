@@ -335,14 +335,14 @@ public interface IMultiUpdate<TEntity>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateFrom<TEntity, TSource> From<TSource>();
     /// <summary>
-    /// 使用表T1, T2字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
+    /// 使用表T1, T2部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
     /// </summary>
     /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
     /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateFrom<TEntity, T1, T2> From<T1, T2>();
     /// <summary>
-    /// 使用表T1, T2, T3字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
+    /// 使用表T1, T2, T3部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
     /// </summary>
     /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
     /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
@@ -350,7 +350,7 @@ public interface IMultiUpdate<TEntity>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateFrom<TEntity, T1, T2, T3> From<T1, T2, T3>();
     /// <summary>
-    /// 使用表T1, T2, T3, T4字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
+    /// 使用表T1, T2, T3, T4部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
     /// </summary>
     /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
     /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
@@ -359,7 +359,7 @@ public interface IMultiUpdate<TEntity>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateFrom<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>();
     /// <summary>
-    /// 使用表T1, T2, T3, T4, T5字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
+    /// 使用表T1, T2, T3, T4, T5部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
     /// </summary>
     /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
     /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
@@ -369,14 +369,14 @@ public interface IMultiUpdate<TEntity>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
     /// <summary>
-    /// InnerJoin内连接表TSource字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// InnerJoin内连接表TSource部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
     /// </summary>
     /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateJoin<TEntity, TSource> InnerJoin<TSource>(Expression<Func<TEntity, TSource, bool>> joinOn);
     /// <summary>
-    /// LeftJoin左连接表TSource字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// LeftJoin左连接表TSource部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
     /// </summary>
     /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -665,7 +665,7 @@ public interface IMultiUpdateSetting<TEntity> : IMultiUpdateSet<TEntity>
     #endregion
 }
 /// <summary>
-/// 使用表T1字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
+/// 使用表T1部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表T1实体类型</typeparam>
@@ -915,7 +915,7 @@ public interface IMultiUpdateFrom<TEntity, T1> : IMultiUpdateSet<TEntity>
     #endregion
 }
 /// <summary>
-/// 使用表T1, T2字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
+/// 使用表T1, T2部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
@@ -1166,7 +1166,7 @@ public interface IMultiUpdateFrom<TEntity, T1, T2> : IMultiUpdateSet<TEntity>
     #endregion
 }
 /// <summary>
-/// 使用表T1, T2, T3字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
+/// 使用表T1, T2, T3部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
@@ -1418,7 +1418,7 @@ public interface IMultiUpdateFrom<TEntity, T1, T2, T3> : IMultiUpdateSet<TEntity
     #endregion
 }
 /// <summary>
-/// 使用表T1, T2, T3, T4字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
+/// 使用表T1, T2, T3, T4部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
@@ -1671,7 +1671,7 @@ public interface IMultiUpdateFrom<TEntity, T1, T2, T3, T4> : IMultiUpdateSet<TEn
     #endregion
 }
 /// <summary>
-/// 使用表T1, T2, T3, T4, T5字段数据更新表TEntity数据，仅限SQL SERVER数据库使用
+/// 使用表T1, T2, T3, T4, T5部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
@@ -1925,7 +1925,7 @@ public interface IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IMultiUpdateSet
     #endregion
 }
 /// <summary>
-/// 使用表T1字段数据更新表TEntity数据，仅限MySql,Mariadb,PostgreSQL数据库使用
+/// 使用表T1部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">要更新数据表T1实体类型</typeparam>
@@ -2192,7 +2192,7 @@ public interface IMultiUpdateJoin<TEntity, T1> : IMultiUpdateSet<TEntity>
     #endregion
 }
 /// <summary>
-/// 使用表T1, T2字段数据更新表TEntity数据，仅限MySql,Mariadb,PostgreSQL数据库使用
+/// 使用表T1, T2部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
@@ -2201,14 +2201,14 @@ public interface IMultiUpdateJoin<TEntity, T1, T2> : IMultiUpdateSet<TEntity>
 {
     #region Join
     /// <summary>
-    /// InnerJoin内连接表T3字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// InnerJoin内连接表T3部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
     /// </summary>
     /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateJoin<TEntity, T1, T2, T3> InnerJoin<T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn);
     /// <summary>
-    /// LeftJoin左连接表T3字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// LeftJoin左连接表T3部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
     /// </summary>
     /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -2460,7 +2460,7 @@ public interface IMultiUpdateJoin<TEntity, T1, T2> : IMultiUpdateSet<TEntity>
     #endregion
 }
 /// <summary>
-/// 使用表T1, T2, T3字段数据更新表TEntity数据，仅限MySql,Mariadb,PostgreSQL数据库使用
+/// 使用表T1, T2, T3部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
@@ -2470,14 +2470,14 @@ public interface IMultiUpdateJoin<TEntity, T1, T2, T3> : IMultiUpdateSet<TEntity
 {
     #region Join
     /// <summary>
-    /// InnerJoin内连接表T4字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// InnerJoin内连接表T4部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
     /// </summary>
     /// <typeparam name="T4">数据来源表T4实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateJoin<TEntity, T1, T2, T3, T4> InnerJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn);
     /// <summary>
-    /// LeftJoin左连接表T4字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// LeftJoin左连接表T4部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
     /// </summary>
     /// <typeparam name="T4">数据来源表T4实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -2729,7 +2729,7 @@ public interface IMultiUpdateJoin<TEntity, T1, T2, T3> : IMultiUpdateSet<TEntity
     #endregion
 }
 /// <summary>
-/// 使用表T1, T2, T3, T4字段数据更新表TEntity数据，仅限MySql,Mariadb,PostgreSQL数据库使用
+/// 使用表T1, T2, T3, T4部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
@@ -2740,14 +2740,14 @@ public interface IMultiUpdateJoin<TEntity, T1, T2, T3, T4> : IMultiUpdateSet<TEn
 {
     #region Join
     /// <summary>
-    /// InnerJoin内连接表T5字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// InnerJoin内连接表T5部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
     /// </summary>
     /// <typeparam name="T5">数据来源表T5实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回数据更新来源对象</returns>
     IMultiUpdateJoin<TEntity, T1, T2, T3, T4, T5> InnerJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn);
     /// <summary>
-    /// LeftJoin左连接表T5字段数据更新表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// LeftJoin左连接表T5部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
     /// </summary>
     /// <typeparam name="T5">数据来源表T5实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -2999,7 +2999,7 @@ public interface IMultiUpdateJoin<TEntity, T1, T2, T3, T4> : IMultiUpdateSet<TEn
     #endregion
 }
 /// <summary>
-/// 使用表T1, T2, T3, T4, T5字段数据更新表TEntity数据，仅限MySql,Mariadb,PostgreSQL数据库使用
+/// 使用表T1, T2, T3, T4, T5部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表TT1实体类型</typeparam>
