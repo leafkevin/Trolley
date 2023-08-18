@@ -197,7 +197,7 @@ public class MySqlUnitTest3 : UnitTestBase
 
         int increasedAmount = 50;
         var result = repository.Update<Order>()
-            .WithBy(f => new
+            .SetWith(f => new
             {
                 BuyerId = DBNull.Value,
                 OrderNo = "ON_" + f.OrderNo,
@@ -222,7 +222,7 @@ public class MySqlUnitTest3 : UnitTestBase
             Assert.True(updatedOrder.UpdatedAt == updateObj.UpdatedAt);
         }
         var sql = repository.Update<Order>()
-            .WithBy(f => new
+            .SetWith(f => new
             {
                 TotalAmount = this.CalcAmount(f.TotalAmount + increasedAmount, 3),
                 Products = this.GetProducts(),
@@ -258,7 +258,7 @@ public class MySqlUnitTest3 : UnitTestBase
 
         int increasedAmount = 50;
         var result = repository.Update<Order>()
-            .WithBy(f => new
+            .SetWith(f => new
             {
                 TotalAmount = this.CalcAmount(f.TotalAmount + increasedAmount, 3),
                 Products = this.GetProducts(),
@@ -281,7 +281,7 @@ public class MySqlUnitTest3 : UnitTestBase
             Assert.True(updatedOrder.UpdatedAt == updateObj.UpdatedAt);
         }
         var sql = repository.Update<Order>()
-            .WithBy(f => new
+            .SetWith(f => new
             {
                 TotalAmount = this.CalcAmount(f.TotalAmount + increasedAmount, 3),
                 Products = this.GetProducts(),
@@ -304,7 +304,7 @@ public class MySqlUnitTest3 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
-            .Set((a, b) => new
+            .SetFrom((a, b) => new
             {
                 TotalAmount = a.From<OrderDetail>('b')
                     .Where(f => f.OrderId == b.Id)
@@ -321,13 +321,13 @@ public class MySqlUnitTest3 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
-            .Set((a, b) => new
+            .SetFrom((a, b) => new
             {
                 TotalAmount = a.From<OrderDetail>('b')
                     .Where(f => f.OrderId == b.Id)
                     .Select(t => Sql.Sum(t.Amount))
             })
-            .SetValue(x => x.OrderNo, "ON_111")
+            .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
@@ -338,7 +338,7 @@ public class MySqlUnitTest3 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         var sql = repository.Update<Company>()
-            .Set((a, b) => new
+            .SetFrom((a, b) => new
             {
                 Nature = a.From<Company>('b')
                     .Where(f => f.Name.Contains("Internet"))
@@ -353,13 +353,13 @@ public class MySqlUnitTest3 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
-            .Set((x, y) => new
+            .SetFrom((x, y) => new
             {
                 TotalAmount = x.From<OrderDetail>('b')
                     .Where(f => f.OrderId == y.Id)
                     .Select(t => Sql.Sum(t.Amount))
             })
-            .SetValue(x => x.OrderNo, "ON_111")
+            .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
@@ -371,7 +371,7 @@ public class MySqlUnitTest3 : UnitTestBase
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-            .SetValue(x => x.TotalAmount, 200.56)
+            .Set(x => x.TotalAmount, 200.56)
             .Set((a, b) => new
             {
                 OrderNo = a.OrderNo + "_111",
@@ -403,7 +403,7 @@ public class MySqlUnitTest3 : UnitTestBase
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-            .Set((x, y, z) => new
+            .SetFrom((x, y, z) => new
             {
                 TotalAmount = x.From<OrderDetail>('c')
                     .Where(f => f.OrderId == y.Id)
@@ -541,7 +541,7 @@ public class MySqlUnitTest3 : UnitTestBase
                 OrderNo = x.OrderNo + "-111",
                 BuyerSource = y.SourceType
             })
-            .SetValue(x => x.Products, new List<int> { 1, 2, 3 })
+            .Set(x => x.Products, new List<int> { 1, 2, 3 })
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out var parameters);
         Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1");
@@ -575,7 +575,7 @@ public class MySqlUnitTest3 : UnitTestBase
 
         var user = new User { Gender = Gender.Female };
         var sql3 = repository.Update<User>()
-            .WithBy(f => new { f.Age, user.Gender }, new { Id = 1, Age = 20 })
+            .SetWith(f => new { f.Age, user.Gender }, new { Id = 1, Age = 20 })
             .ToSql(out var parameters3);
         Assert.True(sql3 == "UPDATE `sys_user` SET `Age`=@Age,`Gender`=@Gender WHERE `Id`=@kId");
         Assert.True(parameters3[1].ParameterName == "@Gender");
@@ -584,7 +584,7 @@ public class MySqlUnitTest3 : UnitTestBase
 
         int age = 20;
         var sql7 = repository.Update<User>()
-            .WithBy(f => new { f.Gender, Age = age }, new { Id = 1, Gender = Gender.Male })
+            .SetWith(f => new { f.Gender, Age = age }, new { Id = 1, Gender = Gender.Male })
             .ToSql(out var parameters7);
         Assert.True(sql7 == "UPDATE `sys_user` SET `Gender`=@Gender,`Age`=@Age WHERE `Id`=@kId");
         Assert.True(parameters7[0].ParameterName == "@Gender");
@@ -613,7 +613,7 @@ public class MySqlUnitTest3 : UnitTestBase
         Assert.True((string)parameters5[0].Value == CompanyNature.Internet.ToString());
 
         var sql6 = repository.Update<Company>()
-            .WithBy(f => new { f.Nature }, new { Id = 1, Nature = CompanyNature.Internet })
+            .SetWith(f => new { f.Nature }, new { Id = 1, Nature = CompanyNature.Internet })
             .ToSql(out var parameters6);
         Assert.True(sql6 == "UPDATE `sys_company` SET `Nature`=@Nature WHERE `Id`=@kId");
         Assert.True(parameters6[0].ParameterName == "@Nature");
@@ -681,7 +681,7 @@ public class MySqlUnitTest3 : UnitTestBase
 
         int age = 20;
         var sql7 = repository.Update<User>()
-            .WithBy(f => new { f.SomeTimes, Age = age }, new { Id = 1, SomeTimes = TimeSpan.FromMinutes(1455) })
+            .SetWith(f => new { f.SomeTimes, Age = age }, new { Id = 1, SomeTimes = TimeSpan.FromMinutes(1455) })
             .ToSql(out var parameters7);
         Assert.True(sql7 == "UPDATE `sys_user` SET `SomeTimes`=@SomeTimes,`Age`=@Age WHERE `Id`=@kId");
         Assert.True(parameters7[0].ParameterName == "@SomeTimes");

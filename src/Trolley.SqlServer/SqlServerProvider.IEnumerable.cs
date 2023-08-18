@@ -28,7 +28,7 @@ partial class SqlServerProvider
                     {
                         var builder = new StringBuilder();
                         var elementSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                        var arraySegment = visitor.VisitAndDeferred(elementSegment.Clone(args[0]));
+                        var arraySegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
 
                         var enumerable = arraySegment.Value as IEnumerable;
                         foreach (var item in enumerable)
@@ -78,7 +78,7 @@ partial class SqlServerProvider
                     {
                         var builder = new StringBuilder();
                         var elementSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var targetSegment = visitor.VisitAndDeferred(elementSegment.Clone(target));
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
 
                         var enumerable = targetSegment.Value as IEnumerable;
                         foreach (var item in enumerable)

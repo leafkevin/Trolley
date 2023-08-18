@@ -240,7 +240,7 @@ class MultipleQuery : IMultipleQuery
         return this;
     }
     public IMultiCreate<TEntity> Create<TEntity>() => new MultiCreate<TEntity>(this);
-    public IMultiUpdate<TEntity> Update<TEntity>() => new MultiUpdate<TEntity>(this);
+    //public IMultiUpdate<TEntity> Update<TEntity>() => new MultiUpdate<TEntity>(this);
     public IMultiDelete<TEntity> Delete<TEntity>() => new MultiDelete<TEntity>(this);
     public IMultipleQuery Exists<TEntity>(object whereObj)
     {

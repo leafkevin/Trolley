@@ -287,7 +287,7 @@ public interface IMultipleQuery
     /// </summary>
     /// <typeparam name="TEntity">更新对象类型</typeparam>
     /// <returns>返回更新对象</returns>
-    IMultiUpdate<TEntity> Update<TEntity>();
+    //IMultiUpdate<TEntity> Update<TEntity>();
     /// <summary>
     /// 创建TEntity类型删除对象
     /// </summary>

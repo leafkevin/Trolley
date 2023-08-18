@@ -202,13 +202,13 @@ public class SqlServerUnitTest3 : UnitTestBase
         Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
-            .Set((a, b) => new
+            .SetFrom((a, b) => new
             {
                 TotalAmount = a.From<OrderDetail>('b')
                     .Where(f => f.OrderId == b.Id)
                     .Select(t => Sql.Sum(t.Amount))
             })
-            .SetValue(x => x.OrderNo, "ON_111")
+            .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
@@ -219,7 +219,7 @@ public class SqlServerUnitTest3 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         var sql = repository.Update<Company>()
-            .Set((a, b) => new
+            .SetFrom((a, b) => new
             {
                 Nature = a.From<Company>('b')
                     .Where(f => f.Name.Contains("Internet"))
@@ -234,13 +234,13 @@ public class SqlServerUnitTest3 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
-            .Set((x, y) => new
+            .SetFrom((x, y) => new
             {
                 TotalAmount = x.From<OrderDetail>('b')
                 .Where(f => f.OrderId == y.Id)
                 .Select(t => Sql.Sum(t.Amount))
             })
-            .SetValue(x => x.OrderNo, "ON_111")
+            .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
@@ -252,7 +252,7 @@ public class SqlServerUnitTest3 : UnitTestBase
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
             .From<OrderDetail>()
-            .SetValue(x => x.TotalAmount, 200.56)
+            .Set(x => x.TotalAmount, 200.56)
             .Set((a, b) => new
             {
                 OrderNo = a.OrderNo + "_111",
@@ -284,7 +284,7 @@ public class SqlServerUnitTest3 : UnitTestBase
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
             .From<OrderDetail>()
-            .Set(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
+            .SetFrom(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
                 .Where(f => f.OrderId == y.Id)
                 .Select(t => Sql.Sum(t.Amount)))
             .Set((a, b) => new { OrderNo = a.OrderNo + b.ProductId.ToString() })
@@ -433,7 +433,7 @@ public class SqlServerUnitTest3 : UnitTestBase
 
         var user = new User { Gender = Gender.Female };
         var sql3 = repository.Update<User>()
-            .WithBy(f => new { f.Age, user.Gender }, new { Id = 1, Age = 20 })
+            .SetWith(f => new { f.Age, user.Gender }, new { Id = 1, Age = 20 })
             .ToSql(out var parameters3);
         Assert.True(sql3 == "UPDATE [sys_user] SET [Age]=@Age,[Gender]=@Gender WHERE [Id]=@kId");
         Assert.True(parameters3[1].ParameterName == "@Gender");
@@ -442,7 +442,7 @@ public class SqlServerUnitTest3 : UnitTestBase
 
         int age = 20;
         var sql7 = repository.Update<User>()
-            .WithBy(f => new { f.Gender, Age = age }, new { Id = 1, Gender = Gender.Male })
+            .SetWith(f => new { f.Gender, Age = age }, new { Id = 1, Gender = Gender.Male })
             .ToSql(out var parameters7);
         Assert.True(sql7 == "UPDATE [sys_user] SET [Gender]=@Gender,[Age]=@Age WHERE [Id]=@kId");
         Assert.True(parameters7[0].ParameterName == "@Gender");
@@ -471,7 +471,7 @@ public class SqlServerUnitTest3 : UnitTestBase
         Assert.True((string)parameters5[0].Value == CompanyNature.Internet.ToString());
 
         var sql6 = repository.Update<Company>()
-            .WithBy(f => new { f.Nature }, new { Id = 1, Nature = CompanyNature.Internet })
+            .SetWith(f => new { f.Nature }, new { Id = 1, Nature = CompanyNature.Internet })
             .ToSql(out var parameters6);
         Assert.True(sql6 == "UPDATE [sys_company] SET [Nature]=@Nature WHERE [Id]=@kId");
         Assert.True(parameters6[0].ParameterName == "@Nature");
@@ -539,7 +539,7 @@ public class SqlServerUnitTest3 : UnitTestBase
 
         int age = 20;
         var sql7 = repository.Update<User>()
-            .WithBy(f => new { f.SomeTimes, Age = age }, new { Id = 1, SomeTimes = TimeSpan.FromMinutes(1455) })
+            .SetWith(f => new { f.SomeTimes, Age = age }, new { Id = 1, SomeTimes = TimeSpan.FromMinutes(1455) })
             .ToSql(out var parameters7);
         Assert.True(sql7 == "UPDATE [sys_user] SET [SomeTimes]=@SomeTimes,[Age]=@Age WHERE [Id]=@kId");
         Assert.True(parameters7[0].ParameterName == "@SomeTimes");
