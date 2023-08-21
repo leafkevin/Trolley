@@ -205,7 +205,7 @@ public class SqlVisitor : ISqlVisitor
                     return operatorSegment;
 
                 var leftSegment = this.Visit(sqlSegment.Next(binaryExpr.Left));
-                var rightSegment = this.Visit(sqlSegment.Next(binaryExpr.Right));
+                var rightSegment = this.Visit(new SqlSegment { Expression = binaryExpr.Right });
 
                 //计算数组访问，a??bb
                 if (leftSegment.IsConstant && rightSegment.IsConstant)
@@ -250,10 +250,6 @@ public class SqlVisitor : ISqlVisitor
                             leftSegment.Push(new DeferredExpr { OperationType = OperationType.Not });
                         return leftSegment;
                     }
-                    //表达式左侧有枚举类字段访问，直接字段访问或是表达式计算(加、减、乘、除、取模、按位与、按位或...)
-                    //如：f.SourceType = UserSourceType.WebSite 或是f.SourceType & UserSourceType.WebSite = UserSourceType.WebSite
-                    //在表达式解析过程中，计算时使用UnderlyingType类型，条件等于判断使用枚举类型
-                    this.ChangeSameType(leftSegment, rightSegment);
                 }
                 //带有参数成员访问+常量/变量+带参数的函数调用的表达式
                 var operators = this.OrmProvider.GetBinaryOperator(binaryExpr.NodeType);
@@ -265,15 +261,14 @@ public class SqlVisitor : ISqlVisitor
                 //SELECT TotalAmount = (int)(amount + (a.Price + increasedPrice) * (a.Quartity + increasedCount)) ...FROM ...
                 //SELECT OrderNo = $"OrderNo-{DateTime.Today.ToString("yyyyMMdd")}-{f.Id}"...FROM ...
 
-                if ((leftSegment.ExpectType.IsEnum || leftSegment.ExpectType != null) && calcOps.Contains(operators))
+                var leftType = leftSegment.ExpectType ?? binaryExpr.Left.Type;
+                var rightType = rightSegment.ExpectType ?? binaryExpr.Right.Type;
+
+                if ((leftType.IsEnum || rightType.IsEnum) && calcOps.Contains(operators))
                     throw new NotSupportedException($"枚举类成员{leftSegment.MemberMapper.MemberName}对应的数据库类型为非数字类型，不能进行{operators}操作，可以使用=、<>、IN、EXISTS等操作来代替，表达式：{binaryExpr}");
 
-                //日期，时间，字符串，DBNull，null，Enum都已经在前面单独处理了，只剩下数字类型转换
-                if (leftSegment.ExpectType != rightSegment.ExpectType)
-                {
-                    leftSegment.ToExpectType(this.OrmProvider);
-                    rightSegment.ToExpectType(this.OrmProvider);
-                }
+                //在调用GetQuotedValue方法前，确保左右两侧的类型一致，并都根据MemberMapper的映射类型表生成SQL语句
+                this.ChangeSameType(leftSegment, rightSegment);
                 string strLeft = this.GetQuotedValue(leftSegment);
                 string strRight = this.GetQuotedValue(rightSegment);
 
@@ -423,6 +418,8 @@ public class SqlVisitor : ISqlVisitor
         var rightArgument = this.GetQuotedValue(ifFalseSegment);
         sqlSegment.Merge(ifTrueSegment);
         sqlSegment.Merge(ifFalseSegment);
+        this.ChangeSameType(ifTrueSegment, sqlSegment);
+        sqlSegment.IsFieldType = true;
         return this.VisitDeferredBoolConditional(sqlSegment, conditionalExpr.IfTrue.Type == typeof(bool), leftArgument, rightArgument);
     }
     public virtual SqlSegment VisitListInit(SqlSegment sqlSegment)
@@ -1140,7 +1137,7 @@ public class SqlVisitor : ISqlVisitor
         if (sqlSegment.IsVariable || (this.IsParameterized || sqlSegment.IsParameterized) && sqlSegment.IsConstant)
         {
             string parameterName = null;
-            var dataParameters = dbParameters ?? this.dbParameters;
+            var dataParameters = dbParameters ?? (this.dbParameters ??= new List<IDbDataParameter>());
             if (!string.IsNullOrEmpty(sqlSegment.ParameterName))
             {
                 parameterName = this.OrmProvider.ParameterPrefix + sqlSegment.ParameterName;
@@ -1166,10 +1163,9 @@ public class SqlVisitor : ISqlVisitor
         else if (sqlSegment.IsConstant)
         {
             //对枚举常量，且数据库类型是字符串类型做了特殊处理，目前只有这一种情况
-            if (sqlSegment.MemberMapper != null && sqlSegment.TargetType != null && sqlSegment.ExpectType != sqlSegment.TargetType)
+            if (sqlSegment.MemberMapper != null)
             {
                 sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.MemberMapper, sqlSegment.Value);
-                //sqlSegment.ExpectType = sqlSegment.TargetType;
                 return this.OrmProvider.GetQuotedValue(sqlSegment.Value);
             }
             return this.OrmProvider.GetQuotedValue(sqlSegment);
@@ -1461,24 +1457,30 @@ public class SqlVisitor : ISqlVisitor
         //表达式左侧有枚举类字段访问，直接字段访问或是表达式计算(加、减、乘、除、取模、按位与、按位或...)
         //如：f.SourceType = UserSourceType.WebSite 或是f.SourceType & UserSourceType.WebSite = UserSourceType.WebSite
         //在表达式解析过程中，计算时使用UnderlyingType类型，条件等于判断使用枚举类型
-        if (leftSegment.ExpectType.IsEnum && (rightSegment.IsConstant || rightSegment.IsVariable))
+        if (leftSegment.HasField && (!leftSegment.IsExpression && !leftSegment.IsMethodCall || leftSegment.IsFieldType))
         {
-            if (rightSegment.ExpectType != leftSegment.ExpectType)
-            {
-                rightSegment.ExpectType = leftSegment.ExpectType;
-                rightSegment.Value = Enum.ToObject(leftSegment.ExpectType, rightSegment.Value);
-            }
-            if (leftSegment.HasField)
-            {
-                rightSegment.MemberMapper = leftSegment.MemberMapper;
-                if (leftSegment.MemberMapper.DbDefaultType == typeof(string))
-                {
-                    leftSegment.TargetType = typeof(string);
-                    rightSegment.TargetType = typeof(string);
-                }
-            }
+            rightSegment.MemberMapper = leftSegment.MemberMapper;
             return true;
         }
+
+        //var leftType = leftSegment.ExpectType ?? leftSegment.Expression.Type;
+        //var rightType = rightSegment.ExpectType ?? rightSegment.Expression.Type;
+        //if (leftType != rightType && (leftType.IsEnum || rightType.IsEnum)
+        //    && (rightSegment.IsConstant || rightSegment.IsVariable))
+        //{
+        //    rightSegment.ExpectType = leftSegment.ExpectType;
+        //    rightSegment.Value = Enum.ToObject(leftSegment.ExpectType, rightSegment.Value);
+        //    if (leftSegment.HasField)
+        //    {
+        //        rightSegment.MemberMapper = leftSegment.MemberMapper;
+        //        if (leftSegment.MemberMapper.DbDefaultType == typeof(string))
+        //        {
+        //            leftSegment.TargetType = typeof(string);
+        //            rightSegment.TargetType = typeof(string);
+        //        }
+        //    }
+        //    return true;
+        //}
         return false;
     }
     private List<ConditionExpression> VisitLogicBinaryExpr(Expression conditionExpr)

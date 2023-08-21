@@ -529,7 +529,7 @@ class RepositoryHelper
         }
         else
         {
-            var parameterType = parameters.GetType();
+            var parameterType = parameter.GetType();
             var cacheKey = HashCode.Combine(connection, ormProvider, mapProvider, entityType, parameterType);
             if (!createBatchCommandInitializerCache.TryGetValue(cacheKey, out var objCommandInitializer))
             {
@@ -1015,7 +1015,7 @@ class RepositoryHelper
         var entityMapper = mapProvider.GetEntityMap(entityType);
         if (entityMapper.KeyMembers.Count <= 0)
             throw new Exception($"表{entityMapper.TableName}在实体映射中没有配置任何主键，无法完成删除操作");
-        isNeedEndParenthesis = entityMapper.KeyMembers.Count > 1;
+        isNeedEndParenthesis = entityMapper.KeyMembers.Count == 1;
         if (deleteObj is Dictionary<string, object> dict)
         {
             Action<IDbCommand, IOrmProvider, IEntityMapProvider, StringBuilder, int, Dictionary<string, object>> dictCommandInitializer = null;
@@ -1090,14 +1090,13 @@ class RepositoryHelper
                 var methodInfo2 = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
                 var methodInfo3 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
 
-                var jointMark = entityMapper.KeyMembers.Count > 1 ? ';' : ',';
-                var addCommaExpr = Expression.Call(builderExpr, methodInfo1, Expression.Constant(jointMark));
-                var greatThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0, typeof(int)));
-                blockBodies.Add(Expression.IfThen(greatThenExpr, addCommaExpr));
-
                 if (entityMapper.KeyMembers.Count > 1)
                 {
-                    var sql = $"DELETE FROM {ormProvider.GetFieldName(entityMapper.TableName)} WHERE ";
+                    var addCommaExpr = Expression.Call(builderExpr, methodInfo1, Expression.Constant(';'));
+                    var greatThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0, typeof(int)));
+                    blockBodies.Add(Expression.IfThen(greatThenExpr, addCommaExpr));
+
+                    var sql = $"DELETE FROM {ormProvider.GetTableName(entityMapper.TableName)} WHERE ";
                     blockBodies.Add(Expression.Call(builderExpr, methodInfo2, Expression.Constant(sql)));
                     int index = 0;
                     foreach (var keyMapper in entityMapper.KeyMembers)
@@ -1122,8 +1121,14 @@ class RepositoryHelper
                 else
                 {
                     var keyMapper = entityMapper.KeyMembers[0];
-                    var parameterName = ormProvider.ParameterPrefix + keyMapper.MemberName;
+                    var addCommaExpr = Expression.Call(builderExpr, methodInfo1, Expression.Constant(','));
+                    var deldeteHead = $"DELETE FROM {ormProvider.GetTableName(entityMapper.TableName)} WHERE {ormProvider.GetFieldName(keyMapper.FieldName)} IN (";
+                    var AddHeadExpr = Expression.Call(builderExpr, methodInfo2, Expression.Constant(deldeteHead));
+                    var greatThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0, typeof(int)));
+                    blockBodies.Add(Expression.IfThenElse(greatThenExpr, addCommaExpr, AddHeadExpr));
+
                     var suffixExpr = Expression.Call(indexExpr, typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes));
+                    var parameterName = ormProvider.ParameterPrefix + keyMapper.MemberName;
                     var concatExpr = Expression.Call(methodInfo3, Expression.Constant(parameterName), suffixExpr);
                     blockBodies.Add(Expression.Assign(parameterNameExpr, concatExpr));
                     blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));

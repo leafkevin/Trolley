@@ -394,10 +394,7 @@ partial class MySqlProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                            visitor.ChangeSameType(targetSegment, rightSegment);
-                            //visitor.Change(targetSegment);
-                            //visitor.Change(rightSegment);
-                            string rightArgument = null;
+                              string rightArgument = null;
                             if (rightSegment.IsConstant)
                                 rightArgument = $"'%{rightSegment}%'";
                             else rightArgument = $"CONCAT('%',{visitor.GetQuotedValue(rightSegment)},'%')";

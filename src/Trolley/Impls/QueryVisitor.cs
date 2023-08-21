@@ -1185,7 +1185,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     readerFields.Add(methodCallField);
                     break;
                 }
-                else fieldName = this.OrmProvider.GetQuotedValue(this.Change(sqlSegment));
+                else fieldName = this.OrmProvider.GetQuotedValue(sqlSegment);
                 if (sqlSegment.IsExpression)
                     fieldName = $"({fieldName})";
                 if (sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall || sqlSegment.FromMember?.Name != memberInfo.Name)

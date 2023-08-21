@@ -62,16 +62,7 @@ public class SqlSegment
     /// <summary>
     /// 当强制转换时，此字段值为转换后的类型，当枚举类型时，此字段值为枚举类型，其他场景就是当前表达式的类型
     /// </summary>
-    public Type ExpectType
-    {
-        get
-        {
-            if (this.currentType != null)
-                return this.currentType;
-            return this.Expression.Type;
-        }
-        set { this.currentType = value; }
-    }
+    public Type ExpectType { get; set; }
     /// <summary>
     /// 当枚举类型成员访问时，且数据库为VARCHAR类型，此字段会有值，值为typeof(string)
     /// </summary>

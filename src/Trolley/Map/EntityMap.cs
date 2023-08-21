@@ -115,7 +115,8 @@ public class EntityMap
                 //    var m_stringLength = Regex.Match(col.DbTypeTextFull, @"^varchar\s*\((\w+)\)$", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant);
                 //}
             }
-            memberMapper.DbDefaultType = ormProvider.MapDefaultType(memberMapper.NativeDbType);
+            if (memberMapper.NativeDbType != null)
+                memberMapper.DbDefaultType = ormProvider.MapDefaultType(memberMapper.NativeDbType);
         }
         if (this.memberMaps.Count > 0)
         {
