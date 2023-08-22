@@ -76,7 +76,7 @@ public class MySqlMethodCallUnitTest : UnitTestBase
             .Where(f => f.Id == 1)
             .Select(f => string.Concat(f.Name + "_1_" + isMale, f.Age + 5, isMale) + "_2_" + f.Age + "_3_" + isMale + "_4_" + count)
             .ToSql(out var dbParameters);
-        Assert.True(sql == "SELECT CONCAT(`Name`,'_1_',@p0,`Age`+5,@p1,'_2_',`Age`,'_3_',@p2,'_4_',@p3) FROM `sys_user` WHERE `Id`=1");
+        Assert.True(sql == "SELECT CONCAT(`Name`,'_1_',@p0,CAST(`Age`+5 AS CHAR),@p1,'_2_',CAST(`Age` AS CHAR),'_3_',@p2,'_4_',@p3) FROM `sys_user` WHERE `Id`=1");
         Assert.True((string)dbParameters[0].Value == isMale.ToString());
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
         Assert.True((string)dbParameters[1].Value == isMale.ToString());
@@ -103,7 +103,7 @@ public class MySqlMethodCallUnitTest : UnitTestBase
             .Where(f => f.Name.Contains("cindy"))
             .Select(f => $"{f.Name + "222"}_111_{f.Age + isMale.ToString()}_{isMale}_{count}")
            .ToSql(out var dbParameters);
-        Assert.True(sql == "SELECT CONCAT(`Name`,'222_111_',`Age`,@p0,'_',@p1,'_',@p2) FROM `sys_user` WHERE `Name` LIKE '%cindy%'");
+        Assert.True(sql == "SELECT CONCAT(`Name`,'222_111_',CAST(`Age` AS CHAR),@p0,'_',@p1,'_',@p2) FROM `sys_user` WHERE `Name` LIKE '%cindy%'");
         Assert.True((string)dbParameters[0].Value == isMale.ToString());
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
         Assert.True((string)dbParameters[1].Value == isMale.ToString());

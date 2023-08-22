@@ -55,19 +55,13 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
 
         builder.Append("SET ");
-        foreach (var setField in this.setFields)
-        {
-            if (this.IsNeedAlias) builder.Append($"{aliasName}");
-            if (setField.Type == SetFieldType.RawSql) builder.Append(setField.Value);
-            else builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={setField.Value}");
-        }
-
         if (this.setFields != null && this.setFields.Count > 0)
         {
             for (int i = 0; i < setFields.Count; i++)
             {
                 var setField = this.setFields[i];
                 if (i > 0) builder.Append(',');
+                if (this.IsNeedAlias) builder.Append($"{aliasName}");
                 builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={setField.Value}");
             }
         }
@@ -266,6 +260,27 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         else this.AddMemberElement(sqlSegment, memberMapper);
                     }
                     break;
+            }
+            if (updateObj != null)
+            {
+                this.dbParameters ??= new();
+                foreach (var keyMapper in entityMapper.KeyMembers)
+                {
+                    var fieldValue = this.EvaluateAndCache(updateObj, keyMapper.MemberName);
+                    if (fieldValue != null)
+                    {
+                        var parameterName = this.OrmProvider.ParameterPrefix + keyMapper.MemberName;
+                        if (this.dbParameters.Exists(f => f.ParameterName == parameterName))
+                            parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
+                        this.dbParameters.Add(this.OrmProvider.CreateParameter(keyMapper, parameterName, fieldValue));
+                        if (!string.IsNullOrEmpty(this.whereSql))
+                            this.whereSql += " AND ";
+                        var aliasName = this.tables[0].AliasName;
+                        if (this.IsNeedAlias && aliasName != this.TableAsStart.ToString())
+                            this.whereSql += $"{aliasName}.";
+                        this.whereSql += $"{this.OrmProvider.GetFieldName(keyMapper.FieldName)}={parameterName}";
+                    }
+                }
             }
         }
         else

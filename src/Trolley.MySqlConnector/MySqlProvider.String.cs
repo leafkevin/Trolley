@@ -77,7 +77,6 @@ partial class MySqlProvider
                                 //可能是一个sqlSegment，也可能是多个List<sqlSegment>
                                 var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = concatExprs[i] });
                                 if (i == 0) resultSegment = sqlSegment;
-                                else resultSegment.Merge(sqlSegment);
 
                                 if (sqlSegment.IsConstant)
                                 {
@@ -93,9 +92,16 @@ partial class MySqlProvider
                                 }
                                 if (builder.Length > 0)
                                     builder.Append(',');
-                                sqlSegment.Value = sqlSegment.Value.ToString();
+
+                                if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string))
+                                {
+                                    if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                                        sqlSegment.Value = this.CastTo(typeof(string), sqlSegment.Value);
+                                    else sqlSegment.Value = sqlSegment.Value.ToString();
+                                }
+
                                 builder.Append(visitor.GetQuotedValue(sqlSegment));
-                                resultSegment.IsParameter = resultSegment.IsParameter || sqlSegment.IsParameter;
+                                if (i > 0) resultSegment.Merge(sqlSegment);
                             }
                             if (builder.Length > 0)
                             {
@@ -134,7 +140,6 @@ partial class MySqlProvider
                                 //可能是一个sqlSegment，也可能是多个List<sqlSegment>
                                 var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = concatSegments[i] });
                                 if (i == 0) resultSegment = sqlSegment;
-                                else resultSegment.Merge(sqlSegment);
 
                                 if (sqlSegment.IsConstant)
                                 {
@@ -150,9 +155,16 @@ partial class MySqlProvider
                                 }
                                 if (builder.Length > 0)
                                     builder.Append(',');
-                                sqlSegment.Value = sqlSegment.Value.ToString();
+
+                                if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string))
+                                {
+                                    if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                                        sqlSegment.Value = this.CastTo(typeof(string), sqlSegment.Value);
+                                    else sqlSegment.Value = sqlSegment.Value.ToString();
+                                }
+
                                 builder.Append(visitor.GetQuotedValue(sqlSegment));
-                                resultSegment.IsParameter = resultSegment.IsParameter || sqlSegment.IsParameter;
+                                if (i > 0) resultSegment.Merge(sqlSegment);
                             }
 
                             if (builder.Length > 0)
@@ -254,9 +266,16 @@ partial class MySqlProvider
                                         constBuilder.Clear();
                                     }
                                     builder.Append(',');
-                                    elementSegment.Value = elementSegment.Value.ToString();
+
+                                    if ((elementSegment.ExpectType ?? elementSegment.Expression.Type) != typeof(string))
+                                    {
+                                        if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
+                                            elementSegment.Value = this.CastTo(typeof(string), elementSegment.Value);
+                                        else elementSegment.Value = elementSegment.Value.ToString();
+                                    }
+
                                     builder.Append(visitor.GetQuotedValue(elementSegment));
-                                    resultSegment.IsParameter = resultSegment.IsParameter || elementSegment.IsParameter;
+                                    if (index > 0) resultSegment.Merge(elementSegment);
                                 }
                                 else constBuilder.Append(item.ToString());
                                 index++;
@@ -291,7 +310,7 @@ partial class MySqlProvider
                             if (separatorSegment.IsConstant && (valuesSegment.IsConstant || valuesSegment.IsVariable))
                                 return valuesSegment.Change(string.Join(separatorSegment.ToString(), valuesSegment.Value as List<SqlSegment>, startIndex, length));
 
-                            var resultSegment = valuesSegment;
+                            SqlSegment resultSegment = null;
                             var separatorAugment = separatorSegment.ToString();
                             var enumerable = valuesSegment.Value as IEnumerable;
                             var builder = new StringBuilder();
@@ -308,7 +327,7 @@ partial class MySqlProvider
 
                                 if (item is SqlSegment elementSegment)
                                 {
-                                    resultSegment.Merge(elementSegment);
+                                    if (index == startIndex) resultSegment = elementSegment;
                                     if (elementSegment.IsConstant)
                                     {
                                         constBuilder.Append(elementSegment.ToString());
@@ -322,9 +341,16 @@ partial class MySqlProvider
                                         constBuilder.Clear();
                                     }
                                     builder.Append(',');
-                                    elementSegment.Value = elementSegment.Value.ToString();
+
+                                    if ((elementSegment.ExpectType ?? elementSegment.Expression.Type) != typeof(string))
+                                    {
+                                        if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
+                                            elementSegment.Value = this.CastTo(typeof(string), elementSegment.Value);
+                                        else elementSegment.Value = elementSegment.Value.ToString();
+                                    }
+
                                     builder.Append(visitor.GetQuotedValue(elementSegment));
-                                    resultSegment.IsParameter = resultSegment.IsParameter || elementSegment.IsParameter;
+                                    if (index > startIndex) resultSegment.Merge(elementSegment);
                                 }
                                 else constBuilder.Append(item.ToString());
                                 index++;
@@ -394,7 +420,7 @@ partial class MySqlProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                              string rightArgument = null;
+                            string rightArgument = null;
                             if (rightSegment.IsConstant)
                                 rightArgument = $"'%{rightSegment}%'";
                             else rightArgument = $"CONCAT('%',{visitor.GetQuotedValue(rightSegment)},'%')";

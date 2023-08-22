@@ -470,23 +470,19 @@ public abstract class BaseOrmProvider : IOrmProvider
                         methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                            var isConstant = targetSegment.IsConstant;
-                            var isVariable = targetSegment.IsVariable;
-                            var targetType = targetSegment.Value.GetType();
                             var arguments = new List<object>();
                             for (int i = 0; i < args.Length; i++)
                             {
                                 var argumentSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[i] });
-                                isConstant = isConstant && argumentSegment.IsConstant;
-                                isVariable = isVariable || argumentSegment.IsVariable;
                                 targetSegment.Merge(argumentSegment);
                                 arguments.Add(argumentSegment.Value);
                             }
-                            if (isConstant || isVariable)
+                            if (targetSegment.IsConstant || targetSegment.IsVariable)
                             {
                                 if (!methodCallCache.TryGetValue(cacheKey, out var indexDelegate))
                                 {
-                                    var listExpr = Expression.Parameter(typeof(object), "list");
+                                    var targetType = methodInfo.DeclaringType;
+                                    var listObjExpr = Expression.Parameter(typeof(object), "listObj");
                                     var indicesExpr = Expression.Parameter(typeof(object[]), "indices");
 
                                     var argumentsExpr = new List<Expression>();
@@ -496,11 +492,11 @@ public abstract class BaseOrmProvider : IOrmProvider
                                         var typedIndexExpr = Expression.Convert(indexExpr, parameterInfos[i].ParameterType);
                                         argumentsExpr.Add(typedIndexExpr);
                                     }
-                                    var targetExpr = Expression.Convert(listExpr, targetType);
+                                    var targetExpr = Expression.Convert(listObjExpr, targetType);
                                     var callExpr = Expression.Call(targetExpr, methodInfo, argumentsExpr.ToArray());
                                     var resultExpr = Expression.Convert(callExpr, typeof(object));
 
-                                    indexDelegate = Expression.Lambda<Func<object, object[], object>>(resultExpr, listExpr, indicesExpr).Compile();
+                                    indexDelegate = Expression.Lambda<Func<object, object[], object>>(resultExpr, listObjExpr, indicesExpr).Compile();
                                     methodCallCache.TryAdd(cacheKey, indexDelegate);
                                 }
                                 var indexToValue = indexDelegate as Func<object, object[], object>;

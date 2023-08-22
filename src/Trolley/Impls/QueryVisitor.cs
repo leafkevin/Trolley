@@ -1126,7 +1126,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         else
                         {
                             //类似Json类型的实体类字段
-                            fieldName = this.OrmProvider.GetQuotedValue(sqlSegment);
+                            fieldName = this.GetQuotedValue(sqlSegment);
                             readerFields.Add(new ReaderField
                             {
                                 Index = readerFields.Count,
@@ -1145,7 +1145,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     sqlSegment = this.VisitAndDeferred(sqlSegment);
                     //使用GetQuotedValue方法把常量都变成对应的字符串格式
                     //String和DateTime类型变成'...'数据,数字类型变成数字字符串
-                    fieldName = this.OrmProvider.GetQuotedValue(this.Change(sqlSegment));
+                    fieldName = this.GetQuotedValue(sqlSegment);
                     if (sqlSegment.IsExpression)
                         fieldName = $"({fieldName})";
                     if (sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall || sqlSegment.FromMember?.Name != memberInfo.Name)
@@ -1185,7 +1185,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     readerFields.Add(methodCallField);
                     break;
                 }
-                else fieldName = this.OrmProvider.GetQuotedValue(sqlSegment);
+                else fieldName = this.GetQuotedValue(sqlSegment);
                 if (sqlSegment.IsExpression)
                     fieldName = $"({fieldName})";
                 if (sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall || sqlSegment.FromMember?.Name != memberInfo.Name)

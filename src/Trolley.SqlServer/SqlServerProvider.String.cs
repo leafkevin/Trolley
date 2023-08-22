@@ -77,7 +77,6 @@ partial class SqlServerProvider
                                 //可能是一个sqlSegment，也可能是多个List<sqlSegment>
                                 var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = concatExprs[i] });
                                 if (i == 0) resultSegment = sqlSegment;
-                                else resultSegment.Merge(sqlSegment);
 
                                 if (sqlSegment.IsConstant)
                                 {
@@ -93,11 +92,16 @@ partial class SqlServerProvider
                                 }
                                 if (builder.Length > 0)
                                     builder.Append('+');
-                                if (sqlSegment.ExpectType != typeof(string) && (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall))
-                                    sqlSegment.Value = this.CastTo(typeof(string), sqlSegment.Value);
-                                else sqlSegment.Value = sqlSegment.Value.ToString();
-                                builder.Append(visitor.Change(sqlSegment));
-                                resultSegment.IsParameter = resultSegment.IsParameter || sqlSegment.IsParameter;
+
+                                if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string))
+                                {
+                                    if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                                        sqlSegment.Value = this.CastTo(typeof(string), sqlSegment.Value);
+                                    else sqlSegment.Value = sqlSegment.Value.ToString();
+                                }
+
+                                builder.Append(visitor.GetQuotedValue(sqlSegment));
+                                if (i > 0) resultSegment.Merge(sqlSegment);
                             }
                             if (builder.Length > 0)
                             {
@@ -136,7 +140,6 @@ partial class SqlServerProvider
                                 //可能是一个sqlSegment，也可能是多个List<sqlSegment>
                                 var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = concatSegments[i] });
                                 if (i == 0) resultSegment = sqlSegment;
-                                else resultSegment.Merge(sqlSegment);
 
                                 if (sqlSegment.IsConstant)
                                 {
@@ -152,11 +155,16 @@ partial class SqlServerProvider
                                 }
                                 if (builder.Length > 0)
                                     builder.Append('+');
-                                if (sqlSegment.ExpectType != typeof(string) && (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall))
-                                    sqlSegment.Value = this.CastTo(typeof(string), sqlSegment.Value);
-                                else sqlSegment.Value = sqlSegment.Value.ToString();
+
+                                if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string))
+                                {
+                                    if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                                        sqlSegment.Value = this.CastTo(typeof(string), sqlSegment.Value);
+                                    else sqlSegment.Value = sqlSegment.Value.ToString();
+                                }
+
                                 builder.Append(visitor.Change(sqlSegment));
-                                resultSegment.IsParameter = resultSegment.IsParameter || sqlSegment.IsParameter;
+                                if (i > 0) resultSegment.Merge(sqlSegment);
                             }
 
                             if (builder.Length > 0)
@@ -233,7 +241,7 @@ partial class SqlServerProvider
                             if (separatorSegment.IsConstant && (valuesSegment.IsConstant || valuesSegment.IsVariable))
                                 return visitor.Merge(valuesSegment, separatorSegment, string.Join(separatorSegment.ToString(), valuesSegment.Value as IEnumerable));
 
-                            var resultSegment = valuesSegment;
+                            SqlSegment resultSegment = null;
                             var separatorAugment = separatorSegment.ToString();
                             var enumerable = valuesSegment.Value as IEnumerable;
                             var builder = new StringBuilder();
@@ -244,7 +252,7 @@ partial class SqlServerProvider
                             {
                                 if (item is SqlSegment elementSegment)
                                 {
-                                    resultSegment.Merge(elementSegment);
+                                    if (index == 0) resultSegment = elementSegment;
                                     if (elementSegment.IsConstant)
                                     {
                                         constBuilder.Append(elementSegment.ToString());
@@ -258,11 +266,16 @@ partial class SqlServerProvider
                                         constBuilder.Clear();
                                     }
                                     builder.Append('+');
-                                    if (elementSegment.ExpectType != typeof(string) && (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall))
-                                        elementSegment.Value = this.CastTo(typeof(string), elementSegment.Value);
-                                    else elementSegment.Value = elementSegment.Value.ToString();
+
+                                    if ((elementSegment.ExpectType ?? elementSegment.Expression.Type) != typeof(string))
+                                    {
+                                        if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
+                                            elementSegment.Value = this.CastTo(typeof(string), elementSegment.Value);
+                                        else elementSegment.Value = elementSegment.Value.ToString();
+                                    }
+
                                     builder.Append(visitor.Change(elementSegment));
-                                    resultSegment.IsParameter = resultSegment.IsParameter || elementSegment.IsParameter;
+                                    if (index > 0) resultSegment.Merge(elementSegment);
                                 }
                                 else constBuilder.Append(item.ToString());
                                 index++;
@@ -314,7 +327,7 @@ partial class SqlServerProvider
 
                                 if (item is SqlSegment elementSegment)
                                 {
-                                    resultSegment.Merge(elementSegment);
+                                    if (index == 0) resultSegment = elementSegment;
                                     if (elementSegment.IsConstant)
                                     {
                                         constBuilder.Append(elementSegment.ToString());
@@ -328,11 +341,16 @@ partial class SqlServerProvider
                                         constBuilder.Clear();
                                     }
                                     builder.Append('+');
-                                    if (elementSegment.ExpectType != typeof(string) && (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall))
-                                        elementSegment.Value = this.CastTo(typeof(string), elementSegment.Value);
-                                    else elementSegment.Value = elementSegment.Value.ToString();
+
+                                    if ((elementSegment.ExpectType ?? elementSegment.Expression.Type) != typeof(string))
+                                    {
+                                        if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
+                                            elementSegment.Value = this.CastTo(typeof(string), elementSegment.Value);
+                                        else elementSegment.Value = elementSegment.Value.ToString();
+                                    }
+
                                     builder.Append(visitor.Change(elementSegment));
-                                    resultSegment.IsParameter = resultSegment.IsParameter || elementSegment.IsParameter;
+                                    if (index > 0) resultSegment.Merge(elementSegment);
                                 }
                                 else constBuilder.Append(item.ToString());
                                 index++;
