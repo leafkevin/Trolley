@@ -1009,12 +1009,20 @@ class RepositoryHelper
         return bulkSetFieldsInitializer;
     }
 
-    public static Action<IDbCommand, IOrmProvider, IEntityMapProvider, StringBuilder, int, object> BuildDeleteBatchCommandInitializer(IDbConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object deleteObj, out bool isNeedEndParenthesis)
+    public static Action<IDbCommand, IOrmProvider, IEntityMapProvider, StringBuilder, int, object> BuildDeleteBatchCommandInitializer(IDbConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object deleteObjs, out bool isNeedEndParenthesis)
     {
         Action<IDbCommand, IOrmProvider, IEntityMapProvider, StringBuilder, int, object> commandInitializer = null;
         var entityMapper = mapProvider.GetEntityMap(entityType);
         if (entityMapper.KeyMembers.Count <= 0)
             throw new Exception($"表{entityMapper.TableName}在实体映射中没有配置任何主键，无法完成删除操作");
+        var entities = deleteObjs as IEnumerable;
+        object deleteObj = null;
+        foreach (var entity in entities)
+        {
+            deleteObj = entity;
+            break;
+        }
+
         isNeedEndParenthesis = entityMapper.KeyMembers.Count == 1;
         if (deleteObj is Dictionary<string, object> dict)
         {

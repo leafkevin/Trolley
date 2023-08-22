@@ -120,7 +120,6 @@ class Deleted<TEntity> : IDeleted<TEntity>
             int index = 0;
             var sqlBuilder = new StringBuilder();
             var entities = this.parameters as IEnumerable;
-            if (isNeedEndParenthesis) sqlBuilder.Append('(');
             foreach (var entity in entities)
             {
                 commandInitializer.Invoke(cmd, this.ormProvider, this.mapProvider, sqlBuilder, index, entity);
@@ -161,7 +160,6 @@ class Deleted<TEntity> : IDeleted<TEntity>
             int index = 0;
             var sqlBuilder = new StringBuilder();
             var entities = this.parameters as IEnumerable;
-            if (isNeedEndParenthesis) sqlBuilder.Append('(');
             foreach (var entity in entities)
             {
                 commandInitializer.Invoke(command, this.ormProvider, this.mapProvider, sqlBuilder, index, entity);

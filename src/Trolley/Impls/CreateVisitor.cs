@@ -266,6 +266,9 @@ class CreateVisitor : SqlVisitor, ICreateVisitor
         {
             if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
                 sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
+            sqlSegment.IsParameterized = true;
+            sqlSegment.MemberMapper = memberMapper;
+            sqlSegment.ParameterName = memberMapper.MemberName;
             fromBuilder.Append(this.GetQuotedValue(sqlSegment));
         }
     }
