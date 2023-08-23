@@ -158,7 +158,7 @@ public class MySqlUnitTest4 : UnitTestBase
         var sql = repository.Delete<User>()
             .Where(new[] { new { Id = 1 }, new { Id = 2 } })
             .ToSql(out var parameters);
-        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id`=@Id0;DELETE FROM `sys_user` WHERE `Id`=@Id1");
+        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id` IN (@Id0,@Id1)");
         Assert.True((int)parameters[0].Value == 1);
         Assert.True((int)parameters[1].Value == 2);
     }
@@ -205,7 +205,7 @@ public class MySqlUnitTest4 : UnitTestBase
         var sql = repository.Delete<User>()
             .Where(new int[] { 1, 2 })
             .ToSql(out var parameters);
-        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id`=@Id0;DELETE FROM `sys_user` WHERE `Id`=@Id1");
+        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id` IN (@Id0,@Id1)");
         Assert.True((int)parameters[0].Value == 1);
         Assert.True((int)parameters[1].Value == 2);
 

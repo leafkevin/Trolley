@@ -986,6 +986,18 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
 
     #region Where/And
     /// <summary>
+    /// 使用whereObj生成Where条件，可以是匿名对象或是已有命名对象或是字典，推荐使用匿名对象，不能为null
+    /// </summary>
+    /// <param name="whereObj">where条件对象，可以是匿名对象或是已有命名对象或是字典，推荐使用匿名对象，不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateSet<TEntity> WhereBy(object whereObj);
+    /// <summary>
+    /// 使用keyObj生成Where条件，可以是包含主键的匿名对象或是已有命名对象或是字典，推荐使用匿名对象，不能为null
+    /// </summary>
+    /// <param name="keyObj">where条件对象，可以是包含主键的匿名对象或是已有命名对象或是字典，推荐使用匿名对象，不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateSet<TEntity> WhereByKey(object keyObj);
+    /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
@@ -25,8 +26,9 @@ class RepositoryHelper
     private static ConcurrentDictionary<int, Action<IDbCommand, IOrmProvider, object, StringBuilder, StringBuilder>> createWithBiesCommandInitializerCache = new();
 
     private static ConcurrentDictionary<int, Func<IDbCommand, IOrmProvider, object, string>> updateEntityCommandInitializerCache = new();
-    private static ConcurrentDictionary<int, Action<List<SetField>, List<IDbDataParameter>, object>> updateSetFieldsCache = new();
+    private static ConcurrentDictionary<int, Action<List<UpdateField>, List<IDbDataParameter>, object>> updateSetFieldsCache = new();
     private static ConcurrentDictionary<int, Action<IDbCommand, ISqlVisitor, StringBuilder, object, int>> updateBulkSetFieldsCache = new();
+    private static ConcurrentDictionary<int, Action<ISqlVisitor, List<UpdateField>, List<IDbDataParameter>, object>> updateWhereCache = new();
 
     private static ConcurrentDictionary<int, Action<IDbCommand, IOrmProvider, StringBuilder, int, object>> deleteBatchCommandInitializerCache = new();
     private static ConcurrentDictionary<int, Func<IDbCommand, IOrmProvider, object, string>> deleteCommandInitializerCache = new();
@@ -738,7 +740,7 @@ class RepositoryHelper
             if (!updateEntityCommandInitializerCache.TryGetValue(cacheKey, out var objCommandInitializer))
             {
                 var entityMapper = mapProvider.GetEntityMap(entityType);
-                var members = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
                     .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
                 var commandExpr = Expression.Parameter(typeof(IDbCommand), "command");
                 var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
@@ -756,7 +758,7 @@ class RepositoryHelper
                 var methodInfo1 = typeof(Extensions).GetMethod(nameof(Extensions.CreateParameter));
                 var methodInfo2 = typeof(IList).GetMethod(nameof(IList.Add));
 
-                foreach (var memberInfo in members)
+                foreach (var memberInfo in memberInfos)
                 {
                     var parameterName = ormProvider.ParameterPrefix + memberInfo.Name;
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper)
@@ -791,17 +793,15 @@ class RepositoryHelper
         }
         return commandInitializer;
     }
-    public static Action<ISqlVisitor, List<SetField>, List<IDbDataParameter>, object> BuildUpdateSetWithParameters(ISqlVisitor sqlVisitor, Type entityType, object updateObj)
+    public static Action<ISqlVisitor, List<UpdateField>, List<IDbDataParameter>, object> BuildUpdateSetWithParameters(ISqlVisitor sqlVisitor, Type entityType, object updateObj)
     {
-        Action<ISqlVisitor, List<SetField>, List<IDbDataParameter>, object> setFieldsInitializer = null;
+        Action<ISqlVisitor, List<UpdateField>, List<IDbDataParameter>, object> setFieldsInitializer = null;
         if (updateObj is IDictionary<string, object> dict)
         {
-            Action<ISqlVisitor, List<SetField>, List<IDbDataParameter>, IDictionary<string, object>> dictSetFieldsInitializer = null;
-            dictSetFieldsInitializer = (visitor, memberMappers, dbParameters, dict) =>
+            Action<ISqlVisitor, List<UpdateField>, List<IDbDataParameter>, IDictionary<string, object>> dictSetFieldsInitializer = null;
+            dictSetFieldsInitializer = (visitor, setFields, dbParameters, dict) =>
             {
                 var entityMapper = visitor.MapProvider.GetEntityMap(entityType);
-                var keyMappers = new List<SetField>();
-                var keyDbParameters = new List<IDbDataParameter>();
                 foreach (var item in dict)
                 {
                     if (!entityMapper.TryGetMemberMap(item.Key, out var memberMapper)
@@ -809,23 +809,11 @@ class RepositoryHelper
                         || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                         continue;
 
-                    if (memberMapper.IsKey)
-                    {
-                        var parameterName = $"{visitor.OrmProvider.ParameterPrefix}k{item.Key}";
-                        keyMappers.Add(new SetField { MemberMapper = memberMapper, Value = parameterName });
-                        var dbParameter = visitor.OrmProvider.CreateParameter(memberMapper, parameterName, dict[item.Key]);
-                        keyDbParameters.Add(dbParameter);
-                    }
-                    else
-                    {
-                        var parameterName = $"{visitor.OrmProvider.ParameterPrefix}{item.Key}";
-                        memberMappers.Add(new SetField { MemberMapper = memberMapper, Value = parameterName });
-                        var dbParameter = visitor.OrmProvider.CreateParameter(memberMapper, parameterName, dict[item.Key]);
-                        keyDbParameters.Add(dbParameter);
-                    }
+                    var parameterName = $"{visitor.OrmProvider.ParameterPrefix}{item.Key}";
+                    setFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
+                    var dbParameter = visitor.OrmProvider.CreateParameter(memberMapper, parameterName, dict[item.Key]);
+                    dbParameters.Add(dbParameter);
                 }
-                memberMappers.AddRange(keyMappers);
-                dbParameters.AddRange(keyDbParameters);
             };
             setFieldsInitializer = (visitor, memberMappers, dbParameters, parameters)
                 => dictSetFieldsInitializer.Invoke(visitor, memberMappers, dbParameters, dict);
@@ -837,9 +825,10 @@ class RepositoryHelper
             if (!updateSetFieldsCache.TryGetValue(cacheKey, out var objSetFieldsInitializer))
             {
                 var entityMapper = sqlVisitor.MapProvider.GetEntityMap(entityType);
-                var members = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
                     .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
-                var setFieldsExpr = Expression.Parameter(typeof(List<SetField>), "setFields");
+                var visitorExpr = Expression.Parameter(typeof(ISqlVisitor), "visitor");
+                var setFieldsExpr = Expression.Parameter(typeof(List<UpdateField>), "setFields");
                 var dbParametersExpr = Expression.Parameter(typeof(List<IDbDataParameter>), "dbParameters");
                 var parameterExpr = Expression.Parameter(typeof(object), "parameter");
 
@@ -850,24 +839,30 @@ class RepositoryHelper
                 blockParameters.Add(typedParameterExpr);
                 blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
 
-                foreach (var memberInfo in members)
+                foreach (var memberInfo in memberInfos)
                 {
-                    var parameterName = sqlVisitor.OrmProvider.ParameterPrefix + memberInfo.Name;
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper)
                         || memberMapper.IsIgnore || memberMapper.IsNavigation
                         || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                         continue;
 
-                    var fieldValue = sqlVisitor.EvaluateAndCache(updateObj, memberInfo.Name);
-                    var methodInfo = typeof(List<IDbDataParameter>).GetMethod(nameof(List<IDbDataParameter>.Add));
-                    var dbParameter = sqlVisitor.OrmProvider.CreateParameter(memberMapper, parameterName, fieldValue);
-                    blockBodies.Add(Expression.Call(dbParametersExpr, methodInfo, Expression.Constant(dbParameter)));
+                    var parameterName = sqlVisitor.OrmProvider.ParameterPrefix + memberInfo.Name;
+                    Expression fieldValueExpr = Expression.PropertyOrField(typedParameterExpr, memberMapper.MemberName);
+                    if (fieldValueExpr.Type != typeof(object))
+                        fieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
+                    var memberMapperExpr = Expression.Constant(memberMapper);
+                    var parameterNameExpr = Expression.Constant(parameterName);
+                    var methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.CreateParameter));
 
-                    methodInfo = typeof(List<SetField>).GetMethod(nameof(List<SetField>.Add));
-                    var setField = new SetField { MemberMapper = memberMapper, Value = parameterName };
+                    var dbParameterExpr = Expression.Call(methodInfo, visitorExpr, memberMapperExpr, parameterNameExpr, fieldValueExpr);
+                    methodInfo = typeof(List<IDbDataParameter>).GetMethod(nameof(List<IDbDataParameter>.Add));
+                    blockBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
+
+                    methodInfo = typeof(List<UpdateField>).GetMethod(nameof(List<UpdateField>.Add));
+                    var setField = new UpdateField { MemberMapper = memberMapper, Value = parameterName };
                     blockBodies.Add(Expression.Call(setFieldsExpr, methodInfo, Expression.Constant(setField)));
                 }
-                objSetFieldsInitializer = Expression.Lambda<Action<List<SetField>, List<IDbDataParameter>, object>>(Expression.Block(blockParameters, blockBodies), setFieldsExpr, dbParametersExpr, parameterExpr).Compile();
+                objSetFieldsInitializer = Expression.Lambda<Action<List<UpdateField>, List<IDbDataParameter>, object>>(Expression.Block(blockParameters, blockBodies), setFieldsExpr, dbParametersExpr, parameterExpr).Compile();
                 updateSetFieldsCache.TryAdd(cacheKey, objSetFieldsInitializer);
             }
             setFieldsInitializer = (visitor, memberMappers, dbParameters, parameters)
@@ -875,7 +870,7 @@ class RepositoryHelper
         }
         return setFieldsInitializer;
     }
-    public static Action<IDbCommand, ISqlVisitor, StringBuilder, object, int> BuildUpdateBulkSetFieldsParameters(ISqlVisitor visitor, Type entityType, object updateObjs)
+    public static Action<IDbCommand, ISqlVisitor, StringBuilder, object, int> BuildUpdateBulkSetFieldsParameters(ISqlVisitor sqlVisitor, Type entityType, object updateObjs)
     {
         Action<IDbCommand, ISqlVisitor, StringBuilder, object, int> bulkSetFieldsInitializer = null;
         var entities = updateObjs as IEnumerable;
@@ -925,10 +920,10 @@ class RepositoryHelper
         }
         else
         {
-            var cacheKey = HashCode.Combine(visitor.DbKey, visitor.OrmProvider, visitor.MapProvider, entityType, updateObjType);
+            var cacheKey = HashCode.Combine(sqlVisitor.DbKey, sqlVisitor.OrmProvider, sqlVisitor.MapProvider, entityType, updateObjType);
             if (!updateBulkSetFieldsCache.TryGetValue(cacheKey, out bulkSetFieldsInitializer))
             {
-                var entityMapper = visitor.MapProvider.GetEntityMap(entityType);
+                var entityMapper = sqlVisitor.MapProvider.GetEntityMap(entityType);
                 var memberInfos = updateObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
                     .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
                 var commandExpr = Expression.Parameter(typeof(IDbCommand), "command");
@@ -949,7 +944,7 @@ class RepositoryHelper
                 var methodInfo4 = typeof(IList).GetMethod(nameof(IList.Add));
 
                 var methodInfo = typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes);
-                var updateHeadExpr = Expression.Constant($"UPDATE {visitor.OrmProvider.GetTableName(entityMapper.TableName)} SET ");
+                var updateHeadExpr = Expression.Constant($"UPDATE {sqlVisitor.OrmProvider.GetTableName(entityMapper.TableName)} SET ");
                 blockBodies.Add(Expression.Call(builderExpr, methodInfo2, updateHeadExpr));
                 blockBodies.Add(Expression.Assign(strIndexExpr, Expression.Call(indexExpr, methodInfo)));
                 var dbParametersExpr = Expression.Property(commandExpr, nameof(IDbCommand.Parameters));
@@ -963,10 +958,10 @@ class RepositoryHelper
                         continue;
                     if (memberMapper.IsKey) continue;
 
-                    var parameterName = $"{visitor.OrmProvider.ParameterPrefix}{memberInfo.Name}";
+                    var parameterName = $"{sqlVisitor.OrmProvider.ParameterPrefix}{memberInfo.Name}";
                     var concatExpr = Expression.Call(Expression.Constant(parameterName), methodInfo1, strIndexExpr);
                     blockBodies.Add(Expression.Assign(parameterNameExpr, concatExpr));
-                    var setExpr = Expression.Constant($"{visitor.OrmProvider.GetFieldName(memberMapper.FieldName)}=");
+                    var setExpr = Expression.Constant($"{sqlVisitor.OrmProvider.GetFieldName(memberMapper.FieldName)}=");
                     blockBodies.Add(Expression.Call(builderExpr, methodInfo2, setExpr));
                     blockBodies.Add(Expression.Call(builderExpr, methodInfo2, parameterNameExpr));
 
@@ -986,9 +981,9 @@ class RepositoryHelper
                     if (!memberInfos.Exists(f => f.Name == keyMapper.MemberName))
                         throw new ArgumentNullException($"参数类型{updateObjType.FullName}缺少主键字段{keyMapper.MemberName}");
 
-                    var parameterName = $"{visitor.OrmProvider.ParameterPrefix}k{keyMapper.MemberName}";
+                    var parameterName = $"{sqlVisitor.OrmProvider.ParameterPrefix}k{keyMapper.MemberName}";
                     Expression.Assign(parameterNameExpr, Expression.Call(Expression.Constant(parameterName), methodInfo1, strIndexExpr));
-                    var setExpr = Expression.Constant($"{visitor.OrmProvider.GetFieldName(keyMapper.FieldName)}=");
+                    var setExpr = Expression.Constant($"{sqlVisitor.OrmProvider.GetFieldName(keyMapper.FieldName)}=");
                     blockBodies.Add(Expression.Call(whereBuilderExpr, methodInfo2, setExpr));
                     blockBodies.Add(Expression.Call(whereBuilderExpr, methodInfo2, parameterNameExpr));
 
@@ -1007,6 +1002,105 @@ class RepositoryHelper
             }
         }
         return bulkSetFieldsInitializer;
+    }
+    public static Action<ISqlVisitor, List<UpdateField>, List<IDbDataParameter>, object> BuildUpdateWhereByParameters(ISqlVisitor sqlVisitor, Type entityType, object whereObj, bool isKey)
+    {
+        Action<ISqlVisitor, List<UpdateField>, List<IDbDataParameter>, object> whereInitializer = null;
+        if (whereObj is IDictionary<string, object> dict)
+        {
+            Action<ISqlVisitor, List<UpdateField>, List<IDbDataParameter>, IDictionary<string, object>> dictWhereInitializer = null;
+            var entityMapper = sqlVisitor.MapProvider.GetEntityMap(entityType);
+            if (isKey)
+            {
+                dictWhereInitializer = (visitor, whereFields, dbParameters, dict) =>
+                {
+                    foreach (var keyMapper in entityMapper.KeyMembers)
+                    {
+                        if (!dict.TryGetValue(keyMapper.MemberName, out var fieldValue))
+                            throw new ArgumentNullException("whereObj", $"字典参数中缺少主键字段{keyMapper.MemberName}");
+
+                        var parameterName = $"{visitor.OrmProvider.ParameterPrefix}k{keyMapper.MemberName}";
+                        whereFields.Add(new UpdateField { MemberMapper = keyMapper, Value = parameterName });
+                        var dbParameter = visitor.OrmProvider.CreateParameter(keyMapper, parameterName, fieldValue);
+                        dbParameters.Add(dbParameter);
+                    }
+                };
+            }
+            else
+            {
+                dictWhereInitializer = (visitor, whereFields, dbParameters, dict) =>
+                {
+                    foreach (var item in dict)
+                    {
+                        if (!entityMapper.TryGetMemberMap(item.Key, out var memberMapper)
+                            || memberMapper.IsIgnore || memberMapper.IsNavigation
+                            || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                            continue;
+
+                        var parameterName = $"{visitor.OrmProvider.ParameterPrefix}k{memberMapper.MemberName}";
+                        whereFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
+                        var dbParameter = visitor.OrmProvider.CreateParameter(memberMapper, parameterName, dict[item.Key]);
+                        dbParameters.Add(dbParameter);
+                    }
+                };
+            }
+            whereInitializer = (visitor, whereFields, dbParameters, parameters)
+                => dictWhereInitializer.Invoke(visitor, whereFields, dbParameters, dict);
+        }
+        else
+        {
+            var parameterType = whereObj.GetType();
+            var cacheKey = HashCode.Combine(sqlVisitor.DbKey, sqlVisitor.OrmProvider, sqlVisitor.MapProvider, entityType, parameterType);
+            if (!updateWhereCache.TryGetValue(cacheKey, out whereInitializer))
+            {
+                var entityMapper = sqlVisitor.MapProvider.GetEntityMap(entityType);
+                var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                    .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+                var visitorExpr = Expression.Parameter(typeof(ISqlVisitor), "visitor");
+                var whereFieldsExpr = Expression.Parameter(typeof(List<UpdateField>), "whereFields");
+                var dbParametersExpr = Expression.Parameter(typeof(List<IDbDataParameter>), "dbParameters");
+                var parameterExpr = Expression.Parameter(typeof(object), "parameter");
+
+                var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
+                var blockParameters = new List<ParameterExpression>();
+                var blockBodies = new List<Expression>();
+
+                blockParameters.Add(typedParameterExpr);
+                blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
+
+                var whereMemberMappers = isKey ? entityMapper.KeyMembers : entityMapper.MemberMaps;
+                foreach (var memberMapper in whereMemberMappers)
+                {
+                    if (!memberInfos.Exists(f => f.Name == memberMapper.MemberName))
+                    {
+                        if (isKey) throw new ArgumentNullException("whereObj", $"当前参数whereObj中缺少主键字段{memberMapper.MemberName}");
+                        else continue;
+                    }
+                    if (memberMapper.IsIgnore || memberMapper.IsNavigation
+                        || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                        continue;
+
+                    var parameterName = $"{sqlVisitor.OrmProvider.ParameterPrefix}k{memberMapper.MemberName}";
+                    Expression fieldValueExpr = Expression.PropertyOrField(typedParameterExpr, memberMapper.MemberName);
+                    if (fieldValueExpr.Type != typeof(object))
+                        fieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
+                    var memberMapperExpr = Expression.Constant(memberMapper);
+                    var parameterNameExpr = Expression.Constant(parameterName);
+                    var methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.CreateParameter));
+
+                    var dbParameterExpr = Expression.Call(methodInfo, visitorExpr, memberMapperExpr, parameterNameExpr, fieldValueExpr);
+                    methodInfo = typeof(List<IDbDataParameter>).GetMethod(nameof(List<IDbDataParameter>.Add));
+                    blockBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
+
+                    methodInfo = typeof(List<UpdateField>).GetMethod(nameof(List<UpdateField>.Add));
+                    var whereField = new UpdateField { Type = UpdateFieldType.Where, MemberMapper = memberMapper, Value = parameterName };
+                    blockBodies.Add(Expression.Call(whereFieldsExpr, methodInfo, Expression.Constant(whereField)));
+                }
+                whereInitializer = Expression.Lambda<Action<ISqlVisitor, List<UpdateField>, List<IDbDataParameter>, object>>(Expression.Block(blockParameters, blockBodies), whereFieldsExpr, dbParametersExpr, parameterExpr).Compile();
+                updateWhereCache.TryAdd(cacheKey, whereInitializer);
+            }
+        }
+        return whereInitializer;
     }
 
     public static Action<IDbCommand, IOrmProvider, IEntityMapProvider, StringBuilder, int, object> BuildDeleteBatchCommandInitializer(IDbConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object deleteObjs, out bool isNeedEndParenthesis)
@@ -1272,7 +1366,7 @@ class RepositoryHelper
             var cacheKey = HashCode.Combine(dbKey, opKey, ormProvider, rawSql, entityType, parameterType);
             if (!rawSqlParametersCache.TryGetValue(cacheKey, out dbParametersInitializer))
             {
-                var members = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
                     .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
                 var dbParametersExpr = Expression.Parameter(typeof(List<IDbDataParameter>), "dbParameters");
                 var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
@@ -1285,7 +1379,7 @@ class RepositoryHelper
                 blockParameters.Add(typedParameterExpr);
                 blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
 
-                foreach (var memberInfo in members)
+                foreach (var memberInfo in memberInfos)
                 {
                     var parameterName = ormProvider.ParameterPrefix + memberInfo.Name;
                     if (!Regex.IsMatch(rawSql, parameterName + @"([^\p{L}\p{N}_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant))

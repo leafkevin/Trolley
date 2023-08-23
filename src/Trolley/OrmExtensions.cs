@@ -355,7 +355,7 @@ public static class OrmExtensions
     /// <param name="updateObj">部分字段更新对象，包含想要更新的所需栏位值</param>
     /// <returns>返回更新行数</returns>
     public static int Update<TEntity>(this IRepository repository, Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObj)
-        => repository.Update<TEntity>().SetWith(fieldsSelectorOrAssignment, updateObj).Execute();
+        => repository.Update<TEntity>().SetWith(fieldsSelectorOrAssignment, updateObj).WhereByKey(updateObj).Execute();
     /// <summary>
     /// 使用集合对象updateObjs部分字段批量更新，集合对象updateObjs中的单个元素实体中必须包含主键字段，支持分批次更新，更新条数超过设置的bulkCount值，将在下次更新，直到所有数据更新完毕，bulkCount默认500，用法：
     /// <code>

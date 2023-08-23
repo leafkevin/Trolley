@@ -6,14 +6,15 @@ using System.Text;
 
 namespace Trolley;
 
-public enum SetFieldType
+public enum UpdateFieldType
 {
     SetField,
-    RawSql
+    RawSql,
+    Where
 }
-public struct SetField
+public struct UpdateField
 {
-    public SetFieldType Type { get; set; }
+    public UpdateFieldType Type { get; set; }
     public MemberMap MemberMapper { get; set; }
     public string Value { get; set; }
 }
@@ -31,6 +32,7 @@ public interface IUpdateVisitor
     IUpdateVisitor SetFrom(Expression fieldSelector, Expression valueSelector);
     IUpdateVisitor SetBulkFirst(Expression fieldsSelectorOrAssignment, object updateObjs);
     void SetBulk(StringBuilder builder, IDbCommand command, object updateObj, int index);
+    IUpdateVisitor WhereBy(object whereObj, bool isKey = true);
     IUpdateVisitor Where(Expression whereExpr);
     IUpdateVisitor And(Expression whereExpr);
 }

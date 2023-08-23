@@ -489,6 +489,22 @@ class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
     #endregion
 
     #region Where/And
+    public IUpdateSet<TEntity> WhereBy(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+
+        this.visitor.WhereBy(whereObj, false);
+        return this;
+    }
+    public IUpdateSet<TEntity> WhereByKey(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+
+        this.visitor.WhereBy(whereObj, true);
+        return this;
+    }
     public IUpdateSetting<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
     public IUpdateSetting<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
