@@ -60,7 +60,7 @@ public class SqlServerUnitTest3 : UnitTestBase
     {
         Initialize();
         using var repository = dbFactory.Create();
-        var result = repository.Update<User>(f => f.Name, new { Id = 1, Name = "leafkevin11" });
+        var result = repository.Update<User>(new { Id = 1, Name = "leafkevin11" });
         var result1 = repository.Get<User>(1);
         Assert.True(result > 0);
         Assert.NotNull(result1);
@@ -72,7 +72,20 @@ public class SqlServerUnitTest3 : UnitTestBase
     {
         Initialize();
         using var repository = dbFactory.Create();
-        var result = repository.Update<User>(f => new { Age = 25, f.Name, CompanyId = DBNull.Value }, new { Id = 1, Age = 18, Name = "leafkevin22" });
+        var result = repository.Update<User>()
+            .SetWith(f => new
+            {
+                Age = 25,
+                f.Name,
+                CompanyId = DBNull.Value
+            }, new
+            {
+                Id = 1,
+                Age = 18,
+                Name = "leafkevin22"
+            })
+            .Where(f => f.Id == 1)
+            .Execute();
         var result1 = repository.Get<User>(1);
         Assert.True(result > 0);
         Assert.NotNull(result1);

@@ -314,49 +314,6 @@ public static class OrmExtensions
     public static async Task<int> UpdateAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, object>> fieldsAssignment, Expression<Func<TEntity, bool>> wherePredicate, CancellationToken cancellationToken = default)
         => await repository.Update<TEntity>().Set(fieldsAssignment).Where(wherePredicate).ExecuteAsync(cancellationToken);
     /// <summary>
-    /// 使用表达式fieldsSelectorOrAssignment字段筛选和更新对象updateObj部分字段根据主键更新，updateObj对象内所有与表达式fieldsSelectorOrAssignment筛选字段名称相同的栏位都将参与更新，同时表达式fieldsSelectorOrAssignment也可以直接给字段赋值，单对象更新，updateObj对象中必须包含主键栏位。
-    /// fieldsSelectorOrAssignment字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，只有带参数的成员访问表达式(如：f =&gt; f.Name)，才会被更新为updateObj中对应栏位的值，其他场景将被更新为对应表达式的值(如：tmpObj.TotalAmount, BuyerId = DBNull.Value等)
-    /// 用法：
-    /// <code>
-    /// var orderInfo = repository
-    ///     .From&lt;Order&gt;()
-    ///     .Where(x =&gt; x.Id == 1)
-    ///     .Select(f ==&gt; new { f.ProductCount, f.Disputes, f.UpdatedAt})
-    ///     .First();
-    /// orderInfo.ProductCount += 2;
-    /// orderInfo.Disputes = new Dispute
-    /// {
-    ///     Id = 1,
-    ///     Content = "43dss",
-    ///     Users = "1,2",
-    ///     Result = "OK",
-    ///     CreatedAt = DateTime.Now
-    /// }
-    /// var tmpObj = new { TotalAmount = 450 };
-    /// repository.Update&lt;Order&gt;(f => new
-    /// {
-    ///     tmpObj.TotalAmount,
-    ///     Products = this.GetProducts(),
-    ///     BuyerId = DBNull.Value,
-    ///     f.ProductCount,
-    ///     f.Disputes
-    /// }, orderInfo);
-    /// private int[] GetProducts() => new int[] { 1, 2, 3 };
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`ProductCount`=@ProductCount,`Disputes`=@Disputes WHERE `Id`=1
-    /// </code>
-    /// 执行后的结果，TotalAmount，Products，BuyerId被更新为对应的值，ProductCount，Disputes被更新为orderInfo中对应的值，UpdatedAt栏位没有更新
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="repository">仓储对象</param>
-    /// <param name="fieldsSelectorOrAssignment">字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，只有带参数的成员访问的表达式(如：f =&gt; f.Name)，才会被更新为updateObj中对应栏位的值，其他场景将被更新为对应表达式的值(如：tmpObj.TotalAmount, BuyerId = DBNull.Value等)</param>
-    /// <param name="updateObj">部分字段更新对象，包含想要更新的所需栏位值</param>
-    /// <returns>返回更新行数</returns>
-    public static int Update<TEntity>(this IRepository repository, Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObj)
-        => repository.Update<TEntity>().SetWith(fieldsSelectorOrAssignment, updateObj).WhereByKey(updateObj).Execute();
-    /// <summary>
     /// 使用集合对象updateObjs部分字段批量更新，集合对象updateObjs中的单个元素实体中必须包含主键字段，支持分批次更新，更新条数超过设置的bulkCount值，将在下次更新，直到所有数据更新完毕，bulkCount默认500，用法：
     /// <code>
     /// var parameters = new []{ new { Id = 1, Name = "Name1" }, new { Id = 2, Name = "Name2" }};

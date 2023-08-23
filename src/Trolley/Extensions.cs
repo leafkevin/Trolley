@@ -84,7 +84,6 @@ public static class Extensions
         return mapper;
     }
 
-
     public static IDbDataParameter CreateParameter(this IOrmProvider ormProvider, MemberMap memberMapper, string parameterName, object fieldValue)
     {
         IDbDataParameter dbParameter = null;
@@ -94,9 +93,6 @@ public static class Extensions
             dbParameter = ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbTypeValue);
         }
         else dbParameter = ormProvider.CreateParameter(parameterName, fieldValue);
-
-        if (memberMapper.TypeHandler != null)
-            memberMapper.TypeHandler.SetValue(ormProvider, dbParameter, fieldValue);
         return dbParameter;
     }
 

@@ -27,12 +27,12 @@ public interface IUpdateVisitor
     IUpdateVisitor Set(Expression fieldSelector, object fieldValue);
     IUpdateVisitor SetRaw(string rawSql, object parameters);
     IUpdateVisitor SetWith(Expression fieldsAssignment);
-    IUpdateVisitor SetWith(Expression fieldsSelectorOrAssignment, object updateObj);
+    IUpdateVisitor SetWith(Expression fieldsSelectorOrAssignment, object updateObj, bool isExceptKey = false);
     IUpdateVisitor SetFrom(Expression fieldsAssignment);
     IUpdateVisitor SetFrom(Expression fieldSelector, Expression valueSelector);
     IUpdateVisitor SetBulkFirst(Expression fieldsSelectorOrAssignment, object updateObjs);
     void SetBulk(StringBuilder builder, IDbCommand command, object updateObj, int index);
-    IUpdateVisitor WhereBy(object whereObj, bool isKey = true);
+    IUpdateVisitor WhereWith(object whereObj, bool isOnlyKeys = false);
     IUpdateVisitor Where(Expression whereExpr);
     IUpdateVisitor And(Expression whereExpr);
 }

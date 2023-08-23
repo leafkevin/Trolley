@@ -517,6 +517,59 @@ public class Repository : IRepository
         await command.DisposeAsync();
         return result;
     }
+    public int Update<TEntity>(Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObj)
+    {
+        if (fieldsSelectorOrAssignment == null)
+            throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
+        if (updateObj == null)
+            throw new ArgumentNullException(nameof(updateObj));
+
+        var entityType = typeof(TEntity);
+        var visitor = this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, entityType, this.isParameterized);
+        var sql = visitor.SetWith(fieldsSelectorOrAssignment, updateObj)
+            .WhereWith(updateObj, true)
+            .BuildSql(out var dbParameters);
+
+        using var command = this.connection.CreateCommand();
+        command.CommandType = CommandType.Text;
+        command.Transaction = this.Transaction;
+        command.CommandText = sql;
+        if (dbParameters != null && dbParameters.Count > 0)
+            dbParameters.ForEach(f => command.Parameters.Add(f));
+
+        this.connection.Open();
+        var result = command.ExecuteNonQuery();
+        command.Dispose();
+        return result;
+    }
+    public async Task<int> UpdateAsync<TEntity>(Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObj, CancellationToken cancellationToken = default)
+    {
+        if (fieldsSelectorOrAssignment == null)
+            throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
+        if (updateObj == null)
+            throw new ArgumentNullException(nameof(updateObj));
+
+        var entityType = typeof(TEntity);
+        var visitor = this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, entityType, this.isParameterized);
+        var sql = visitor.SetWith(fieldsSelectorOrAssignment, updateObj)
+            .WhereWith(updateObj, true)
+            .BuildSql(out var dbParameters);
+
+        using var cmd = this.connection.CreateCommand();
+        cmd.CommandType = CommandType.Text;
+        cmd.Transaction = this.Transaction;
+        cmd.CommandText = sql;
+
+        if (cmd is not DbCommand command)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+        if (dbParameters != null && dbParameters.Count > 0)
+            dbParameters.ForEach(f => command.Parameters.Add(f));
+
+        await this.connection.OpenAsync(cancellationToken);
+        var result = await command.ExecuteNonQueryAsync(cancellationToken);
+        await command.DisposeAsync();
+        return result;
+    }
     #endregion
 
     #region Delete

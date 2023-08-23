@@ -131,7 +131,7 @@ public class SqlVisitor : ISqlVisitor
             case ExpressionType.TypeIs:
                 result = this.VisitTypeIs(sqlSegment);
                 break;
-            default: throw new ArgumentNullException($"不支持的表达式操作，{sqlSegment.Expression}");
+            default: throw new NotSupportedException($"不支持的表达式操作，{sqlSegment.Expression}");
         }
         return result;
     }

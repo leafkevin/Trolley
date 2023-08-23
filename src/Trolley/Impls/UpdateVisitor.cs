@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 
 namespace Trolley;
@@ -35,7 +34,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var entityTableName = this.OrmProvider.GetTableName(this.tables[0].Mapper.TableName);
         var builder = new StringBuilder($"UPDATE {entityTableName} ");
         var aliasName = this.tables[0].AliasName;
-        if (this.IsNeedAlias && aliasName != this.TableAsStart.ToString())
+        if (this.IsNeedAlias && aliasName.Length == 1)
             builder.Append($"{aliasName} ");
 
         if (this.isJoin && this.tables.Count > 1)
@@ -53,16 +52,26 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 builder.Append($" ON {tableSegment.OnExpr} ");
             }
         }
-
+        int index = 0;
+        bool hasWhere = false;
         builder.Append("SET ");
         if (this.updateFields != null && this.updateFields.Count > 0)
         {
-            for (int i = 0; i < updateFields.Count; i++)
+            foreach (var setField in this.updateFields)
             {
-                var setField = this.updateFields[i];
-                if (i > 0) builder.Append(',');
-                if (this.IsNeedAlias) builder.Append($"{aliasName}");
-                builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={setField.Value}");
+                if (setField.Type == UpdateFieldType.Where)
+                {
+                    hasWhere = true;
+                    continue;
+                }
+                if (index > 0) builder.Append(',');
+                if (setField.Type == UpdateFieldType.SetField)
+                {
+                    if (this.IsNeedAlias) builder.Append($"{aliasName}.");
+                    builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={setField.Value}");
+                }
+                else builder.Append(setField.Value);
+                index++;
             }
         }
 
@@ -81,9 +90,28 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 builder.Append($"{tableName} {tableSegment.AliasName}");
             }
         }
-
+        if (!string.IsNullOrEmpty(this.whereSql) || hasWhere)
+            builder.Append(" WHERE ");
+        if (hasWhere)
+        {
+            index = 0;
+            foreach (var setField in this.updateFields)
+            {
+                if (setField.Type != UpdateFieldType.Where)
+                    continue;
+                if (index > 0) builder.Append(',');
+                if (this.IsNeedAlias) builder.Append($"{aliasName}");
+                builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={setField.Value}");
+                index++;
+            }
+        }
         if (!string.IsNullOrEmpty(this.whereSql))
-            builder.Append(" WHERE " + this.whereSql);
+        {
+            if (hasWhere)
+                builder.Append(" AND ");
+            builder.Append(this.whereSql);
+        }
+
         dbParameters = this.dbParameters;
         return builder.ToString();
     }
@@ -133,11 +161,11 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
                         continue;
 
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i] });
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i], MemberMapper = memberMapper });
                     //只一个成员访问，没有设置语句，什么也不做，忽略
                     if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberInfo.Name)
                         continue;
-                    this.updateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = this.GetQuotedValue(sqlSegment) });
+                    this.AddMemberElement(sqlSegment, memberMapper);
                 }
                 break;
             case ExpressionType.MemberInit:
@@ -153,7 +181,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     //只一个成员访问，没有设置语句，什么也不做，忽略
                     if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
                         continue;
-                    this.updateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = this.GetQuotedValue(sqlSegment) });
+                    this.AddMemberElement(sqlSegment, memberMapper);
                 }
                 break;
         }
@@ -215,7 +243,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         return this;
     }
-    public virtual IUpdateVisitor SetWith(Expression fieldsSelectorOrAssignment, object updateObj)
+    public virtual IUpdateVisitor SetWith(Expression fieldsSelectorOrAssignment, object updateObj, bool isExceptKey = false)
     {
         var entityMapper = this.tables[0].Mapper;
         if (fieldsSelectorOrAssignment != null)
@@ -264,7 +292,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         else
         {
-            var parametersInitializer = RepositoryHelper.BuildUpdateSetWithParameters(this, entityMapper.EntityType, updateObj);
+            this.dbParameters ??= new();
+            var parametersInitializer = RepositoryHelper.BuildUpdateSetWithParameters(this, entityMapper.EntityType, updateObj, isExceptKey);
             parametersInitializer.Invoke(this, this.updateFields, this.dbParameters, updateObj);
         }
         return this;
@@ -445,10 +474,11 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public virtual void SetBulk(StringBuilder builder, IDbCommand command, object updateObj, int index)
         => this.bulkSetFieldsInitializer.Invoke(command, this, builder, updateObj, index);
-    public virtual IUpdateVisitor WhereBy(object whereObj, bool isKey = true)
+    public virtual IUpdateVisitor WhereWith(object whereObj, bool isOnlyKeys = false)
     {
         var entityMapper = this.tables[0].Mapper;
-        var whereInitializer = RepositoryHelper.BuildUpdateWhereByParameters(this, entityMapper.EntityType, whereObj, isKey);
+        this.dbParameters ??= new();
+        var whereInitializer = RepositoryHelper.BuildUpdateWhereWithParameters(this, entityMapper.EntityType, whereObj, isOnlyKeys);
         whereInitializer.Invoke(this, this.updateFields, this.dbParameters, whereObj);
         return this;
     }
@@ -662,6 +692,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.updateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = "NULL" });
             return;
         }
+        sqlSegment.IsParameterized = true;
+        sqlSegment.MemberMapper = memberMapper;
+        sqlSegment.ParameterName = memberMapper.MemberName;
         this.updateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = this.GetQuotedValue(sqlSegment) });
     }
 }

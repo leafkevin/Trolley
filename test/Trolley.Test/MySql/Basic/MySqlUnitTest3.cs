@@ -555,9 +555,9 @@ public class MySqlUnitTest3 : UnitTestBase
         var sql1 = repository.Update<User>()
             .SetWith(new
             {
-                Id = 1,
                 Gender = Gender.Male
             })
+            .Where(new { Id = 1 })
             .ToSql(out var parameters1);
         Assert.True(sql1 == "UPDATE `sys_user` SET `Gender`=@Gender WHERE `Id`=@kId");
         Assert.True(parameters1[0].ParameterName == "@Gender");
@@ -576,6 +576,7 @@ public class MySqlUnitTest3 : UnitTestBase
         var user = new User { Gender = Gender.Female };
         var sql3 = repository.Update<User>()
             .SetWith(f => new { f.Age, user.Gender }, new { Id = 1, Age = 20 })
+            .Where(new { Id = 1, Age = 20 })
             .ToSql(out var parameters3);
         Assert.True(sql3 == "UPDATE `sys_user` SET `Age`=@Age,`Gender`=@Gender WHERE `Id`=@kId");
         Assert.True(parameters3[1].ParameterName == "@Gender");

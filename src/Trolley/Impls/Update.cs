@@ -340,6 +340,7 @@ class UpdateBase
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
     protected readonly IUpdateVisitor visitor;
+    protected bool hasWhere = false;
     #endregion
 
     #region Ctors
@@ -354,11 +355,12 @@ class UpdateBase
     #region Execute
     public int Execute()
     {
+        if (!hasWhere)
+            throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
         using var command = this.connection.CreateCommand();
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        command.CommandText = sql;
+        command.CommandText = this.visitor.BuildSql(out var dbParameters);
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
         this.connection.Open();
@@ -368,11 +370,12 @@ class UpdateBase
     }
     public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
+        if (!hasWhere)
+            throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
         using var cmd = this.connection.CreateCommand();
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        cmd.CommandText = sql;
+        cmd.CommandText = this.visitor.BuildSql(out var dbParameters);
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => cmd.Parameters.Add(f));
         if (cmd is not DbCommand command)
@@ -386,7 +389,12 @@ class UpdateBase
     #endregion
 
     #region ToSql
-    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
+    public string ToSql(out List<IDbDataParameter> dbParameters)
+    {
+        if (!hasWhere)
+            throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+        return this.visitor.BuildSql(out dbParameters);
+    }
     #endregion
 }
 class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
@@ -489,20 +497,12 @@ class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
     #endregion
 
     #region Where/And
-    public IUpdateSet<TEntity> WhereBy(object whereObj)
+    public IUpdateSet<TEntity> Where<TFields>(TFields whereObj)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
-
-        this.visitor.WhereBy(whereObj, false);
-        return this;
-    }
-    public IUpdateSet<TEntity> WhereByKey(object whereObj)
-    {
-        if (whereObj == null)
-            throw new ArgumentNullException(nameof(whereObj));
-
-        this.visitor.WhereBy(whereObj, true);
+        this.visitor.WhereWith(whereObj);
+        this.hasWhere = true;
         return this;
     }
     public IUpdateSetting<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
@@ -515,6 +515,7 @@ class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
         if (condition)
             this.visitor.Where(ifPredicate);
         else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     public IUpdateSetting<TEntity> And(Expression<Func<TEntity, bool>> predicate)
@@ -527,6 +528,7 @@ class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
         if (condition)
             this.visitor.And(ifPredicate);
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     #endregion
@@ -645,6 +647,7 @@ class UpdateFrom<TEntity, T1> : UpdateBase, IUpdateFrom<TEntity, T1>
         if (condition)
             this.visitor.Where(ifPredicate);
         else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     public IUpdateFrom<TEntity, T1> And(Expression<Func<TEntity, T1, bool>> predicate)
@@ -657,6 +660,7 @@ class UpdateFrom<TEntity, T1> : UpdateBase, IUpdateFrom<TEntity, T1>
         if (condition)
             this.visitor.And(ifPredicate);
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     #endregion
@@ -775,6 +779,7 @@ class UpdateFrom<TEntity, T1, T2> : UpdateBase, IUpdateFrom<TEntity, T1, T2>
         if (condition)
             this.visitor.Where(ifPredicate);
         else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2> And(Expression<Func<TEntity, T1, T2, bool>> predicate)
@@ -787,6 +792,7 @@ class UpdateFrom<TEntity, T1, T2> : UpdateBase, IUpdateFrom<TEntity, T1, T2>
         if (condition)
             this.visitor.And(ifPredicate);
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     #endregion
@@ -905,6 +911,7 @@ class UpdateFrom<TEntity, T1, T2, T3> : UpdateBase, IUpdateFrom<TEntity, T1, T2,
         if (condition)
             this.visitor.Where(ifPredicate);
         else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2, T3> And(Expression<Func<TEntity, T1, T2, T3, bool>> predicate)
@@ -917,6 +924,7 @@ class UpdateFrom<TEntity, T1, T2, T3> : UpdateBase, IUpdateFrom<TEntity, T1, T2,
         if (condition)
             this.visitor.And(ifPredicate);
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     #endregion
@@ -1035,6 +1043,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateFrom<TEntity, T1,
         if (condition)
             this.visitor.Where(ifPredicate);
         else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2, T3, T4> And(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate)
@@ -1047,6 +1056,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateFrom<TEntity, T1,
         if (condition)
             this.visitor.And(ifPredicate);
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     #endregion
@@ -1165,6 +1175,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateFrom<TEntity,
         if (condition)
             this.visitor.Where(ifPredicate);
         else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> And(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate)
@@ -1177,6 +1188,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateFrom<TEntity,
         if (condition)
             this.visitor.And(ifPredicate);
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     #endregion
@@ -1314,6 +1326,7 @@ class UpdateJoin<TEntity, T1> : UpdateBase, IUpdateJoin<TEntity, T1>
         if (condition)
             this.visitor.Where(ifPredicate);
         else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     public IUpdateJoin<TEntity, T1> And(Expression<Func<TEntity, T1, bool>> predicate)
@@ -1326,6 +1339,7 @@ class UpdateJoin<TEntity, T1> : UpdateBase, IUpdateJoin<TEntity, T1>
         if (condition)
             this.visitor.And(ifPredicate);
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     #endregion
@@ -1463,6 +1477,7 @@ class UpdateJoin<TEntity, T1, T2> : UpdateBase, IUpdateJoin<TEntity, T1, T2>
         if (condition)
             this.visitor.Where(ifPredicate);
         else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2> And(Expression<Func<TEntity, T1, T2, bool>> predicate)
@@ -1475,6 +1490,7 @@ class UpdateJoin<TEntity, T1, T2> : UpdateBase, IUpdateJoin<TEntity, T1, T2>
         if (condition)
             this.visitor.And(ifPredicate);
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     #endregion
@@ -1612,6 +1628,7 @@ class UpdateJoin<TEntity, T1, T2, T3> : UpdateBase, IUpdateJoin<TEntity, T1, T2,
         if (condition)
             this.visitor.Where(ifPredicate);
         else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2, T3> And(Expression<Func<TEntity, T1, T2, T3, bool>> predicate)
@@ -1624,6 +1641,7 @@ class UpdateJoin<TEntity, T1, T2, T3> : UpdateBase, IUpdateJoin<TEntity, T1, T2,
         if (condition)
             this.visitor.And(ifPredicate);
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     #endregion
@@ -1761,6 +1779,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateJoin<TEntity, T1,
         if (condition)
             this.visitor.Where(ifPredicate);
         else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2, T3, T4> And(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate)
@@ -1773,6 +1792,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateJoin<TEntity, T1,
         if (condition)
             this.visitor.And(ifPredicate);
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     #endregion
@@ -1891,6 +1911,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateJoin<TEntity,
         if (condition)
             this.visitor.Where(ifPredicate);
         else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> And(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate)
@@ -1903,6 +1924,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateJoin<TEntity,
         if (condition)
             this.visitor.And(ifPredicate);
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
     #endregion
