@@ -13,7 +13,6 @@ public class SqlSegment
     public static readonly SqlSegment True = new SqlSegment { isFixValue = true, OperationType = OperationType.None, IsConstant = true, Value = true };
     public static readonly SqlSegment Null = new SqlSegment { isFixValue = true, OperationType = OperationType.None, IsConstant = true, Value = "NULL" };
     private bool isFixValue = false;
-    private Type currentType = null;
 
     /// <summary>
     /// 操作符:None,Equal,Not,And,Or

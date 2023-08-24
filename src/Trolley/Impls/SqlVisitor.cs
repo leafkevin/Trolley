@@ -1014,10 +1014,8 @@ public class SqlVisitor : ISqlVisitor
         }
         var result = queryVisitor.BuildSql(out var dbDataParameters, out _);
         if (dbDataParameters != null && dbDataParameters.Count > 0)
-        {
-            this.dbParameters ??= new();
             this.dbParameters.AddRange(dbDataParameters);
-        }
+
         isNeedAlias = queryVisitor.IsNeedAlias;
         return result;
     }
@@ -1026,7 +1024,6 @@ public class SqlVisitor : ISqlVisitor
         if (sqlSegment.IsVariable || (sqlSegment.IsParameterized || this.IsParameterized) && sqlSegment.IsConstant)
         {
             string parameterName = null;
-            this.dbParameters ??= new();
             if (!string.IsNullOrEmpty(sqlSegment.ParameterName))
             {
                 parameterName = this.OrmProvider.ParameterPrefix + sqlSegment.ParameterName;
@@ -1091,7 +1088,6 @@ public class SqlVisitor : ISqlVisitor
         if (sqlSegment.IsVariable || (sqlSegment.IsParameterized || this.IsParameterized) && sqlSegment.IsConstant)
         {
             string parameterName = null;
-            this.dbParameters ??= new();
             if (!string.IsNullOrEmpty(sqlSegment.ParameterName))
             {
                 parameterName = this.OrmProvider.ParameterPrefix + sqlSegment.ParameterName;
@@ -1137,7 +1133,7 @@ public class SqlVisitor : ISqlVisitor
         if (sqlSegment.IsVariable || (this.IsParameterized || sqlSegment.IsParameterized) && sqlSegment.IsConstant)
         {
             string parameterName = null;
-            var dataParameters = dbParameters ?? (this.dbParameters ??= new List<IDbDataParameter>());
+            var dataParameters = dbParameters ?? this.dbParameters;
             if (!string.IsNullOrEmpty(sqlSegment.ParameterName))
             {
                 parameterName = this.OrmProvider.ParameterPrefix + sqlSegment.ParameterName;
@@ -1145,6 +1141,10 @@ public class SqlVisitor : ISqlVisitor
                     parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + dataParameters.Count.ToString();
             }
             else parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + dataParameters.Count.ToString();
+
+            //只有常量和变量才有可能是数组
+            if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
+                sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
 
             if (index.HasValue)
                 parameterName += index.ToString();
@@ -1165,6 +1165,9 @@ public class SqlVisitor : ISqlVisitor
             //对枚举常量，且数据库类型是字符串类型做了特殊处理，目前只有这一种情况
             if (sqlSegment.MemberMapper != null)
             {
+                //只有常量和变量才有可能是数组
+                if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
+                    sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
                 sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.MemberMapper, sqlSegment.Value);
                 return this.OrmProvider.GetQuotedValue(sqlSegment.Value);
             }
@@ -1179,7 +1182,6 @@ public class SqlVisitor : ISqlVisitor
             return "NULL";
         if (arraySegment.IsVariable || (this.IsParameterized || arraySegment.IsParameterized) && arraySegment.IsConstant)
         {
-            this.dbParameters ??= new();
             var parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
             if (index.HasValue)
                 parameterName += index.ToString();
@@ -1194,7 +1196,33 @@ public class SqlVisitor : ISqlVisitor
             elementValue = this.OrmProvider.ToFieldValue(arraySegment.MemberMapper, elementValue);
         return this.OrmProvider.GetQuotedValue(elementValue);
     }
+    public virtual string GetQuotedValue(object fieldValue, MemberMap memberMapper, bool isParameterized = true, List<IDbDataParameter> dbParameters = null, int? index = null)
+    {
+        //默认只要是变量就设置为参数
+        if (isParameterized)
+        {
+            var dataParameters = dbParameters ?? this.dbParameters;
+            var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
+            if (dataParameters.Exists(f => f.ParameterName == parameterName))
+                parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + dataParameters.Count.ToString();
 
+            if (index.HasValue)
+                parameterName += index.ToString();
+            IDbDataParameter dbParameter = null;
+            if (memberMapper != null)
+                dbParameter = this.OrmProvider.CreateParameter(memberMapper, parameterName, fieldValue);
+            else dbParameter = this.OrmProvider.CreateParameter(parameterName, fieldValue);
+
+            dataParameters.Add(dbParameter);
+            return parameterName;
+        }
+        if (memberMapper != null)
+        {
+            fieldValue = this.OrmProvider.ToFieldValue(memberMapper, fieldValue);
+            return this.OrmProvider.GetQuotedValue(fieldValue);
+        }
+        return this.OrmProvider.GetQuotedValue(fieldValue);
+    }
 
     public SqlSegment VisitDeferredBoolConditional(SqlSegment sqlSegment, bool isExpectBooleanType, string ifTrueValue, string ifFalseValue)
     {

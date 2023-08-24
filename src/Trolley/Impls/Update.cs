@@ -243,7 +243,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         foreach (var updateObj in this.updateObjs)
         {
             if (index > 0) sqlBuilder.Append(';');
-            else this.visitor.SetBulk(sqlBuilder, command, updateObj, index);
+            this.visitor.SetBulk(sqlBuilder, command, updateObj, index);
 
             if (index >= this.bulkCount)
             {
@@ -279,7 +279,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         foreach (var updateObj in this.updateObjs)
         {
             if (index > 0) sqlBuilder.Append(';');
-            else this.visitor.SetBulk(sqlBuilder, command, updateObj, index);
+            this.visitor.SetBulk(sqlBuilder, command, updateObj, index);
 
             if (index >= this.bulkCount)
             {
@@ -315,7 +315,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
         foreach (var updateObj in this.updateObjs)
         {
             if (index > 0) sqlBuilder.Append(';');
-            else this.visitor.SetBulk(sqlBuilder, command, updateObj, index);
+            this.visitor.SetBulk(sqlBuilder, command, updateObj, index);
 
             if (index >= this.bulkCount)
             {

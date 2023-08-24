@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq.Expressions;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -517,56 +519,126 @@ public class Repository : IRepository
         await command.DisposeAsync();
         return result;
     }
-    public int Update<TEntity>(Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObj)
+    public int Update<TEntity>(Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObjs, int bulkCount = 500)
     {
         if (fieldsSelectorOrAssignment == null)
             throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
-        if (updateObj == null)
-            throw new ArgumentNullException(nameof(updateObj));
+        if (updateObjs == null)
+            throw new ArgumentNullException(nameof(updateObjs));
 
+        int result = 0;
         var entityType = typeof(TEntity);
+        bool isMulti = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not Dictionary<string, object>;
         var visitor = this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, entityType, this.isParameterized);
-        var sql = visitor.SetWith(fieldsSelectorOrAssignment, updateObj)
-            .WhereWith(updateObj, true)
-            .BuildSql(out var dbParameters);
-
         using var command = this.connection.CreateCommand();
         command.CommandType = CommandType.Text;
         command.Transaction = this.Transaction;
-        command.CommandText = sql;
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
+        if (isMulti)
+        {
+            visitor.SetBulkFirst(fieldsSelectorOrAssignment, updateObjs);
+
+            int index = 0;
+            var sqlBuilder = new StringBuilder();
+            var updateParameters = updateObjs as IEnumerable;
+            foreach (var updateObj in updateParameters)
+            {
+                if (index > 0) sqlBuilder.Append(';');
+                visitor.SetBulk(sqlBuilder, command, updateObj, index);
+
+                if (index >= bulkCount)
+                {
+                    command.CommandText = sqlBuilder.ToString();
+                    this.connection.Open();
+                    result += command.ExecuteNonQuery();
+                    command.Parameters.Clear();
+                    sqlBuilder.Clear();
+                    index = 0;
+                    continue;
+                }
+                index++;
+            }
+            if (index > 0)
+            {
+                command.CommandText = sqlBuilder.ToString();
+                this.connection.Open();
+                result += command.ExecuteNonQuery();
+            }
+        }
+        else
+        {
+            var sql = visitor.SetWith(fieldsSelectorOrAssignment, updateObjs)
+                .WhereWith(updateObjs, true)
+                .BuildSql(out var dbParameters);
+            command.CommandText = sql;
+            if (dbParameters != null && dbParameters.Count > 0)
+                dbParameters.ForEach(f => command.Parameters.Add(f));
+
+            this.connection.Open();
+            result = command.ExecuteNonQuery();
+        }
         command.Dispose();
         return result;
     }
-    public async Task<int> UpdateAsync<TEntity>(Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObj, CancellationToken cancellationToken = default)
+    public async Task<int> UpdateAsync<TEntity>(Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
     {
         if (fieldsSelectorOrAssignment == null)
             throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
-        if (updateObj == null)
-            throw new ArgumentNullException(nameof(updateObj));
+        if (updateObjs == null)
+            throw new ArgumentNullException(nameof(updateObjs));
 
+        int result = 0;
         var entityType = typeof(TEntity);
+        bool isMulti = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not Dictionary<string, object>;
         var visitor = this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, entityType, this.isParameterized);
-        var sql = visitor.SetWith(fieldsSelectorOrAssignment, updateObj)
-            .WhereWith(updateObj, true)
-            .BuildSql(out var dbParameters);
-
         using var cmd = this.connection.CreateCommand();
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.Transaction;
-        cmd.CommandText = sql;
 
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
+        if (isMulti)
+        {
+            visitor.SetBulkFirst(fieldsSelectorOrAssignment, updateObjs);
+
+            int index = 0;
+            var sqlBuilder = new StringBuilder();
+            var updateParameters = updateObjs as IEnumerable;
+            foreach (var updateObj in updateParameters)
+            {
+                if (index > 0) sqlBuilder.Append(';');
+                visitor.SetBulk(sqlBuilder, command, updateObj, index);
+
+                if (index >= bulkCount)
+                {
+                    command.CommandText = sqlBuilder.ToString();
+                    await this.connection.OpenAsync(cancellationToken);
+                    result += await command.ExecuteNonQueryAsync(cancellationToken);
+                    command.Parameters.Clear();
+                    sqlBuilder.Clear();
+                    index = 0;
+                    continue;
+                }
+                index++;
+            }
+            if (index > 0)
+            {
+                command.CommandText = sqlBuilder.ToString();
+                await this.connection.OpenAsync(cancellationToken);
+                result += await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            var sql = visitor.WhereWith(updateObjs, true).BuildSql(out var dbParameters);
+            command.CommandText = sql;
+            if (dbParameters != null && dbParameters.Count > 0)
+                dbParameters.ForEach(f => command.Parameters.Add(f));
+
+            await this.connection.OpenAsync(cancellationToken);
+            result = await command.ExecuteNonQueryAsync(cancellationToken);
+        }
         await command.DisposeAsync();
         return result;
     }

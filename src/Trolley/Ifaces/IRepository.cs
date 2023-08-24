@@ -409,7 +409,8 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回更新行数</returns>
     Task<int> UpdateAsync<TEntity>(object updateObj, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 使用表达式fieldsSelectorOrAssignment字段筛选和更新对象updateObj部分字段根据主键更新，updateObj对象内所有与表达式fieldsSelectorOrAssignment筛选字段名称相同的栏位都将参与更新，同时表达式fieldsSelectorOrAssignment也可以直接给字段赋值，单对象更新，updateObj对象中必须包含主键栏位。
+    /// 使用表达式fieldsSelectorOrAssignment字段筛选和更新对象updateObjs部分字段根据主键进行更新，可单条也可多条数据更新，多条可多次完成，每次更新bulkCount条数。
+    /// updateObjs对象内所有与表达式fieldsSelectorOrAssignment筛选字段名称相同的栏位都将参与更新，同时表达式fieldsSelectorOrAssignment也可以直接给字段赋值，updateObjs对象中必须包含主键栏位。
     /// fieldsSelectorOrAssignment字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，只有带参数的成员访问表达式(如：f =&gt; f.Name)，才会被更新为updateObj中对应栏位的值，其他场景将被更新为对应表达式的值(如：tmpObj.TotalAmount, BuyerId = DBNull.Value等)
     /// 用法：
     /// <code>
@@ -446,11 +447,13 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="fieldsSelectorOrAssignment">字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，只有带参数的成员访问的表达式(如：f =&gt; f.Name)，才会被更新为updateObj中对应栏位的值，其他场景将被更新为对应表达式的值(如：tmpObj.TotalAmount, BuyerId = DBNull.Value等)</param>
-    /// <param name="updateObj">部分字段更新对象，包含想要更新的所需栏位值</param>
+    /// <param name="updateObjs">部分字段更新对象，包含想要更新的所需栏位值，可单条也可多条数据更新</param>
+    /// <param name="bulkCount">多条数据更新时，一次入库的最大条数，剩余条数会放到下次更新中</param>
     /// <returns>返回更新行数</returns>
-    int Update<TEntity>(Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObj);
+    int Update<TEntity>(Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObjs, int bulkCount = 500);
     /// <summary>
-    /// 使用表达式fieldsSelectorOrAssignment字段筛选和更新对象updateObj部分字段根据主键更新，updateObj对象内所有与表达式fieldsSelectorOrAssignment筛选字段名称相同的栏位都将参与更新，同时表达式fieldsSelectorOrAssignment也可以直接给字段赋值，单对象更新，updateObj对象中必须包含主键栏位。
+    /// 使用表达式fieldsSelectorOrAssignment字段筛选和更新对象updateObjs部分字段根据主键进行更新，可单条也可多条数据更新，多条可多次完成，每次更新bulkCount条数。
+    /// updateObjs对象内所有与表达式fieldsSelectorOrAssignment筛选字段名称相同的栏位都将参与更新，同时表达式fieldsSelectorOrAssignment也可以直接给字段赋值，updateObjs对象中必须包含主键栏位。
     /// fieldsSelectorOrAssignment字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，只有带参数的成员访问表达式(如：f =&gt; f.Name)，才会被更新为updateObj中对应栏位的值，其他场景将被更新为对应表达式的值(如：tmpObj.TotalAmount, BuyerId = DBNull.Value等)
     /// 用法：
     /// <code>
@@ -487,10 +490,11 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="fieldsSelectorOrAssignment">字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，只有带参数的成员访问的表达式(如：f =&gt; f.Name)，才会被更新为updateObj中对应栏位的值，其他场景将被更新为对应表达式的值(如：tmpObj.TotalAmount, BuyerId = DBNull.Value等)</param>
-    /// <param name="updateObj">部分字段更新对象，包含想要更新的所需栏位值</param>
+    /// <param name="updateObjs">部分字段更新对象，包含想要更新的所需栏位值</param>
+    /// <param name="bulkCount">多条数据更新时，一次入库的最大条数，剩余条数会放到下次更新中</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回更新行数</returns>
-    Task<int> UpdateAsync<TEntity>(Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObj, CancellationToken cancellationToken = default);
+    Task<int> UpdateAsync<TEntity>(Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObjs, int bulkCount = 500, CancellationToken cancellationToken = default);
     #endregion
 
     #region Delete

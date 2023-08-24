@@ -32,6 +32,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         this.tables = new();
         this.tableAlias = new();
+        this.dbParameters = new();
     }
     /// <summary>
     /// Union,ToSql,Join,Cte，各种子查询,各种单值查询，但都有SELECT操作
@@ -267,11 +268,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         tableSegment.IsNeedAlais = true;
         this.InitFromQueryReaderFields(tableSegment, readerFields);
         if (dbParameters != null)
-        {
-            if (this.dbParameters == null)
-                this.dbParameters = dbParameters;
-            else this.dbParameters.AddRange(dbParameters);
-        }
+            this.dbParameters.AddRange(dbParameters);
         return tableSegment;
     }
     public virtual IQueryVisitor WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null)
@@ -307,11 +304,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var tableSegment = this.AddTable(entityType, string.Empty, TableType.FromQuery, cteTableName, readerFields);
         this.InitFromQueryReaderFields(tableSegment, readerFields);
         if (dbParameters != null)
-        {
-            if (this.dbParameters == null)
-                this.dbParameters = dbParameters;
-            else this.dbParameters.AddRange(dbParameters);
-        }
+            this.dbParameters.AddRange(dbParameters);
         //清掉构建CTE表时Union产生的sql
         this.sql = null;
         return this;
@@ -324,11 +317,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         readerFields.ForEach(f => f.TableSegment = this.tables[0]);
         this.cteTableSql = null;
         if (dbParameters != null)
-        {
-            if (this.dbParameters == null)
-                this.dbParameters = dbParameters;
-            else this.dbParameters.AddRange(dbParameters);
-        }
+            this.dbParameters.AddRange(dbParameters);
         this.sql = sql;
     }
     public virtual void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null)
@@ -1747,29 +1736,5 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         if (memberExpr == null) return false;
         return typeof(IAggregateSelect).IsAssignableFrom(memberExpr.Member.DeclaringType) && memberExpr.Member.Name == "Grouping";
-    }
-    private void Clear()
-    {
-        this.sql = null;
-        this.whereSql = string.Empty;
-        this.groupBySql = string.Empty;
-        this.havingSql = string.Empty;
-        this.orderBySql = string.Empty;
-        this.skip = null;
-        this.limit = null;
-        this.isDistinct = false;
-        this.cteTableSql = null;
-
-        this.includeSegments = null;
-        this.lastIncludeSegment = null;
-        this.groupFields = null;
-
-        this.IsNeedAlias = false;
-        this.isSelect = false;
-        this.isWhere = false;
-        this.isFromQuery = false;
-        this.tables.Clear();
-        this.tableAlias.Clear();
-        this.parameterPrefix = "p";
     }
 }

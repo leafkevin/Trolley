@@ -21,6 +21,7 @@ class DeleteVisitor : SqlVisitor, IDeleteVisitor
             EntityType = entityType,
             Mapper = this.MapProvider.GetEntityMap(entityType)
         };
+        this.dbParameters = new();
     }
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
@@ -200,11 +201,6 @@ class DeleteVisitor : SqlVisitor, IDeleteVisitor
         builder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName) + "=");
         if (sqlSegment == SqlSegment.Null)
             builder.Append("NULL");
-        else
-        {
-            if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
-                sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
-            builder.Append(this.GetQuotedValue(sqlSegment));
-        }
+        else builder.Append(this.GetQuotedValue(sqlSegment));
     }
 }

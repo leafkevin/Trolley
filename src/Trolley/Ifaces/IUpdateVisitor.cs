@@ -9,6 +9,7 @@ namespace Trolley;
 public enum UpdateFieldType
 {
     SetField,
+    SetValue,
     RawSql,
     Where
 }

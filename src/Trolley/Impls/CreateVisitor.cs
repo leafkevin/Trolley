@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 
 namespace Trolley;
@@ -23,6 +22,7 @@ class CreateVisitor : SqlVisitor, ICreateVisitor
             EntityType = entityType,
             Mapper = this.MapProvider.GetEntityMap(entityType)
         });
+        this.dbParameters = new();
     }
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
@@ -264,8 +264,6 @@ class CreateVisitor : SqlVisitor, ICreateVisitor
             fromBuilder.Append("NULL");
         else
         {
-            if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
-                sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
             sqlSegment.IsParameterized = true;
             sqlSegment.MemberMapper = memberMapper;
             sqlSegment.ParameterName = memberMapper.MemberName;
