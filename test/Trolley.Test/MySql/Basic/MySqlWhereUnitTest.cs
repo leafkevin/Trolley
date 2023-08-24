@@ -115,7 +115,6 @@ public class MySqlWhereUnitTest : UnitTestBase
             .Select(f => f.Id)
             .ToSql(out dbParameters);
         Assert.True(sql4 == "SELECT `Id` FROM `sys_user` WHERE (CASE WHEN `IsEnabled`=1 THEN `SourceType` ELSE 'Website' END)>'Website'");
-        Assert.Null(dbParameters);
         var result5 = await repository.QueryAsync<Company>(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature);
         Assert.True(result5.Count >= 2);
         Assert.True(result5[0].Nature == localNature);

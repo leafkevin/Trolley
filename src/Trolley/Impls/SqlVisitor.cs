@@ -487,9 +487,11 @@ public class SqlVisitor : ISqlVisitor
             if (!memberGetterCache.TryGetValue(cacheKey, out var getter))
             {
                 var objExpr = Expression.Parameter(typeof(object), "obj");
-                Expression valueExpr = Expression.PropertyOrField(Expression.Convert(objExpr, type), memberName);
-                var resultExpr = Expression.Convert(valueExpr, typeof(object));
-                getter = Expression.Lambda<Func<object, object>>(resultExpr, objExpr).Compile();
+                var typedObjExpr = Expression.Convert(objExpr, type);
+                Expression valueExpr = Expression.PropertyOrField(typedObjExpr, memberName);
+                if (valueExpr.Type != typeof(object))
+                    valueExpr = Expression.Convert(valueExpr, typeof(object));
+                getter = Expression.Lambda<Func<object, object>>(valueExpr, objExpr).Compile();
                 memberGetterCache.TryAdd(cacheKey, getter);
             }
             return getter.Invoke(valueOrEntity);

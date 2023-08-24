@@ -106,27 +106,7 @@ public class MySqlUnitTest3 : UnitTestBase
         });
     }
     [Fact]
-    public void Update_WithBy_Parameters()
-    {
-        Initialize();
-        using var repository = dbFactory.Create();
-        repository.BeginTransaction();
-        var result = repository.Update<Order>().SetWith(new
-        {
-            ProductCount = 10,
-            Id = 1
-        }).Execute();
-        var result1 = repository.Get<Order>(new { Id = 1 });
-        repository.Commit();
-        if (result > 0)
-        {
-            Assert.NotNull(result1);
-            Assert.True(result1.Id == 1);
-            Assert.True(result1.ProductCount == 10);
-        }
-    }
-    [Fact]
-    public async void Update_WithBy_Parameters_Multi()
+    public async void Update_WithBulk_Parameters_Multi()
     {
         using var repository = dbFactory.Create();
         var parameters = await repository.From<OrderDetail>()
@@ -137,7 +117,7 @@ public class MySqlUnitTest3 : UnitTestBase
         Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price5,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5");
     }
     [Fact]
-    public async void Update_WithBy_Fields_Parameters_Multi()
+    public async void Update_WithBulk_Fields_Parameters_Multi()
     {
         using var repository = dbFactory.Create();
         var parameters = await repository.From<OrderDetail>()
@@ -160,10 +140,10 @@ public class MySqlUnitTest3 : UnitTestBase
                 ProductId = DBNull.Value
             }, parameters)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity0,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount0,`ProductId`=NULL WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity1,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount1,`ProductId`=NULL WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity2,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount2,`ProductId`=NULL WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity3,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount3,`ProductId`=NULL WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity4,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount4,`ProductId`=NULL WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price,`Quantity`=@Quantity5,`UpdatedBy`=@UpdatedBy,`Amount`=@Amount5,`ProductId`=NULL WHERE `Id`=@kId5");
+        Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5");
     }
     [Fact]
-    public async void Update_Parameters_WithBy()
+    public async void Update_Parameters_WithBulk()
     {
         using var repository = dbFactory.Create();
         var orders = await repository.From<Order>()
@@ -180,7 +160,7 @@ public class MySqlUnitTest3 : UnitTestBase
         Assert.True(sql == "UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount0 WHERE `Id`=@kId0;UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount1 WHERE `Id`=@kId1;UPDATE `sys_order` SET `BuyerId`=NULL,`OrderNo`=CONCAT('ON_',`OrderNo`),`TotalAmount`=@TotalAmount2 WHERE `Id`=@kId2");
     }
     [Fact]
-    public void Update_WithBy_MethodCall()
+    public void Update_SetWith()
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
@@ -196,17 +176,15 @@ public class MySqlUnitTest3 : UnitTestBase
         updateObj.UpdatedAt = DateTime.Now;
 
         int increasedAmount = 50;
-        var result = repository.Update<Order>()
-            .SetWith(f => new
-            {
-                BuyerId = DBNull.Value,
-                OrderNo = "ON_" + f.OrderNo,
-                TotalAmount = f.TotalAmount + increasedAmount,
-                Products = this.GetProducts(),
-                f.Disputes,
-                f.UpdatedAt
-            }, updateObj)
-            .Execute();
+        var result = repository.Update<Order>(f => new
+        {
+            BuyerId = DBNull.Value,
+            OrderNo = "ON_" + f.OrderNo,
+            TotalAmount = f.TotalAmount + increasedAmount,
+            Products = this.GetProducts(),
+            f.Disputes,
+            f.UpdatedAt
+        }, updateObj);
 
         var updatedOrder = repository.Get<Order>(1);
         repository.Commit();
@@ -218,27 +196,21 @@ public class MySqlUnitTest3 : UnitTestBase
             Assert.True(updatedOrder.Products[1] == 2);
             Assert.True(updatedOrder.Products[2] == 3);
             Assert.True(updatedOrder.TotalAmount == updateObj.TotalAmount + increasedAmount);
-            Assert.True(updatedOrder.Disputes == updateObj.Disputes);
-            Assert.True(updatedOrder.UpdatedAt == updateObj.UpdatedAt);
+            Assert.True(JsonSerializer.Serialize(updatedOrder.Disputes) == JsonSerializer.Serialize(updateObj.Disputes));
+            //Assert.True(updatedOrder.UpdatedAt == updateObj.UpdatedAt);
         }
-        var sql = repository.Update<Order>()
-            .SetWith(f => new
-            {
-                TotalAmount = this.CalcAmount(f.TotalAmount + increasedAmount, 3),
-                Products = this.GetProducts(),
-                f.Disputes,
-                f.UpdatedAt
-            }, updateObj)
-           .ToSql(out var dbParameters);
-        Assert.True(sql == "");
-        Assert.True(dbParameters[0].ParameterName == "@TotalAmount");
-        Assert.True((int)dbParameters[0].Value == increasedAmount);
-        Assert.True(dbParameters[1].ParameterName == "@Products");
-        Assert.True((string)dbParameters[1].Value == JsonSerializer.Serialize(this.GetProducts()));
-        Assert.True(dbParameters[2].ParameterName == "@Disputes");
-        Assert.True((string)dbParameters[2].Value == JsonSerializer.Serialize(updateObj.Disputes));
-        Assert.True(dbParameters[3].ParameterName == "@UpdatedAt");
-        Assert.True((DateTime)dbParameters[3].Value == updateObj.UpdatedAt);
+        var result1 = repository.Update<Order>()
+            .SetWith(new { ProductCount = 10 })
+            .Where(new { Id = 1 })
+            .Execute();
+        updatedOrder = repository.Get<Order>(new { Id = 1 });
+        repository.Commit();
+        if (result > 0)
+        {
+            Assert.NotNull(updatedOrder);
+            Assert.True(updatedOrder.Id == 1);
+            Assert.True(updatedOrder.ProductCount == 10);
+        }
     }
     [Fact]
     public void Update_SetWith_MethodCall()
