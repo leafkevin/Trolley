@@ -20,12 +20,15 @@ namespace Trolley;
 
 class Create<TEntity> : ICreate<TEntity>
 {
+    #region Fields
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
     private readonly bool isParameterized;
+    #endregion
 
+    #region Constructor
     public Create(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false)
     {
         this.connection = connection;
@@ -34,6 +37,9 @@ class Create<TEntity> : ICreate<TEntity>
         this.mapProvider = mapProvider;
         this.isParameterized = isParameterized;
     }
+    #endregion
+
+    #region RawSql
     public ICreated<TEntity> RawSql(string rawSql, object parameters)
     {
         if (string.IsNullOrEmpty(rawSql))
@@ -41,22 +47,31 @@ class Create<TEntity> : ICreate<TEntity>
 
         return new Created<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider).RawSql(rawSql, parameters);
     }
+    #endregion
+
+    #region WithBy
     public IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
     {
         if (insertObj == null)
             throw new ArgumentNullException(nameof(insertObj));
         if (insertObj is IEnumerable && insertObj is not string && insertObj is not Dictionary<string, object>)
-            throw new NotSupportedException("只能插入单个实体，批量插入请使用WithBulkBy方法");
+            throw new NotSupportedException("只能插入单个实体，批量插入请使用WithBulk方法");
 
         return new ContinuedCreate<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider).WithBy(insertObj);
     }
-    public ICreated<TEntity> WithBulkBy(IEnumerable insertObjs, int bulkCount = 500)
+    #endregion
+
+    #region WithBulk
+    public ICreated<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
 
-        return new Created<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider).WithBulkBy(insertObjs, bulkCount);
+        return new Created<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider).WithBulk(insertObjs, bulkCount);
     }
+    #endregion
+
+    #region From
     public IContinuedCreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector)
     {
         if (fieldSelector == null)
@@ -83,15 +98,19 @@ class Create<TEntity> : ICreate<TEntity>
         return new ContinuedCreate<TEntity, <#=tables#>>(this.connection, this.transaction, visitor);
     }
 <#  }#>
+#endregion
 }
 class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 {
+    #region Fields
     private readonly List<WithByBuilderCache> builders = new();
     private readonly TheaConnection connection;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
     private readonly IDbTransaction transaction;
+    #endregion
 
+    #region Constructor
     public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
     {
         this.connection = connection;
@@ -99,6 +118,9 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
         this.ormProvider = ormProvider;
         this.mapProvider = mapProvider;
     }
+    #endregion
+
+    #region WithBy
     public IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
     {
         if (insertObj == null)
@@ -108,8 +130,7 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 
         var entityType = typeof(TEntity);
         var commandInitializer = RepositoryHelper.BuildCreateWithBiesCommandInitializer(
-            this.connection, this.ormProvider, this.mapProvider, entityType, insertObj);
-
+              this.connection, this.ormProvider, this.mapProvider, entityType, insertObj);
         this.builders.Add(new WithByBuilderCache
         {
             CommandInitializer = commandInitializer,
@@ -119,15 +140,12 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     }
     public IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
     {
-        if (condition)
-        {
-            if (insertObj == null)
-                throw new ArgumentNullException(nameof(insertObj));
-
-            return this.WithBy(insertObj);
-        }
+        if (condition) this.WithBy(insertObj);
         return this;
     }
+    #endregion
+
+    #region Execute
     public int Execute()
     {
         int result = 0;
@@ -146,7 +164,6 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
         {
             using var reader = command.ExecuteReader();
             if (reader.Read()) result = reader.To<int>();
-            reader.Close();
             reader.Dispose();
             command.Dispose();
             return result;
@@ -176,7 +193,6 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
             using var reader = await command.ExecuteReaderAsync(cancellationToken);
             if (await reader.ReadAsync(cancellationToken))
                 result = reader.To<int>();
-            await reader.CloseAsync();
             await reader.DisposeAsync();
             await command.DisposeAsync();
             return result;
@@ -185,6 +201,9 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
         await command.DisposeAsync();
         return result;
     }
+    #endregion
+
+    #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
         var entityType = typeof(TEntity);
@@ -195,10 +214,12 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
         dbParameters = null;
         if (command.Parameters != null && command.Parameters.Count > 0)
             dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
-        command.Cancel();
         command.Dispose();
         return sql;
     }
+    #endregion
+
+    #region Others
     private string BuildSql(EntityMap entityMapper, IDbCommand command)
     {
         var insertBuilder = new StringBuilder($"INSERT INTO {this.ormProvider.GetTableName(entityMapper.TableName)} (");
@@ -211,7 +232,7 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
                 insertBuilder.Append(',');
                 valuesBuilder.Append(',');
             }
-            builder.CommandInitializer.Invoke(command, this.ormProvider, builder.Parameters, insertBuilder, valuesBuilder);
+            builder.CommandInitializer.Invoke(command, this.ormProvider, this.mapProvider, builder.Parameters, insertBuilder, valuesBuilder);
             index++;
         }
         insertBuilder.Append(')');
@@ -224,11 +245,13 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     struct WithByBuilderCache
     {
         public object Parameters { get; set; }
-        public Action<IDbCommand, IOrmProvider, object, StringBuilder, StringBuilder> CommandInitializer { get; set; }
+        public Action<IDbCommand, IOrmProvider, IEntityMapProvider, object, StringBuilder, StringBuilder> CommandInitializer { get; set; }
     }
+    #endregion
 }
 class Created<TEntity> : ICreated<TEntity>
 {
+    #region Fields
     private readonly TheaConnection connection;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
@@ -236,7 +259,9 @@ class Created<TEntity> : ICreated<TEntity>
     private string rawSql = null;
     private object parameters = null;
     private int? bulkCount;
+    #endregion
 
+    #region Constructor
     public Created(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
     {
         this.connection = connection;
@@ -244,6 +269,9 @@ class Created<TEntity> : ICreated<TEntity>
         this.ormProvider = ormProvider;
         this.mapProvider = mapProvider;
     }
+    #endregion
+
+    #region RawSql
     public ICreated<TEntity> RawSql(string rawSql, object parameters)
     {
         if (string.IsNullOrEmpty(rawSql))
@@ -252,7 +280,10 @@ class Created<TEntity> : ICreated<TEntity>
         this.parameters = parameters;
         return this;
     }
-    public ICreated<TEntity> WithBulkBy(IEnumerable insertObjs, int bulkCount = 500)
+    #endregion
+
+    #region WithBulk
+    public ICreated<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
@@ -260,29 +291,49 @@ class Created<TEntity> : ICreated<TEntity>
         this.bulkCount = bulkCount;
         return this;
     }
+    #endregion
+
+    #region Execute
     public int Execute()
     {
         int result = 0;
-        string sql = null;
         var entityType = typeof(TEntity);
-        var entityMapper = this.mapProvider.GetEntityMap(entityType);
-        bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not Dictionary<string, object>;
         using var command = this.connection.CreateCommand();
-        if (isMulti)
+        if (!string.IsNullOrEmpty(this.rawSql))
         {
-            var commandInitializer = RepositoryHelper.BuildCreateBatchCommandInitializer(
-                   this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
+            command.CommandText = this.rawSql;
+            command.CommandType = CommandType.Text;
+            command.Transaction = this.transaction;
+            if (this.parameters != null)
+            {
+                var commandInitializer = RepositoryHelper.BuildCreateRawSqlParameters(
+                    this.connection, this.ormProvider, this.mapProvider, entityType, this.rawSql, this.parameters);
+                commandInitializer.Invoke(command, this.ormProvider, this.parameters);
+            }
 
+            this.connection.Open();
+            var entityMapper = this.mapProvider.GetEntityMap(entityType);
+            if (entityMapper.IsAutoIncrement)
+            {
+                using var reader = command.ExecuteReader();
+                if (reader.Read()) result = reader.To<int>();
+                reader.Dispose();
+            }
+            else result = command.ExecuteNonQuery();
+        }
+        else
+        {
             int index = 0;
             this.bulkCount ??= 500;
             command.CommandType = CommandType.Text;
             command.Transaction = this.transaction;
+
             var sqlBuilder = new StringBuilder();
             var entities = this.parameters as IEnumerable;
-
+            var commandInitializer = RepositoryHelper.BuildCreateBatchCommandInitializer(this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
             foreach (var entity in entities)
             {
-                commandInitializer.Invoke(command, this.ormProvider, sqlBuilder, index, entity);
+                commandInitializer.Invoke(command, this.ormProvider, this.mapProvider, sqlBuilder, index, entity);
                 if (index >= this.bulkCount)
                 {
                     command.CommandText = sqlBuilder.ToString();
@@ -302,68 +353,54 @@ class Created<TEntity> : ICreated<TEntity>
                 result += command.ExecuteNonQuery();
             }
         }
-        else
-        {
-            if (!string.IsNullOrEmpty(this.rawSql))
-            {
-                sql = this.rawSql;
-                if (this.parameters != null)
-                {
-                    var commandInitializer = RepositoryHelper.BuildCreateRawSqlParameters(this.connection,
-                        this.ormProvider, this.mapProvider, entityType, this.rawSql, this.parameters);
-                    commandInitializer.Invoke(command, this.ormProvider, this.parameters);
-                }
-            }
-            else
-            {
-                var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(
-                   this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
-                sql = commandInitializer.Invoke(command, this.ormProvider, this.parameters);
-            }
-            command.CommandText = sql;
-            command.CommandType = CommandType.Text;
-            command.Transaction = this.transaction;
-            this.connection.Open();
-
-            if (entityMapper.IsAutoIncrement)
-            {
-                using var reader = command.ExecuteReader();
-                if (reader.Read()) result = reader.To<int>();
-                reader.Close();
-                reader.Dispose();
-            }
-            else result = command.ExecuteNonQuery();
-        }
         command.Dispose();
         return result;
     }
     public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        string sql = null;
         var entityType = typeof(TEntity);
-        var entityMapper = this.mapProvider.GetEntityMap(entityType);
-        bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not Dictionary<string, object>;
         using var cmd = this.connection.CreateCommand();
+        cmd.CommandText = this.rawSql;
+        cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
+
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
-        if (isMulti)
+        if (!string.IsNullOrEmpty(this.rawSql))
         {
-            var commandInitializer = RepositoryHelper.BuildCreateBatchCommandInitializer(
-                   this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
+            if (this.parameters != null)
+            {
+                var commandInitializer = RepositoryHelper.BuildCreateRawSqlParameters(
+                    this.connection, this.ormProvider, this.mapProvider, entityType, this.rawSql, this.parameters);
+                commandInitializer.Invoke(command, this.ormProvider, this.parameters);
+            }
+
+            await this.connection.OpenAsync(cancellationToken);
+            var entityMapper = this.mapProvider.GetEntityMap(entityType);
+            if (entityMapper.IsAutoIncrement)
+            {
+                using var reader = await command.ExecuteReaderAsync(cancellationToken);
+                if (await reader.ReadAsync(cancellationToken))
+                    result = reader.To<int>();
+                await reader.DisposeAsync();
+            }
+            else result = await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        else
+        {
             int index = 0;
             this.bulkCount ??= 500;
             var sqlBuilder = new StringBuilder();
             var entities = this.parameters as IEnumerable;
+            var commandInitializer = RepositoryHelper.BuildCreateBatchCommandInitializer(this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
             foreach (var entity in entities)
             {
-                commandInitializer.Invoke(command, this.ormProvider, sqlBuilder, index, entity);
+                commandInitializer.Invoke(command, this.ormProvider, this.mapProvider, sqlBuilder, index, entity);
                 if (index >= this.bulkCount)
                 {
                     command.CommandText = sqlBuilder.ToString();
-                    command.CommandType = CommandType.Text;
                     await this.connection.OpenAsync(cancellationToken);
                     result += await command.ExecuteNonQueryAsync(cancellationToken);
                     command.Parameters.Clear();
@@ -376,68 +413,41 @@ class Created<TEntity> : ICreated<TEntity>
             if (index > 0)
             {
                 command.CommandText = sqlBuilder.ToString();
-                command.CommandType = CommandType.Text;
                 await this.connection.OpenAsync(cancellationToken);
                 result += await command.ExecuteNonQueryAsync(cancellationToken);
             }
         }
-        else
-        {
-            if (!string.IsNullOrEmpty(this.rawSql))
-            {
-                sql = this.rawSql;
-                if (this.parameters != null)
-                {
-                    var commandInitializer = RepositoryHelper.BuildCreateRawSqlParameters(this.connection,
-                        this.ormProvider, this.mapProvider, entityType, this.rawSql, this.parameters);
-                    commandInitializer.Invoke(cmd, this.ormProvider, this.parameters);
-                }
-            }
-            else
-            {
-                var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(
-                   this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
-                sql = commandInitializer.Invoke(cmd, this.ormProvider, this.parameters);
-            }
-            cmd.CommandText = this.rawSql;
-            cmd.CommandType = CommandType.Text;
-            await this.connection.OpenAsync(cancellationToken);
-            if (entityMapper.IsAutoIncrement)
-            {
-                using var reader = await command.ExecuteReaderAsync(cancellationToken);
-                if (await reader.ReadAsync(cancellationToken))
-                    result = reader.To<int>();
-                await reader.CloseAsync();
-                await reader.DisposeAsync();
-            }
-            else result = await command.ExecuteNonQueryAsync(cancellationToken);
-        }
         await command.DisposeAsync();
         return result;
     }
+    #endregion
+
+    #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
         dbParameters = null;
         string sql = null;
         var entityType = typeof(TEntity);
-        var entityMapper = this.mapProvider.GetEntityMap(entityType);
-        bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not Dictionary<string, object>;
         using var command = this.connection.CreateCommand();
-        if (isMulti)
+        if (!string.IsNullOrEmpty(this.rawSql))
         {
-            var commandInitializer = RepositoryHelper.BuildCreateBatchCommandInitializer(
-                   this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
-
+            sql = this.rawSql;
+            if (this.parameters != null)
+            {
+                var commandInitializer = RepositoryHelper.BuildCreateRawSqlParameters(this.connection, this.ormProvider, this.mapProvider, entityType, this.rawSql, this.parameters);
+                commandInitializer.Invoke(command, this.ormProvider, this.parameters);
+            }
+        }
+        else
+        {
             int index = 0;
             this.bulkCount ??= 500;
-            command.CommandType = CommandType.Text;
-            command.Transaction = this.transaction;
             var sqlBuilder = new StringBuilder();
             var entities = this.parameters as IEnumerable;
-
+            var commandInitializer = RepositoryHelper.BuildCreateBatchCommandInitializer(this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
             foreach (var entity in entities)
             {
-                commandInitializer.Invoke(command, this.ormProvider, sqlBuilder, index, entity);
+                commandInitializer.Invoke(command, this.ormProvider, this.mapProvider, sqlBuilder, index, entity);
                 if (index >= this.bulkCount)
                     break;
                 index++;
@@ -445,44 +455,33 @@ class Created<TEntity> : ICreated<TEntity>
             if (index > 0)
                 sql = sqlBuilder.ToString();
         }
-        else
-        {
-            if (!string.IsNullOrEmpty(this.rawSql))
-            {
-                sql = this.rawSql;
-                if (this.parameters != null)
-                {
-                    var commandInitializer = RepositoryHelper.BuildCreateRawSqlParameters(this.connection,
-                        this.ormProvider, this.mapProvider, entityType, this.rawSql, this.parameters);
-                    commandInitializer.Invoke(command, this.ormProvider, this.parameters);
-                }
-            }
-            else
-            {
-                var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(
-                   this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
-                sql = commandInitializer.Invoke(command, this.ormProvider, this.parameters);
-            }
-        }
+        command.Dispose();
+
         if (command.Parameters != null && command.Parameters.Count > 0)
             dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
-        command.Cancel();
         command.Dispose();
         return sql;
     }
+    #endregion
 }
 class ContinuedCreateBase
 {
+    #region Fields
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
     protected readonly ICreateVisitor visitor;
+    #endregion
 
+    #region Constructor
     public ContinuedCreateBase(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
     }
+    #endregion
+
+    #region Execute
     public int Execute()
     {
         var sql = this.visitor.BuildSql(out var dbParameters);
@@ -517,21 +516,23 @@ class ContinuedCreateBase
         await command.DisposeAsync();
         return result;
     }
+    #endregion
+
+    #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(out dbParameters);
+    #endregion
 }
 class ContinuedCreate<TEntity, TSource> : ContinuedCreateBase, IContinuedCreate<TEntity, TSource>
 {
+    #region Constructor
     public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
         : base(connection, transaction, visitor) { }
-    public IContinuedCreate<TEntity, TSource> Where(Expression<Func<TSource, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
+    #endregion
 
-        this.visitor.Where(predicate);
-        return this;
-    }
+    #region Where/And
+    public IContinuedCreate<TEntity, TSource> Where(Expression<Func<TSource, bool>> predicate)
+        => this.Where(true, predicate);
     public IContinuedCreate<TEntity, TSource> Where(bool condition, Expression<Func<TSource, bool>> ifPredicate, Expression<Func<TSource, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -543,13 +544,8 @@ class ContinuedCreate<TEntity, TSource> : ContinuedCreateBase, IContinuedCreate<
         return this;
     }
     public IContinuedCreate<TEntity, TSource> And(Expression<Func<TSource, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
+        => this.And(true, predicate);
 
-        this.visitor.And(predicate);
-        return this;
-    }
     public IContinuedCreate<TEntity, TSource> And(bool condition, Expression<Func<TSource, bool>> ifPredicate, Expression<Func<TSource, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -560,6 +556,7 @@ class ContinuedCreate<TEntity, TSource> : ContinuedCreateBase, IContinuedCreate<
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
         return this;
     }
+    #endregion
 }
 <#
     count = 6;
@@ -570,16 +567,14 @@ class ContinuedCreate<TEntity, TSource> : ContinuedCreateBase, IContinuedCreate<
 #>
 class ContinuedCreate<TEntity, <#=tables#>> : ContinuedCreateBase, IContinuedCreate<TEntity, <#=tables#>>
 {
+    #region Constructor
     public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
         : base(connection, transaction, visitor) { }
-    public IContinuedCreate<TEntity, <#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
+    #endregion
 
-        this.visitor.Where(predicate);
-        return this;
-    }
+    #region Where/And
+    public IContinuedCreate<TEntity, <#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
+        => this.Where(true, predicate);
     public IContinuedCreate<TEntity, <#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -591,13 +586,7 @@ class ContinuedCreate<TEntity, <#=tables#>> : ContinuedCreateBase, IContinuedCre
         return this;
     }
     public IContinuedCreate<TEntity, <#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.And(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public IContinuedCreate<TEntity, <#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -608,5 +597,6 @@ class ContinuedCreate<TEntity, <#=tables#>> : ContinuedCreateBase, IContinuedCre
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
         return this;
     }
+    #endregion
 }
 <#  }#>

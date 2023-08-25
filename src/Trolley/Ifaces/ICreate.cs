@@ -14,6 +14,7 @@ namespace Trolley;
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface ICreate<TEntity>
 {
+    #region RawSql
     /// <summary>
     /// 使用原始SQL和参数插入数据，用法：
     /// <code>
@@ -27,6 +28,9 @@ public interface ICreate<TEntity>
     /// </param>
     /// <returns>返回插入对象</returns>
     ICreated<TEntity> RawSql(string rawSql, object parameters);
+    #endregion
+
+    #region WithBy
     /// <summary>
     /// 使用插入对象部分字段插入，单个对象插入
     /// <para>自动增长的栏位，不需要传入，用法：</para>
@@ -55,6 +59,9 @@ public interface ICreate<TEntity>
     /// <param name="insertObj">插入对象，包含想要插入的必需栏位值</param>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
+    #endregion
+
+    #region WithBulk
     /// <summary>
     /// 批量插入,采用多表值方式，生成的SQL:
     /// <code>
@@ -65,6 +72,9 @@ public interface ICreate<TEntity>
     /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
     /// <returns>返回插入对象</returns>
     ICreated<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
+    #endregion
+
+    #region From
     /// <summary>
     /// 从表TSource中捞取部分字段数据，并插入当前表TEntity中，用法：
     /// <code>
@@ -220,6 +230,7 @@ public interface ICreate<TEntity>
     /// <param name="fieldSelector">插入的字段赋值表达式</param>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, object>> fieldSelector);
+    #endregion
 }
 /// <summary>
 /// 插入数据
@@ -227,6 +238,7 @@ public interface ICreate<TEntity>
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface IContinuedCreate<TEntity>
 {
+    #region WithBy
     /// <summary>
     /// 使用插入对象部分字段插入，单个对象插入
     /// <para>自动增长的栏位，不需要传入，用法：</para>
@@ -284,6 +296,9 @@ public interface IContinuedCreate<TEntity>
     /// <param name="insertObj">插入数据对象，包含想要插入的必需栏位值</param>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
+    #endregion
+
+    #region Execute
     /// <summary>
     /// 执行插入操作，并返回插入行数
     /// </summary>
@@ -295,12 +310,16 @@ public interface IContinuedCreate<TEntity>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToSql
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
     /// <param name="dbParameters">参数列表</param>
     /// <returns>当前查询的SQL</returns>
     string ToSql(out List<IDbDataParameter> dbParameters);
+    #endregion
 }
 /// <summary>
 /// 插入数据
@@ -308,6 +327,7 @@ public interface IContinuedCreate<TEntity>
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface ICreated<TEntity>
 {
+    #region ToSql
     /// <summary>
     /// 执行插入操作，并返回插入行数
     /// </summary>
@@ -319,12 +339,16 @@ public interface ICreated<TEntity>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToSql
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
     /// <param name="dbParameters">参数列表</param>
     /// <returns>当前查询的SQL</returns>
     string ToSql(out List<IDbDataParameter> dbParameters);
+    #endregion
 }
 /// <summary>
 /// 插入数据
@@ -333,6 +357,7 @@ public interface ICreated<TEntity>
 /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
 public interface IContinuedCreate<TEntity, TSource>
 {
+    #region Where/And
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -363,6 +388,9 @@ public interface IContinuedCreate<TEntity, TSource>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IContinuedCreate<TEntity, TSource> And(bool condition, Expression<Func<TSource, bool>> ifPredicate = null, Expression<Func<TSource, bool>> elsePredicate = null);
+    #endregion
+
+    #region Execute
     /// <summary>
     /// 执行插入操作，并返回插入行数
     /// </summary>
@@ -374,12 +402,16 @@ public interface IContinuedCreate<TEntity, TSource>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToSql
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
     /// <param name="dbParameters">参数列表</param>
     /// <returns>当前查询的SQL</returns>
     string ToSql(out List<IDbDataParameter> dbParameters);
+    #endregion
 }
 /// <summary>
 /// 插入数据
@@ -389,6 +421,7 @@ public interface IContinuedCreate<TEntity, TSource>
 /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
 public interface IContinuedCreate<TEntity, T1, T2>
 {
+    #region Where/And
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -419,6 +452,9 @@ public interface IContinuedCreate<TEntity, T1, T2>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IContinuedCreate<TEntity, T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null);
+    #endregion
+
+    #region Execute
     /// <summary>
     /// 执行插入操作，并返回插入行数
     /// </summary>
@@ -430,12 +466,16 @@ public interface IContinuedCreate<TEntity, T1, T2>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToSql
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
     /// <param name="dbParameters">参数列表</param>
     /// <returns>当前查询的SQL</returns>
     string ToSql(out List<IDbDataParameter> dbParameters);
+    #endregion
 }
 /// <summary>
 /// 插入数据
@@ -446,6 +486,7 @@ public interface IContinuedCreate<TEntity, T1, T2>
 /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
 public interface IContinuedCreate<TEntity, T1, T2, T3>
 {
+    #region Where/And
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -476,6 +517,9 @@ public interface IContinuedCreate<TEntity, T1, T2, T3>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IContinuedCreate<TEntity, T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null);
+    #endregion
+
+    #region Execute
     /// <summary>
     /// 执行插入操作，并返回插入行数
     /// </summary>
@@ -487,12 +531,16 @@ public interface IContinuedCreate<TEntity, T1, T2, T3>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToSql
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
     /// <param name="dbParameters">参数列表</param>
     /// <returns>当前查询的SQL</returns>
     string ToSql(out List<IDbDataParameter> dbParameters);
+    #endregion
 }
 /// <summary>
 /// 插入数据
@@ -504,6 +552,7 @@ public interface IContinuedCreate<TEntity, T1, T2, T3>
 /// <typeparam name="T4">数据来源表T4实体类型</typeparam>
 public interface IContinuedCreate<TEntity, T1, T2, T3, T4>
 {
+    #region Where/And
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -534,6 +583,9 @@ public interface IContinuedCreate<TEntity, T1, T2, T3, T4>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IContinuedCreate<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null);
+    #endregion
+
+    #region Execute
     /// <summary>
     /// 执行插入操作，并返回插入行数
     /// </summary>
@@ -545,12 +597,16 @@ public interface IContinuedCreate<TEntity, T1, T2, T3, T4>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToSql
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
     /// <param name="dbParameters">参数列表</param>
     /// <returns>当前查询的SQL</returns>
     string ToSql(out List<IDbDataParameter> dbParameters);
+    #endregion
 }
 /// <summary>
 /// 插入数据
@@ -563,6 +619,7 @@ public interface IContinuedCreate<TEntity, T1, T2, T3, T4>
 /// <typeparam name="T5">数据来源表T5实体类型</typeparam>
 public interface IContinuedCreate<TEntity, T1, T2, T3, T4, T5>
 {
+    #region Where/And
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -593,6 +650,9 @@ public interface IContinuedCreate<TEntity, T1, T2, T3, T4, T5>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IContinuedCreate<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null);
+    #endregion
+
+    #region Execute
     /// <summary>
     /// 执行插入操作，并返回插入行数
     /// </summary>
@@ -604,10 +664,14 @@ public interface IContinuedCreate<TEntity, T1, T2, T3, T4, T5>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToSql
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>
     /// <param name="dbParameters">参数列表</param>
     /// <returns>当前查询的SQL</returns>
     string ToSql(out List<IDbDataParameter> dbParameters);
+    #endregion
 }

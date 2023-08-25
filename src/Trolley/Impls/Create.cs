@@ -13,12 +13,15 @@ namespace Trolley;
 
 class Create<TEntity> : ICreate<TEntity>
 {
+    #region Fields
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
     private readonly bool isParameterized;
+    #endregion
 
+    #region Constructor
     public Create(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false)
     {
         this.connection = connection;
@@ -27,6 +30,9 @@ class Create<TEntity> : ICreate<TEntity>
         this.mapProvider = mapProvider;
         this.isParameterized = isParameterized;
     }
+    #endregion
+
+    #region RawSql
     public ICreated<TEntity> RawSql(string rawSql, object parameters)
     {
         if (string.IsNullOrEmpty(rawSql))
@@ -34,6 +40,9 @@ class Create<TEntity> : ICreate<TEntity>
 
         return new Created<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider).RawSql(rawSql, parameters);
     }
+    #endregion
+
+    #region WithBy
     public IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
     {
         if (insertObj == null)
@@ -43,6 +52,9 @@ class Create<TEntity> : ICreate<TEntity>
 
         return new ContinuedCreate<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider).WithBy(insertObj);
     }
+    #endregion
+
+    #region WithBulk
     public ICreated<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500)
     {
         if (insertObjs == null)
@@ -50,6 +62,9 @@ class Create<TEntity> : ICreate<TEntity>
 
         return new Created<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider).WithBulk(insertObjs, bulkCount);
     }
+    #endregion
+
+    #region From
     public IContinuedCreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector)
     {
         if (fieldSelector == null)
@@ -95,15 +110,19 @@ class Create<TEntity> : ICreate<TEntity>
         var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
         return new ContinuedCreate<TEntity, T1, T2, T3, T4, T5>(this.connection, this.transaction, visitor);
     }
+    #endregion
 }
 class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 {
+    #region Fields
     private readonly List<WithByBuilderCache> builders = new();
     private readonly TheaConnection connection;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
     private readonly IDbTransaction transaction;
+    #endregion
 
+    #region Constructor
     public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
     {
         this.connection = connection;
@@ -111,6 +130,9 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
         this.ormProvider = ormProvider;
         this.mapProvider = mapProvider;
     }
+    #endregion
+
+    #region WithBy
     public IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
     {
         if (insertObj == null)
@@ -133,6 +155,9 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
         if (condition) this.WithBy(insertObj);
         return this;
     }
+    #endregion
+
+    #region Execute
     public int Execute()
     {
         int result = 0;
@@ -151,7 +176,6 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
         {
             using var reader = command.ExecuteReader();
             if (reader.Read()) result = reader.To<int>();
-            reader.Close();
             reader.Dispose();
             command.Dispose();
             return result;
@@ -181,7 +205,6 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
             using var reader = await command.ExecuteReaderAsync(cancellationToken);
             if (await reader.ReadAsync(cancellationToken))
                 result = reader.To<int>();
-            await reader.CloseAsync();
             await reader.DisposeAsync();
             await command.DisposeAsync();
             return result;
@@ -190,6 +213,9 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
         await command.DisposeAsync();
         return result;
     }
+    #endregion
+
+    #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
         var entityType = typeof(TEntity);
@@ -200,10 +226,12 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
         dbParameters = null;
         if (command.Parameters != null && command.Parameters.Count > 0)
             dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
-        command.Cancel();
         command.Dispose();
         return sql;
     }
+    #endregion
+
+    #region Others
     private string BuildSql(EntityMap entityMapper, IDbCommand command)
     {
         var insertBuilder = new StringBuilder($"INSERT INTO {this.ormProvider.GetTableName(entityMapper.TableName)} (");
@@ -231,9 +259,11 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
         public object Parameters { get; set; }
         public Action<IDbCommand, IOrmProvider, IEntityMapProvider, object, StringBuilder, StringBuilder> CommandInitializer { get; set; }
     }
+    #endregion
 }
 class Created<TEntity> : ICreated<TEntity>
 {
+    #region Fields
     private readonly TheaConnection connection;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
@@ -241,7 +271,9 @@ class Created<TEntity> : ICreated<TEntity>
     private string rawSql = null;
     private object parameters = null;
     private int? bulkCount;
+    #endregion
 
+    #region Constructor
     public Created(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
     {
         this.connection = connection;
@@ -249,6 +281,9 @@ class Created<TEntity> : ICreated<TEntity>
         this.ormProvider = ormProvider;
         this.mapProvider = mapProvider;
     }
+    #endregion
+
+    #region RawSql
     public ICreated<TEntity> RawSql(string rawSql, object parameters)
     {
         if (string.IsNullOrEmpty(rawSql))
@@ -257,6 +292,9 @@ class Created<TEntity> : ICreated<TEntity>
         this.parameters = parameters;
         return this;
     }
+    #endregion
+
+    #region WithBulk
     public ICreated<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500)
     {
         if (insertObjs == null)
@@ -265,6 +303,9 @@ class Created<TEntity> : ICreated<TEntity>
         this.bulkCount = bulkCount;
         return this;
     }
+    #endregion
+
+    #region Execute
     public int Execute()
     {
         int result = 0;
@@ -288,14 +329,12 @@ class Created<TEntity> : ICreated<TEntity>
             {
                 using var reader = command.ExecuteReader();
                 if (reader.Read()) result = reader.To<int>();
-                reader.Close();
                 reader.Dispose();
             }
             else result = command.ExecuteNonQuery();
         }
         else
         {
-
             int index = 0;
             this.bulkCount ??= 500;
             command.CommandType = CommandType.Text;
@@ -357,7 +396,6 @@ class Created<TEntity> : ICreated<TEntity>
                 using var reader = await command.ExecuteReaderAsync(cancellationToken);
                 if (await reader.ReadAsync(cancellationToken))
                     result = reader.To<int>();
-                await reader.CloseAsync();
                 await reader.DisposeAsync();
             }
             else result = await command.ExecuteNonQueryAsync(cancellationToken);
@@ -394,6 +432,9 @@ class Created<TEntity> : ICreated<TEntity>
         await command.DisposeAsync();
         return result;
     }
+    #endregion
+
+    #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
         dbParameters = null;
@@ -433,19 +474,26 @@ class Created<TEntity> : ICreated<TEntity>
         command.Dispose();
         return sql;
     }
+    #endregion
 }
 class ContinuedCreateBase
 {
+    #region Fields
     protected readonly TheaConnection connection;
     protected readonly IDbTransaction transaction;
     protected readonly ICreateVisitor visitor;
+    #endregion
 
+    #region Constructor
     public ContinuedCreateBase(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
     }
+    #endregion
+
+    #region Execute
     public int Execute()
     {
         var sql = this.visitor.BuildSql(out var dbParameters);
@@ -480,21 +528,23 @@ class ContinuedCreateBase
         await command.DisposeAsync();
         return result;
     }
+    #endregion
+
+    #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(out dbParameters);
+    #endregion
 }
 class ContinuedCreate<TEntity, TSource> : ContinuedCreateBase, IContinuedCreate<TEntity, TSource>
 {
+    #region Constructor
     public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
         : base(connection, transaction, visitor) { }
-    public IContinuedCreate<TEntity, TSource> Where(Expression<Func<TSource, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
+    #endregion
 
-        this.visitor.Where(predicate);
-        return this;
-    }
+    #region Where/And
+    public IContinuedCreate<TEntity, TSource> Where(Expression<Func<TSource, bool>> predicate)
+        => this.Where(true, predicate);
     public IContinuedCreate<TEntity, TSource> Where(bool condition, Expression<Func<TSource, bool>> ifPredicate, Expression<Func<TSource, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -506,13 +556,8 @@ class ContinuedCreate<TEntity, TSource> : ContinuedCreateBase, IContinuedCreate<
         return this;
     }
     public IContinuedCreate<TEntity, TSource> And(Expression<Func<TSource, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
+        => this.And(true, predicate);
 
-        this.visitor.And(predicate);
-        return this;
-    }
     public IContinuedCreate<TEntity, TSource> And(bool condition, Expression<Func<TSource, bool>> ifPredicate, Expression<Func<TSource, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -523,19 +568,18 @@ class ContinuedCreate<TEntity, TSource> : ContinuedCreateBase, IContinuedCreate<
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
         return this;
     }
+    #endregion
 }
 class ContinuedCreate<TEntity, T1, T2> : ContinuedCreateBase, IContinuedCreate<TEntity, T1, T2>
 {
+    #region Constructor
     public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
         : base(connection, transaction, visitor) { }
-    public IContinuedCreate<TEntity, T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
+    #endregion
 
-        this.visitor.Where(predicate);
-        return this;
-    }
+    #region Where/And
+    public IContinuedCreate<TEntity, T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
+        => this.Where(true, predicate);
     public IContinuedCreate<TEntity, T1, T2> Where(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -547,13 +591,7 @@ class ContinuedCreate<TEntity, T1, T2> : ContinuedCreateBase, IContinuedCreate<T
         return this;
     }
     public IContinuedCreate<TEntity, T1, T2> And(Expression<Func<T1, T2, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.And(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public IContinuedCreate<TEntity, T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -564,19 +602,18 @@ class ContinuedCreate<TEntity, T1, T2> : ContinuedCreateBase, IContinuedCreate<T
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
         return this;
     }
+    #endregion
 }
 class ContinuedCreate<TEntity, T1, T2, T3> : ContinuedCreateBase, IContinuedCreate<TEntity, T1, T2, T3>
 {
+    #region Constructor
     public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
         : base(connection, transaction, visitor) { }
-    public IContinuedCreate<TEntity, T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
+    #endregion
 
-        this.visitor.Where(predicate);
-        return this;
-    }
+    #region Where/And
+    public IContinuedCreate<TEntity, T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
+        => this.Where(true, predicate);
     public IContinuedCreate<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -588,13 +625,7 @@ class ContinuedCreate<TEntity, T1, T2, T3> : ContinuedCreateBase, IContinuedCrea
         return this;
     }
     public IContinuedCreate<TEntity, T1, T2, T3> And(Expression<Func<T1, T2, T3, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.And(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public IContinuedCreate<TEntity, T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -605,19 +636,18 @@ class ContinuedCreate<TEntity, T1, T2, T3> : ContinuedCreateBase, IContinuedCrea
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
         return this;
     }
+    #endregion
 }
 class ContinuedCreate<TEntity, T1, T2, T3, T4> : ContinuedCreateBase, IContinuedCreate<TEntity, T1, T2, T3, T4>
 {
+    #region Constructor
     public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
         : base(connection, transaction, visitor) { }
-    public IContinuedCreate<TEntity, T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
+    #endregion
 
-        this.visitor.Where(predicate);
-        return this;
-    }
+    #region Where/And
+    public IContinuedCreate<TEntity, T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
+        => this.Where(true, predicate);
     public IContinuedCreate<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -629,13 +659,7 @@ class ContinuedCreate<TEntity, T1, T2, T3, T4> : ContinuedCreateBase, IContinued
         return this;
     }
     public IContinuedCreate<TEntity, T1, T2, T3, T4> And(Expression<Func<T1, T2, T3, T4, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.And(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public IContinuedCreate<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -646,19 +670,18 @@ class ContinuedCreate<TEntity, T1, T2, T3, T4> : ContinuedCreateBase, IContinued
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
         return this;
     }
+    #endregion
 }
 class ContinuedCreate<TEntity, T1, T2, T3, T4, T5> : ContinuedCreateBase, IContinuedCreate<TEntity, T1, T2, T3, T4, T5>
 {
+    #region Constructor
     public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
         : base(connection, transaction, visitor) { }
-    public IContinuedCreate<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
+    #endregion
 
-        this.visitor.Where(predicate);
-        return this;
-    }
+    #region Where/And
+    public IContinuedCreate<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
+        => this.Where(true, predicate);
     public IContinuedCreate<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -670,13 +693,7 @@ class ContinuedCreate<TEntity, T1, T2, T3, T4, T5> : ContinuedCreateBase, IConti
         return this;
     }
     public IContinuedCreate<TEntity, T1, T2, T3, T4, T5> And(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.And(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public IContinuedCreate<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -687,4 +704,5 @@ class ContinuedCreate<TEntity, T1, T2, T3, T4, T5> : ContinuedCreateBase, IConti
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
         return this;
     }
+    #endregion
 }

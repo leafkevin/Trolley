@@ -463,7 +463,7 @@ public interface IQuery<T> : IQueryBase
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> Where(Expression<Func<T, bool>> predicate);
     /// <summary>
@@ -478,7 +478,7 @@ public interface IQuery<T> : IQueryBase
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
-    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> And(Expression<Func<T, bool>> predicate);
     /// <summary>

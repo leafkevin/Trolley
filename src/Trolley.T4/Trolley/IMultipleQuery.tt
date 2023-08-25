@@ -16,7 +16,7 @@ public interface IMultipleQuery
 {
     #region Query
     /// <summary>
-    /// 查询数据，用法：
+    /// 从表T中查询数据，用法：
     /// <code>
     /// repository
     ///     .From&lt;Menu&gt;()
@@ -33,7 +33,7 @@ public interface IMultipleQuery
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> From<T>(char tableAsStart = 'a', string suffixRawSql = null);
     /// <summary>
-    /// SQL子查询，用法：
+    /// 从SQL子查询中查询数据，用法：
     /// <code>
     /// repository
     ///     .From(f => f.From&lt;Page, Menu&gt;('o')
@@ -145,57 +145,73 @@ public interface IMultipleQuery
     IMultiQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a');
 <#  }#>
     /// <summary>
-    /// 执行SQL查询，返回满足条件的TEntity实体第一条记录，记录不存在时返回TEntity类型的默认值
+    /// 使用原始SQL语句rawSql查询数据，返回满足条件的TEntity实体第一条记录，记录不存在时返回TEntity类型的默认值
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
-    /// <param name="rawSql">原始SQL</param>
+    /// <param name="rawSql">原始SQL，不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultipleQuery QueryFirst<TEntity>(string rawSql);
     /// <summary>
-    /// 执行SQL查询，返回满足条件的TEntity实体第一条记录，记录不存在时返回TEntity类型的默认值
+    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
-    /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
+    /// <param name="rawSql">原始SQL，不能为null</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultipleQuery QueryFirst<TEntity>(string rawSql, object parameters);
     /// <summary>
-    /// 执行SQL查询，返回TEntity实体所有字段的第一条记录，记录不存在时返回TEntity类型的默认值
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，用法：
+    /// <code>
+    /// repository.QueryFirst&lt;User&gt;(new { Id = 1, IsEnabled = true })
+    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
+    /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
-    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
+    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultipleQuery QueryFirst<TEntity>(object whereObj);
     /// <summary>
-    /// 执行SQL查询，返回满足条件的所有TEntity实体记录，记录不存在时返回空的List&lt;TEntity&gt;类型对象
+    /// 使用原始SQL语句rawSql查询数据，返回满足条件的所有TEntity实体记录，记录不存在时返回空的List&lt;TEntity&gt;类型对象
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
-    /// <param name="rawSql">原始SQL</param>
+    /// <param name="rawSql">原始SQL，不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultipleQuery Query<TEntity>(string rawSql);
     /// <summary>
-    /// 执行SQL查询，返回满足条件的所有TEntity实体记录，记录不存在时返回空的List&lt;TEntity&gt;类型对象
+    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
-    /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
+    /// <param name="rawSql">原始SQL，不能为null</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultipleQuery Query<TEntity>(string rawSql, object parameters);
     /// <summary>
-    /// 执行SQL查询，返回满足条件的所有TEntity实体记录，记录不存在时返回空的List&lt;TEntity&gt;类型对象
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，用法：
+    /// <code>
+    /// repository.Query&lt;User&gt;(new { Id = 1, IsEnabled = true })
+    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
+    /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
-    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
+    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultipleQuery Query<TEntity>(object whereObj);
     #endregion
 
     #region CRUD
     /// <summary>
-    /// 根据主键信息，获取TEntity实体，记录不存在时返回TEntity类型的默认值
+    /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，用法：
+    /// <code>
+    /// repository.Get&lt;User&gt;(1) //或是
+    /// repository.Get&lt;User&gt;(new { Id = 1}) //或是
+    /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ...};
+    /// repository.Get&lt;User&gt;(userInfo) //三种写法是等价的
+    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id
+    /// </code>
     /// </summary>
-    /// <typeparam name="TEntity">获取实体类型</typeparam>
-    /// <returns>返回实体对象或是TEntity类型默认值</returns>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="whereObj">主键值或是包含主键的匿名对象或是已有对象，不能为null，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
+    /// <returns>返回查询对象</returns>
     IMultipleQuery Get<TEntity>(object whereObj);
     /// <summary>
     /// 创建TEntity类型插入对象
@@ -204,26 +220,30 @@ public interface IMultipleQuery
     /// <returns>返回插入对象</returns>
     IMultiCreate<TEntity> Create<TEntity>();
     /// <summary>
-    /// 创建T类型更新对象
+    /// 创建TEntity类型更新对象
     /// </summary>
-    /// <typeparam name="TEntity">更新对象类型</typeparam>
+    /// <typeparam name="TEntity">更新实体类型</typeparam>
     /// <returns>返回更新对象</returns>
     IMultiUpdate<TEntity> Update<TEntity>();
     /// <summary>
     /// 创建TEntity类型删除对象
     /// </summary>
-    /// <typeparam name="TEntity">删除对象类型</typeparam>
+    /// <typeparam name="TEntity">删除实体类型</typeparam>
     /// <returns>返回删除对象</returns>
     IMultiDelete<TEntity> Delete<TEntity>();
     /// <summary>
-    /// 判断TEntity表是否存在满足whereObj条件的记录，存在返回true,否则返回false，查询条件：TEntity表中对应字段值等于whreObj对象中的各属性值。
+    /// 判断是否存在表TEntity中满足与whereObj对象各属性值都相等的记录，存在返回true，否则返回false。
+    /// <code>
+    /// repository.Exists&lt;User&gt;(new { Id = 1, IsEnabled = true })
+    /// SQL: SELECT COUNT(1) FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
+    /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体对象类型</typeparam>
-    /// <param name="whereObj">where条件对象，根据TEntity表中对应字段值等于whreObj对象中的各属性值</param>
+    /// <param name="whereObj">where条件对象，whereObj对象各属性值都参与相等比较,推荐使用匿名对象</param>
     /// <returns>返回查询对象</returns>
     IMultipleQuery Exists<TEntity>(object whereObj);
     /// <summary>
-    /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true,否则返回false
+    /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false。
     /// </summary>
     /// <typeparam name="TEntity">实体对象类型</typeparam>
     /// <param name="wherePredicate">where条件表达式</param>
@@ -232,27 +252,27 @@ public interface IMultipleQuery
     /// <summary>
     /// 执行原始SQL，并返回影响行数
     /// </summary>
-    /// <param name="sql">要执行的SQL</param>
+    /// <param name="rawSql">要执行的SQL</param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery Execute(string sql);
+    IMultipleQuery Execute(string rawSql);
     /// <summary>
     /// 执行原始SQL，并返回影响行数
     /// </summary>
-    /// <param name="sql">要执行的SQL</param>
-    /// <param name="parameters">SQL中使用的参数</param>
+    /// <param name="rawSql">要执行的SQL，不能为null</param>
+    /// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，不能为null</param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery Execute(string sql, object parameters);
+    IMultipleQuery Execute(string rawSql, object parameters);
     #endregion
 }
 /// <summary>
 /// 查询数据
 /// </summary>
 /// <typeparam name="T">实体类型</typeparam>
-public interface IMultiQuery<T>
+public interface IMultiQuery<T> : IQueryBase
 {
     #region Union/UnionAll
     /// <summary>
-    /// Union操作，用法：
+    /// Union操作，去掉重复记录，用法：
     /// <code>
     /// await repository.From&lt;Order&gt;()
     ///     .Where(x => x.Id == 1)
@@ -296,7 +316,7 @@ public interface IMultiQuery<T>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery);
     /// <summary>
-    /// Union All操作，用法：
+    /// Union All操作，所有记录不去掉重复记录，用法：
     /// <code>
     /// repository.From&lt;Order&gt;()
     ///     .Where(x =&gt; x.Id == 1)
@@ -657,7 +677,7 @@ public interface IMultiQuery<T>
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> Where(Expression<Func<T, bool>> predicate);
     /// <summary>
@@ -672,7 +692,7 @@ public interface IMultiQuery<T>
     /// <summary>
     /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
-    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> And(Expression<Func<T, bool>> predicate);
     /// <summary>
@@ -816,18 +836,6 @@ public interface IMultiQuery<T>
     #region Aggregate
     #region Count
     /// <summary>
-    /// 返回int类型数据条数
-    /// </summary>
-    /// <param name="result">返回数据条数</param>
-    /// <returns>返回查询对象</returns>
-    IMultipleQuery Count();
-    /// <summary>
-    /// 返回long类型数据条数
-    /// </summary>
-    /// <param name="result">返回数据条数</param>
-    /// <returns>返回查询对象</returns>
-    IMultipleQuery LongCount();
-    /// <summary>
     /// 返回某个字段的int类型数据条数，用法：
     /// <code>repository.From&lt;Order&gt;().Count(f =&gt; f.BuyerId);</code>
     /// </summary>
@@ -836,7 +844,7 @@ public interface IMultiQuery<T>
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count<TField>(Expression<Func<T, TField>> fieldExpr);
     /// <summary>
-    /// 返回某个字段去重后的int类型数据条数，这个更有实际意义，用法：
+    /// 返回某个字段去重后的int类型数据条数，用法：
     /// <code>repository.From&lt;Order&gt;().CountDistinct(f =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -919,15 +927,6 @@ public interface IMultiQuery<T>
     /// <returns>返回查询对象</returns>
     IMultipleQuery ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull;
     #endregion
-
-    #region ToSql
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
-    #endregion
 }
 public interface IMultiQueryBase
 {
@@ -955,11 +954,11 @@ public interface IMultiQueryBase
     #endregion
 }
 <#
-    count = 16;
-    tables = "T1";
-    currentTable = "T1";
+    var count = 16;
+    var tables = "T1";
     var tableAlias = "a";
-    var currentAlias = "a";    
+    var currentAlias = "a";
+    var currentTable = "T1";
     for (int i = 2; i < count; i++)
     {
         tables += $", T{i}";
@@ -1432,7 +1431,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     #region Count
     /// <summary>
     /// 返回某个字段的int类型数据条数，用法：
-    /// <code>repository.From&lt;Order&gt;().Count(f =&gt; f.BuyerId);</code>
+    /// <code>repository.From&lt;<#=tables#>&gt;().Count((<#=tableAlias#>) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -1440,7 +1439,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     IMultipleQuery Count<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     /// <summary>
     /// 返回某个字段去重后的int类型数据条数，用法：
-    /// <code>repository.From&lt;Order&gt;().CountDistinct(f =&gt; f.BuyerId);</code>
+    /// <code>repository.From&lt;<#=tables#>&gt;().CountDistinct((<#=tableAlias#>) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -1448,7 +1447,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     IMultipleQuery CountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     /// <summary>
     /// 返回某个字段的long类型数据条数，用法：
-    /// <code>repository.From&lt;Order&gt;().LongCount(f =&gt; f.BuyerId);</code>
+    /// <code>repository.From&lt;<#=tables#>&gt;().LongCount((<#=tableAlias#>) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -1456,7 +1455,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     IMultipleQuery LongCount<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     /// <summary>
     /// 返回某个字段去重后的long类型数据条数，用法：
-    /// <code>repository.From&lt;Order&gt;().LongCountDistinct(f =&gt; f.BuyerId);</code>
+    /// <code>repository.From&lt;<#=tables#>&gt;().LongCountDistinct((<#=tableAlias#>) =&gt; f.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -1466,6 +1465,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
 
     /// <summary>
     /// 计算指定字段的求和值
+    /// <code>repository.From&lt;<#=tables#>&gt;().Sum((<#=tableAlias#>) =&gt; f.TotalAmount);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -1473,6 +1473,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     IMultipleQuery Sum<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     /// <summary>
     /// 计算指定字段的平均值
+    /// <code>repository.From&lt;<#=tables#>&gt;().Avg((<#=tableAlias#>) =&gt; f.TotalAmount);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -1480,6 +1481,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     IMultipleQuery Avg<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     /// <summary>
     /// 计算指定字段的最大值
+    /// <code>repository.From&lt;<#=tables#>&gt;().Max((<#=tableAlias#>) =&gt; f.TotalAmount);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -1487,6 +1489,7 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     IMultipleQuery Max<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr);
     /// <summary>
     /// 计算指定字段的最小值
+    /// <code>repository.From&lt;<#=tables#>&gt;().Min((<#=tableAlias#>) =&gt; f.TotalAmount);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>

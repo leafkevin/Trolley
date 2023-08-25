@@ -23,7 +23,7 @@ public interface IUpdate<TEntity>
 {
     #region Set/SetRaw/SetWith/SetFrom
     /// <summary>
-    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，用法：
+    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，用法：
     /// <code>
     /// repository.Update&lt;User&gt;()
     ///     .Set(f =&gt; new { SomeTimes = TimeSpan.FromMinutes(1455) })
@@ -57,7 +57,7 @@ public interface IUpdate<TEntity>
     /// </code>
     /// </summary>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
-    /// <param name="fieldsAssignment">更新字段表达式</param>
+    /// <param name="fieldsAssignment">更新字段表达式，一个或是多个字段成员访问表达式，同名字段省略赋值字段，如：parameter.TotalAmount</param>
     /// <returns>返回更新对象</returns>
     IUpdateSetting<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
@@ -97,7 +97,7 @@ public interface IUpdate<TEntity>
     /// </summary>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="condition">更新条件</param>
-    /// <param name="fieldsAssignment">更新字段表达式</param>
+    /// <param name="fieldsAssignment">更新字段表达式，一个或是多个字段成员访问表达式，同名字段省略赋值字段，如：parameter.TotalAmount</param>
     /// <returns>返回更新对象</returns>
     IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
@@ -172,7 +172,7 @@ public interface IUpdate<TEntity>
     /// </code>
     /// </summary>
     /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
+    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有命名对象，可以为null</param>
     /// <returns></returns>
     IUpdateSetting<TEntity> SetRaw(string rawSql, object updateObj);
     /// <summary>
@@ -192,8 +192,8 @@ public interface IUpdate<TEntity>
     /// </summary>
     /// <param name="condition">判断条件</param>
     /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
+    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有命名对象，可以为null</param>
+    /// <returns>返回更新对象</returns>
     IUpdateSetting<TEntity> SetRaw(bool condition, string rawSql, object updateObj);
     /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象内所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，用法：
@@ -209,7 +209,7 @@ public interface IUpdate<TEntity>
     /// </code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
-    /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新</param>
+    /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新，可以是字典或是匿名对象或是现有命名对象</param>
     /// <returns>返回更新对象</returns>
     IUpdateSetting<TEntity> SetWith<TUpdateObj>(TUpdateObj updateObj);
     /// <summary>
@@ -228,7 +228,7 @@ public interface IUpdate<TEntity>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
     /// <param name="condition">判断条件</param>
-    /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新</param>
+    /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新，可以是字典或是匿名对象或是现有命名对象</param>
     /// <returns>返回更新对象</returns>
     IUpdateSetting<TEntity> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj);
     /// <summary>
@@ -449,11 +449,10 @@ public interface IUpdate<TEntity>
     /// UPDATE `sys_user` SET `Name`=@Name0 WHERE `Id`=@kId0;UPDATE `sys_user` SET `Name`=@Name1 WHERE `Id`=@kId1;
     /// </code>
     /// </summary>
-    /// <typeparam name="TUpdateObj"></typeparam>
     /// <param name="updateObjs">更新对象参数集合，包含想要更新的必需栏位和主键字段</param>
-    /// <param name="bulkCount">单次更新的最大数据条数</param>
+    /// <param name="bulkCount">单次更新的最大数据条数，默认是500</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSet<TEntity> WithBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500);
+    IUpdateSet<TEntity> WithBulk(IEnumerable updateObjs, int bulkCount = 500);
     /// <summary>
     /// 使用表达式fieldsSelectorOrAssignment字段筛选和集合对象updateObjs部分字段批量更新，集合对象updateObjs中的单个元素实体中必须包含主键字段，支持分批次更新，更新条数超过设置的bulkCount值，将在下次更新，直到所有数据更新完毕，bulkCount默认500，用法：
     /// <code>
@@ -478,7 +477,7 @@ public interface IUpdate<TEntity>
     /// <typeparam name="TFields">要更新的字段</typeparam>
     /// <param name="fieldsSelectorOrAssignment">字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，只有带参数的成员访问的表达式(如：f =&gt; f.Name)，才会被更新为updateObj中对应栏位的值，其他场景将被更新为对应表达式的值(如：tmpObj.TotalAmount, BuyerId = DBNull.Value等)</param>
     /// <param name="updateObjs">更新对象参数集合，包含想要更新的必需栏位和主键字段</param>
-    /// <param name="bulkCount">单次更新的最大数据条数</param>
+    /// <param name="bulkCount">单次更新的最大数据条数，默认是500</param>
     /// <returns>返回更新对象</returns>
     IUpdateSet<TEntity> WithBulk<TFields>(Expression<Func<TEntity, TFields>> fieldsSelectorOrAssignment, IEnumerable updateObjs, int bulkCount = 500);
     #endregion
@@ -981,11 +980,18 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
 
     #region Where/And
     /// <summary>
-    /// 使用wherePredicate表达式生成Where条件，表达式wherePredicate不能为null
+    /// 使用whereObj生成Where条件，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，whereObj对象可以是匿名对象或是已有命名对象或是字典，推荐使用匿名对象，不能为null
     /// </summary>
-    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
+    /// <typeparam name="TFields">where条件对象类型</typeparam>
+    /// <param name="whereObj">where条件对象，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，可以是匿名对象或是已有命名对象或是字典，推荐使用匿名对象，不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> Where(Expression<Func<TEntity, bool>> wherePredicate);
+    IUpdateSet<TEntity> Where<TFields>(TFields whereObj);
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateSetting<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -996,11 +1002,11 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateSetting<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用andPredicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式andPredicate不能为null
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
-    /// <param name="andPredicate">条件表达式，表达式andPredicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> And(Expression<Func<TEntity, bool>> andPredicate);
+    IUpdateSetting<TEntity> And(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -1413,9 +1419,9 @@ public interface IUpdateFrom<<#=tables#>> : IUpdateSet<TEntity>
 
     #region Where/And
     /// <summary>
-    /// 使用wherePredicate表达式生成Where条件，表达式wherePredicate不能为null
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="wherePredicate">条件表达式，表达式wherePredicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
     IUpdateFrom<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
@@ -1428,11 +1434,11 @@ public interface IUpdateFrom<<#=tables#>> : IUpdateSet<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateFrom<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用andPredicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式andPredicate不能为null
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
-    /// <param name="andPredicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> andPredicate);
+    IUpdateFrom<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
@@ -1871,11 +1877,11 @@ public interface IUpdateJoin<<#=tables#>> : IUpdateSet<TEntity>
 
     #region Where/And
     /// <summary>
-    /// 使用wherePredicate表达式生成Where条件，表达式wherePredicate不能为null
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
-    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> wherePredicate);
+    IUpdateJoin<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
@@ -1886,11 +1892,11 @@ public interface IUpdateJoin<<#=tables#>> : IUpdateSet<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用andPredicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式andPredicate不能为null
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
-    /// <param name="andPredicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> andPredicate);
+    IUpdateJoin<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件

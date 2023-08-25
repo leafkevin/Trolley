@@ -129,6 +129,7 @@ class MultiContinuedCreate<TEntity> : IMultiContinuedCreate<TEntity>
         var entityType = typeof(TEntity);
         var commandInitializer = RepositoryHelper.BuildCreateWithBiesCommandInitializer(
               this.connection, this.ormProvider, this.mapProvider, entityType, insertObj);
+
         this.builders.Add(new WithByBuilderCache
         {
             CommandInitializer = commandInitializer,
@@ -138,13 +139,7 @@ class MultiContinuedCreate<TEntity> : IMultiContinuedCreate<TEntity>
     }
     public IMultiContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
     {
-        if (condition)
-        {
-            if (insertObj == null)
-                throw new ArgumentNullException(nameof(insertObj));
-
-            return this.WithBy(insertObj);
-        }
+        if (condition) this.WithBy(insertObj);
         return this;
     }
     public IMultipleQuery Execute()
@@ -161,15 +156,14 @@ class MultiContinuedCreate<TEntity> : IMultiContinuedCreate<TEntity>
     {
         var entityType = typeof(TEntity);
         var entityMapper = this.mapProvider.GetEntityMap(entityType);
-        using var sqlCommand = this.connection.CreateCommand();
-        var sql = this.BuildSql(entityMapper, sqlCommand);
+        using var command = this.connection.CreateCommand();
+        var sql = this.BuildSql(entityMapper, command);
 
         dbParameters = null;
-        if (sqlCommand.Parameters != null && sqlCommand.Parameters.Count > 0)
-            dbParameters = sqlCommand.Parameters.Cast<IDbDataParameter>().ToList();
-        sqlCommand.Cancel();
-        sqlCommand.Dispose();
-        this.builders.Clear();
+        if (command.Parameters != null && command.Parameters.Count > 0)
+            dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+        command.Cancel();
+        command.Dispose();
         return sql;
     }
     private string BuildSql(EntityMap entityMapper, IDbCommand command)
@@ -218,10 +212,20 @@ class MultiCreated<TEntity> : IMultiCreated<TEntity>
         this.mapProvider = multiQuery.MapProvider;
         this.command = multiQuery.Command;
     }
-    public IMultiCreated<TEntity> RawSql(string rawSql, object parameters = null)
+    public IMultiCreated<TEntity> RawSql(string rawSql)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
+        this.rawSql = rawSql;
+        return this;
+    }
+    public IMultiCreated<TEntity> RawSql(string rawSql, object parameters)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        if (parameters == null)
+            throw new ArgumentNullException(nameof(parameters));
+
         this.rawSql = rawSql;
         this.parameters = parameters;
         return this;
@@ -245,12 +249,11 @@ class MultiCreated<TEntity> : IMultiCreated<TEntity>
     {
         dbParameters = null;
         var entityType = typeof(TEntity);
-        using var sqlCommand = this.connection.CreateCommand();
-        var sql = this.BuildSql(entityType, sqlCommand);
-        if (sqlCommand.Parameters != null && sqlCommand.Parameters.Count > 0)
-            dbParameters = sqlCommand.Parameters.Cast<IDbDataParameter>().ToList();
-        sqlCommand.Cancel();
-        sqlCommand.Dispose();
+        using var command = this.connection.CreateCommand();
+        string sql = this.BuildSql(entityType, command);
+        if (command.Parameters != null && command.Parameters.Count > 0)
+            dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+        command.Dispose();
         return sql;
     }
     private string BuildSql(Type entityType, IDbCommand command)
@@ -260,7 +263,8 @@ class MultiCreated<TEntity> : IMultiCreated<TEntity>
         {
             if (this.parameters != null)
             {
-                var commandInitializer = RepositoryHelper.BuildCreateRawSqlParameters(this.connection, this.ormProvider, this.mapProvider, entityType, this.rawSql, this.parameters);
+                var commandInitializer = RepositoryHelper.BuildCreateRawSqlParameters(
+                    this.connection, this.ormProvider, this.mapProvider, entityType, this.rawSql, this.parameters);
                 commandInitializer.Invoke(command, this.ormProvider, this.parameters);
             }
             sql = this.rawSql;
@@ -306,13 +310,7 @@ class MultiContinuedCreate<TEntity, TSource> : MultiContinuedCreateBase, IMultiC
     public MultiContinuedCreate(MultipleQuery multiQuery, ICreateVisitor visitor)
         : base(multiQuery, visitor) { }
     public IMultiContinuedCreate<TEntity, TSource> Where(Expression<Func<TSource, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.Where(predicate);
-        return this;
-    }
+        => this.Where(true, predicate);
     public IMultiContinuedCreate<TEntity, TSource> Where(bool condition, Expression<Func<TSource, bool>> ifPredicate, Expression<Func<TSource, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -324,13 +322,7 @@ class MultiContinuedCreate<TEntity, TSource> : MultiContinuedCreateBase, IMultiC
         return this;
     }
     public IMultiContinuedCreate<TEntity, TSource> And(Expression<Func<TSource, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.And(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public IMultiContinuedCreate<TEntity, TSource> And(bool condition, Expression<Func<TSource, bool>> ifPredicate, Expression<Func<TSource, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -347,13 +339,7 @@ class MultiContinuedCreate<TEntity, T1, T2> : MultiContinuedCreateBase, IMultiCo
     public MultiContinuedCreate(MultipleQuery multiQuery, ICreateVisitor visitor)
         : base(multiQuery, visitor) { }
     public IMultiContinuedCreate<TEntity, T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.Where(predicate);
-        return this;
-    }
+        => this.Where(true, predicate);
     public IMultiContinuedCreate<TEntity, T1, T2> Where(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -365,13 +351,7 @@ class MultiContinuedCreate<TEntity, T1, T2> : MultiContinuedCreateBase, IMultiCo
         return this;
     }
     public IMultiContinuedCreate<TEntity, T1, T2> And(Expression<Func<T1, T2, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.And(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public IMultiContinuedCreate<TEntity, T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -388,13 +368,7 @@ class MultiContinuedCreate<TEntity, T1, T2, T3> : MultiContinuedCreateBase, IMul
     public MultiContinuedCreate(MultipleQuery multiQuery, ICreateVisitor visitor)
         : base(multiQuery, visitor) { }
     public IMultiContinuedCreate<TEntity, T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.Where(predicate);
-        return this;
-    }
+        => this.Where(true, predicate);
     public IMultiContinuedCreate<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -406,13 +380,7 @@ class MultiContinuedCreate<TEntity, T1, T2, T3> : MultiContinuedCreateBase, IMul
         return this;
     }
     public IMultiContinuedCreate<TEntity, T1, T2, T3> And(Expression<Func<T1, T2, T3, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.And(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public IMultiContinuedCreate<TEntity, T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -429,13 +397,7 @@ class MultiContinuedCreate<TEntity, T1, T2, T3, T4> : MultiContinuedCreateBase, 
     public MultiContinuedCreate(MultipleQuery multiQuery, ICreateVisitor visitor)
         : base(multiQuery, visitor) { }
     public IMultiContinuedCreate<TEntity, T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.Where(predicate);
-        return this;
-    }
+        => this.Where(true, predicate);
     public IMultiContinuedCreate<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -447,13 +409,7 @@ class MultiContinuedCreate<TEntity, T1, T2, T3, T4> : MultiContinuedCreateBase, 
         return this;
     }
     public IMultiContinuedCreate<TEntity, T1, T2, T3, T4> And(Expression<Func<T1, T2, T3, T4, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.And(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public IMultiContinuedCreate<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -470,13 +426,7 @@ class MultiContinuedCreate<TEntity, T1, T2, T3, T4, T5> : MultiContinuedCreateBa
     public MultiContinuedCreate(MultipleQuery multiQuery, ICreateVisitor visitor)
         : base(multiQuery, visitor) { }
     public IMultiContinuedCreate<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.Where(predicate);
-        return this;
-    }
+        => this.Where(true, predicate);
     public IMultiContinuedCreate<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -488,13 +438,7 @@ class MultiContinuedCreate<TEntity, T1, T2, T3, T4, T5> : MultiContinuedCreateBa
         return this;
     }
     public IMultiContinuedCreate<TEntity, T1, T2, T3, T4, T5> And(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.And(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public IMultiContinuedCreate<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
