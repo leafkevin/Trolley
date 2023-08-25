@@ -552,11 +552,13 @@ public class SqlServerUnitTest1 : UnitTestBase
                 UpdatedBy = 1
             })
             .ToSql(out var parameters);
-        Assert.True(sql == "INSERT INTO [sys_order] ([Id],[OrderNo],[ProductCount],[TotalAmount],[BuyerId],[SellerId],[Products],[Disputes],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) VALUES(@Id,@OrderNo,@ProductCount,@TotalAmount,@BuyerId,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
-        Assert.True(parameters[6].ParameterName == "@Products");
-        Assert.True((string)parameters[6].Value == "[1,2]");
-        Assert.True(parameters[7].ParameterName == "@Disputes");
-        Assert.True((string)parameters[7].Value == "{\"Id\":2,\"Users\":\"Buyer2,Seller2\",\"Content\":\"\\u65E0\\u826F\\u5546\\u5BB6\",\"Result\":\"\\u540C\\u610F\\u9000\\u6B3E\",\"CreatedAt\":\"2023-03-05T00:00:00\"}");
+        Assert.True(sql == "INSERT INTO [sys_order] ([Id],[OrderNo],[TotalAmount],[BuyerId],[BuyerSource],[SellerId],[ProductCount],[Products],[Disputes],[IsEnabled],[CreatedBy],[CreatedAt],[UpdatedBy],[UpdatedAt]) VALUES(@Id,@OrderNo,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@ProductCount,@Products,@Disputes,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
+        Assert.True(parameters[4].ParameterName == "@BuyerSource");
+        Assert.True((string)parameters[4].Value == UserSourceType.Website.ToString());
+        Assert.True(parameters[7].ParameterName == "@Products");
+        Assert.True((string)parameters[7].Value == "[1,2]");
+        Assert.True(parameters[8].ParameterName == "@Disputes");
+        Assert.True((string)parameters[8].Value == "{\"Id\":2,\"Users\":\"Buyer2,Seller2\",\"Content\":\"\\u65E0\\u826F\\u5546\\u5BB6\",\"Result\":\"\\u540C\\u610F\\u9000\\u6B3E\",\"CreatedAt\":\"2023-03-05T00:00:00\"}");
         var count = repository.Create<Order>()
             .WithBy(new Order
             {
@@ -628,7 +630,7 @@ public class SqlServerUnitTest1 : UnitTestBase
                  UpdatedBy = 1
              })
              .ToSql(out var parameters2);
-        Assert.True(sql2 == "INSERT INTO [sys_company] ([Id],[Name],[Nature],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) VALUES(@Id,@Name,@Nature,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+        Assert.True(sql2 == "INSERT INTO [sys_company] ([Id],[Name],[Nature],[IsEnabled],[CreatedBy],[CreatedAt],[UpdatedBy],[UpdatedAt]) VALUES(@Id,@Name,@Nature,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
         Assert.True(parameters2[2].ParameterName == "@Nature");
         Assert.True(parameters2[2].Value.GetType() == typeof(string));
         Assert.True((string)parameters2[2].Value == CompanyNature.Internet.ToString());
