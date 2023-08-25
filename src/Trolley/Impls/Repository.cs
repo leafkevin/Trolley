@@ -12,12 +12,12 @@ namespace Trolley;
 
 public class Repository : IRepository
 {
-    #region 字段
+    #region Fields
     private bool isParameterized = false;
     protected TheaConnection connection;
     #endregion
 
-    #region 属性
+    #region Properties
     public string DbKey { get; private set; }
     public IDbConnection Connection => this.connection;
     public IOrmProvider OrmProvider { get; private set; }
@@ -25,7 +25,7 @@ public class Repository : IRepository
     public IDbTransaction Transaction { get; private set; }
     #endregion
 
-    #region 构造方法
+    #region Constructor
     public Repository(string dbKey, IDbConnection connection, IOrmProvider ormProvider, IEntityMapProvider entityMapProvider)
     {
         this.DbKey = dbKey;
@@ -42,7 +42,7 @@ public class Repository : IRepository
     }
     #endregion
 
-    #region Query
+    #region From/FromWith/FromWithRecursive
     public IQuery<T> From<T>(char tableAsStart = 'a', string suffixRawSql = null)
     {
         var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart);
@@ -130,7 +130,9 @@ public class Repository : IRepository
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.connection, this.Transaction, visitor);
     }
+    #endregion
 
+    #region QueryFirst/Query
     public TEntity QueryFirst<TEntity>(string rawSql, object parameters = null)
     {
         if (string.IsNullOrEmpty(rawSql))

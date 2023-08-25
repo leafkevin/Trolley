@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -14,12 +13,15 @@ namespace Trolley;
 
 class Delete<TEntity> : IDelete<TEntity>
 {
+    #region Fields
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
     private readonly bool isParameterized;
+    #endregion
 
+    #region Constructor
     public Delete(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false)
     {
         this.connection = connection;
@@ -28,7 +30,9 @@ class Delete<TEntity> : IDelete<TEntity>
         this.mapProvider = mapProvider;
         this.isParameterized = isParameterized;
     }
+    #endregion
 
+    #region Where
     public IDeleted<TEntity> Where(object keys)
     {
         if (keys == null)
@@ -37,14 +41,7 @@ class Delete<TEntity> : IDelete<TEntity>
         return new Deleted<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider, keys);
     }
     public IDeleting<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        var visitor = this.ormProvider.NewDeleteVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
-        visitor.Where(predicate);
-        return new Deleting<TEntity>(this.connection, this.transaction, visitor);
-    }
+        => this.Where(true, predicate);
     public IDeleting<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -55,15 +52,19 @@ class Delete<TEntity> : IDelete<TEntity>
         else if (elsePredicate != null) visitor.Where(elsePredicate);
         return new Deleting<TEntity>(this.connection, this.transaction, visitor);
     }
+    #endregion
 }
 class Deleted<TEntity> : IDeleted<TEntity>
 {
+    #region Fields
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
     private object parameters = null;
+    #endregion
 
+    #region Constructor
     public Deleted(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, object parameters)
     {
         this.connection = connection;
@@ -72,6 +73,9 @@ class Deleted<TEntity> : IDeleted<TEntity>
         this.mapProvider = mapProvider;
         this.parameters = parameters;
     }
+    #endregion
+
+    #region Execute
     public int Execute()
     {
         string sql = null;
@@ -146,6 +150,9 @@ class Deleted<TEntity> : IDeleted<TEntity>
         command.Dispose();
         return result;
     }
+    #endregion
+
+    #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
         dbParameters = null;
@@ -179,28 +186,28 @@ class Deleted<TEntity> : IDeleted<TEntity>
         command.Dispose();
         return sql;
     }
+    #endregion
 }
 class Deleting<TEntity> : IDeleting<TEntity>
 {
+    #region Fields
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
     private readonly IDeleteVisitor visitor;
+    #endregion
 
+    #region Constructor
     public Deleting(TheaConnection connection, IDbTransaction transaction, IDeleteVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
         this.visitor = visitor;
     }
+    #endregion
 
+    #region And
     public IDeleting<TEntity> And(Expression<Func<TEntity, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.And(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public IDeleting<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
@@ -210,6 +217,9 @@ class Deleting<TEntity> : IDeleting<TEntity>
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
         return this;
     }
+    #endregion
+
+    #region Execute
     public int Execute()
     {
         var sql = this.visitor.BuildSql(out var dbParameters);
@@ -243,5 +253,9 @@ class Deleting<TEntity> : IDeleting<TEntity>
         await command.DisposeAsync();
         return result;
     }
+    #endregion
+
+    #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
+    #endregion
 }

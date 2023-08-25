@@ -12,7 +12,7 @@ namespace Trolley;
 /// </summary>
 public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
 {
-    #region 属性
+    #region Properties
     /// <summary>
     /// 数据库链接串Key
     /// </summary>
@@ -35,7 +35,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     IDbTransaction Transaction { get; }
     #endregion
 
-    #region Query
+    #region From/FromWith/FromWithRecursive
     /// <summary>
     /// 从表T中查询数据，用法：
     /// <code>
@@ -251,8 +251,11 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a');
+    #endregion
+
+    #region QueryFirst/Query
     /// <summary>
-    /// 使用原始SQL语句rawSql和参数parameters查询表TEntity数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值
+    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
@@ -260,7 +263,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     TEntity QueryFirst<TEntity>(string rawSql, object parameters = null);
     /// <summary>
-    /// 使用原始SQL语句rawSql和参数parameters查询表TEntity数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值
+    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值
     /// </summary>
     /// <typeparam name="TEntity">返回的实体类型</typeparam>
     /// <param name="rawSql">查询SQL</param>
@@ -292,7 +295,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     Task<TEntity> QueryFirstAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 使用原始SQL语句rawSql和参数parameters查询表TEntity数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表
+    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
@@ -560,7 +563,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// 执行原始SQL，并返回影响行数
     /// </summary>
     /// <param name="rawSql">要执行的SQL</param>
-    /// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象</param>
+    /// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回影响行数</returns>
     Task<int> ExecuteAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default);

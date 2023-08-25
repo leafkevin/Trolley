@@ -19,7 +19,7 @@ namespace Trolley;
 /// </summary>
 public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
 {
-    #region 属性
+    #region Properties
     /// <summary>
     /// 数据库链接串Key
     /// </summary>
@@ -42,7 +42,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     IDbTransaction Transaction { get; }
     #endregion
 
-    #region Query
+    #region From/FromWith/FromWithRecursive
     /// <summary>
     /// 从表T中查询数据，用法：
     /// <code>
@@ -171,7 +171,10 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a');
-<#  }#>    
+<#  }#>
+    #endregion
+
+    #region QueryFirst/Query
     /// <summary>
     /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值
     /// </summary>

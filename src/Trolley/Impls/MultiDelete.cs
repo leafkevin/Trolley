@@ -10,12 +10,15 @@ namespace Trolley;
 
 class MultiDelete<TEntity> : IMultiDelete<TEntity>
 {
+    #region Fields
     private readonly MultipleQuery multiQuery;
     private readonly TheaConnection connection;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
     private readonly bool isParameterized;
+    #endregion
 
+    #region Constructor
     public MultiDelete(MultipleQuery multiQuery)
     {
         this.multiQuery = multiQuery;
@@ -24,7 +27,9 @@ class MultiDelete<TEntity> : IMultiDelete<TEntity>
         this.mapProvider = multiQuery.MapProvider;
         this.isParameterized = multiQuery.IsParameterized;
     }
+    #endregion
 
+    #region Where
     public IMultiDeleted<TEntity> Where(object keys)
     {
         if (keys == null)
@@ -51,16 +56,20 @@ class MultiDelete<TEntity> : IMultiDelete<TEntity>
         else if (elsePredicate != null) visitor.Where(elsePredicate);
         return new MultiDeleting<TEntity>(this.multiQuery, visitor);
     }
+    #endregion
 }
 class MultiDeleted<TEntity> : IMultiDeleted<TEntity>
 {
+    #region Fields
     private readonly MultipleQuery multiQuery;
     private readonly TheaConnection connection;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
     private readonly IDbCommand command;
     private object parameters = null;
+    #endregion
 
+    #region Constructor
     public MultiDeleted(MultipleQuery multiQuery, object parameters)
     {
         this.multiQuery = multiQuery;
@@ -70,6 +79,9 @@ class MultiDeleted<TEntity> : IMultiDeleted<TEntity>
         this.command = multiQuery.Command;
         this.parameters = parameters;
     }
+    #endregion
+
+    #region Execute
     public IMultipleQuery Execute()
     {
         string sql = null;
@@ -100,6 +112,9 @@ class MultiDeleted<TEntity> : IMultiDeleted<TEntity>
         this.multiQuery.AddReader(sql, readerGetter);
         return this.multiQuery;
     }
+    #endregion
+
+    #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
         dbParameters = null;
@@ -133,18 +148,24 @@ class MultiDeleted<TEntity> : IMultiDeleted<TEntity>
         sqlCommand.Dispose();
         return sql;
     }
+    #endregion
 }
 class MultiDeleting<TEntity> : IMultiDeleting<TEntity>
 {
+    #region Fields
     private readonly MultipleQuery multiQuery;
     private readonly IDeleteVisitor visitor;
+    #endregion
 
+    #region Constructor
     public MultiDeleting(MultipleQuery multiQuery, IDeleteVisitor visitor)
     {
         this.multiQuery = multiQuery;
         this.visitor = visitor;
     }
+    #endregion
 
+    #region And
     public IMultiDeleting<TEntity> And(Expression<Func<TEntity, bool>> predicate)
     {
         if (predicate == null)
@@ -162,6 +183,9 @@ class MultiDeleting<TEntity> : IMultiDeleting<TEntity>
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
         return this;
     }
+    #endregion
+
+    #region Execute
     public IMultipleQuery Execute()
     {
         var sql = this.visitor.BuildSql(out var dbParameters);
@@ -169,6 +193,10 @@ class MultiDeleting<TEntity> : IMultiDeleting<TEntity>
         this.multiQuery.AddReader(sql, readerGetter, dbParameters);
         return this.multiQuery;
     }
+    #endregion
+
+    #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(out dbParameters);
+    #endregion
 }

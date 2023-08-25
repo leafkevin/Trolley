@@ -216,10 +216,6 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>MultiGroupingQuery.cs</LastGenOutput>
     </Content>
-    <Content Include="Trolley\Repository.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>Repository.cs</LastGenOutput>
-    </Content>
     <Content Include="Trolley\MultiUpdate.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>MultiUpdate.cs</LastGenOutput>

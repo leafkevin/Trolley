@@ -11,19 +11,29 @@ namespace Trolley;
 
 class QueryAnonymousObject : IQueryAnonymousObject
 {
+    #region Fields
     private readonly IQueryVisitor visitor;
+    #endregion
+
+    #region Constructor
     public QueryAnonymousObject(IQueryVisitor visitor) => this.visitor = visitor;
+    #endregion
+
+    #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(out dbParameters, out _);
+    #endregion
 }
 class QueryBase : IQueryBase
 {
+    #region Fields
     protected string dbKey;
     protected TheaConnection connection;
     protected IDbTransaction transaction;
     protected IQueryVisitor visitor;
     protected int unionIndex;
     protected int withIndex;
+    #endregion
 
     #region Count
     public int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -92,9 +102,13 @@ class QueryBase : IQueryBase
 }
 class Query<T> : QueryBase, IQuery<T>
 {
+    #region Fields
     private int? offset;
     private int pageIndex;
     private int pageSize;
+    #endregion
+
+    #region Constructor
     public Query(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor, int withIndex = 0)
     {
         this.connection = connection;
@@ -103,6 +117,7 @@ class Query<T> : QueryBase, IQuery<T>
         this.dbKey = connection.DbKey;
         this.withIndex = withIndex;
     }
+    #endregion
 
     #region Union/UnionAll
     public IQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery)
@@ -819,10 +834,12 @@ class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
+    #region ToSql
     public override string ToSql(out List<IDbDataParameter> dbParameters)
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.visitor.SelectDefault(defaultExpr);
         return this.visitor.BuildSql(out dbParameters, out _);
     }
+    #endregion
 }
