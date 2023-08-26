@@ -377,7 +377,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var memberExpr = lambdaExpr.Body as MemberExpression;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
 
-        this.InitTableAlias(lambdaExpr);
+        this.InitTableAlias(valueSelector as LambdaExpression);
         var sql = this.VisitFromQuery(valueSelector as LambdaExpression, out var isNeedAlias);
         if (isNeedAlias) this.IsNeedAlias = true;
         this.updateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = $"({sql})" });

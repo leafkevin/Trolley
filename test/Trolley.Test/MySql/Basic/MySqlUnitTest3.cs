@@ -5,13 +5,16 @@ using System.Linq;
 using System.Text.Json;
 using Trolley.MySqlConnector;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Trolley.Test.MySql;
 
 public class MySqlUnitTest3 : UnitTestBase
 {
-    public MySqlUnitTest3()
+    protected readonly ITestOutputHelper logger;
+    public MySqlUnitTest3(ITestOutputHelper logger)
     {
+        this.logger = logger;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
@@ -61,26 +64,49 @@ public class MySqlUnitTest3 : UnitTestBase
     {
         Initialize();
         using var repository = dbFactory.Create();
-        var result = repository.Update<User>(f => f.Name, new { Id = 1, Name = "leafkevin11" });
+        var result = repository.Update<User>(new { Id = 1, Name = "leafkevin11" });
         var result1 = repository.Get<User>(1);
         Assert.True(result > 0);
         Assert.NotNull(result1);
-        Assert.True(result1.Name == result1.Name);
         Assert.True(result1.Name == "leafkevin11");
+        result = repository.Update<User>(f => f.Name, new { Id = 1, Name = "leafkevin22" });
+        var result2 = repository.Get<User>(1);
+        Assert.True(result > 0);
+        Assert.NotNull(result2);
+        Assert.True(result2.Name == "leafkevin22");
     }
     [Fact]
     public void Update_Fields_Parameters_One()
     {
         Initialize();
         using var repository = dbFactory.Create();
-        var result = repository.Update<User>(f => new { Age = 25, f.Name, CompanyId = DBNull.Value }, new { Id = 1, Age = 18, Name = "leafkevin22" });
+        var result = repository.Update<User>(f => new { Age = 24, f.Name, CompanyId = DBNull.Value }, new { Id = 1, Age = 18, Name = "leafkevin11" });
         var result1 = repository.Get<User>(1);
         Assert.True(result > 0);
         Assert.NotNull(result1);
-        Assert.True(result1.Name == result1.Name);
-        Assert.True(result1.Name == "leafkevin22");
-        Assert.True(result1.Age == 25);
+        Assert.True(result1.Name == "leafkevin11");
+        Assert.True(result1.Age == 24);
         Assert.True(result1.CompanyId == 0);
+        result = repository.Update<User>()
+            .SetWith(f => new
+            {
+                Age = 25,
+                f.Name,
+                CompanyId = DBNull.Value
+            }, new
+            {
+                Id = 1,
+                Age = 18,
+                Name = "leafkevin22"
+            })
+            .Where(f => f.Id == 1)
+            .Execute();
+        var result2 = repository.Get<User>(1);
+        Assert.True(result > 0);
+        Assert.NotNull(result2);
+        Assert.True(result2.Name == "leafkevin22");
+        Assert.True(result2.Age == 25);
+        Assert.True(result2.CompanyId == 0);
     }
     [Fact]
     public async void Update_Fields_Parameters_Multi()
@@ -106,6 +132,39 @@ public class MySqlUnitTest3 : UnitTestBase
         });
     }
     [Fact]
+    public void Update_SetWith_Parameters()
+    {
+        Initialize();
+        using var repository = dbFactory.Create();
+        repository.BeginTransaction();
+        var result = repository.Update<Order>(new
+        {
+            ProductCount = 10,
+            Id = 1
+        });
+        var result1 = repository.Get<Order>(new { Id = 1 });
+        repository.Commit();
+        if (result > 0)
+        {
+            Assert.NotNull(result1);
+            Assert.True(result1.Id == 1);
+            Assert.True(result1.ProductCount == 10);
+        }
+        repository.BeginTransaction();
+        result = repository.Update<Order>()
+            .SetWith(new { ProductCount = 11 })
+            .Where(new { Id = 1 })
+            .Execute();
+        var result2 = repository.Get<Order>(new { Id = 1 });
+        repository.Commit();
+        if (result > 0)
+        {
+            Assert.NotNull(result2);
+            Assert.True(result2.Id == 1);
+            Assert.True(result2.ProductCount == 11);
+        }
+    }
+    [Fact]
     public async void Update_WithBulk_Parameters_Multi()
     {
         using var repository = dbFactory.Create();
@@ -114,6 +173,7 @@ public class MySqlUnitTest3 : UnitTestBase
             .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
             .ToListAsync();
         var sql = repository.Update<OrderDetail>().WithBulk(parameters).ToSql(out _);
+        this.logger.WriteLine(sql);
         Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price5,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5");
     }
     [Fact]
@@ -145,6 +205,7 @@ public class MySqlUnitTest3 : UnitTestBase
     [Fact]
     public async void Update_Parameters_WithBulk()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
         var orders = await repository.From<Order>()
             .Where(f => new int[] { 1, 2, 3 }.Contains(f.Id))
@@ -162,6 +223,7 @@ public class MySqlUnitTest3 : UnitTestBase
     [Fact]
     public void Update_SetWith()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
         var updateObj = repository.Get<Order>(1);
@@ -215,6 +277,7 @@ public class MySqlUnitTest3 : UnitTestBase
     [Fact]
     public void Update_SetWith_MethodCall()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
         var updateObj = repository.Get<Order>(1);
@@ -278,8 +341,26 @@ public class MySqlUnitTest3 : UnitTestBase
     [Fact]
     public void Update_Set_FromQuery_Multi()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .Set(true, (x, y) => new
+            {
+                TotalAmount = 200.56,
+                OrderNo = x.OrderNo + "-111",
+                BuyerSource = y.SourceType
+            })
+            .Set(x => x.Products, new List<int> { 1, 2, 3 })
+            .Where((a, b) => a.BuyerId == 1)
+          .ToSql(out var dbParameters);
+        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1");
+        Assert.NotNull(dbParameters);
+        Assert.True(dbParameters[0].ParameterName == "@TotalAmount");
+        Assert.True((double)dbParameters[0].Value == 200.56);
+        Assert.True(dbParameters[1].ParameterName == "@Products");
+        Assert.True((string)dbParameters[1].Value == JsonSerializer.Serialize(new List<int> { 1, 2, 3 }));
+        sql = repository.Update<Order>()
             .SetFrom((a, b) => new
             {
                 TotalAmount = a.From<OrderDetail>('b')
@@ -295,6 +376,7 @@ public class MySqlUnitTest3 : UnitTestBase
     [Fact]
     public void Update_Set_FromQuery_One()
     {
+        Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
             .SetFrom((a, b) => new
@@ -312,6 +394,7 @@ public class MySqlUnitTest3 : UnitTestBase
     [Fact]
     public void Update_Set_FromQuery_One_Enum()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.Update<Company>()
             .SetFrom((a, b) => new
@@ -344,6 +427,7 @@ public class MySqlUnitTest3 : UnitTestBase
     [Fact]
     public void Update_InnerJoin_One()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
@@ -360,6 +444,7 @@ public class MySqlUnitTest3 : UnitTestBase
     [Fact]
     public void Update_InnerJoin_Multi()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
@@ -376,6 +461,7 @@ public class MySqlUnitTest3 : UnitTestBase
     [Fact]
     public void Update_InnerJoin_Fields()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
@@ -390,6 +476,17 @@ public class MySqlUnitTest3 : UnitTestBase
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out _);
         Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,CAST(b.`ProductId` AS CHAR)),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+
+        var sql1 = repository.Update<Order>()
+            .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
+            .SetFrom(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
+                .Where(f => f.OrderId == y.Id)
+                .Select(t => Sql.Sum(t.Amount)))
+            .Set((a, b) => new { OrderNo = a.OrderNo + b.ProductId.ToString() })
+            .Set((x, y) => new { BuyerId = DBNull.Value })
+            .Where((x, y) => x.BuyerId == 1)
+            .ToSql(out _);
+        Assert.True(sql1 == "UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,CAST(b.`ProductId` AS CHAR)),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
     }
     [Fact]
     public void Update_SetNull_WhereNull()
@@ -529,10 +626,7 @@ public class MySqlUnitTest3 : UnitTestBase
         Assert.True((string)parameters[1].Value == JsonSerializer.Serialize(new List<int> { 1, 2, 3 }));
 
         var sql1 = repository.Update<User>()
-            .SetWith(new
-            {
-                Gender = Gender.Male
-            })
+            .SetWith(new { Gender = Gender.Male })
             .Where(new { Id = 1 })
             .ToSql(out var parameters1);
         Assert.True(sql1 == "UPDATE `sys_user` SET `Gender`=@Gender WHERE `Id`=@kId");
@@ -589,9 +683,9 @@ public class MySqlUnitTest3 : UnitTestBase
 
         var sql6 = repository.Update<Company>()
             .SetWith(f => new { f.Nature }, new { Id = 1, Nature = CompanyNature.Internet })
-            .Where(f => f.Id == 1)
+            .Where(new { Id = 1 })
             .ToSql(out var parameters6);
-        Assert.True(sql6 == "UPDATE `sys_company` SET `Nature`=@Nature WHERE `Id`=1");
+        Assert.True(sql6 == "UPDATE `sys_company` SET `Nature`=@Nature WHERE `Id`=@kId");
         Assert.True(parameters6[0].ParameterName == "@Nature");
         Assert.True(parameters6[0].Value.GetType() == typeof(string));
         Assert.True((string)parameters6[0].Value == CompanyNature.Internet.ToString());
