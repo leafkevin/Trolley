@@ -25,21 +25,6 @@ class MultiQueryReader : IMultiQueryReader
         this.mapProvider = mapProvider;
         this.readerAfters = readerAfters;
     }
-    public dynamic ReadFirst()
-    {
-        dynamic result = default;
-        if (this.reader.Read())
-        {
-            if (this.readerAfters != null)
-                result = this.readerAfters[this.readerIndex].ReaderGetter.Invoke(this.reader);
-            else
-            {
-
-            }
-        }
-        this.ReadNextResult();
-        return result;
-    }
     public T ReadFirst<T>()
     {
         T result = default;
@@ -57,10 +42,6 @@ class MultiQueryReader : IMultiQueryReader
         }
         this.ReadNextResult();
         return result;
-    }
-    public List<dynamic> Read()
-    {
-        return null;
     }
     public List<T> Read<T>()
     {
@@ -94,19 +75,12 @@ class MultiQueryReader : IMultiQueryReader
         this.ReadNextResult();
         return result;
     }
-    public IPagedList<dynamic> ReadPageList()
-    {
-        return null;
-    }
     public IPagedList<T> ReadPageList<T>()
     {
+        this.Read<T>();
         return null;
     }
     public Dictionary<TKey, TValue> ReadDictionary<TKey, TValue>()
-    {
-        return null;
-    }
-    public Task<dynamic> ReadFirstAsync(CancellationToken cancellationToken = default)
     {
         return null;
     }
@@ -114,15 +88,7 @@ class MultiQueryReader : IMultiQueryReader
     {
         return null;
     }
-    public Task<List<dynamic>> ReadAsync(CancellationToken cancellationToken = default)
-    {
-        return null;
-    }
     public Task<List<T>> ReadAsync<T>(CancellationToken cancellationToken = default)
-    {
-        return null;
-    }
-    public Task<IPagedList<dynamic>> ReadPageListAsync(CancellationToken cancellationToken = default)
     {
         return null;
     }
@@ -134,9 +100,6 @@ class MultiQueryReader : IMultiQueryReader
     {
         return null;
     }
-
-
-
     private void ReadNextResult()
     {
         if (!this.reader.NextResult())

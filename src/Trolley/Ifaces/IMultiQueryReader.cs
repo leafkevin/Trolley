@@ -11,7 +11,7 @@ public interface IMultiQueryReader : IDisposable, IAsyncDisposable
     /// 读取单个动态类型对象或值，记录不存在时返回动态类型的默认值
     /// </summary>
     /// <returns>返回动态类型对象或值，记录不存在时返回动态类型的默认值</returns>
-    dynamic ReadFirst();
+    //dynamic ReadFirst();
     /// <summary>
     /// 读取单个T类型对象或值，记录不存在时返回T类型的默认值
     /// </summary>
@@ -22,7 +22,7 @@ public interface IMultiQueryReader : IDisposable, IAsyncDisposable
     /// 读取动态类型对象列表或值列表，记录不存在时返回没有任何元素的空列表
     /// </summary>
     /// <returns>返回动态类型对象列表或值列表，记录不存在时返回没有任何元素的空列表</returns>
-    List<dynamic> Read();
+    //List<dynamic> Read();
     /// <summary>
     /// 读取T类型对象列表或值列表，记录不存在时返回没有任何元素的空列表
     /// </summary>
@@ -33,7 +33,7 @@ public interface IMultiQueryReader : IDisposable, IAsyncDisposable
     /// 读取当前列表，并转化为IPagedListy&lt;dynamic&gt;分页列表
     /// </summary>
     /// <returns>返回动态类型对象分页列表或值分页列表，记录不存在时返回没有任何元素的空分页列表</returns>
-    IPagedList<dynamic> ReadPageList();
+    //IPagedList<dynamic> ReadPageList();
     /// <summary>
     /// 读取当前列表，并转化为IPagedListy&lt;T&gt;分页列表
     /// </summary>
@@ -52,7 +52,7 @@ public interface IMultiQueryReader : IDisposable, IAsyncDisposable
     /// </summary>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回动态类型对象或值，记录不存在时返回动态类型的默认值</returns>
-    Task<dynamic> ReadFirstAsync(CancellationToken cancellationToken = default);
+    //Task<dynamic> ReadFirstAsync(CancellationToken cancellationToken = default);
     /// <summary>
     /// 读取单个T类型对象或值，记录不存在时返回T类型的默认值
     /// </summary>
@@ -65,7 +65,7 @@ public interface IMultiQueryReader : IDisposable, IAsyncDisposable
     /// </summary>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回动态类型对象列表或值列表，记录不存在时返回没有任何元素的空列表</returns>
-    Task<List<dynamic>> ReadAsync(CancellationToken cancellationToken = default);
+    //Task<List<dynamic>> ReadAsync(CancellationToken cancellationToken = default);
     /// <summary>
     /// 读取T类型对象列表或值列表，记录不存在时返回没有任何元素的空列表
     /// </summary>
@@ -78,7 +78,7 @@ public interface IMultiQueryReader : IDisposable, IAsyncDisposable
     /// </summary>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回动态类型对象分页列表或值分页列表，记录不存在时返回没有任何元素的空分页列表</returns>
-    Task<IPagedList<dynamic>> ReadPageListAsync(CancellationToken cancellationToken = default);
+    //Task<IPagedList<dynamic>> ReadPageListAsync(CancellationToken cancellationToken = default);
     /// <summary>
     /// 读取当前列表，并转化为IPagedListy&lt;T&gt;分页列表
     /// </summary>
