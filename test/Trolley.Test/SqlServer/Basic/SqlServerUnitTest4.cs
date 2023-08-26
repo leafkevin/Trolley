@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using Trolley.SqlServer;
 using Xunit;
@@ -47,6 +49,37 @@ public class SqlServerUnitTest4 : UnitTestBase
         Assert.False(typeof(DateTime?).IsEntityType(out _));
         Assert.False(typeof(byte[]).IsEntityType(out _));
         Assert.False(typeof(int[]).IsEntityType(out _));
+        Assert.False(typeof(List<int>).IsEntityType(out _));
+        Assert.False(typeof(List<int[]>).IsEntityType(out _));
+        Assert.False(typeof(Collection<string>).IsEntityType(out _));
+        Assert.False(typeof(DBNull).IsEntityType(out _));
+
+        var vt1 = ValueTuple.Create("kevin");
+        Assert.False(vt1.GetType().IsEntityType(out _));
+        var vt2 = ValueTuple.Create(1, "kevin", 25, 30000.00d);
+        Assert.True(vt2.GetType().IsEntityType(out _));
+        Assert.True(typeof((string Name, int Age)).IsEntityType(out _));
+        Assert.True(typeof(Dictionary<string, int>).IsEntityType(out _));
+        Assert.True(typeof(Studuent).IsEntityType(out _));
+        Assert.True(typeof(Teacher).IsEntityType(out _));
+
+        Assert.True(typeof(Dictionary<string, int>[]).IsEntityType(out _));
+        Assert.True(typeof(List<Dictionary<string, int>>).IsEntityType(out _));
+        Assert.True(typeof(List<Dictionary<string, int>[]>).IsEntityType(out _));
+        Assert.True(typeof(Collection<Dictionary<string, int>>).IsEntityType(out _));
+        Assert.True(typeof(Dictionary<string, Dictionary<string, int>>).IsEntityType(out _));
+
+        Assert.True(typeof(Teacher[]).IsEntityType(out _));
+        Assert.True(typeof(List<Teacher>).IsEntityType(out _));
+        Assert.True(typeof(List<Teacher[]>).IsEntityType(out _));
+        Assert.True(typeof(Collection<Teacher>).IsEntityType(out _));
+        Assert.True(typeof(Dictionary<string, Teacher>).IsEntityType(out _));
+
+        Assert.True(typeof(Studuent[]).IsEntityType(out _));
+        Assert.True(typeof(List<Studuent>).IsEntityType(out _));
+        Assert.True(typeof(List<Studuent[]>).IsEntityType(out _));
+        Assert.True(typeof(Collection<Studuent>).IsEntityType(out _));
+        Assert.True(typeof(Dictionary<string, Studuent>).IsEntityType(out _));
     }
     [Fact]
     public async void Delete()
@@ -121,9 +154,19 @@ public class SqlServerUnitTest4 : UnitTestBase
         var sql = repository.Delete<User>()
             .Where(new[] { new { Id = 1 }, new { Id = 2 } })
             .ToSql(out var parameters);
-        Assert.True(sql == "DELETE FROM [sys_user] WHERE [Id]=@Id0;DELETE FROM [sys_user] WHERE [Id]=@Id1");
+        Assert.True(sql == "DELETE FROM [sys_user] WHERE [Id] IN (@Id0,@Id1)");
         Assert.True((int)parameters[0].Value == 1);
         Assert.True((int)parameters[1].Value == 2);
+
+        var sql1 = repository.Delete<Function>()
+            .Where(new[] { new { MenuId = 1, PageId = 1 }, new { MenuId = 2, PageId = 2 } })
+            .ToSql(out parameters);
+        Assert.True(sql1 == "DELETE FROM [sys_function] WHERE [MenuId]=@MenuId0 AND [PageId]=@PageId0;DELETE FROM [sys_function] WHERE [MenuId]=@MenuId1 AND [PageId]=@PageId1");
+        Assert.True(parameters.Count == 4);
+        Assert.True((int)parameters[0].Value == 1);
+        Assert.True((int)parameters[1].Value == 1);
+        Assert.True((int)parameters[2].Value == 2);
+        Assert.True((int)parameters[3].Value == 2);
     }
     [Fact]
     public async void Delete_Multi1()
@@ -168,7 +211,7 @@ public class SqlServerUnitTest4 : UnitTestBase
         var sql = repository.Delete<User>()
             .Where(new int[] { 1, 2 })
             .ToSql(out var parameters);
-        Assert.True(sql == "DELETE FROM [sys_user] WHERE [Id]=@Id0;DELETE FROM [sys_user] WHERE [Id]=@Id1");
+        Assert.True(sql == "DELETE FROM [sys_user] WHERE [Id] IN (@Id0,@Id1)");
         Assert.True((int)parameters[0].Value == 1);
         Assert.True((int)parameters[1].Value == 2);
 
@@ -239,7 +282,7 @@ public class SqlServerUnitTest4 : UnitTestBase
             .ToSql(out _);
         Assert.True(sql == "DELETE FROM [sys_user] WHERE [Name] LIKE '%kevin%' AND [Age]>25");
     }
-	[Fact]
+    [Fact]
     public void Delete_Enum_Fields()
     {
         using var repository = dbFactory.Create();
@@ -279,8 +322,10 @@ public class SqlServerUnitTest4 : UnitTestBase
         repository.Timeout(60);
         repository.BeginTransaction();
         repository.Update<User>()
-            .SetWith(new { Name = "leafkevin1", Id = 1 })
+            .SetWith(new { Name = "leafkevin1" })
+            .Where(new { Id = 1 })
             .Execute();
+        repository.Update<User>(new { Name = "leafkevin1", Id = 1 });
         repository.Delete<User>()
             .Where(f => f.Name.Contains("kevin"))
             .And(isMale.HasValue, f => f.Age > 25)

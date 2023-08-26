@@ -199,7 +199,7 @@ public class SqlServerUnitTest3 : UnitTestBase
         Assert.True(sql == "UPDATE [sys_order_detail] SET [Price]=@Price,[UpdatedBy]=@UpdatedBy,[ProductId]=NULL,[Quantity]=@Quantity0,[Amount]=@Amount0 WHERE [Id]=@kId0;UPDATE [sys_order_detail] SET [Price]=@Price,[UpdatedBy]=@UpdatedBy,[ProductId]=NULL,[Quantity]=@Quantity1,[Amount]=@Amount1 WHERE [Id]=@kId1;UPDATE [sys_order_detail] SET [Price]=@Price,[UpdatedBy]=@UpdatedBy,[ProductId]=NULL,[Quantity]=@Quantity2,[Amount]=@Amount2 WHERE [Id]=@kId2;UPDATE [sys_order_detail] SET [Price]=@Price,[UpdatedBy]=@UpdatedBy,[ProductId]=NULL,[Quantity]=@Quantity3,[Amount]=@Amount3 WHERE [Id]=@kId3;UPDATE [sys_order_detail] SET [Price]=@Price,[UpdatedBy]=@UpdatedBy,[ProductId]=NULL,[Quantity]=@Quantity4,[Amount]=@Amount4 WHERE [Id]=@kId4;UPDATE [sys_order_detail] SET [Price]=@Price,[UpdatedBy]=@UpdatedBy,[ProductId]=NULL,[Quantity]=@Quantity5,[Amount]=@Amount5 WHERE [Id]=@kId5");
     }
     [Fact]
-    public async void Update_Parameters_WithBy()
+    public async void Update_Parameters_WithBulk()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -324,7 +324,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             }, updateObj)
             .Where(new { updateObj.Id })
             .ToSql(out var dbParameters);
-        Assert.True(sql == "UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`Disputes`=@Disputes,`UpdatedAt`=@UpdatedAt WHERE `Id`=@kId");
+        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=@TotalAmount,[Products]=@Products,[Disputes]=@Disputes,[UpdatedAt]=@UpdatedAt WHERE [Id]=@kId");
         Assert.True(dbParameters[0].ParameterName == "@TotalAmount");
         Assert.True((double)dbParameters[0].Value == this.CalcAmount(updateObj.TotalAmount + increasedAmount, 3));
         Assert.True(dbParameters[1].ParameterName == "@Products");
@@ -356,7 +356,7 @@ public class SqlServerUnitTest3 : UnitTestBase
         Assert.True((double)dbParameters[0].Value == 200.56);
         Assert.True(dbParameters[1].ParameterName == "@Products");
         Assert.True((string)dbParameters[1].Value == JsonSerializer.Serialize(new List<int> { 1, 2, 3 }));
-    	sql = repository.Update<Order>()
+        sql = repository.Update<Order>()
             .SetFrom((a, b) => new
             {
                 TotalAmount = a.From<OrderDetail>('b')
@@ -412,8 +412,8 @@ public class SqlServerUnitTest3 : UnitTestBase
             .SetFrom((x, y) => new
             {
                 TotalAmount = x.From<OrderDetail>('b')
-                .Where(f => f.OrderId == y.Id)
-                .Select(t => Sql.Sum(t.Amount))
+                    .Where(f => f.OrderId == y.Id)
+                    .Select(t => Sql.Sum(t.Amount))
             })
             .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
@@ -603,7 +603,7 @@ public class SqlServerUnitTest3 : UnitTestBase
         this.Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
-            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .From<User>()
             .Set((x, y) => new
             {
                 TotalAmount = 200.56,
@@ -611,9 +611,9 @@ public class SqlServerUnitTest3 : UnitTestBase
                 BuyerSource = y.SourceType
             })
             .Set(x => x.Products, new List<int> { 1, 2, 3 })
-            .Where((a, b) => a.BuyerId == 1)
+            .Where((a, b) => a.BuyerId == b.Id && a.BuyerId == 1)
             .ToSql(out var parameters);
-        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=@TotalAmount,[OrderNo]=([sys_order].[OrderNo]+'-111'),[BuyerSource]=b.[SourceType],[Products]=@Products FROM [sys_user] b WHERE [sys_order].[BuyerId]=b.[Id] AND [sys_order].[BuyerId]=1");
         Assert.True(parameters[0].ParameterName == "@TotalAmount");
         Assert.True(parameters[0].Value.GetType() == typeof(double));
         Assert.True((double)parameters[0].Value == 200.56);

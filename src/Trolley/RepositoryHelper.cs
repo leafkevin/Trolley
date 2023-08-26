@@ -1391,6 +1391,7 @@ class RepositoryHelper
                         if (isEntityType)
                             AddMemberParameter(commandExpr, ormProviderExpr, parameterNameExpr, typedParameterExpr, keyMapper, blockBodies);
                         else AddValueParameter(commandExpr, ormProviderExpr, parameterNameExpr, parameterExpr, keyMapper, blockBodies);
+                        index++;
                     }
                 }
                 else

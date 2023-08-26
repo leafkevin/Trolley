@@ -215,3 +215,20 @@ CREATE TABLE `sys_user`  (
 INSERT INTO `sys_user` VALUES (1, 'leafkevin', 2, 25, 1, 'e09d9d46-1783-475b-9d57-2721d163c29f', '01:19:29.000000', 'Douyin', 1, '2023-03-03 00:00:00', 1, '2023-04-29 00:05:28', 1);
 INSERT INTO `sys_user` VALUES (2, 'cindy', 2, 21, 2, '20687f1c-3f27-4741-894e-fa59bcd43dbc', '01:35:30.000000', 'Taobao', 1, '2023-03-03 06:06:06', 1, '2023-04-29 00:05:28', 1);
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ----------------------------
+-- Table structure for sys_user
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_function`;
+CREATE TABLE `sys_user`  (
+  `MenuId` int NOT NULL,
+  `PageId` int NOT NULL,
+  `FunctionName` varchar(50) NULL DEFAULT NULL,
+  `Description` varchar(500) NULL DEFAULT NULL,
+  `IsEnabled` tinyint(1) NULL DEFAULT NULL,
+  `CreatedAt` datetime NULL DEFAULT NULL,
+  `CreatedBy` int NULL DEFAULT NULL,
+  `UpdatedAt` datetime NULL DEFAULT NULL,
+  `UpdatedBy` int NULL DEFAULT NULL,
+  PRIMARY KEY (`MenuId`,`PageId`) USING BTREE
+);

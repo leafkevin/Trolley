@@ -140,3 +140,20 @@ CREATE TABLE [dbo].[sys_user](
 )
 );
 GO
+CREATE TABLE [dbo].[sys_function](
+	[MenuId] [int] NOT NULL,
+	[PageId] [int] NOT NULL,
+	[FunctionName] [nvarchar](50) NULL,
+	Description [nvarchar](500) NULL,
+	[IsEnabled] [bit] NULL,
+	[CreatedAt] [datetime] NULL,
+	[CreatedBy] [int] NULL,
+	[UpdatedAt] [datetime] NULL,
+	[UpdatedBy] [int] NULL,
+ CONSTRAINT [pk_sys_function] PRIMARY KEY CLUSTERED 
+(
+	[MenuId] ASC,
+	[PageId] ASC
+)
+);
+GO

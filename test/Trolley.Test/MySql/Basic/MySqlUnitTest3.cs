@@ -410,6 +410,7 @@ public class MySqlUnitTest3 : UnitTestBase
     [Fact]
     public void Update_Set_FromQuery_Fields()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.Update<Order>()
             .SetFrom((x, y) => new

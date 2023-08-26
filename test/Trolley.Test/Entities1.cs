@@ -183,3 +183,15 @@ public class Dispute
     public string Result { get; set; }
     public DateTime CreatedAt { get; set; }
 }
+public class Function
+{
+    public int MenuId { get; set; }
+    public int PageId { get; set; }
+    public string FunctionName { get; set; }
+    public string Description { get; set; }
+    public bool IsEnabled { get; set; }
+    public int CreatedBy { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public int UpdatedBy { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}

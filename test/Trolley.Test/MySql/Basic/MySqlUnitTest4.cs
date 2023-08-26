@@ -9,18 +9,7 @@ using Xunit;
 namespace Trolley.Test.MySql;
 
 public class MySqlUnitTest4 : UnitTestBase
-{
-    enum Sex { Male, Female }
-    struct Studuent
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
-    }
-    class Teacher
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
-    }
+{   
     public MySqlUnitTest4()
     {
         var services = new ServiceCollection();
@@ -44,6 +33,7 @@ public class MySqlUnitTest4 : UnitTestBase
     {
         Assert.False(typeof(Sex).IsEntityType(out _));
         Assert.False(typeof(Sex?).IsEntityType(out _));
+        Assert.True(typeof(Studuent).IsEntityType(out _));
         Assert.False(typeof(string).IsEntityType(out _));
         Assert.False(typeof(int).IsEntityType(out _));
         Assert.False(typeof(int?).IsEntityType(out _));
@@ -161,6 +151,16 @@ public class MySqlUnitTest4 : UnitTestBase
         Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id` IN (@Id0,@Id1)");
         Assert.True((int)parameters[0].Value == 1);
         Assert.True((int)parameters[1].Value == 2);
+
+        var sql1 = repository.Delete<Function>()
+            .Where(new[] { new { MenuId = 1, PageId = 1 }, new { MenuId = 2, PageId = 2 } })
+            .ToSql(out parameters);
+        Assert.True(sql1 == "DELETE FROM `sys_function` WHERE `MenuId`=@MenuId0 AND `PageId`=@PageId0;DELETE FROM `sys_function` WHERE `MenuId`=@MenuId1 AND `PageId`=@PageId1");
+        Assert.True(parameters.Count == 4);
+        Assert.True((int)parameters[0].Value == 1);
+        Assert.True((int)parameters[1].Value == 1);
+        Assert.True((int)parameters[2].Value == 2);
+        Assert.True((int)parameters[3].Value == 2);
     }
     [Fact]
     public async void Delete_Multi1()

@@ -143,5 +143,18 @@ class SqlServerModelConfiguration : IModelConfiguration
             f.Member(t => t.UpdatedAt).Field(nameof(Page.UpdatedAt)).NativeDbType(SqlDbType.DateTime);
             f.Member(t => t.UpdatedBy).Field(nameof(Page.UpdatedBy)).NativeDbType(SqlDbType.Int);
         });
+        builder.Entity<Function>(f =>
+        {
+            f.ToTable("sys_function").Key(t => new { t.MenuId, t.PageId });
+            f.Member(t => t.MenuId).Field(nameof(Function.MenuId)).NativeDbType(SqlDbType.Int);
+            f.Member(t => t.PageId).Field(nameof(Function.PageId)).NativeDbType(SqlDbType.Int);
+            f.Member(t => t.FunctionName).Field(nameof(Function.FunctionName)).NativeDbType(SqlDbType.VarChar);
+            f.Member(t => t.Description).Field(nameof(Function.Description)).NativeDbType(SqlDbType.VarChar);
+            f.Member(t => t.IsEnabled).Field(nameof(Function.IsEnabled)).NativeDbType(SqlDbType.Bit);
+            f.Member(t => t.CreatedAt).Field(nameof(Function.CreatedAt)).NativeDbType(SqlDbType.DateTime);
+            f.Member(t => t.CreatedBy).Field(nameof(Function.CreatedBy)).NativeDbType(SqlDbType.Int);
+            f.Member(t => t.UpdatedAt).Field(nameof(Function.UpdatedAt)).NativeDbType(SqlDbType.DateTime);
+            f.Member(t => t.UpdatedBy).Field(nameof(Function.UpdatedBy)).NativeDbType(SqlDbType.Int);
+        });
     }
 }

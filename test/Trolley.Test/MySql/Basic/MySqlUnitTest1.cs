@@ -552,6 +552,8 @@ public class MySqlUnitTest1 : UnitTestBase
             })
             .ToSql(out var parameters);
         Assert.True(sql == "INSERT INTO `sys_order` (`Id`,`OrderNo`,`TotalAmount`,`BuyerId`,`BuyerSource`,`SellerId`,`ProductCount`,`Products`,`Disputes`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) VALUES(@Id,@OrderNo,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@ProductCount,@Products,@Disputes,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
+		Assert.True(parameters[4].ParameterName == "@BuyerSource");
+        Assert.True((string)parameters[4].Value == UserSourceType.Website.ToString());
         Assert.True(parameters[7].ParameterName == "@Products");
         Assert.True((string)parameters[7].Value == "[1,2]");
         Assert.True(parameters[8].ParameterName == "@Disputes");
