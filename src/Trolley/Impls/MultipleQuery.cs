@@ -341,6 +341,10 @@ class MultipleQuery : IMultipleQuery
 }
 class ReaderAfter
 {
+    /// <summary>
+    /// 明确的类型可以使用dynamic类型
+    /// </summary>
+    public bool IsTyped { get; set; } = true;
     public Func<IDataReader, object> ReaderGetter { get; set; }
     public IQueryVisitor QueryVisitor { get; set; }
     public int PageIndex { get; set; }

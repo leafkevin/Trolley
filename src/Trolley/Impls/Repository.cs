@@ -765,7 +765,7 @@ public class Repository : IRepository
 
         this.connection.Open();
         var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-        return new MultiQueryReader(this.DbKey, command, reader, this.OrmProvider, this.MapProvider);
+        return new MultiQueryReader(command, reader);
     }
     public async Task<IMultiQueryReader> QueryMultipleAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
     {
@@ -787,7 +787,7 @@ public class Repository : IRepository
 
         await this.connection.OpenAsync(cancellationToken);
         var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-        return new MultiQueryReader(this.DbKey, command, reader, this.OrmProvider, this.MapProvider);
+        return new MultiQueryReader(command, reader);
     }
     public IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries)
     {
@@ -804,7 +804,7 @@ public class Repository : IRepository
 
         this.connection.Open();
         var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-        return new MultiQueryReader(this.DbKey, command, reader, this.OrmProvider, this.MapProvider, multiQuery.ReaderAfters);
+        return new MultiQueryReader(command, reader, multiQuery.ReaderAfters);
     }
     public async Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default)
     {
@@ -823,7 +823,7 @@ public class Repository : IRepository
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
         await this.connection.OpenAsync(cancellationToken);
         var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-        return new MultiQueryReader(this.DbKey, command, reader, this.OrmProvider, this.MapProvider, multiQuery.ReaderAfters);
+        return new MultiQueryReader(command, reader, multiQuery.ReaderAfters);
     }
     #endregion
 

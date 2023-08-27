@@ -142,6 +142,11 @@ class MultiContinuedCreate<TEntity> : IMultiContinuedCreate<TEntity>
         if (condition) this.WithBy(insertObj);
         return this;
     }
+    //public IMultiContinuedCreate<TEntity> IgnoreInto ( )
+    //{
+
+    //    return this;
+    //}
     public IMultipleQuery Execute()
     {
         var entityType = typeof(TEntity);

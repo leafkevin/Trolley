@@ -43,10 +43,11 @@ public interface IMultiQueryReader : IDisposable, IAsyncDisposable
     /// <summary>
     /// 读取当前列表，并转化为Dictionary&lt;TKey, TValue&gt;的字典，记录不存在时返回没有任何元素的空字典
     /// </summary>
+    /// <typeparam name="TEntity">实体类型，一定要包含当前实体可确定唯一的字段</typeparam>
     /// <typeparam name="TKey">字典的键，一定要唯一，通常是当前实体类型中的某个唯一字段</typeparam>
     /// <typeparam name="TValue">字典的值，通常是当前实体类型或是其中一部分字段</typeparam>
     /// <returns>返回Dictionary&lt;TKey, TValue&gt;类型字典</returns>
-    Dictionary<TKey, TValue> ReadDictionary<TKey, TValue>();
+    Dictionary<TKey, TValue> ReadDictionary<TEntity, TKey, TValue>(Func<TEntity, TKey> keySelector, Func<TEntity, TValue> valueSelector) where TKey : notnull;
     /// <summary>
     /// 读取单个动态类型对象或值，记录不存在时返回动态类型的默认值
     /// </summary>
@@ -89,9 +90,10 @@ public interface IMultiQueryReader : IDisposable, IAsyncDisposable
     /// <summary>
     /// 读取当前列表，并转化为Dictionary&lt;TKey, TValue&gt;的字典，记录不存在时返回没有任何元素的空字典
     /// </summary>
+    /// <typeparam name="TEntity">实体类型，一定要包含当前实体可确定唯一的字段</typeparam>
     /// <typeparam name="TKey">字典的键，一定要唯一，通常是当前实体类型中的某个唯一字段</typeparam>
     /// <typeparam name="TValue">字典的值，通常是当前实体类型或是其中一部分字段</typeparam>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回Dictionary&lt;TKey, TValue&gt;类型字典</returns>
-    Task<Dictionary<TKey, TValue>> ReadDictionaryAsync<TKey, TValue>(CancellationToken cancellationToken = default);
+    Task<Dictionary<TKey, TValue>> ReadDictionaryAsync<TEntity, TKey, TValue>(Func<TEntity, TKey> keySelector, Func<TEntity, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull;
 }

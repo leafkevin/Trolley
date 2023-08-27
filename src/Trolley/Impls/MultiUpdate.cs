@@ -238,12 +238,9 @@ class MultiUpdateSet<TEntity> : IMultiUpdateSet<TEntity>
             this.visitor.SetBulk(builder, this.command, updateObj, index);
             index++;
         }
-        if (index > 0)
-        {
-            var sql = builder.ToString();
-            Func<IDataReader, object> readerGetter = reader => reader.To<int>();
-            this.multiQuery.AddReader(sql, readerGetter);
-        }
+        var sql = builder.ToString();
+        Func<IDataReader, object> readerGetter = reader => reader.To<int>();
+        this.multiQuery.AddReader(sql, readerGetter);
         return this.multiQuery;
     }
     #endregion
