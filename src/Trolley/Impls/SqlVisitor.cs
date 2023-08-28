@@ -23,6 +23,7 @@ public class SqlVisitor : ISqlVisitor
     protected bool isSelect = false;
     protected bool isWhere = false;
     protected bool isFromQuery = false;
+    protected string multiParameterPrefix = string.Empty;
     protected OperationType lastWhereNodeType = OperationType.None;
 
     public string DbKey { get; private set; }
@@ -32,7 +33,7 @@ public class SqlVisitor : ISqlVisitor
     public char TableAsStart { get; set; }
     public bool IsNeedAlias { get; set; }
 
-    public SqlVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+    public SqlVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
     {
         this.DbKey = dbKey;
         this.OrmProvider = ormProvider;
@@ -40,6 +41,7 @@ public class SqlVisitor : ISqlVisitor
         this.IsParameterized = isParameterized;
         this.TableAsStart = tableAsStart;
         this.parameterPrefix = parameterPrefix;
+        this.multiParameterPrefix = multiParameterPrefix;
     }
     public virtual SqlSegment VisitAndDeferred(SqlSegment sqlSegment)
     {
@@ -1140,9 +1142,9 @@ public class SqlVisitor : ISqlVisitor
             {
                 parameterName = this.OrmProvider.ParameterPrefix + sqlSegment.ParameterName;
                 if (dataParameters.Exists(f => f.ParameterName == parameterName))
-                    parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + dataParameters.Count.ToString();
+                    parameterName = this.OrmProvider.ParameterPrefix + this.multiParameterPrefix + this.parameterPrefix + dataParameters.Count.ToString();
             }
-            else parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + dataParameters.Count.ToString();
+            else parameterName = this.OrmProvider.ParameterPrefix + this.multiParameterPrefix + this.parameterPrefix + dataParameters.Count.ToString();
 
             //只有常量和变量才有可能是数组
             if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
@@ -1184,7 +1186,7 @@ public class SqlVisitor : ISqlVisitor
             return "NULL";
         if (arraySegment.IsVariable || (this.IsParameterized || arraySegment.IsParameterized) && arraySegment.IsConstant)
         {
-            var parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
+            var parameterName = this.OrmProvider.ParameterPrefix + this.multiParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
             if (index.HasValue)
                 parameterName += index.ToString();
             IDbDataParameter dbParameter = null;
@@ -1204,9 +1206,9 @@ public class SqlVisitor : ISqlVisitor
         if (isParameterized)
         {
             var dataParameters = dbParameters ?? this.dbParameters;
-            var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
+            var parameterName = this.OrmProvider.ParameterPrefix + this.multiParameterPrefix + memberMapper.MemberName;
             if (dataParameters.Exists(f => f.ParameterName == parameterName))
-                parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + dataParameters.Count.ToString();
+                parameterName = this.OrmProvider.ParameterPrefix + this.multiParameterPrefix + this.parameterPrefix + dataParameters.Count.ToString();
 
             if (index.HasValue)
                 parameterName += index.ToString();

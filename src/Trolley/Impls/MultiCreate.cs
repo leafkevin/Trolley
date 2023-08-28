@@ -127,7 +127,7 @@ class MultiContinuedCreate<TEntity> : IMultiContinuedCreate<TEntity>
             throw new NotSupportedException("只能插入单个实体，批量插入请使用WithBulkBy方法");
 
         var entityType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildCreateWithBiesCommandInitializer(
+        var commandInitializer = RepositoryHelper.BuildMultiCreateWithBiesCommandInitializer(
               this.connection, this.ormProvider, this.mapProvider, entityType, insertObj);
 
         this.builders.Add(new WithByBuilderCache
@@ -176,6 +176,7 @@ class MultiContinuedCreate<TEntity> : IMultiContinuedCreate<TEntity>
         var insertBuilder = new StringBuilder($"INSERT INTO {this.ormProvider.GetTableName(entityMapper.TableName)} (");
         var valuesBuilder = new StringBuilder(" VALUES(");
         int index = 0;
+        var prefix = $"m{this.multiQuery.ReaderAfters.Count}";
         foreach (var builder in this.builders)
         {
             if (index > 0)
@@ -183,7 +184,7 @@ class MultiContinuedCreate<TEntity> : IMultiContinuedCreate<TEntity>
                 insertBuilder.Append(',');
                 valuesBuilder.Append(',');
             }
-            builder.CommandInitializer.Invoke(command, this.ormProvider, this.mapProvider, builder.Parameters, insertBuilder, valuesBuilder);
+            builder.CommandInitializer.Invoke(command, this.ormProvider, this.mapProvider, prefix, builder.Parameters, insertBuilder, valuesBuilder);
             index++;
         }
         insertBuilder.Append(')');
@@ -196,7 +197,7 @@ class MultiContinuedCreate<TEntity> : IMultiContinuedCreate<TEntity>
     struct WithByBuilderCache
     {
         public object Parameters { get; set; }
-        public Action<IDbCommand, IOrmProvider, IEntityMapProvider, object, StringBuilder, StringBuilder> CommandInitializer { get; set; }
+        public Action<IDbCommand, IOrmProvider, IEntityMapProvider, string, object, StringBuilder, StringBuilder> CommandInitializer { get; set; }
     }
 }
 class MultiCreated<TEntity> : IMultiCreated<TEntity>
@@ -278,11 +279,12 @@ class MultiCreated<TEntity> : IMultiCreated<TEntity>
         {
             int index = 0;
             var entities = this.parameters as IEnumerable;
-            var commandInitializer = RepositoryHelper.BuildCreateBatchCommandInitializer(this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
+            var commandInitializer = RepositoryHelper.BuildCreateMultiBatchCommandInitializer(this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
             var sqlBuilder = new StringBuilder();
+            var prefix = $"m{this.multiQuery.ReaderAfters.Count}";
             foreach (var entity in entities)
             {
-                commandInitializer.Invoke(command, this.ormProvider, this.mapProvider, sqlBuilder, index, entity);
+                commandInitializer.Invoke(command, this.ormProvider, this.mapProvider, prefix, sqlBuilder, index, entity);
                 index++;
             }
             sql = sqlBuilder.ToString();

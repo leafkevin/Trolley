@@ -1,20 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 
 namespace Trolley;
 
-class DeleteVisitor : SqlVisitor, IDeleteVisitor
+public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 {
-    private readonly TableSegment tableSegment;
-    private string whereSql = string.Empty;
+    protected readonly TableSegment tableSegment;
+    protected string whereSql = string.Empty;
 
-    public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix)
+    public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
+        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix)
     {
         this.tableSegment = new TableSegment
         {

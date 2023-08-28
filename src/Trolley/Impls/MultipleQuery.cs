@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq.Expressions;
 using System.Text;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Trolley;
 
@@ -48,13 +52,13 @@ class MultipleQuery : IMultipleQuery
     #region From/FromWith/FromWithRecursive
     public IMultiQuery<T> From<T>(char tableAsStart = 'a', string suffixRawSql = null)
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, multiParameterPrefix: $"m{this.ReaderAfters.Count}");
         visitor.From(tableAsStart, typeof(T), suffixRawSql);
         return new MultiQuery<T>(this, visitor);
     }
     public IMultiQuery<T> From<T>(Func<IFromQuery, IFromQuery<T>> subQuery, char tableAsStart = 'a')
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, "p1w");
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, "p1w", $"m{this.ReaderAfters.Count}");
         subQuery.Invoke(new FromQuery(visitor));
         var sql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
         var newVisitor = visitor.Clone(tableAsStart);
@@ -63,7 +67,7 @@ class MultipleQuery : IMultipleQuery
     }
     public IMultiQuery<T> FromWith<T>(Func<IFromQuery, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, "p1w");
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, "p1w", $"m{this.ReaderAfters.Count}");
         cteSubQuery.Invoke(new FromQuery(visitor));
         var rawSql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
         var newVisitor = visitor.Clone(tableAsStart);
@@ -72,7 +76,7 @@ class MultipleQuery : IMultipleQuery
     }
     public IMultiQuery<T> FromWithRecursive<T>(Func<IFromQuery, string, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, "p1w");
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, "p1w", $"m{this.ReaderAfters.Count}");
         cteSubQuery.Invoke(new FromQuery(visitor), cteTableName);
         var rawSql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
         var newVisitor = visitor.Clone(tableAsStart);
@@ -81,55 +85,55 @@ class MultipleQuery : IMultipleQuery
     }
     public IMultiQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, multiParameterPrefix: $"m{this.ReaderAfters.Count}");
         visitor.From(tableAsStart, typeof(T1), typeof(T2));
         return new MultiQuery<T1, T2>(this, visitor);
     }
     public IMultiQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a')
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, multiParameterPrefix: $"m{this.ReaderAfters.Count}");
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3));
         return new MultiQuery<T1, T2, T3>(this, visitor);
     }
     public IMultiQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a')
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, multiParameterPrefix: $"m{this.ReaderAfters.Count}");
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         return new MultiQuery<T1, T2, T3, T4>(this, visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a')
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, multiParameterPrefix: $"m{this.ReaderAfters.Count}");
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
         return new MultiQuery<T1, T2, T3, T4, T5>(this, visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a')
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, multiParameterPrefix: $"m{this.ReaderAfters.Count}");
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
         return new MultiQuery<T1, T2, T3, T4, T5, T6>(this, visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a')
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, multiParameterPrefix: $"m{this.ReaderAfters.Count}");
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7>(this, visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a')
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, multiParameterPrefix: $"m{this.ReaderAfters.Count}");
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this, visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a')
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, multiParameterPrefix: $"m{this.ReaderAfters.Count}");
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this, visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, multiParameterPrefix: $"m{this.ReaderAfters.Count}");
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this, visitor);
     }
@@ -173,9 +177,8 @@ class MultipleQuery : IMultipleQuery
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var sql = RepositoryHelper.BuildQuerySqlPart(this.Connection, this.OrmProvider, this.MapProvider, entityType);
-        var commandInitializer = RepositoryHelper.BuildQueryWhereSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
-        sql = commandInitializer?.Invoke(this.Command, this.OrmProvider, this.MapProvider, sql, whereObj);
+        var commandInitializer = RepositoryHelper.BuildQueryMultiWhereObjSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
+        var sql = commandInitializer.Invoke(this.Command, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
 
         Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         this.AddReader(sql, readerGetter);
@@ -218,9 +221,8 @@ class MultipleQuery : IMultipleQuery
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var sql = RepositoryHelper.BuildQuerySqlPart(this.Connection, this.OrmProvider, this.MapProvider, entityType);
-        var commandInitializer = RepositoryHelper.BuildQueryWhereSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
-        sql = commandInitializer?.Invoke(this.Command, this.OrmProvider, this.MapProvider, sql, whereObj);
+        var commandInitializer = RepositoryHelper.BuildQueryMultiWhereObjSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
+        var sql = commandInitializer.Invoke(this.Command, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
 
         Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         this.AddReader(sql, readerGetter);
@@ -235,9 +237,8 @@ class MultipleQuery : IMultipleQuery
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var sql = RepositoryHelper.BuildGetSql(this.Connection, this.OrmProvider, this.MapProvider, entityType);
-        var commandInitializer = RepositoryHelper.BuildGetParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
-        commandInitializer?.Invoke(this.Command, this.OrmProvider, this.MapProvider, whereObj);
+        var commandInitializer = RepositoryHelper.BuildMultiGetSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
+        var sql = commandInitializer.Invoke(this.Command, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
 
         Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         this.AddReader(sql, readerGetter);
@@ -251,6 +252,58 @@ class MultipleQuery : IMultipleQuery
 
     #region Update
     public IMultiUpdate<TEntity> Update<TEntity>() => new MultiUpdate<TEntity>(this);
+    public IMultipleQuery Update<TEntity>(object updateObj)
+    {
+        if (updateObj == null)
+            throw new ArgumentNullException(nameof(updateObj));
+
+        var entityType = typeof(TEntity);
+        var commandInitializer = RepositoryHelper.BuildMultiUpdateEntitySqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, updateObj);
+        var sql = commandInitializer.Invoke(this.Command, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", updateObj);
+
+        Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
+        this.AddReader(sql, readerGetter);
+        return this;
+    }
+    public IMultipleQuery Update<TEntity>(Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObjs)
+    {
+        if (fieldsSelectorOrAssignment == null)
+            throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
+        if (updateObjs == null)
+            throw new ArgumentNullException(nameof(updateObjs));
+
+        var entityType = typeof(TEntity);
+        bool isMulti = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not Dictionary<string, object>;
+        var visitor = this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, entityType, this.IsParameterized, multiParameterPrefix: $"m{this.ReaderAfters.Count}");
+        string sql = null;
+        if (isMulti)
+        {
+            int index = 0;
+            var sqlBuilder = new StringBuilder();
+            var updateParameters = updateObjs as IEnumerable;
+            visitor.SetBulkFirst(fieldsSelectorOrAssignment, updateObjs);
+            foreach (var updateObj in updateParameters)
+            {
+                visitor.SetBulk(sqlBuilder, this.Command, updateObj, index);
+                index++;
+            }
+            if (index <= 0)
+                throw new Exception("参数updateObjs中，没有任何可以更新的元素");
+            sql = sqlBuilder.ToString();
+        }
+        else
+        {
+            sql = visitor.SetWith(fieldsSelectorOrAssignment, updateObjs)
+                .WhereWith(updateObjs, true)
+                .BuildSql(out var dbParameters);
+            if (dbParameters != null && dbParameters.Count > 0)
+                dbParameters.ForEach(f => this.Command.Parameters.Add(f));
+        }
+        Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
+        this.AddReader(sql, readerGetter);
+        return this;
+    }
+
     #endregion
 
     #region Delete
@@ -264,8 +317,8 @@ class MultipleQuery : IMultipleQuery
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
-        var sql = commandInitializer.Invoke(this.Command, this.OrmProvider, this.MapProvider, whereObj);
+        var commandInitializer = RepositoryHelper.BuildMultiExistsSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
+        var sql = commandInitializer.Invoke(this.Command, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
         Func<IDataReader, object> readerGetter = reader => reader.To<int>() > 0;
         this.AddReader(sql, readerGetter);
         return this;

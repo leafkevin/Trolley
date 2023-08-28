@@ -204,13 +204,12 @@ public class Repository : IRepository
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
         var entityType = typeof(TEntity);
-        var sql = RepositoryHelper.BuildQuerySqlPart(this.connection, this.OrmProvider, this.MapProvider, entityType);
+        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
 
         using var command = this.connection.CreateCommand();
         command.CommandType = CommandType.Text;
         command.Transaction = this.Transaction;
-        var commandInitializer = RepositoryHelper.BuildQueryWhereSqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
-        command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, sql, whereObj);
+        command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, whereObj);
 
         TEntity result = default;
         this.connection.Open();
@@ -233,13 +232,12 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var sql = RepositoryHelper.BuildQuerySqlPart(this.connection, this.OrmProvider, this.MapProvider, entityType);
+        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
 
         using var cmd = this.connection.CreateCommand();
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.Transaction;
-        var commandInitializer = RepositoryHelper.BuildQueryWhereSqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
-        cmd.CommandText = commandInitializer.Invoke(cmd, this.OrmProvider, this.MapProvider, sql, whereObj);
+        cmd.CommandText = commandInitializer.Invoke(cmd, this.OrmProvider, this.MapProvider, whereObj);
 
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
@@ -349,13 +347,12 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var sql = RepositoryHelper.BuildQuerySqlPart(this.connection, this.OrmProvider, this.MapProvider, entityType);
+        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
 
         using var command = this.connection.CreateCommand();
         command.CommandType = CommandType.Text;
         command.Transaction = this.Transaction;
-        var commandInitializer = RepositoryHelper.BuildQueryWhereSqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
-        command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, sql, whereObj);
+        command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, whereObj);
 
         var result = new List<TEntity>();
         this.connection.Open();
@@ -386,13 +383,12 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var sql = RepositoryHelper.BuildQuerySqlPart(this.connection, this.OrmProvider, this.MapProvider, entityType);
+        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
 
         using var cmd = this.connection.CreateCommand();
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.Transaction;
-        var commandInitializer = RepositoryHelper.BuildQueryWhereSqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
-        cmd.CommandText = commandInitializer.Invoke(cmd, this.OrmProvider, this.MapProvider, sql, whereObj);
+        cmd.CommandText = commandInitializer.Invoke(cmd, this.OrmProvider, this.MapProvider, whereObj);
 
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
@@ -429,14 +425,12 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var sql = RepositoryHelper.BuildGetSql(this.connection, this.OrmProvider, this.MapProvider, entityType);
+        var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
 
         using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.Transaction;
-        var commandInitializer = RepositoryHelper.BuildGetParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
-        commandInitializer?.Invoke(command, this.OrmProvider, this.MapProvider, whereObj);
+        command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, whereObj);
 
         TEntity result = default;
         this.connection.Open();
@@ -454,16 +448,14 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var sql = RepositoryHelper.BuildGetSql(this.connection, this.OrmProvider, this.MapProvider, entityType);
+        var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
+
         using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.Transaction;
-
+        cmd.CommandText = commandInitializer.Invoke(cmd, this.OrmProvider, this.MapProvider, whereObj);
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-        var commandInitializer = RepositoryHelper.BuildGetParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
-        commandInitializer?.Invoke(command, this.OrmProvider, this.MapProvider, whereObj);
 
         TEntity result = default;
         await this.connection.OpenAsync(cancellationToken);

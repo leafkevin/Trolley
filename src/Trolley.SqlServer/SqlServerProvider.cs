@@ -121,10 +121,10 @@ public partial class SqlServerProvider : BaseOrmProvider
         parameter.Value = value ?? DBNull.Value;
         return parameter;
     }
-    public override IQueryVisitor NewQueryVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-        => new SqlServerQueryVisitor(dbKey, this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
-    public override IUpdateVisitor NewUpdateVisitor(string dbKey, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-        => new SqlServerUpdateVisitor(dbKey, this, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix);
+    public override IQueryVisitor NewQueryVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
+        => new SqlServerQueryVisitor(dbKey, this, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix);
+    public override IUpdateVisitor NewUpdateVisitor(string dbKey, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
+        => new SqlServerUpdateVisitor(dbKey, this, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix);
 
     public override string GetFieldName(string propertyName) => "[" + propertyName + "]";
     public override string GetTableName(string entityName) => "[" + entityName + "]";

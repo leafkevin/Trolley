@@ -14,7 +14,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     private static ConcurrentDictionary<int, string> sqlCache = new();
     private static ConcurrentDictionary<int, object> getterCache = new();
     private static ConcurrentDictionary<int, object> setterCache = new();
-    public string sql = string.Empty;
+    protected string sql = string.Empty;
     protected string whereSql = string.Empty;
     protected string groupBySql = string.Empty;
     protected string havingSql = string.Empty;
@@ -27,8 +27,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     protected TableSegment lastIncludeSegment = null;
     protected List<ReaderField> groupFields = null;
 
-    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix)
+    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
+        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix)
     {
         this.tables = new();
         this.tableAlias = new();

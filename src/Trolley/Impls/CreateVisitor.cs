@@ -1,19 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
 namespace Trolley;
 
-class CreateVisitor : SqlVisitor, ICreateVisitor
+public class CreateVisitor : SqlVisitor, ICreateVisitor
 {
-    private string selectSql = null;
-    private string whereSql = null;
+    protected string selectSql = null;
+    protected string whereSql = null;
 
-    public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix)
+    public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
+        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix)
     {
         this.tables = new();
         this.tableAlias = new();

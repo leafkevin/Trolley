@@ -39,7 +39,7 @@ class MultiUpdate<TEntity> : IMultiUpdate<TEntity>
         if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized, multiParameterPrefix: $"m{this.multiQuery.ReaderAfters.Count}");
         if (condition) visitor.Set(fieldsAssignment);
         return new MultiUpdateSetting<TEntity>(this.multiQuery, visitor);
     }
@@ -54,7 +54,7 @@ class MultiUpdate<TEntity> : IMultiUpdate<TEntity>
         if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized, multiParameterPrefix: $"m{this.multiQuery.ReaderAfters.Count}");
         if (condition) visitor.Set(fieldSelector, fieldValue);
         return new MultiUpdateSetting<TEntity>(this.multiQuery, visitor);
     }
@@ -66,7 +66,7 @@ class MultiUpdate<TEntity> : IMultiUpdate<TEntity>
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized, multiParameterPrefix: $"m{this.multiQuery.ReaderAfters.Count}");
         if (condition) visitor.SetRaw(rawSql, updateObj);
         return new MultiUpdateSetting<TEntity>(this.multiQuery, visitor);
     }
@@ -77,7 +77,7 @@ class MultiUpdate<TEntity> : IMultiUpdate<TEntity>
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
 
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized, multiParameterPrefix: $"m{this.multiQuery.ReaderAfters.Count}");
         if (condition) visitor.SetWith(null, updateObj);
         return new MultiUpdateSetting<TEntity>(this.multiQuery, visitor);
     }
@@ -92,7 +92,7 @@ class MultiUpdate<TEntity> : IMultiUpdate<TEntity>
         if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberAccess && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持MemberAccess、New、MemberInit三种类型表达式");
 
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized, multiParameterPrefix: $"m{this.multiQuery.ReaderAfters.Count}");
         if (condition) visitor.SetWith(fieldsSelectorOrAssignment, updateObj);
         return new MultiUpdateSetting<TEntity>(this.multiQuery, visitor);
     }
@@ -106,7 +106,7 @@ class MultiUpdate<TEntity> : IMultiUpdate<TEntity>
         if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized, multiParameterPrefix: $"m{this.multiQuery.ReaderAfters.Count}");
         if (condition) visitor.SetFrom(fieldsAssignment);
         return new MultiUpdateSetting<TEntity>(this.multiQuery, visitor);
     }
@@ -121,7 +121,7 @@ class MultiUpdate<TEntity> : IMultiUpdate<TEntity>
         if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized, multiParameterPrefix: $"m{this.multiQuery.ReaderAfters.Count}");
         if (condition) visitor.SetFrom(fieldSelector, valueSelector);
         return new MultiUpdateSetting<TEntity>(this.multiQuery, visitor);
     }
@@ -132,7 +132,7 @@ class MultiUpdate<TEntity> : IMultiUpdate<TEntity>
     {
         if (updateObjs == null)
             throw new ArgumentNullException(nameof(updateObjs));
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized, multiParameterPrefix: $"m{this.multiQuery.ReaderAfters.Count}")
             .SetBulkFirst(null, updateObjs);
         return new MultiUpdateSet<TEntity>(this.multiQuery, visitor, updateObjs);
     }
@@ -153,7 +153,7 @@ class MultiUpdate<TEntity> : IMultiUpdate<TEntity>
                 throw new NotSupportedException("不支持的updateObjs元素类型，updateObjs元素类型可以是字典或是实体类或是多字段元组");
             break;
         }
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized, multiParameterPrefix: $"m{this.multiQuery.ReaderAfters.Count}")
             .SetBulkFirst(fieldsSelectorOrAssignment, updateObjType);
         return new MultiUpdateSet<TEntity>(this.multiQuery, visitor, updateObjs);
     }
@@ -162,31 +162,31 @@ class MultiUpdate<TEntity> : IMultiUpdate<TEntity>
     #region From
     public IMultiUpdateFrom<TEntity, TSource> From<TSource>()
     {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized, multiParameterPrefix: $"m{this.multiQuery.ReaderAfters.Count}")
             .From(typeof(TSource));
         return new MultiUpdateFrom<TEntity, TSource>(this.multiQuery, visitor);
     }
     public IMultiUpdateFrom<TEntity, T1, T2> From<T1, T2>()
     {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized, multiParameterPrefix: $"m{this.multiQuery.ReaderAfters.Count}")
             .From(typeof(T1), typeof(T2));
         return new MultiUpdateFrom<TEntity, T1, T2>(this.multiQuery, visitor);
     }
     public IMultiUpdateFrom<TEntity, T1, T2, T3> From<T1, T2, T3>()
     {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized, multiParameterPrefix: $"m{this.multiQuery.ReaderAfters.Count}")
             .From(typeof(T1), typeof(T2), typeof(T3));
         return new MultiUpdateFrom<TEntity, T1, T2, T3>(this.multiQuery, visitor);
     }
     public IMultiUpdateFrom<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>()
     {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized, multiParameterPrefix: $"m{this.multiQuery.ReaderAfters.Count}")
             .From(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         return new MultiUpdateFrom<TEntity, T1, T2, T3, T4>(this.multiQuery, visitor);
     }
     public IMultiUpdateFrom<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
     {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized, multiParameterPrefix: $"m{this.multiQuery.ReaderAfters.Count}")
             .From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
         return new MultiUpdateFrom<TEntity, T1, T2, T3, T4, T5>(this.multiQuery, visitor);
     }
@@ -195,13 +195,13 @@ class MultiUpdate<TEntity> : IMultiUpdate<TEntity>
     #region Join
     public IMultiUpdateJoin<TEntity, TSource> InnerJoin<TSource>(Expression<Func<TEntity, TSource, bool>> joinOn)
     {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized, multiParameterPrefix: $"m{this.multiQuery.ReaderAfters.Count}")
             .Join("INNER JOIN", typeof(TSource), joinOn);
         return new MultiUpdateJoin<TEntity, TSource>(this.multiQuery, visitor);
     }
     public IMultiUpdateJoin<TEntity, TSource> LeftJoin<TSource>(Expression<Func<TEntity, TSource, bool>> joinOn)
     {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized, multiParameterPrefix: $"m{this.multiQuery.ReaderAfters.Count}")
            .Join("INNER JOIN", typeof(TSource), joinOn);
         return new MultiUpdateJoin<TEntity, TSource>(this.multiQuery, visitor);
     }

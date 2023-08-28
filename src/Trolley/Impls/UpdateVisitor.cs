@@ -9,16 +9,16 @@ namespace Trolley;
 
 public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 {
-    public bool isFrom = false;
-    public bool isJoin = false;
-    public string whereSql = string.Empty;
-    public List<UpdateField> updateFields = new();
-    public string fixedSql = null;
-    public List<IDbDataParameter> fixedDbParameters = new();
-    public Action<IDbCommand, UpdateVisitor, StringBuilder, object, int> bulkSetFieldsInitializer = null;
+    protected bool isFrom = false;
+    protected bool isJoin = false;
+    protected string whereSql = string.Empty;
+    protected List<UpdateField> updateFields = new();
+    protected string fixedSql = null;
+    protected List<IDbDataParameter> fixedDbParameters = new();
+    protected Action<IDbCommand, UpdateVisitor, StringBuilder, object, int> bulkSetFieldsInitializer = null;
 
-    public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix)
+    public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
+        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix)
     {
         this.tables = new();
         this.tableAlias = new();
@@ -396,7 +396,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     {
                         var memberExpr = lambdaExpr.Body as MemberExpression;
                         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
-                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberExpr.Member.Name}";
+                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{this.multiParameterPrefix}{memberExpr.Member.Name}";
                         this.updateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
                     }
                     break;
@@ -412,7 +412,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i] });
                         if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberMapper.MemberName)
                         {
-                            var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberInfo.Name}";
+                            var parameterName = $"{this.OrmProvider.ParameterPrefix}{this.multiParameterPrefix}{memberInfo.Name}";
                             this.updateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
                         }
                         else this.AddMemberElement(sqlSegment, memberMapper, fixSetFields, this.fixedDbParameters);
@@ -430,7 +430,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression });
                         if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberMapper.MemberName)
                         {
-                            var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}";
+                            var parameterName = $"{this.OrmProvider.ParameterPrefix}{this.multiParameterPrefix}{memberMapper.MemberName}";
                             this.updateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
                         }
                         else this.AddMemberElement(sqlSegment, memberMapper, fixSetFields, this.fixedDbParameters);
@@ -450,6 +450,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             }
             this.fixedSql = fixedBuilder.ToString();
 
+            var setFields = this.updateFields.FindAll(f => !f.MemberMapper.IsKey);
             this.bulkSetFieldsInitializer = (command, visitor, builder, updateObj, index) =>
             {
                 builder.Append(visitor.fixedSql);
@@ -459,7 +460,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 int setIndex = 0;
                 foreach (var setField in visitor.updateFields)
                 {
-                    if (setField.MemberMapper.IsKey) continue;
                     if (setIndex > 0) builder.Append(',');
                     if (setField.Type == UpdateFieldType.SetValue)
                         builder.Append($"{visitor.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={setField.Value}");
@@ -706,7 +706,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         sqlSegment.IsParameterized = true;
         sqlSegment.MemberMapper = memberMapper;
         sqlSegment.ParameterName = memberMapper.MemberName;
-        var dataParameters = dbParameters ?? this.dbParameters;        
+        var dataParameters = dbParameters ?? this.dbParameters;
         updateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = this.GetQuotedValue(sqlSegment, dataParameters) });
     }
 }
