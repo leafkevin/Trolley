@@ -2,11 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
 using System.Linq.Expressions;
 using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
 
 namespace Trolley;
 
@@ -392,7 +389,7 @@ class MultipleQuery : IMultipleQuery
     }
     #endregion
 }
-class ReaderAfter
+public class ReaderAfter
 {
     /// <summary>
     /// 明确的类型可以使用dynamic类型
