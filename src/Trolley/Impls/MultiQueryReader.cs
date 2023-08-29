@@ -114,6 +114,13 @@ class MultiQueryReader : IMultiQueryReader
         var dataList = await this.ReadAsync<TEntity>(cancellationToken);
         return dataList.ToDictionary(keySelector, valueSelector);
     }
+    public string ToSql(out List<IDbDataParameter> dbParameters)
+    {
+        dbParameters = null;
+        if (this.command.Parameters != null && this.command.Parameters.Count > 0)
+            dbParameters = this.command.Parameters.Cast<IDbDataParameter>().ToList();
+        return this.command.CommandText;
+    }
     private (int, int) ReadList<T>(List<T> dataList, bool isPaged)
     {
         int pageIndex = 0;

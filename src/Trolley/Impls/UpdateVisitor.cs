@@ -199,7 +199,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var memberExpr = lambdaExpr.Body as MemberExpression;
         var entityMapper = this.tables[0].Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
-        this.AddMemberElement(memberMapper, fieldValue);
+        this.AddMemberElement(memberMapper, fieldValue, false);
         return this;
     }
     public virtual IUpdateVisitor SetRaw(string rawSql, object parameters)
@@ -298,8 +298,16 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         else
         {
-            var parametersInitializer = RepositoryHelper.BuildUpdateSetWithParameters(this, entityMapper.EntityType, updateObj, isExceptKey);
-            parametersInitializer.Invoke(this, this.updateFields, this.dbParameters, updateObj);
+            if (string.IsNullOrEmpty(this.multiParameterPrefix))
+            {
+                var parametersInitializer = RepositoryHelper.BuildUpdateSetWithParameters(this, entityMapper.EntityType, updateObj, isExceptKey);
+                parametersInitializer.Invoke(this, this.updateFields, this.dbParameters, updateObj);
+            }
+            else
+            {
+                var parametersInitializer = RepositoryHelper.BuildMultiUpdateSetWithParameters(this, entityMapper.EntityType, updateObj, isExceptKey);
+                parametersInitializer.Invoke(this, this.multiParameterPrefix, this.updateFields, this.dbParameters, updateObj);
+            }
         }
         return this;
     }
@@ -684,14 +692,15 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             index++;
         }
     }
-    protected void AddMemberElement(MemberMap memberMapper, object memberValue)
+    protected void AddMemberElement(MemberMap memberMapper, object memberValue, bool isEntity = true)
     {
         if (memberValue is DBNull || memberValue == null)
         {
             this.updateFields.Add(new UpdateField { Type = UpdateFieldType.SetValue, MemberMapper = memberMapper, Value = "NULL" });
             return;
         }
-        var fieldValue = this.EvaluateAndCache(memberValue, memberMapper.MemberName);
+        object fieldValue = null;
+        if (isEntity) fieldValue = this.EvaluateAndCache(memberValue, memberMapper.MemberName);
         var sqlOrParameterName = this.GetQuotedValue(fieldValue, memberMapper, true);
         this.updateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = sqlOrParameterName });
     }
@@ -705,7 +714,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         sqlSegment.IsParameterized = true;
         sqlSegment.MemberMapper = memberMapper;
-        sqlSegment.ParameterName = memberMapper.MemberName;
+        sqlSegment.ParameterName = this.multiParameterPrefix + memberMapper.MemberName;
         var dataParameters = dbParameters ?? this.dbParameters;
         updateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = this.GetQuotedValue(sqlSegment, dataParameters) });
     }

@@ -1140,7 +1140,7 @@ public class SqlVisitor : ISqlVisitor
             var dataParameters = dbParameters ?? this.dbParameters;
             if (!string.IsNullOrEmpty(sqlSegment.ParameterName))
             {
-                parameterName = this.OrmProvider.ParameterPrefix + sqlSegment.ParameterName;
+                parameterName = this.OrmProvider.ParameterPrefix + this.multiParameterPrefix + sqlSegment.ParameterName;
                 if (dataParameters.Exists(f => f.ParameterName == parameterName))
                     parameterName = this.OrmProvider.ParameterPrefix + this.multiParameterPrefix + this.parameterPrefix + dataParameters.Count.ToString();
             }

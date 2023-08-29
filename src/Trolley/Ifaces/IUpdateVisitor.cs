@@ -13,7 +13,7 @@ public enum UpdateFieldType
     RawSql,
     Where
 }
-public struct UpdateField
+public class UpdateField
 {
     public UpdateFieldType Type { get; set; }
     public MemberMap MemberMapper { get; set; }

@@ -31,9 +31,9 @@ public class MySqlUnitTest5 : UnitTestBase
         Initialize();
         using var repository = dbFactory.Create();
         var reader = await repository.QueryMultipleAsync(f => f
-            .Get<User>(new { Id = 1 })
+            .Get<User>(new { Id = 1 })            
             .Exists<Order>(f => f.BuyerId.IsNull())
-            .Execute("DELETE FROM sys_page where Id=10")
+            //.Execute("DELETE FROM sys_page where Id=10")
             .From<Order>()
                 .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
                 .Where((x, y) => x.Id == 1)
@@ -53,6 +53,7 @@ public class MySqlUnitTest5 : UnitTestBase
                 .SetFrom(t => t.TotalAmount, (x, y) => x.From<OrderDetail>('b')
                     .Where(x => x.OrderId == y.Id)
                     .SelectAggregate((x, y) => x.Sum(y.Amount)))
+                .Where(t => t.Id == 1)
                 .Execute()
             .From<Product>()
                 .Include(f => f.Brand)
@@ -67,9 +68,10 @@ public class MySqlUnitTest5 : UnitTestBase
                 .InnerJoin<User>((x, y) => x.Grouping.BuyerId == y.Id)
                 .Select((x, y) => new { x.Grouping, x.Grouping.BuyerId, x.ProductTotal, BuyerName = y.Name, BuyerId2 = x.BuyerId1 })
                 .First());
-        var userInfo = await reader.ReadFirstAsync<User>();
+        var sql = reader.ToSql(out var dbParameters);
+        var userInfo = await reader.ReadFirstAsync<User>();        
         var isExists = await reader.ReadFirstAsync<bool>();
-        var deletedCount = await reader.ReadFirstAsync<int>();
+        //var deletedCount = await reader.ReadFirstAsync<int>();
         var orderInfo = await reader.ReadFirstAsync<dynamic>();
         var userInfo2 = await reader.ReadFirstAsync<User>();
         var updatedCount = await reader.ReadFirstAsync<int>();

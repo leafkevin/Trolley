@@ -345,7 +345,6 @@ class Created<TEntity> : ICreated<TEntity>
             var commandInitializer = RepositoryHelper.BuildCreateBatchCommandInitializer(this.connection, this.ormProvider, this.mapProvider, entityType, this.parameters);
             foreach (var entity in entities)
             {
-                if (index > 0) sqlBuilder.Append(',');
                 commandInitializer.Invoke(command, this.ormProvider, this.mapProvider, sqlBuilder, index, entity);
                 if (index >= this.bulkCount)
                 {
