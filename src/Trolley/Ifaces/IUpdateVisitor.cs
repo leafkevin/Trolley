@@ -26,7 +26,6 @@ public interface IUpdateVisitor
     IUpdateVisitor Join(string joinType, Type entityType, Expression joinOn);
     IUpdateVisitor Set(Expression fieldsAssignment);
     IUpdateVisitor Set(Expression fieldSelector, object fieldValue);
-    IUpdateVisitor SetRaw(string rawSql, object parameters);
     IUpdateVisitor SetWith(Expression fieldsAssignment);
     IUpdateVisitor SetWith(Expression fieldsSelectorOrAssignment, object updateObj, bool isExceptKey = false);
     IUpdateVisitor SetFrom(Expression fieldsAssignment);

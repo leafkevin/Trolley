@@ -32,7 +32,7 @@ class Update<TEntity> : IUpdate<TEntity>
     }
     #endregion
 
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     public IUpdateSetting<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
@@ -59,18 +59,6 @@ class Update<TEntity> : IUpdate<TEntity>
 
         var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
         if (condition) visitor.Set(fieldSelector, fieldValue);
-        return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
-    }
-
-    public IUpdateSetting<TEntity> SetRaw(string rawSql, object updateObj)
-        => this.SetRaw(true, rawSql, updateObj);
-    public IUpdateSetting<TEntity> SetRaw(bool condition, string rawSql, object updateObj)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
-        if (condition) visitor.SetRaw(rawSql, updateObj);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
     public IUpdateSetting<TEntity> SetWith<TUpdateObj>(TUpdateObj updateObj)
@@ -404,7 +392,7 @@ class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
         : base(connection, transaction, visitor) { }
     #endregion
 
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     public IUpdateSetting<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
        => this.Set(true, fieldsAssignment);
     public IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
@@ -429,17 +417,6 @@ class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
         if (condition) this.visitor.Set(fieldSelector, fieldValue);
-        return this;
-    }
-
-    public IUpdateSetting<TEntity> SetRaw(string rawSql, object updateObj)
-        => this.SetRaw(true, rawSql, updateObj);
-    public IUpdateSetting<TEntity> SetRaw(bool condition, string rawSql, object updateObj)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        if (condition) this.visitor.SetRaw(rawSql, updateObj);
         return this;
     }
 
@@ -540,7 +517,7 @@ class UpdateFrom<TEntity, T1> : UpdateBase, IUpdateFrom<TEntity, T1>
         : base(connection, transaction, visitor) { }
     #endregion
 
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     public IUpdateFrom<TEntity, T1> Set<TFields>(Expression<Func<TEntity, T1, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public IUpdateFrom<TEntity, T1> Set<TFields>(bool condition, Expression<Func<TEntity, T1, TFields>> fieldsAssignment)
@@ -567,17 +544,6 @@ class UpdateFrom<TEntity, T1> : UpdateBase, IUpdateFrom<TEntity, T1>
 
         if (condition)
             this.visitor.Set(fieldSelector, fieldValue);
-        return this;
-    }
-
-    public IUpdateFrom<TEntity, T1> SetRaw(string rawSql, object updateObj)
-        => this.SetRaw(true, rawSql, updateObj);
-    public IUpdateFrom<TEntity, T1> SetRaw(bool condition, string rawSql, object updateObj)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        if (condition) this.visitor.SetRaw(rawSql, updateObj);
         return this;
     }
 
@@ -672,7 +638,7 @@ class UpdateFrom<TEntity, T1, T2> : UpdateBase, IUpdateFrom<TEntity, T1, T2>
         : base(connection, transaction, visitor) { }
     #endregion
 
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     public IUpdateFrom<TEntity, T1, T2> Set<TFields>(Expression<Func<TEntity, T1, T2, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public IUpdateFrom<TEntity, T1, T2> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, TFields>> fieldsAssignment)
@@ -699,17 +665,6 @@ class UpdateFrom<TEntity, T1, T2> : UpdateBase, IUpdateFrom<TEntity, T1, T2>
 
         if (condition)
             this.visitor.Set(fieldSelector, fieldValue);
-        return this;
-    }
-
-    public IUpdateFrom<TEntity, T1, T2> SetRaw(string rawSql, object updateObj)
-        => this.SetRaw(true, rawSql, updateObj);
-    public IUpdateFrom<TEntity, T1, T2> SetRaw(bool condition, string rawSql, object updateObj)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        if (condition) this.visitor.SetRaw(rawSql, updateObj);
         return this;
     }
 
@@ -804,7 +759,7 @@ class UpdateFrom<TEntity, T1, T2, T3> : UpdateBase, IUpdateFrom<TEntity, T1, T2,
         : base(connection, transaction, visitor) { }
     #endregion
 
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     public IUpdateFrom<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public IUpdateFrom<TEntity, T1, T2, T3> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsAssignment)
@@ -831,17 +786,6 @@ class UpdateFrom<TEntity, T1, T2, T3> : UpdateBase, IUpdateFrom<TEntity, T1, T2,
 
         if (condition)
             this.visitor.Set(fieldSelector, fieldValue);
-        return this;
-    }
-
-    public IUpdateFrom<TEntity, T1, T2, T3> SetRaw(string rawSql, object updateObj)
-        => this.SetRaw(true, rawSql, updateObj);
-    public IUpdateFrom<TEntity, T1, T2, T3> SetRaw(bool condition, string rawSql, object updateObj)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        if (condition) this.visitor.SetRaw(rawSql, updateObj);
         return this;
     }
 
@@ -936,7 +880,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateFrom<TEntity, T1,
         : base(connection, transaction, visitor) { }
     #endregion
 
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     public IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsAssignment)
@@ -963,17 +907,6 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateFrom<TEntity, T1,
 
         if (condition)
             this.visitor.Set(fieldSelector, fieldValue);
-        return this;
-    }
-
-    public IUpdateFrom<TEntity, T1, T2, T3, T4> SetRaw(string rawSql, object updateObj)
-        => this.SetRaw(true, rawSql, updateObj);
-    public IUpdateFrom<TEntity, T1, T2, T3, T4> SetRaw(bool condition, string rawSql, object updateObj)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        if (condition) this.visitor.SetRaw(rawSql, updateObj);
         return this;
     }
 
@@ -1068,7 +1001,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateFrom<TEntity,
         : base(connection, transaction, visitor) { }
     #endregion
 
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsAssignment)
@@ -1095,17 +1028,6 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateFrom<TEntity,
 
         if (condition)
             this.visitor.Set(fieldSelector, fieldValue);
-        return this;
-    }
-
-    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetRaw(string rawSql, object updateObj)
-        => this.SetRaw(true, rawSql, updateObj);
-    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetRaw(bool condition, string rawSql, object updateObj)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        if (condition) this.visitor.SetRaw(rawSql, updateObj);
         return this;
     }
 
@@ -1219,7 +1141,7 @@ class UpdateJoin<TEntity, T1> : UpdateBase, IUpdateJoin<TEntity, T1>
     }
     #endregion
 
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     public IUpdateJoin<TEntity, T1> Set<TFields>(Expression<Func<TEntity, T1, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public IUpdateJoin<TEntity, T1> Set<TFields>(bool condition, Expression<Func<TEntity, T1, TFields>> fieldsAssignment)
@@ -1246,17 +1168,6 @@ class UpdateJoin<TEntity, T1> : UpdateBase, IUpdateJoin<TEntity, T1>
 
         if (condition)
             this.visitor.Set(fieldSelector, fieldValue);
-        return this;
-    }
-
-    public IUpdateJoin<TEntity, T1> SetRaw(string rawSql, object updateObj)
-       => this.SetRaw(true, rawSql, updateObj);
-    public IUpdateJoin<TEntity, T1> SetRaw(bool condition, string rawSql, object updateObj)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        if (condition) this.visitor.SetRaw(rawSql, updateObj);
         return this;
     }
 
@@ -1370,7 +1281,7 @@ class UpdateJoin<TEntity, T1, T2> : UpdateBase, IUpdateJoin<TEntity, T1, T2>
     }
     #endregion
 
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     public IUpdateJoin<TEntity, T1, T2> Set<TFields>(Expression<Func<TEntity, T1, T2, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public IUpdateJoin<TEntity, T1, T2> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, TFields>> fieldsAssignment)
@@ -1397,17 +1308,6 @@ class UpdateJoin<TEntity, T1, T2> : UpdateBase, IUpdateJoin<TEntity, T1, T2>
 
         if (condition)
             this.visitor.Set(fieldSelector, fieldValue);
-        return this;
-    }
-
-    public IUpdateJoin<TEntity, T1, T2> SetRaw(string rawSql, object updateObj)
-       => this.SetRaw(true, rawSql, updateObj);
-    public IUpdateJoin<TEntity, T1, T2> SetRaw(bool condition, string rawSql, object updateObj)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        if (condition) this.visitor.SetRaw(rawSql, updateObj);
         return this;
     }
 
@@ -1521,7 +1421,7 @@ class UpdateJoin<TEntity, T1, T2, T3> : UpdateBase, IUpdateJoin<TEntity, T1, T2,
     }
     #endregion
 
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     public IUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public IUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsAssignment)
@@ -1548,17 +1448,6 @@ class UpdateJoin<TEntity, T1, T2, T3> : UpdateBase, IUpdateJoin<TEntity, T1, T2,
 
         if (condition)
             this.visitor.Set(fieldSelector, fieldValue);
-        return this;
-    }
-
-    public IUpdateJoin<TEntity, T1, T2, T3> SetRaw(string rawSql, object updateObj)
-       => this.SetRaw(true, rawSql, updateObj);
-    public IUpdateJoin<TEntity, T1, T2, T3> SetRaw(bool condition, string rawSql, object updateObj)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        if (condition) this.visitor.SetRaw(rawSql, updateObj);
         return this;
     }
 
@@ -1672,7 +1561,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateJoin<TEntity, T1,
     }
     #endregion
 
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     public IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsAssignment)
@@ -1699,17 +1588,6 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateJoin<TEntity, T1,
 
         if (condition)
             this.visitor.Set(fieldSelector, fieldValue);
-        return this;
-    }
-
-    public IUpdateJoin<TEntity, T1, T2, T3, T4> SetRaw(string rawSql, object updateObj)
-       => this.SetRaw(true, rawSql, updateObj);
-    public IUpdateJoin<TEntity, T1, T2, T3, T4> SetRaw(bool condition, string rawSql, object updateObj)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        if (condition) this.visitor.SetRaw(rawSql, updateObj);
         return this;
     }
 
@@ -1804,7 +1682,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateJoin<TEntity,
         : base(connection, transaction, visitor) { }
     #endregion
 
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsAssignment)
@@ -1831,17 +1709,6 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateJoin<TEntity,
 
         if (condition)
             this.visitor.Set(fieldSelector, fieldValue);
-        return this;
-    }
-
-    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetRaw(string rawSql, object updateObj)
-       => this.SetRaw(true, rawSql, updateObj);
-    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetRaw(bool condition, string rawSql, object updateObj)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        if (condition) this.visitor.SetRaw(rawSql, updateObj);
         return this;
     }
 

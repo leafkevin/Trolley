@@ -14,7 +14,7 @@ namespace Trolley;
 /// <typeparam name="TEntity">要更新的实体类型</typeparam>
 public interface IUpdate<TEntity>
 {
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     /// <summary>
     /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，用法：
     /// <code>
@@ -149,45 +149,6 @@ public interface IUpdate<TEntity>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
     IUpdateSetting<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
-    /// <summary>
-    /// 使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，参数可以为null，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a SET Name=@Name WHERE a.`Id`=1
-    /// UPDATE `sys_order` a SET Name=@Name,Age=NULL WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有命名对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateSetting<TEntity> SetRaw(string rawSql, object updateObj);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw(condition, "Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw(condition, "Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a SET Name=@Name,Gender=@Gender,Age=NULL WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <param name="condition">判断条件</param>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有命名对象，可以为null</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> SetRaw(bool condition, string rawSql, object updateObj);
     /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象内所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，用法：
     /// <code>
@@ -570,39 +531,24 @@ public interface IUpdateSet<TEntity>
 /// <typeparam name="TEntity">要更新的实体类型</typeparam>
 public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
 {
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     /// <summary>
     /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，用法：
     /// <code>
-    /// repository.Update&lt;User&gt;()
-    ///     .Set(f =&gt; new { SomeTimes = TimeSpan.FromMinutes(1455) })
-    ///     .Where(x =&gt; x.Id == 1)
-    ///     .Execute();
-    /// var parameter = repository.Get&lt;Order&gt;(1);
-    /// parameter.TotalAmount += 50;
+    /// repository.Update&lt;User&gt;().Set(f =&gt; new { SomeTimes = TimeSpan.FromMinutes(1455) })
+    /// var parameter = new OrderInfo { ... };
     /// repository.Update&lt;Order&gt;()
     ///     .Set(f => new
     ///     {
-    ///         parameter.TotalAmount,
-    ///         Products = this.GetProducts(),
-    ///         BuyerId = DBNull.Value,
-    ///         Disputes = new Dispute
-    ///         {
-    ///             Id = 1,
-    ///             Content = "43dss",
-    ///             Users = "1,2",
-    ///             Result = "OK",
-    ///             CreatedAt = DateTime.Now
-    ///         }
+    ///         parameter.TotalAmount, //直接赋值，使用同名变量
+    ///         Products = this.GetProducts(), //直接赋值，使用本地函数
+    ///         BuyerId = DBNull.Value, //直接赋值 NULL
+    ///         Disputes = new Dispute { ... } //直接赋值，实体对象由TypeHandler处理
     ///     })
-    ///     .Where(x =&gt; x.Id == 1)
-    ///     .Execute();
     /// private int[] GetProducts() => new int[] { 1, 2, 3 };
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// SQL1:UPDATE `sys_user` SET `SomeTimes`=@SomeTimes WHERE `Id`=1
-    /// SQL2:UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`Disputes`=@Disputes WHERE `Id`=1
+    /// SQL:
+    /// UPDATE `sys_user` SET `SomeTimes`=@SomeTimes WHERE `Id`=1
+    /// UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`Disputes`=@Disputes WHERE `Id`=1
     /// </code>
     /// </summary>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
@@ -613,35 +559,20 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
     /// var condition = true;
-    /// repository.Update&lt;User&gt;()
-    ///     .Set(condition, f =&gt; new { Gender = Gender.Male })
-    ///     .Where(x =&gt; x.Id == 1)
-    ///     .Execute();
-    /// var parameter = repository.Get&lt;Order&gt;(1);
-    /// parameter.TotalAmount += 50;
+    /// repository.Update&lt;User&gt;().Set(f =&gt; new { SomeTimes = TimeSpan.FromMinutes(1455) })
+    /// var parameter = new OrderInfo { ... };
     /// repository.Update&lt;Order&gt;()
-    ///     .Set(condition, f =&gt; new
+    ///     .Set(condition, f => new
     ///     {
-    ///         parameter.TotalAmount,
-    ///         Products = this.GetProducts(),
-    ///         BuyerId = DBNull.Value,
-    ///         Disputes = new Dispute
-    ///         {
-    ///             Id = 1,
-    ///             Content = "43dss",
-    ///             Users = "1,2",
-    ///             Result = "OK",
-    ///             CreatedAt = DateTime.Now
-    ///         }
+    ///         parameter.TotalAmount, //直接赋值，使用同名变量
+    ///         Products = this.GetProducts(), //直接赋值，使用本地函数
+    ///         BuyerId = DBNull.Value, //直接赋值 NULL
+    ///         Disputes = new Dispute { ... } //直接赋值，实体对象由TypeHandler处理
     ///     })
-    ///     .Where(x =&gt; x.Id == 1)
-    ///     .Execute();
     /// private int[] GetProducts() => new int[] { 1, 2, 3 };
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// SQL1:UPDATE `sys_user` SET `Gender`=@Gender WHERE `Id`=1
-    /// SQL2:UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`Disputes`=@Disputes WHERE `Id`=1
+    /// SQL:
+    /// UPDATE `sys_user` SET `SomeTimes`=@SomeTimes WHERE `Id`=1
+    /// UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`Disputes`=@Disputes WHERE `Id`=1
     /// </code>
     /// </summary>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
@@ -651,25 +582,7 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     IUpdateSetting<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
     /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .Set((a, b) =&gt; new
-    ///     {
-    ///         TotalAmount = a.From&lt;OrderDetail&gt;('b')
-    ///             .Where(f =&gt; f.OrderId == b.Id)
-    ///             .Select(t =&gt; Sql.Sum(t.Amount))
-    ///     })
-    ///     //单个字段+值方式
-    ///     .Set(x =&gt; x.OrderNo, "ON_111")
-    ///     //单个字段、多个字段 表达式方式
-    ///     .Set(f =&gt; new { BuyerId = DBNull.Value })
-    ///     .Where(a =&gt; a.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`Id`=1
-    /// </code>
+    /// <code>.Set(x =&gt; x.OrderNo, "ON_111")</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
     /// <param name="fieldSelector">筛选单个字段表达式，只能筛选一个字段</param>
@@ -678,26 +591,7 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     IUpdateSetting<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .Set((a, b) =&gt; new
-    ///     {
-    ///         TotalAmount = a.From&lt;OrderDetail&gt;('b')
-    ///         .Where(f =&gt; f.OrderId == b.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount))
-    ///     })
-    ///     //单个字段+值方式
-    ///     .Set(condition, x =&gt; x.OrderNo, "ON_111")
-    ///     //单个字段、多个字段 表达式方式
-    ///     .Set(condition, f =&gt; new { BuyerId = DBNull.Value })
-    ///     .Where(a =&gt; a.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`Id`=1
-    /// </code>
+    /// <code>.Set(condition, x =&gt; x.OrderNo, "ON_111")</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
     /// <param name="condition">判断条件</param>
@@ -706,56 +600,8 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateSetting<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     /// <summary>
-    /// 使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，参数可以为null，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a SET Name=@Name WHERE a.`Id`=1
-    /// UPDATE `sys_order` a SET Name=@Name,Age=NULL WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateSetting<TEntity> SetRaw(string rawSql, object updateObj);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw(condition, "Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw(condition, "Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a SET Name=@Name,Gender=@Gender,Age=NULL WHERE a.`Id`=1
-    /// </code>
-    /// </summary>
-    /// <param name="condition">判断条件</param>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateSetting<TEntity> SetRaw(bool condition, string rawSql, object updateObj);
-    /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象内所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，用法：
-    /// <code>
-    /// repository.Update&lt;User&gt;()
-    ///     .SetWith(new { Name = "kevin"})
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=1
-    /// </code>
+    /// <code>.SetWith(new { Name = "kevin"})  SQL: SET `Name`=@Name</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
     /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新</param>
@@ -763,17 +609,7 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     IUpdateSetting<TEntity> SetWith<TUpdateObj>(TUpdateObj updateObj);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象内所有与当前实体表TEntity名称相当的栏位都将参与更新，单对象更新，为false不做更新，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;User&gt;()
-    ///     .SetWith(condition, new { Name = "kevin"})
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@kId
-    /// </code>
+    /// <code>.SetWith(condition, new { Name = "kevin"})  SQL: SET `Name`=@Name</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
     /// <param name="condition">判断条件</param>
@@ -781,43 +617,23 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateSetting<TEntity> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj);
     /// <summary>
-    /// 使用表达式fieldsSelectorOrAssignment字段筛选和更新对象updateObj部分字段更新，updateObj对象内所有与表达式fieldsSelectorOrAssignment筛选字段名称相同的栏位都将参与更新，同时表达式fieldsSelectorOrAssignment也可以直接给字段赋值，单对象更新，
-    /// fieldsSelectorOrAssignment字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，只有带参数的成员访问表达式(如：f =&gt; f.Name)，才会被更新为updateObj中对应栏位的值，其他场景将被更新为对应表达式的值(如：tmpObj.TotalAmount, BuyerId = DBNull.Value等)
-    /// 用法：
+    /// 使用表达式fieldsSelectorOrAssignment字段筛选和更新对象updateObjs部分字段根据主键进行更新，可单条也可多条数据更新，多条可分批次完成，每次更新bulkCount条数。
+    /// updateObjs对象内所有与表达式fieldsSelectorOrAssignment筛选字段名称相同的栏位都将参与更新，同时表达式fieldsSelectorOrAssignment也可以直接给字段赋值，updateObjs对象中必须包含主键栏位。
+    /// fieldsSelectorOrAssignment字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，用法：
     /// <code>
-    /// var orderInfo = repository
-    ///     .From&lt;Order&gt;()
-    ///     .Where(x =&gt; x.Id == 1)
-    ///     .Select(f ==&gt; new { f.ProductCount, f.Disputes, f.UpdatedAt})
-    ///     .First();
-    /// orderInfo.ProductCount += 2;
-    /// orderInfo.Disputes = new Dispute
+    /// var orderInfo = new OrderInfo { ... };
+    /// var tmpObj = new { TotalAmount = 450, ... };
+    /// repository.Update&lt;Order&gt;(f => new
     /// {
-    ///     Id = 1,
-    ///     Content = "43dss",
-    ///     Users = "1,2",
-    ///     Result = "OK",
-    ///     CreatedAt = DateTime.Now
-    /// }
-    /// var tmpObj = new { TotalAmount = 450 };
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetWith(f => new
-    ///     {
-    ///         tmpObj.TotalAmount,
-    ///         Products = this.GetProducts(),
-    ///         BuyerId = DBNull.Value,
-    ///         f.ProductCount,
-    ///         f.Disputes
-    ///     }, orderInfo)
-    ///     .Where(x =&gt; x.Id == 1)
-    ///     .Execute();
+    ///     tmpObj.TotalAmount, //直接赋值，使用同名变量
+    ///     Products = this.GetProducts(), //直接赋值，使用本地函数
+    ///     BuyerId = DBNull.Value, //直接赋值 NULL
+    ///     f.ProductCount, //使用updateObjs对象中的参数
+    ///     f.Disputes //使用updateObjs对象中的参数，实体对象由TypeHandler处理
+    /// }, orderInfo);
     /// private int[] GetProducts() => new int[] { 1, 2, 3 };
+    /// SQL: UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`ProductCount`=@ProductCount,`Disputes`=@Disputes WHERE `Id`=1
     /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`ProductCount`=@ProductCount,`Disputes`=@Disputes WHERE `Id`=1
-    /// </code>
-    /// 执行后的结果，TotalAmount，Products，BuyerId被更新为对应的值，ProductCount，Disputes被更新为orderInfo中对应的值，UpdatedAt栏位没有更新
     /// </summary>
     /// <typeparam name="TFields">字段筛选表达式要更新的所有字段类型</typeparam>
     /// <param name="fieldsSelectorOrAssignment">字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，只有带参数的成员访问的表达式(如：f =&gt; f.Name)，才会被更新为updateObj中对应栏位的值，其他场景将被更新为对应表达式的值(如：tmpObj.TotalAmount, BuyerId = DBNull.Value等)</param>
@@ -825,43 +641,23 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateSetting<TEntity> SetWith<TFields>(Expression<Func<TEntity, TFields>> fieldsSelectorOrAssignment, object updateObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsSelectorOrAssignment字段筛选和更新对象updateObj部分字段更新，updateObj对象内所有与表达式fieldsSelectorOrAssignment筛选字段名称相同的栏位都将参与更新，同时表达式fieldsSelectorOrAssignment也可以直接给字段赋值，单对象更新，
-    /// fieldsSelectorOrAssignment字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，只有带参数的成员访问表达式(如：f =&gt; f.Name)，才会被更新为updateObj中对应栏位的值，其他场景将被更新为对应表达式的值(如：tmpObj.TotalAmount, BuyerId = DBNull.Value等)，用法：
+    /// 判断condition布尔值，如果为true，使用表达式fieldsSelectorOrAssignment字段筛选和更新对象updateObjs部分字段根据主键进行更新，可单条也可多条数据更新，多条可分批次完成，每次更新bulkCount条数。
+    /// updateObjs对象内所有与表达式fieldsSelectorOrAssignment筛选字段名称相同的栏位都将参与更新，同时表达式fieldsSelectorOrAssignment也可以直接给字段赋值，updateObjs对象中必须包含主键栏位。
+    /// fieldsSelectorOrAssignment字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，用法：
     /// <code>
-    /// var condition = true;
-    /// var orderInfo = repository
-    ///     .From&lt;Order&gt;()
-    ///     .Where(x =&gt; x.Id == 1)
-    ///     .Select(f ==&gt; new { f.ProductCount, f.Disputes, f.UpdatedAt})
-    ///     .First();
-    /// orderInfo.ProductCount += 2;
-    /// orderInfo.Disputes = new Dispute
+    /// var orderInfo = new OrderInfo { ... };
+    /// var tmpObj = new { TotalAmount = 450, ... };
+    /// repository.Update&lt;Order&gt;(condition, f => new
     /// {
-    ///     Id = 1,
-    ///     Content = "43dss",
-    ///     Users = "1,2",
-    ///     Result = "OK",
-    ///     CreatedAt = DateTime.Now
-    /// }
-    /// var tmpObj = new { TotalAmount = 450 };
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetWith(condition, f => new
-    ///     {
-    ///         tmpObj.TotalAmount,
-    ///         Products = this.GetProducts(),
-    ///         BuyerId = DBNull.Value,
-    ///         f.ProductCount,
-    ///         f.Disputes
-    ///     }, orderInfo)
-    ///     .Where(x =&gt; x.Id == 1)
-    ///     .Execute();
+    ///     tmpObj.TotalAmount, //直接赋值，使用同名变量
+    ///     Products = this.GetProducts(), //直接赋值，使用本地函数
+    ///     BuyerId = DBNull.Value, //直接赋值 NULL
+    ///     f.ProductCount, //使用updateObjs对象中的参数
+    ///     f.Disputes //使用updateObjs对象中的参数，实体对象由TypeHandler处理
+    /// }, orderInfo);
     /// private int[] GetProducts() => new int[] { 1, 2, 3 };
+    /// SQL: UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`ProductCount`=@ProductCount,`Disputes`=@Disputes WHERE `Id`=1
     /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`ProductCount`=@ProductCount,`Disputes`=@Disputes WHERE `Id`=1
-    /// </code>
-    /// 执行后的结果，TotalAmount，Products，BuyerId被更新为对应的值，ProductCount，Disputes被更新为orderInfo中对应的值，UpdatedAt栏位没有更新
     /// </summary>
     /// <typeparam name="TFields">字段筛选表达式要更新的所有字段类型</typeparam>
     /// <param name="condition">判断条件</param>
@@ -872,34 +668,16 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <summary>
     /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，用法：
     /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
-    ///     .Set((x, y, z) =&gt; new
-    ///     {
-    ///         TotalAmount = x.From&lt;OrderDetail&gt;('c')
-    ///             .Where(f =&gt; f.OrderId == y.Id)
-    ///             .Select(t =&gt; Sql.Sum(t.Amount))
-    ///         OrderNo = y.OrderNo + z.ProductId.ToString(),
-    ///         BuyerId = DBNull.Value
-    ///     })
-    ///     .Where((a, b) =&gt; a.BuyerId == 1)
-    ///     .Execute();
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
-    ///     .Set((x, y, z) =&gt; new
-    ///     {
-    ///         TotalAmount = x.From&lt;OrderDetail&gt;('c')
-    ///             .Where(f =&gt; f.OrderId == y.Id)
-    ///             .Select(t =&gt; Sql.Sum(t.Amount))
-    ///     })
-    ///     .Set((a, b) =&gt; new { OrderNo = a.OrderNo + b.ProductId.ToString() })
-    ///     .Set((x, y) =&gt; new { BuyerId = DBNull.Value })
-    ///     .Where((a, b) =&gt; a.BuyerId == 1)
-    ///     .Execute();
-    /// </code>
-    /// 上面两种方式生成的SQL是一样的，SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,CAST(b.`ProductId` AS CHAR)),a.`BuyerId`=NULL WHERE a.`BuyerId`=1
+    /// .Set((x, y, z) =&gt; new
+    /// {
+    ///     TotalAmount = x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount))
+    ///     OrderNo = y.OrderNo + z.ProductId.ToString(),
+    ///     BuyerId = DBNull.Value
+    /// })
+    /// SQL:
+    /// ... SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,CAST(b.`ProductId` AS CHAR)),a.`BuyerId`=NULL ...
     /// </code>
     /// </summary>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
@@ -909,22 +687,16 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
-    ///     .Set(true, (x, y, z) =&gt; new
-    ///     {
-    ///         TotalAmount = x.From&lt;OrderDetail&gt;('c')
-    ///             .Where(f =&gt; f.OrderId == y.Id)
-    ///             .Select(t =&gt; Sql.Sum(t.Amount))
-    ///     })
-    ///     .Set((a, b) =&gt; new { OrderNo = a.OrderNo + b.ProductId.ToString() })
-    ///     .Set((x, y) =&gt; new { BuyerId = DBNull.Value })
-    ///     .Where((a, b) =&gt; a.BuyerId == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,CAST(b.`ProductId` AS CHAR)),a.`BuyerId`=NULL WHERE a.`BuyerId`=1
+    /// .Set(true, (x, y, z) =&gt; new
+    /// {
+    ///     TotalAmount = x.From&lt;OrderDetail&gt;('c')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount))
+    ///     OrderNo = y.OrderNo + z.ProductId.ToString(),
+    ///     BuyerId = DBNull.Value
+    /// })
+    /// SQL:
+    /// ... SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,CAST(b.`ProductId` AS CHAR)),a.`BuyerId`=NULL ...
     /// </code>
     /// </summary>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
@@ -935,20 +707,11 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// <summary>
     /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
-    ///     .SetFrom(f =&gt; f.TotalAmount, (x, y, z) =&gt; x
-    ///         .From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .Set((a, b) =&gt; new { OrderNo = a.OrderNo + b.ProductId.ToString() })
-    ///     .Set((x, y) =&gt; new { BuyerId = DBNull.Value })
-    ///     .Where((a, b) =&gt; a.BuyerId == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,CAST(b.`ProductId` AS CHAR)),a.`BuyerId`=NULL WHERE a.`BuyerId`=1
+    /// .SetFrom(f =&gt; f.TotalAmount, (x, y, z) =&gt; x
+    ///     .From&lt;OrderDetail&gt;('c')
+    ///     .Where(f =&gt; f.OrderId == y.Id)
+    ///     .Select(t =&gt; Sql.Sum(t.Amount)))
+    /// SQL: SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`)
     /// </code>
     /// </summary>
     /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
@@ -960,20 +723,11 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
     /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
     /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .InnerJoin&lt;OrderDetail&gt;((x, y) =&gt; x.Id == y.OrderId)
-    ///     .SetFrom(f =&gt; f.TotalAmount, (x, y, z) =&gt; x
-    ///         .From&lt;OrderDetail&gt;('c')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)))
-    ///     .Set((a, b) =&gt; new { OrderNo = a.OrderNo + b.ProductId.ToString() })
-    ///     .Set((x, y) =&gt; new { BuyerId = DBNull.Value })
-    ///     .Where((a, b) =&gt; a.BuyerId == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,CAST(b.`ProductId` AS CHAR)),a.`BuyerId`=NULL WHERE a.`BuyerId`=1
+    /// .SetFrom(condition, f =&gt; f.TotalAmount, (x, y, z) =&gt; x
+    ///     .From&lt;OrderDetail&gt;('c')
+    ///     .Where(f =&gt; f.OrderId == y.Id)
+    ///     .Select(t =&gt; Sql.Sum(t.Amount)))
+    /// SQL: SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`)
     /// </code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -1031,7 +785,7 @@ public interface IUpdateSetting<TEntity> : IUpdateSet<TEntity>
 /// <typeparam name="T1">更新值来源表T1实体类型</typeparam>
 public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
 {
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     /// <summary>
     /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，用法：
     /// <code>
@@ -1138,47 +892,6 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
     IUpdateFrom<TEntity, T1> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
-
-    /// <summary>
-    /// 使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，参数可以为null，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateFrom<TEntity, T1> SetRaw(string rawSql, object updateObj);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="condition">判断条件</param>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateFrom<TEntity, T1> SetRaw(bool condition, string rawSql, object updateObj);
 
     /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象内所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，用法：
@@ -1449,7 +1162,7 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
 /// <typeparam name="T2">更新值来源表T2实体类型</typeparam>
 public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
 {
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     /// <summary>
     /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，用法：
     /// <code>
@@ -1556,47 +1269,6 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
     IUpdateFrom<TEntity, T1, T2> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
-
-    /// <summary>
-    /// 使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，参数可以为null，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateFrom<TEntity, T1, T2> SetRaw(string rawSql, object updateObj);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="condition">判断条件</param>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateFrom<TEntity, T1, T2> SetRaw(bool condition, string rawSql, object updateObj);
 
     /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象内所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，用法：
@@ -1868,7 +1540,7 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
 /// <typeparam name="T3">更新值来源表T3实体类型</typeparam>
 public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
 {
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     /// <summary>
     /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，用法：
     /// <code>
@@ -1975,47 +1647,6 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
     IUpdateFrom<TEntity, T1, T2, T3> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
-
-    /// <summary>
-    /// 使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，参数可以为null，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateFrom<TEntity, T1, T2, T3> SetRaw(string rawSql, object updateObj);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="condition">判断条件</param>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateFrom<TEntity, T1, T2, T3> SetRaw(bool condition, string rawSql, object updateObj);
 
     /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象内所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，用法：
@@ -2288,7 +1919,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
 /// <typeparam name="T4">更新值来源表T4实体类型</typeparam>
 public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
 {
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     /// <summary>
     /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，用法：
     /// <code>
@@ -2395,47 +2026,6 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
     IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
-
-    /// <summary>
-    /// 使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，参数可以为null，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> SetRaw(string rawSql, object updateObj);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="condition">判断条件</param>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> SetRaw(bool condition, string rawSql, object updateObj);
 
     /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象内所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，用法：
@@ -2709,7 +2299,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
 /// <typeparam name="T5">更新值来源表T5实体类型</typeparam>
 public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
 {
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     /// <summary>
     /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，用法：
     /// <code>
@@ -2816,47 +2406,6 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
     IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
-
-    /// <summary>
-    /// 使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，参数可以为null，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetRaw(string rawSql, object updateObj);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="condition">判断条件</param>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetRaw(bool condition, string rawSql, object updateObj);
 
     /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象内所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，用法：
@@ -3143,7 +2692,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
     IUpdateJoin<TEntity, T1, T2> LeftJoin<T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn);
     #endregion
 
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     /// <summary>
     /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，用法：
     /// <code>
@@ -3250,47 +2799,6 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
-
-    /// <summary>
-    /// 使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，参数可以为null，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateJoin<TEntity, T1> SetRaw(string rawSql, object updateObj);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="condition">判断条件</param>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateJoin<TEntity, T1> SetRaw(bool condition, string rawSql, object updateObj);
 
     /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象内所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，用法：
@@ -3580,7 +3088,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
     IUpdateJoin<TEntity, T1, T2, T3> LeftJoin<T3>(Expression<Func<TEntity, T1, T2, T3, bool>> joinOn);
     #endregion
 
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     /// <summary>
     /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，用法：
     /// <code>
@@ -3687,47 +3195,6 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
-
-    /// <summary>
-    /// 使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，参数可以为null，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateJoin<TEntity, T1, T2> SetRaw(string rawSql, object updateObj);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="condition">判断条件</param>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateJoin<TEntity, T1, T2> SetRaw(bool condition, string rawSql, object updateObj);
 
     /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象内所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，用法：
@@ -4018,7 +3485,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     IUpdateJoin<TEntity, T1, T2, T3, T4> LeftJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn);
     #endregion
 
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     /// <summary>
     /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，用法：
     /// <code>
@@ -4125,47 +3592,6 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
-
-    /// <summary>
-    /// 使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，参数可以为null，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateJoin<TEntity, T1, T2, T3> SetRaw(string rawSql, object updateObj);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="condition">判断条件</param>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateJoin<TEntity, T1, T2, T3> SetRaw(bool condition, string rawSql, object updateObj);
 
     /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象内所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，用法：
@@ -4457,7 +3883,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> LeftJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn);
     #endregion
 
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     /// <summary>
     /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，用法：
     /// <code>
@@ -4564,47 +3990,6 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
-
-    /// <summary>
-    /// 使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，参数可以为null，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> SetRaw(string rawSql, object updateObj);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="condition">判断条件</param>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> SetRaw(bool condition, string rawSql, object updateObj);
 
     /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象内所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，用法：
@@ -4880,7 +4265,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
 /// <typeparam name="T5">更新值来源表T5实体类型</typeparam>
 public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
 {
-    #region Set/SetRaw/SetWith/SetFrom
+    #region Set/SetWith/SetFrom
     /// <summary>
     /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，用法：
     /// <code>
@@ -4987,47 +4372,6 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
     /// <param name="fieldValue">字段值，固定值</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
-
-    /// <summary>
-    /// 使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，参数可以为null，用法：
-    /// <code>
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetRaw(string rawSql, object updateObj);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用原始SQL和参数更新一个或多个字段，多个字段中间用逗号，分割，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var condition = true;
-    /// repository.Update&lt;Order&gt;()
-    ///     .SetRaw("Name=@Name", new { Name = "kevin"}) //单条语句
-    ///     .SetRaw("Gender=@Gender,Age=NULL", new { Gender = Gender.Male }) //多条语句
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE [sys_order] SET [Name]=@Name WHERE [Id]=1
-    /// UPDATE [sys_order] SET [Name]=@Name,[Age]=NULL WHERE [Id]=1
-    /// </code>
-    /// </summary>
-    /// <param name="condition">判断条件</param>
-    /// <param name="rawSql">原始SQL，可以更新一个或多个字段，多个字段中间用逗号,分割</param>
-    /// <param name="updateObj">参数对象，可以是字典或是匿名对象或是现有对象，可以为null</param>
-    /// <returns></returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetRaw(bool condition, string rawSql, object updateObj);
 
     /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象内所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，用法：

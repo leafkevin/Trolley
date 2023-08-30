@@ -202,14 +202,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.AddMemberElement(memberMapper, fieldValue, false);
         return this;
     }
-    public virtual IUpdateVisitor SetRaw(string rawSql, object parameters)
-    {
-        this.updateFields.Add(new UpdateField { Type = UpdateFieldType.RawSql, Value = rawSql });
-        var entityType = this.tables[0].EntityType;
-        var dbParametersInitializer = RepositoryHelper.BuildRawSqlParameters(this.DbKey, this.OrmProvider, "SetRaw", rawSql, entityType, parameters);
-        dbParametersInitializer.Invoke(this.dbParameters, this.OrmProvider, parameters);
-        return this;
-    }
     public virtual IUpdateVisitor SetWith(Expression fieldsAssignment)
     {
         var entityMapper = this.tables[0].Mapper;
@@ -298,16 +290,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         else
         {
-            if (string.IsNullOrEmpty(this.multiParameterPrefix))
-            {
-                var parametersInitializer = RepositoryHelper.BuildUpdateSetWithParameters(this, entityMapper.EntityType, updateObj, isExceptKey);
-                parametersInitializer.Invoke(this, this.updateFields, this.dbParameters, updateObj);
-            }
-            else
-            {
-                var parametersInitializer = RepositoryHelper.BuildMultiUpdateSetWithParameters(this, entityMapper.EntityType, updateObj, isExceptKey);
-                parametersInitializer.Invoke(this, this.multiParameterPrefix, this.updateFields, this.dbParameters, updateObj);
-            }
+            var parametersInitializer = RepositoryHelper.BuildUpdateSetWithParameters(this, entityMapper.EntityType, updateObj, isExceptKey);
+            parametersInitializer.Invoke(this, this.updateFields, this.dbParameters, updateObj);
         }
         return this;
     }
@@ -714,7 +698,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         sqlSegment.IsParameterized = true;
         sqlSegment.MemberMapper = memberMapper;
-        sqlSegment.ParameterName = this.multiParameterPrefix + memberMapper.MemberName;
+        sqlSegment.ParameterName = memberMapper.MemberName;
         var dataParameters = dbParameters ?? this.dbParameters;
         updateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = this.GetQuotedValue(sqlSegment, dataParameters) });
     }

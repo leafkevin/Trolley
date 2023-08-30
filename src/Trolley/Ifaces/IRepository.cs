@@ -35,114 +35,20 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     IDbTransaction Transaction { get; }
     #endregion
 
-    #region From/FromWith/FromWithRecursive
+    #region From
     /// <summary>
     /// 从表T中查询数据，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .Select(f => new { f.Id, f.Name, f.ParentId })
-    ///     .First();
+    /// repository.From&lt;Menu&gt;()
+    /// SQL:FROM `sys_menu`
     /// </code>
-    /// 生成的SQL:<code>SELECT `Id`,`Name`,`ParentId` FROM `sys_menu`</code>
     /// </summary>
     /// <typeparam name="T">实体类型</typeparam>
     /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <param name="suffixRawSql">额外的原始SQL, SqlServer会有With用法，如：
-    /// <cdoe>SELECT * FROM sys_user WITH(NOLOCK)</cdoe>
+    /// <param name="suffixRawSql">额外的原始SQL, SqlServer会有With用法，如：<cdoe>SELECT * FROM sys_user WITH(NOLOCK)</cdoe>
     /// </param>
     /// <returns>返回查询对象</returns>
     IQuery<T> From<T>(char tableAsStart = 'a', string suffixRawSql = null);
-    /// <summary>
-    /// 从SQL子查询中查询数据，用法：
-    /// <code>
-    /// repository
-    ///     .From(f => f.From&lt;Page, Menu&gt;('o')
-    ///         .Where((a, b) => a.Id == b.PageId)
-    ///         .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
-    ///     .InnerJoin&lt;Menu&gt;>((a, b) => a.Id == b.Id)
-    ///     .Where((a, b) => a.Id == b.Id)
-    ///     .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-    ///     .ToList();
-    /// </code>
-    /// 生成的SQL：
-    /// <code>
-    /// SELECT a.`Id`,b.`Name`,a.`ParentId`,a.`Url` FROM (SELECT p.`Id`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) a INNER JOIN `sys_menu` b ON a.`Id`=b.`Id` WHERE a.`Id`=b.`Id`
-    /// </code>
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="subQuery"></param>
-    /// <param name="tableAsStart"></param>
-    /// <returns></returns>
-    IQuery<T> From<T>(Func<IFromQuery, IFromQuery<T>> subQuery, char tableAsStart = 'a');
-    /// <summary>
-    /// 使用CTE子句创建查询对象，不能自我引用不能递归查询，用法：
-    /// <code>
-    /// repository
-    ///     .FromWith(f => f.From<Menu>()
-    ///         .Select(x => new { x.Id, x.Name, x.ParentId, x.PageId }), "MenuList")
-    ///     .InnerJoin<Page>((a, b) => a.Id == b.Id)
-    ///     .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-    ///     .ToList();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// WITH MenuList(Id,Name,ParentId,PageId) AS 
-    /// (
-    ///     SELECT `Id`,`Name`,`ParentId`,`PageId` FROM `sys_menu`
-    /// )
-    /// SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN `sys_page` b ON a.`Id`=b.`Id`
-    /// </code>
-    /// </summary>
-    /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
-    /// <param name="cteSubQuery">CTE 查询子句</param>
-    /// <param name="cteTableName">CTE子句的临时表名，默认值：cte</param>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T> FromWith<T>(Func<IFromQuery, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
-    /// <summary>
-    /// 使用可递归CTE子句创建查询对象，可以自我引用递归查询，要有包含自我引用的Union或Union All查询子句，
-    /// <para>通常用来查询树型数据，查找叶子或是查找根，用法：</para>
-    /// <code>
-    /// repository
-    ///     .FromWithRecursive((f, cte) =&gt; f.From&lt;Menu&gt;()
-    ///             .Where(x =&gt; x.Id == 1)
-    ///             .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
-    ///         .UnionAllRecursive((x, y) =&gt; x.From&lt;Menu&gt;()
-    ///             .InnerJoinRecursive(y, cte, (a, b) =&gt; a.ParentId == b.Id)
-    ///             .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId })), "MenuList")
-    ///     .NextWithRecursive((f, cte) =&gt; f.From&lt;Page, Menu&gt;()
-    ///             .Where((a, b) =&gt; a.Id == b.PageId)
-    ///             .Select((x, y) =&gt; new { y.Id, y.ParentId, x.Url })
-    ///         .UnionAll(x =&gt; x.From&lt;Menu&gt;()
-    ///             .LeftJoin&lt;Page&gt;((a, b) =&gt; a.PageId == b.Id)
-    ///             .Where((a, b) =&gt; a.Id &gt; 1)
-    ///             .Select((x, y) =&gt; new { x.Id, x.ParentId, y.Url })), "MenuPageList")
-    ///     .InnerJoin((a, b) =&gt; a.Id == b.Id)
-    ///     .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId, b.Url })
-    ///     .ToList();
-    /// </code>
-    /// 生成的SQL
-    /// <code>
-    /// WITH RECURSIVE MenuList(Id,Name,ParentId) AS
-    /// (
-    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id`
-    /// ),
-    /// MenuPageList(Id,Url) AS 
-    /// (
-    ///     SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=1 UNION ALL
-    ///     SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`>1
-    /// )
-    /// SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageList b ON a.`Id`=b.`Id`
-    /// </code>
-    /// </summary>
-    /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
-    /// <param name="cteSubQuery">CTE 查询子句，带有Union或Union All查询子句</param>
-    /// <param name="cteTableName">CTE子句的临时表名，默认值：cte</param>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T> FromWithRecursive<T>(Func<IFromQuery, string, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
     /// <summary>
     /// 使用2个表创建查询对象
     /// </summary>
@@ -253,6 +159,75 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a');
     #endregion
 
+    #region From SubQuery
+    /// <summary>
+    /// 从SQL子查询中查询数据，用法：
+    /// <code>
+    /// repository
+    ///     .From(f =&gt; f.From&lt;Page, Menu&gt;('o')
+    ///         .Where((a, b) =&gt; a.Id == b.PageId)
+    ///         .Select((x, y) =&gt; new { y.Id, y.ParentId, x.Url }))
+    ///     ...
+    /// SQL:
+    /// ... FROM (SELECT p.`Id`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="T">表T实体类型</typeparam>
+    /// <param name="subQuery">子查询</param>
+    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> From<T>(Func<IFromQuery, IFromQuery<T>> subQuery, char tableAsStart = 'a');
+    #endregion
+
+    #region FromWith CTE
+    /// <summary>
+    /// 使用CTE子句创建查询对象，不能自我引用不能递归查询，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; f.From&lt;Menu&gt;()
+    ///         .Select(x =&gt; new { x.Id, x.Name, x.ParentId, x.PageId }), "MenuList")
+    ///     ...
+    /// SQL:
+    /// WITH MenuList(Id,Name,ParentId,PageId) AS 
+    /// (
+    ///     SELECT `Id`,`Name`,`ParentId`,`PageId` FROM `sys_menu`
+    /// )
+    /// ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
+    /// <param name="cteSubQuery">CTE 查询子句</param>
+    /// <param name="cteTableName">CTE子句的临时表名，默认值：cte</param>
+    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> FromWith<T>(Func<IFromQuery, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    /// <summary>
+    /// 使用可递归CTE子句创建查询对象，可以自我引用递归查询，要有包含自我引用的Union或Union All查询子句，通常用来查询树型数据，查找叶子或是查找根，用法：
+    /// <code>
+    /// repository
+    ///     .FromWithRecursive((f, cte) =&gt; f.From&lt;Menu&gt;()
+    ///             .Where(x =&gt; x.Id == 1)
+    ///             .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
+    ///         .UnionAllRecursive((x, y) =&gt; x.From&lt;Menu&gt;()
+    ///             .InnerJoinRecursive(y, cte, (a, b) =&gt; a.ParentId == b.Id)
+    ///             .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId })), "MenuList")
+    ///     ...
+    /// SQL:
+    /// WITH RECURSIVE MenuList(Id,Name,ParentId) AS
+    /// (
+    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
+    ///     SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id`
+    /// ) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
+    /// <param name="cteSubQuery">CTE 查询子句，带有Union或Union All查询子句</param>
+    /// <param name="cteTableName">CTE子句的临时表名，默认值：cte</param>
+    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> FromWithRecursive<T>(Func<IFromQuery, string, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    #endregion
+
     #region QueryFirst/Query
     /// <summary>
     /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值
@@ -341,10 +316,10 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，用法：
     /// <code>
     /// repository.Get&lt;User&gt;(1) //或是
-    /// repository.Get&lt;User&gt;(new { Id = 1}) //或是
-    /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ...};
-    /// repository.Get&lt;User&gt;(userInfo) //三种写法是等价的
-    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id
+    /// repository.Get&lt;User&gt;(new { Id = 1 }) //或是
+    /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ... };
+    /// repository.Get&lt;User&gt;(userInfo) //三种写法是等效的
+    /// SQL: SELECT ... FROM `sys_user` WHERE `Id`=@Id
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
@@ -355,10 +330,10 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，用法：
     /// <code>
     /// await repository.GetAsync&lt;User&gt;(1) //或是
-    /// await repository.GetAsync&lt;User&gt;(new { Id = 1}) //或是
+    /// await repository.GetAsync&lt;User&gt;(new { Id = 1 }) //或是
     /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ...};
-    /// await repository.GetAsync&lt;User&gt;(userInfo) //三种写法是等价的
-    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id
+    /// await repository.GetAsync&lt;User&gt;(userInfo) //三种写法是等效的
+    /// SQL: SELECT ... FROM `sys_user` WHERE `Id`=@Id
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
@@ -366,147 +341,6 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回实体对象或是TEntity类型默认值</returns>
     Task<TEntity> GetAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default);
-    #endregion
-
-    #region Create
-    /// <summary>
-    /// 创建TEntity类型插入对象
-    /// </summary>
-    /// <typeparam name="TEntity">插入实体类型</typeparam>
-    /// <returns>返回插入对象</returns>
-    ICreate<TEntity> Create<TEntity>();
-    #endregion
-
-    #region Update
-    /// <summary>
-    /// 创建TEntity类型更新对象
-    /// </summary>
-    /// <typeparam name="TEntity">更新实体类型</typeparam>
-    /// <returns>返回更新对象</returns>
-    IUpdate<TEntity> Update<TEntity>();
-    /// <summary>
-    /// 使用更新对象updateObj部分字段更新，updateObj对象内除主键字段外所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，updateObj对象必须包含主键字段，用法：
-    /// <code>
-    /// repository.Update&lt;User&gt;(new { Id = 1, Name = "kevin"});
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@Id
-    /// </code>
-    /// </summary>
-    /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新</param>
-    /// <returns>返回更新对象</returns> 
-    int Update<TEntity>(object updateObj);
-    /// <summary>
-    /// 使用更新对象updateObj部分字段更新，updateObj对象内除主键字段外所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，updateObj对象必须包含主键字段，用法：
-    /// <code>
-    /// await repository.UpdateAsync&lt;User&gt;(new { Id = 1, Name = "kevin"});
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@Id
-    /// </code>
-    /// </summary>
-    /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新</param>
-    /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回更新行数</returns>
-    Task<int> UpdateAsync<TEntity>(object updateObj, CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 使用表达式fieldsSelectorOrAssignment字段筛选和更新对象updateObjs部分字段根据主键进行更新，可单条也可多条数据更新，多条可多次完成，每次更新bulkCount条数。
-    /// updateObjs对象内所有与表达式fieldsSelectorOrAssignment筛选字段名称相同的栏位都将参与更新，同时表达式fieldsSelectorOrAssignment也可以直接给字段赋值，updateObjs对象中必须包含主键栏位。
-    /// fieldsSelectorOrAssignment字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，只有带参数的成员访问表达式(如：f =&gt; f.Name)，才会被更新为updateObj中对应栏位的值，其他场景将被更新为对应表达式的值(如：tmpObj.TotalAmount, BuyerId = DBNull.Value等)
-    /// 用法：
-    /// <code>
-    /// var orderInfo = repository
-    ///     .From&lt;Order&gt;()
-    ///     .Where(x =&gt; x.Id == 1)
-    ///     .Select(f ==&gt; new { f.ProductCount, f.Disputes, f.UpdatedAt})
-    ///     .First();
-    /// orderInfo.ProductCount += 2;
-    /// orderInfo.Disputes = new Dispute
-    /// {
-    ///     Id = 1,
-    ///     Content = "43dss",
-    ///     Users = "1,2",
-    ///     Result = "OK",
-    ///     CreatedAt = DateTime.Now
-    /// }
-    /// var tmpObj = new { TotalAmount = 450 };
-    /// repository.Update&lt;Order&gt;(f => new
-    /// {
-    ///     tmpObj.TotalAmount,
-    ///     Products = this.GetProducts(),
-    ///     BuyerId = DBNull.Value,
-    ///     f.ProductCount,
-    ///     f.Disputes
-    /// }, orderInfo);
-    /// private int[] GetProducts() => new int[] { 1, 2, 3 };
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`ProductCount`=@ProductCount,`Disputes`=@Disputes WHERE `Id`=1
-    /// </code>
-    /// 执行后的结果，TotalAmount，Products，BuyerId被更新为对应的值，ProductCount，Disputes被更新为orderInfo中对应的值，UpdatedAt栏位没有更新
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="fieldsSelectorOrAssignment">字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，只有带参数的成员访问的表达式(如：f =&gt; f.Name)，才会被更新为updateObj中对应栏位的值，其他场景将被更新为对应表达式的值(如：tmpObj.TotalAmount, BuyerId = DBNull.Value等)</param>
-    /// <param name="updateObjs">部分字段更新对象，包含想要更新的所需栏位值，可单条也可多条数据更新</param>
-    /// <param name="bulkCount">多条数据更新时，一次入库的最大条数，剩余条数会放到下次更新中</param>
-    /// <returns>返回更新行数</returns>
-    int Update<TEntity>(Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObjs, int bulkCount = 500);
-    /// <summary>
-    /// 使用表达式fieldsSelectorOrAssignment字段筛选和更新对象updateObjs部分字段根据主键进行更新，可单条也可多条数据更新，多条可多次完成，每次更新bulkCount条数。
-    /// updateObjs对象内所有与表达式fieldsSelectorOrAssignment筛选字段名称相同的栏位都将参与更新，同时表达式fieldsSelectorOrAssignment也可以直接给字段赋值，updateObjs对象中必须包含主键栏位。
-    /// fieldsSelectorOrAssignment字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，只有带参数的成员访问表达式(如：f =&gt; f.Name)，才会被更新为updateObj中对应栏位的值，其他场景将被更新为对应表达式的值(如：tmpObj.TotalAmount, BuyerId = DBNull.Value等)
-    /// 用法：
-    /// <code>
-    /// var orderInfo = repository
-    ///     .From&lt;Order&gt;()
-    ///     .Where(x =&gt; x.Id == 1)
-    ///     .Select(f ==&gt; new { f.ProductCount, f.Disputes, f.UpdatedAt})
-    ///     .First();
-    /// orderInfo.ProductCount += 2;
-    /// orderInfo.Disputes = new Dispute
-    /// {
-    ///     Id = 1,
-    ///     Content = "43dss",
-    ///     Users = "1,2",
-    ///     Result = "OK",
-    ///     CreatedAt = DateTime.Now
-    /// }
-    /// var tmpObj = new { TotalAmount = 450 };
-    /// await repository.UpdateAsync&lt;Order&gt;(f => new
-    /// {
-    ///     tmpObj.TotalAmount,
-    ///     Products = this.GetProducts(),
-    ///     BuyerId = DBNull.Value,
-    ///     f.ProductCount,
-    ///     f.Disputes
-    /// }, orderInfo);
-    /// private int[] GetProducts() => new int[] { 1, 2, 3 };
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`ProductCount`=@ProductCount,`Disputes`=@Disputes WHERE `Id`=1
-    /// </code>
-    /// 执行后的结果，TotalAmount，Products，BuyerId被更新为对应的值，ProductCount，Disputes被更新为orderInfo中对应的值，UpdatedAt栏位没有更新
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="fieldsSelectorOrAssignment">字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，只有带参数的成员访问的表达式(如：f =&gt; f.Name)，才会被更新为updateObj中对应栏位的值，其他场景将被更新为对应表达式的值(如：tmpObj.TotalAmount, BuyerId = DBNull.Value等)</param>
-    /// <param name="updateObjs">部分字段更新对象，包含想要更新的所需栏位值</param>
-    /// <param name="bulkCount">多条数据更新时，一次入库的最大条数，剩余条数会放到下次更新中</param>
-    /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回更新行数</returns>
-    Task<int> UpdateAsync<TEntity>(Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObjs, int bulkCount = 500, CancellationToken cancellationToken = default);
-    #endregion
-
-    #region Delete
-    /// <summary>
-    /// 创建TEntity类型删除对象
-    /// </summary>
-    /// <typeparam name="TEntity">删除实体类型</typeparam>
-    /// <returns>返回删除对象</returns>
-    IDelete<TEntity> Delete<TEntity>();
     #endregion
 
     #region Exists
@@ -534,22 +368,121 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回是否存在的布尔值</returns>
     Task<bool> ExistsAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false。
+    /// 判断TEntity表是否存在满足predicate条件的记录，存在返回true，否则返回false。
     /// </summary>
     /// <typeparam name="TEntity">实体对象类型</typeparam>
-    /// <param name="wherePredicate">where条件表达式</param>
-    /// <param name="result">返回是否存在的布尔值</param>
+    /// <param name="predicate">where条件表达式</param>
     /// <returns>返回是否存在的布尔值</returns>
-    bool Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate);
+    bool Exists<TEntity>(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
-    /// 判断TEntity表是否存在满足wherePredicate条件的记录，存在返回true，否则返回false。
+    /// 判断TEntity表是否存在满足predicate条件的记录，存在返回true，否则返回false。
     /// </summary>
     /// <typeparam name="TEntity">实体对象类型</typeparam>
-    /// <param name="wherePredicate">where条件表达式</param>
+    /// <param name="predicate">where条件表达式</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回是否存在的布尔值</returns>
-    Task<bool> ExistsAsync<TEntity>(Expression<Func<TEntity, bool>> wherePredicate, CancellationToken cancellationToken = default);
+    Task<bool> ExistsAsync<TEntity>(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
     #endregion
+
+    #region Create
+    /// <summary>
+    /// 创建TEntity类型插入对象
+    /// </summary>
+    /// <typeparam name="TEntity">插入实体类型</typeparam>
+    /// <returns>返回插入对象</returns>
+    ICreate<TEntity> Create<TEntity>();
+    #endregion
+
+    #region Update
+    /// <summary>
+    /// 创建TEntity类型更新对象
+    /// </summary>
+    /// <typeparam name="TEntity">更新实体类型</typeparam>
+    /// <returns>返回更新对象</returns>
+    IUpdate<TEntity> Update<TEntity>();
+    /// <summary>
+    /// 使用更新对象updateObj部分字段更新，updateObj对象内除主键字段外所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，updateObj对象必须包含主键字段，用法：
+    /// <code>
+    /// repository.Update&lt;User&gt;(new { Id = 1, Name = "kevin"});
+    /// SQL: UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@Id
+    /// </code>
+    /// </summary>
+    /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新</param>
+    /// <returns>返回更新对象</returns> 
+    int Update<TEntity>(object updateObj);
+    /// <summary>
+    /// 使用更新对象updateObj部分字段更新，updateObj对象内除主键字段外所有与当前实体表TEntity名称相同的栏位都将参与更新，单对象更新，updateObj对象必须包含主键字段，用法：
+    /// <code>
+    /// repository.Update&lt;User&gt;(new { Id = 1, Name = "kevin"});
+    /// SQL: UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@Id
+    /// </code>
+    /// </summary>
+    /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回更新行数</returns>
+    Task<int> UpdateAsync<TEntity>(object updateObj, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 使用表达式fieldsSelectorOrAssignment字段筛选和更新对象updateObjs部分字段根据主键进行更新，可单条也可多条数据更新，多条可分批次完成，每次更新bulkCount条数。
+    /// updateObjs对象内所有与表达式fieldsSelectorOrAssignment筛选字段名称相同的栏位都将参与更新，同时表达式fieldsSelectorOrAssignment也可以直接给字段赋值，updateObjs对象中必须包含主键栏位。
+    /// fieldsSelectorOrAssignment字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，用法：
+    /// <code>
+    /// var orderInfo = new OrderInfo { ... };
+    /// var tmpObj = new { TotalAmount = 450, ... };
+    /// repository.Update&lt;Order&gt;(f => new
+    /// {
+    ///     tmpObj.TotalAmount, //直接赋值，使用同名变量
+    ///     Products = this.GetProducts(), //直接赋值，使用本地函数
+    ///     BuyerId = DBNull.Value, //直接赋值 NULL
+    ///     f.ProductCount, //使用updateObjs对象中的参数
+    ///     f.Disputes //使用updateObjs对象中的参数，实体对象由TypeHandler处理
+    /// }, orderInfo);
+    /// private int[] GetProducts() => new int[] { 1, 2, 3 };
+    /// SQL: UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`ProductCount`=@ProductCount,`Disputes`=@Disputes WHERE `Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="fieldsSelectorOrAssignment">字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，只有带参数的成员访问的表达式(如：f =&gt; f.Name)，才会被更新为updateObj中对应栏位的值，其他场景将被更新为对应表达式的值(如：tmpObj.TotalAmount, BuyerId = DBNull.Value等)</param>
+    /// <param name="updateObjs">部分字段更新对象，包含想要更新的所需栏位值，可单条也可多条数据更新</param>
+    /// <param name="bulkCount">多条数据更新时，一次入库的最大条数，剩余条数会放到下次更新中</param>
+    /// <returns>返回更新行数</returns>
+    int Update<TEntity>(Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObjs, int bulkCount = 500);
+    /// <summary>
+    /// 使用表达式fieldsSelectorOrAssignment字段筛选和更新对象updateObjs部分字段根据主键进行更新，可单条也可多条数据更新，多条可分批次完成，每次更新bulkCount条数。
+    /// updateObjs对象内所有与表达式fieldsSelectorOrAssignment筛选字段名称相同的栏位都将参与更新，同时表达式fieldsSelectorOrAssignment也可以直接给字段赋值，updateObjs对象中必须包含主键栏位。
+    /// fieldsSelectorOrAssignment字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，用法：
+    /// <code>
+    /// var orderInfo = new OrderInfo { ... };
+    /// var tmpObj = new { TotalAmount = 450, ... };
+    /// await repository.UpdateAsync&lt;Order&gt;(f => new
+    /// {
+    ///     tmpObj.TotalAmount, //直接赋值，使用同名变量
+    ///     Products = this.GetProducts(), //直接赋值，使用本地函数
+    ///     BuyerId = DBNull.Value, //直接赋值
+    ///     f.ProductCount, //使用updateObjs对象中的参数
+    ///     f.Disputes //使用updateObjs对象中的参数
+    /// }, orderInfo);
+    /// private int[] GetProducts() => new int[] { 1, 2, 3 };
+    /// SQL:
+    /// UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`ProductCount`=@ProductCount,`Disputes`=@Disputes WHERE `Id`=1
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="fieldsSelectorOrAssignment">字段筛选表达式，既可以筛选字段，也可以用表达式的值更新字段，只有带参数的成员访问的表达式(如：f =&gt; f.Name)，才会被更新为updateObj中对应栏位的值，其他场景将被更新为对应表达式的值(如：tmpObj.TotalAmount, BuyerId = DBNull.Value等)</param>
+    /// <param name="updateObjs">部分字段更新对象，包含想要更新的所需栏位值</param>
+    /// <param name="bulkCount">多条数据更新时，一次入库的最大条数，剩余条数会放到下次更新中</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回更新行数</returns>
+    Task<int> UpdateAsync<TEntity>(Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObjs, int bulkCount = 500, CancellationToken cancellationToken = default);
+    #endregion
+
+    #region Delete
+    /// <summary>
+    /// 创建TEntity类型删除对象
+    /// </summary>
+    /// <typeparam name="TEntity">删除实体类型</typeparam>
+    /// <returns>返回删除对象</returns>
+    IDelete<TEntity> Delete<TEntity>();
+    #endregion   
 
     #region Execute
     /// <summary>
@@ -570,21 +503,23 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     #endregion
 
     #region QueryMultiple
-    /// <summary>
-    /// 多SQL语句一起执行，并返回多个结果集，根据SQL语句按顺序接收返回结果。
-    /// </summary>
-    /// <param name="rawSql">要执行的SQL</param>
-    /// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
-    /// <returns>返回多结果集Reader对象</returns>
-    IMultiQueryReader QueryMultiple(string rawSql, object parameters = null);
-    /// <summary>
-    /// 多SQL语句一起执行，并返回多个结果集，根据SQL语句顺序接收返回结果。
-    /// </summary>
-    /// <param name="rawSql">要执行的SQL</param>
-    /// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
-    /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回多结果集Reader对象</returns>
-    Task<IMultiQueryReader> QueryMultipleAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
+    #region 不支持
+    ///// <summary>
+    ///// 多SQL语句一起执行，并返回多个结果集，根据SQL语句按顺序接收返回结果。
+    ///// </summary>
+    ///// <param name="rawSql">要执行的SQL</param>
+    ///// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
+    ///// <returns>返回多结果集Reader对象</returns>
+    //IMultiQueryReader QueryMultiple(string rawSql, object parameters = null);
+    ///// <summary>
+    ///// 多SQL语句一起执行，并返回多个结果集，根据SQL语句顺序接收返回结果。
+    ///// </summary>
+    ///// <param name="rawSql">要执行的SQL</param>
+    ///// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
+    ///// <param name="cancellationToken">取消Token</param>
+    ///// <returns>返回多结果集Reader对象</returns>
+    //Task<IMultiQueryReader> QueryMultipleAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
+    #endregion
     /// <summary>
     /// 使用IMultipleQuery操作生成多个SQL语句一起执行，并返回多个结果集，根据IMultipleQuery操作顺序接收返回结果。
     /// </summary>

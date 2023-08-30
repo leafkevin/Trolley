@@ -174,7 +174,7 @@ class MultipleQuery : IMultipleQuery
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildQueryMultiWhereObjSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
+        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
         var sql = commandInitializer.Invoke(this.Command, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
 
         Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
@@ -218,7 +218,7 @@ class MultipleQuery : IMultipleQuery
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildQueryMultiWhereObjSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
+        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
         var sql = commandInitializer.Invoke(this.Command, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
 
         Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
@@ -234,78 +234,14 @@ class MultipleQuery : IMultipleQuery
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildMultiGetSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
+        var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
         var sql = commandInitializer.Invoke(this.Command, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
 
         Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         this.AddReader(sql, readerGetter);
         return this;
     }
-    #endregion
-
-    #region Create
-    public IMultiCreate<TEntity> Create<TEntity>() => new MultiCreate<TEntity>(this);
-    #endregion
-
-    #region Update
-    public IMultiUpdate<TEntity> Update<TEntity>() => new MultiUpdate<TEntity>(this);
-    public IMultipleQuery Update<TEntity>(object updateObj)
-    {
-        if (updateObj == null)
-            throw new ArgumentNullException(nameof(updateObj));
-
-        var entityType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildMultiUpdateEntitySqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, updateObj);
-        var sql = commandInitializer.Invoke(this.Command, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", updateObj);
-
-        Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
-        this.AddReader(sql, readerGetter);
-        return this;
-    }
-    public IMultipleQuery Update<TEntity>(Expression<Func<TEntity, object>> fieldsSelectorOrAssignment, object updateObjs)
-    {
-        if (fieldsSelectorOrAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
-        if (updateObjs == null)
-            throw new ArgumentNullException(nameof(updateObjs));
-
-        var entityType = typeof(TEntity);
-        bool isMulti = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not Dictionary<string, object>;
-        var visitor = this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, entityType, this.IsParameterized, multiParameterPrefix: $"m{this.ReaderAfters.Count}");
-        string sql = null;
-        if (isMulti)
-        {
-            int index = 0;
-            var sqlBuilder = new StringBuilder();
-            var updateParameters = updateObjs as IEnumerable;
-            visitor.SetBulkFirst(fieldsSelectorOrAssignment, updateObjs);
-            foreach (var updateObj in updateParameters)
-            {
-                visitor.SetBulk(sqlBuilder, this.Command, updateObj, index);
-                index++;
-            }
-            if (index <= 0)
-                throw new Exception("参数updateObjs中，没有任何可以更新的元素");
-            sql = sqlBuilder.ToString();
-        }
-        else
-        {
-            sql = visitor.SetWith(fieldsSelectorOrAssignment, updateObjs)
-                .WhereWith(updateObjs, true)
-                .BuildSql(out var dbParameters);
-            if (dbParameters != null && dbParameters.Count > 0)
-                dbParameters.ForEach(f => this.Command.Parameters.Add(f));
-        }
-        Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
-        this.AddReader(sql, readerGetter);
-        return this;
-    }
-
-    #endregion
-
-    #region Delete
-    public IMultiDelete<TEntity> Delete<TEntity>() => new MultiDelete<TEntity>(this);
-    #endregion
+    #endregion 
 
     #region Exists
     public IMultipleQuery Exists<TEntity>(object whereObj)
@@ -314,7 +250,7 @@ class MultipleQuery : IMultipleQuery
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildMultiExistsSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
+        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.Connection, this.OrmProvider, this.MapProvider, entityType, whereObj);
         var sql = commandInitializer.Invoke(this.Command, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
         Func<IDataReader, object> readerGetter = reader => reader.To<int>() > 0;
         this.AddReader(sql, readerGetter);

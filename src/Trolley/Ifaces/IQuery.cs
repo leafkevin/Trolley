@@ -54,87 +54,37 @@ public interface IQuery<T> : IQueryBase
     /// Union操作，去掉重复记录，用法：
     /// <code>
     /// await repository.From&lt;Order&gt;()
-    ///     .Where(x => x.Id == 1)
-    ///     .Select(x => new
-    ///     {
-    ///         x.Id,
-    ///         x.OrderNo,
-    ///         x.SellerId,
-    ///         x.BuyerId
-    ///      })
+    ///     ...
     ///     .Union(f => f.From&lt;Order&gt;()
     ///         .Where(x => x.Id > 1)
-    ///         .Select(x => new
-    ///         {
-    ///             x.Id,
-    ///             x.OrderNo,
-    ///             x.SellerId,
-    ///             x.BuyerId
-    ///         }))
+    ///         .Select(x => new { ... }))
     ///     .ToListAsync();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`=1 UNION
-    /// SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`&gt;1
+    /// SQL:
+    /// SELECT ... FROM `sys_order` ... UNION
+    /// SELECT ... FROM `sys_order` WHERE `Id`&gt;1
     /// </code>
     /// </summary>
     /// <param name="subQuery">子查询，需要有Select语句，如：
-    /// <code>
-    /// f.From&lt;Order&gt;()
-    ///     .Where(x => x.Id > 1)
-    ///     .Select(x => new
-    ///     {
-    ///         x.Id,
-    ///         x.OrderNo,
-    ///         x.SellerId,
-    ///         x.BuyerId
-    ///     }
-    /// </code>
+    /// <code>f.From&lt;Order&gt;() ... .Select(x => new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
     IQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery);
     /// <summary>
-    /// Union All操作，所有记录不去掉重复记录，用法：
+    /// Union All操作，所有记录不去掉重复，用法：
     /// <code>
-    /// repository.From&lt;Order&gt;()
-    ///     .Where(x =&gt; x.Id == 1)
-    ///     .Select(x =&gt; new
-    ///     {
-    ///         x.Id,
-    ///         x.OrderNo,
-    ///         x.SellerId,
-    ///         x.BuyerId
-    ///     })
-    ///     .UnionAll(f =&gt; f
-    ///         .From&lt;Order&gt;()
-    ///         .Where(x =&gt; x.Id &gt; 1)
-    ///         .Select(x =&gt; new
-    ///         {
-    ///             x.Id,
-    ///             x.OrderNo,
-    ///             x.SellerId,
-    ///             x.BuyerId
-    ///         }))
+    /// await repository.From&lt;Order&gt;()
+    ///     ...
+    ///     .UnionAll(f => f.From&lt;Order&gt;()
+    ///         .Where(x => x.Id > 1)
+    ///         .Select(x => new { ... }))
     ///     .ToListAsync();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`=1 UNION ALL
-    /// SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`&gt;1
+    /// SQL:
+    /// SELECT ... FROM `sys_order` ... UNION ALL
+    /// SELECT ... FROM `sys_order` WHERE `Id`&gt;1
     /// </code>
     /// </summary>
     /// <param name="subQuery">子查询，需要有Select语句，如：
-    ///  f.From&lt;Order&gt;()
-    ///     .Where(x =&gt; x.Id &gt; 1)
-    ///     .Select(x =&gt; new
-    ///     {
-    ///         x.Id,
-    ///         x.OrderNo,
-    ///         x.SellerId,
-    ///         x.BuyerId
-    ///     }
-    /// </param>
+    /// <code>f.From&lt;Order&gt;() ... .Select(x => new { ... })</code>
     /// <returns>返回查询对象</returns>
     IQuery<T> UnionAll(Func<IFromQuery, IFromQuery<T>> subQuery);
     #endregion
@@ -145,29 +95,22 @@ public interface IQuery<T> : IQueryBase
     /// <code>
     /// repository
     ///     .FromWith((f =&gt; ...), "MenuList")
-    ///     .NextWith(f => f.From&lt;Page&gt;()
-    ///         .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
-    ///         .Where((a, b) =&gt; a.Id == 1)
-    ///         .Select((x, y) =&gt; new { y.Id, x.Url })), "MenuPageList")
-    ///     .InnerJoin((a, b) =&gt; a.Id == b.Id)
-    ///     .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId, b.Url })
-    ///     .ToList();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
+    ///     .NextWith(f => f.From&lt;Page&gt;() ...)
+    ///     ...
+    /// SQL:
     /// WITH MenuList(Id,Name,ParentId) AS 
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1
+    ///     ...
     /// ),
     /// MenuPageList(Id,Url) AS
     /// (
-    ///     SELECT b.`Id`, a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=1
+    ///     ...
     /// )
-    /// SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageList b ON a.`Id`=b.`Id`
+    /// ...
     /// </code>
     /// </summary>
     /// <typeparam name="TTarget">当前CTE临时返回的实体类型</typeparam>
-    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
     /// <code>
     /// f.From&lt;Page&gt;()
     ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
@@ -190,15 +133,8 @@ public interface IQuery<T> : IQueryBase
     ///             .InnerJoinRecursive(y, cte, (a, b) =&gt; a.ParentId == b.Id)
     ///             .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId })), "MenuList")
     ///     .NextWithRecursive((f, cte) =&gt; f.From&lt;Page, Menu&gt;()
-    ///             .Where((a, b) =&gt; a.Id == b.PageId)
-    ///             .Select((x, y) =&gt; new { y.Id, y.ParentId, x.Url })
-    ///         .UnionAll(x =&gt; x.From&lt;Menu&gt;()
-    ///             .LeftJoin&lt;Page&gt;((a, b) =&gt; a.PageId == b.Id)
-    ///             .Where((a, b) =&gt; a.Id &gt; 1)
-    ///             .Select((x, y) =&gt; new { x.Id, x.ParentId, y.Url })), "MenuPageList")
-    ///     .InnerJoin((a, b) =&gt; a.Id == b.Id)
-    ///     .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId, b.Url })
-    ///     .ToList();
+    ///             ...), "MenuPageList")
+    ///     ...
     /// 生成的SQL:
     /// <code>
     /// WITH RECURSIVE MenuList(Id,Name,ParentId) AS 
@@ -208,14 +144,13 @@ public interface IQuery<T> : IQueryBase
     /// ),
     /// MenuPageList(Id,ParentId,Url) AS
     /// (
-    ///     SELECT a.`Id`,a.`ParentId`,b.`Url` FROM `sys_menu` a,`sys_page` b WHERE a.`PageId`=b.Id UNION ALL
-    ///     SELECT a.`Id`,a.`ParentId`,b.`Url` FROM `sys_menu` a INNER JOIN MenuList b ON a.`Id`=b.`ParentId`
-    /// ),
-    /// SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageList b ON a.`Id`=b.`Id`
+    ///     ...
+    /// )
+    /// ...
     /// </code>
     /// </summary>
     /// <typeparam name="TTarget">当前CTE With子句临时返回的实体类型</typeparam>
-    /// <param name="cteSubQuery">CTE子查询，如：
+    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
     /// <code>
     /// f.From&lt;Page&gt;()
     ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.Id == b.PageId)
@@ -235,16 +170,9 @@ public interface IQuery<T> : IQueryBase
     /// <code>
     /// repository
     ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f => f.From&lt;Page, Menu&gt;('c')
-    ///         .Where((a, b) => a.Id == b.PageId)
-    ///         .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
-    ///     .Where((a, b) => a.Id == b.Id)
-    ///     .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-    ///     .ToList();
-    /// </code>
-    /// 生成的SQL：
-    /// <code>
-    /// SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `sys_menu` a,(SELECT d.`Id`,d.`ParentId`,c.`Url` FROM `sys_page` c,`sys_menu` d WHERE c.`Id`=d.`PageId`) b WHERE a.`Id`=b.`Id`
+    ///     .WithTable(f => f.From&lt;Page, Menu&gt;('c') ... )
+    ///     ...
+    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -488,27 +416,14 @@ public interface IQuery<T> : IQueryBase
     #region GroupBy/OrderBy
     /// <summary>
     /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
-    /// <example>
     /// <code>
-    /// repository.From&lt;User&gt;()
-    ///    .InnerJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
+    /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b) =&gt; new { a.Id, a.Name, b.CreatedAt.Date })
-    ///    .OrderBy((x, a, b) =&gt; x.Grouping)
-    ///    .Select((x, a, b) =&gt; new
-    ///    {
-    ///        x.Grouping,
-    ///        OrderCount = x.Count(b.Id),
-    ///        TotalAmount = x.Sum(b.TotalAmount)
-    ///    })
-    ///    .ToSql(out _);
+    ///    ...
+    /// SQL: ... FROM `sys_user` a ... GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ...
     /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ORDER BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE)
-    /// </code>
-    /// </example>
     /// </summary>
-    /// <typeparam name="TGrouping">分组后的实体对象类型，可以是单个字段类型或是匿名类型</typeparam>
+    /// <typeparam name="TGrouping">分组后的实体对象类型，New类型表达式，可以一个或是多个字段</typeparam>
     /// <param name="groupingExpr">分组表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr);
@@ -585,8 +500,8 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> Select();
     /// <summary>
-    /// 选择指定字段返回，可以是单个字段或多个字段的匿名对象，用法：
-    /// Select(f => new { f.Id, f.Name }) 或是 Select(x => x.CreatedAt.Date)
+    /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
+    /// <code> ...Select(f =&gt; new { f.Id, f.Name }) 或是 ...Select(x =&gt; x.CreatedAt.Date)</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
@@ -602,9 +517,8 @@ public interface IQuery<T> : IQueryBase
     ///        TotalAmount = x.Sum(a.TotalAmount)
     ///    })
     ///    .ToSql(out _);
+    /// SQL: SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` FROM `sys_order`
     /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` FROM `sys_order`</code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型，单个字段类型，或是多个字段的匿名类</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个聚合字段或多个聚合字段的匿名对象</param>
@@ -612,7 +526,6 @@ public interface IQuery<T> : IQueryBase
     IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr);
     #endregion
 
-    #region Aggregate
     #region Count
     /// <summary>
     /// 返回某个字段的数据条数，用法：
@@ -684,6 +597,7 @@ public interface IQuery<T> : IQueryBase
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
 
+    #region Aggregate
     /// <summary>
     /// 计算指定字段的求和值
     /// </summary>
@@ -809,7 +723,7 @@ public interface IQuery<T> : IQueryBase
 /// <typeparam name="T2">表T2实体类型</typeparam>
 public interface IQuery<T1, T2> : IQueryBase
 {
-    #region CTE NextWith/NextWithRecursive
+    #region NextWith/NextWithRecursive CTE
     /// <summary>
     /// 继续定义CTE With子句，在Select查询之前，可以定义一个或多个CTE子句，多个CTE With子句要连续定义，用法：
     /// <code>
@@ -915,7 +829,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// </code>
     /// 生成的SQL：
     /// <code>
-    /// ... (SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE c.`Id`=d.`PageId`) c INNER JOIN ...
+    /// ... (SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b.`PageId`) c INNER JOIN ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -1248,11 +1162,10 @@ public interface IQuery<T1, T2> : IQueryBase
     IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, TTarget>> fieldsExpr);
     #endregion
 
-    #region Aggregate
     #region Count
     /// <summary>
     /// 返回某个字段的数据条数，用法：
-    /// <code>repository.From&lt;T1, T2&gt;().Count((a, b) =&gt; f.BuyerId);</code>
+    /// <code>repository.From&lt;T1, T2&gt;().Count((a, b) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -1260,7 +1173,7 @@ public interface IQuery<T1, T2> : IQueryBase
     int Count<TField>(Expression<Func<T1, T2, TField>> fieldExpr);
     /// <summary>
     /// 返回某个字段的数据条数，用法：
-    /// <code>await repository.From&lt;T1, T2&gt;().CountAsync((a, b) =&gt; f.BuyerId);</code>
+    /// <code>await repository.From&lt;T1, T2&gt;().CountAsync((a, b) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -1269,7 +1182,7 @@ public interface IQuery<T1, T2> : IQueryBase
     Task<int> CountAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
     /// <summary>
     /// 返回某个字段去重后的数据条数，用法：
-    /// <code>repository.From&lt;T1, T2&gt;().CountDistinct((a, b) =&gt; f.BuyerId);</code>
+    /// <code>repository.From&lt;T1, T2&gt;().CountDistinct((a, b) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -1277,7 +1190,7 @@ public interface IQuery<T1, T2> : IQueryBase
     int CountDistinct<TField>(Expression<Func<T1, T2, TField>> fieldExpr);
     /// <summary>
     /// 返回某个字段去重后的数据条数，用法：
-    /// <code>await repository.From&lt;T1, T2&gt;().CountDistinctAsync((a, b) =&gt; f.BuyerId);</code>
+    /// <code>await repository.From&lt;T1, T2&gt;().CountDistinctAsync((a, b) =&gt; a.BuyerId);</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldExpr">字段表达式</param>
@@ -1320,6 +1233,7 @@ public interface IQuery<T1, T2> : IQueryBase
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
 
+    #region Aggregate
     /// <summary>
     /// 计算指定字段的求和值
     /// <code>repository.From&lt;T1, T2&gt;().Sum((a, b) =&gt; f.TotalAmount);</code>

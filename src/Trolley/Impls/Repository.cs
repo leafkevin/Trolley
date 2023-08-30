@@ -42,39 +42,12 @@ public class Repository : IRepository
     }
     #endregion
 
-    #region From/FromWith/FromWithRecursive
+    #region From
     public IQuery<T> From<T>(char tableAsStart = 'a', string suffixRawSql = null)
     {
         var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart);
         visitor.From(tableAsStart, typeof(T), suffixRawSql);
         return new Query<T>(this.connection, this.Transaction, visitor);
-    }
-    public IQuery<T> From<T>(Func<IFromQuery, IFromQuery<T>> subQuery, char tableAsStart = 'a')
-    {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart, "p1w");
-        subQuery.Invoke(new FromQuery(visitor));
-        var sql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
-        var newVisitor = visitor.Clone(tableAsStart);
-        newVisitor.WithTable(typeof(T), sql, dbDataParameters, readerFields);
-        return new Query<T>(this.connection, this.Transaction, newVisitor);
-    }
-    public IQuery<T> FromWith<T>(Func<IFromQuery, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart, "p1w");
-        cteSubQuery.Invoke(new FromQuery(visitor));
-        var rawSql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
-        var newVisitor = visitor.Clone(tableAsStart);
-        newVisitor.WithCteTable(typeof(T), cteTableName, false, rawSql, dbDataParameters, readerFields);
-        return new Query<T>(this.connection, this.Transaction, newVisitor);
-    }
-    public IQuery<T> FromWithRecursive<T>(Func<IFromQuery, string, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart, "p1w");
-        cteSubQuery.Invoke(new FromQuery(visitor), cteTableName);
-        var rawSql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
-        var newVisitor = visitor.Clone(tableAsStart);
-        newVisitor.WithCteTable(typeof(T), cteTableName, true, rawSql, dbDataParameters, readerFields);
-        return new Query<T>(this.connection, this.Transaction, newVisitor);
     }
     public IQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
@@ -129,6 +102,39 @@ public class Repository : IRepository
         var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.connection, this.Transaction, visitor);
+    }
+    #endregion
+
+    #region From SubQuery
+    public IQuery<T> From<T>(Func<IFromQuery, IFromQuery<T>> subQuery, char tableAsStart = 'a')
+    {
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart, "p1w");
+        subQuery.Invoke(new FromQuery(visitor));
+        var sql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
+        var newVisitor = visitor.Clone(tableAsStart);
+        newVisitor.WithTable(typeof(T), sql, dbDataParameters, readerFields);
+        return new Query<T>(this.connection, this.Transaction, newVisitor);
+    }
+    #endregion
+
+    #region FromWith/FromWithRecursive
+    public IQuery<T> FromWith<T>(Func<IFromQuery, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
+    {
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart, "p1w");
+        cteSubQuery.Invoke(new FromQuery(visitor));
+        var rawSql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
+        var newVisitor = visitor.Clone(tableAsStart);
+        newVisitor.WithCteTable(typeof(T), cteTableName, false, rawSql, dbDataParameters, readerFields);
+        return new Query<T>(this.connection, this.Transaction, newVisitor);
+    }
+    public IQuery<T> FromWithRecursive<T>(Func<IFromQuery, string, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
+    {
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart, "p1w");
+        cteSubQuery.Invoke(new FromQuery(visitor), cteTableName);
+        var rawSql = visitor.BuildSql(out var dbDataParameters, out var readerFields);
+        var newVisitor = visitor.Clone(tableAsStart);
+        newVisitor.WithCteTable(typeof(T), cteTableName, true, rawSql, dbDataParameters, readerFields);
+        return new Query<T>(this.connection, this.Transaction, newVisitor);
     }
     #endregion
 
@@ -209,7 +215,7 @@ public class Repository : IRepository
         using var command = this.connection.CreateCommand();
         command.CommandType = CommandType.Text;
         command.Transaction = this.Transaction;
-        command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, whereObj);
+        command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, "", whereObj);
 
         TEntity result = default;
         this.connection.Open();
@@ -237,7 +243,7 @@ public class Repository : IRepository
         using var cmd = this.connection.CreateCommand();
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.Transaction;
-        cmd.CommandText = commandInitializer.Invoke(cmd, this.OrmProvider, this.MapProvider, whereObj);
+        cmd.CommandText = commandInitializer.Invoke(cmd, this.OrmProvider, this.MapProvider, "", whereObj);
 
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
@@ -352,7 +358,7 @@ public class Repository : IRepository
         using var command = this.connection.CreateCommand();
         command.CommandType = CommandType.Text;
         command.Transaction = this.Transaction;
-        command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, whereObj);
+        command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, "", whereObj);
 
         var result = new List<TEntity>();
         this.connection.Open();
@@ -388,7 +394,7 @@ public class Repository : IRepository
         using var cmd = this.connection.CreateCommand();
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.Transaction;
-        cmd.CommandText = commandInitializer.Invoke(cmd, this.OrmProvider, this.MapProvider, whereObj);
+        cmd.CommandText = commandInitializer.Invoke(cmd, this.OrmProvider, this.MapProvider, "", whereObj);
 
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
@@ -430,7 +436,7 @@ public class Repository : IRepository
         using var command = this.connection.CreateCommand();
         command.CommandType = CommandType.Text;
         command.Transaction = this.Transaction;
-        command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, whereObj);
+        command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, "", whereObj);
 
         TEntity result = default;
         this.connection.Open();
@@ -453,7 +459,7 @@ public class Repository : IRepository
         using var cmd = this.connection.CreateCommand();
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.Transaction;
-        cmd.CommandText = commandInitializer.Invoke(cmd, this.OrmProvider, this.MapProvider, whereObj);
+        cmd.CommandText = commandInitializer.Invoke(cmd, this.OrmProvider, this.MapProvider, "", whereObj);
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
@@ -653,7 +659,7 @@ public class Repository : IRepository
         using var command = this.connection.CreateCommand();
         command.CommandType = CommandType.Text;
         command.Transaction = this.Transaction;
-        command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, whereObj);
+        command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, "", whereObj);
 
         int result = 0;
         this.connection.Open();
@@ -675,7 +681,7 @@ public class Repository : IRepository
         using var cmd = this.connection.CreateCommand();
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.Transaction;
-        cmd.CommandText = commandInitializer.Invoke(cmd, this.OrmProvider, this.MapProvider, whereObj);
+        cmd.CommandText = commandInitializer.Invoke(cmd, this.OrmProvider, this.MapProvider, "", whereObj);
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
@@ -740,47 +746,6 @@ public class Repository : IRepository
     #endregion
 
     #region QueryMultiple
-    public IMultiQueryReader QueryMultiple(string rawSql, object parameters = null)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        var command = this.connection.CreateCommand();
-        command.CommandText = rawSql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.Transaction;
-        if (parameters != null)
-        {
-            var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.Connection, this.OrmProvider, rawSql, parameters);
-            commandInitializer.Invoke(command, this.OrmProvider, parameters);
-        }
-
-        this.connection.Open();
-        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-        return new MultiQueryReader(command, reader);
-    }
-    public async Task<IMultiQueryReader> QueryMultipleAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        var cmd = this.connection.CreateCommand();
-        cmd.CommandText = rawSql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.Transaction;
-        if (parameters != null)
-        {
-            var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.Connection, this.OrmProvider, rawSql, parameters);
-            commandInitializer.Invoke(cmd, this.OrmProvider, parameters);
-        }
-
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-        return new MultiQueryReader(command, reader);
-    }
     public IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries)
     {
         if (subQueries == null)

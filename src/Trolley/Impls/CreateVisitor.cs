@@ -265,7 +265,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         {
             sqlSegment.IsParameterized = true;
             sqlSegment.MemberMapper = memberMapper;
-            sqlSegment.ParameterName = this.multiParameterPrefix + memberMapper.MemberName;
+            sqlSegment.ParameterName = memberMapper.MemberName;
             fromBuilder.Append(this.GetQuotedValue(sqlSegment));
         }
     }
