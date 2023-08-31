@@ -76,6 +76,7 @@ public class SqlServerDateTimeUnitTest : UnitTestBase
         this.Initialize();
         var days = 365;
         using var repository = dbFactory.Create();
+        repository.BeginTransaction();
         var sql = repository.From<User>()
             .Where(f => f.UpdatedAt > DateTime.Now - TimeSpan.FromDays(days) - TimeSpan.FromMinutes(25))
             .Select(f => new
@@ -93,7 +94,6 @@ public class SqlServerDateTimeUnitTest : UnitTestBase
                 ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT DATEADD(DAY,365,[CreatedAt]) AS [Add],DATEADD(DAY,30,[CreatedAt]) AS [AddDays],DATEADD(MILLISECOND,300,[CreatedAt]) AS [AddMilliseconds],DATEADD(DAY,-365,[CreatedAt]) AS [Subtract1],DATEADD(DAY,-365,GETDATE()) AS [Subtract2],(CAST(DATEDIFF(DAY,'1900-01-01 00:00:00',[UpdatedAt]-[CreatedAt]) AS VARCHAR)+'.'+CONVERT(VARCHAR,[UpdatedAt]-[CreatedAt],108)) AS [Subtract3],DAY(EOMONTH(CAST(DATEPART(YEAR,GETDATE()) AS NVARCHAR(4))+'-'+CAST(DATEPART(MONTH,GETDATE()) AS NVARCHAR(2))+'-01')) AS [DayInMonth],(CASE WHEN (DATEPART(YEAR,GETDATE()))%4=0 AND (DATEPART(YEAR,GETDATE()))%100<>0 OR (DATEPART(YEAR,GETDATE()))%400=0 THEN 1 ELSE 0 END) AS [IsLeapYear1],1 AS [IsLeapYear2],CAST(FORMAT(GETDATE(),'yyyy-MM-dd HH:mm:ss') AS DATETIME) AS [Parse],'2023-05-07 13:08:45.000' AS [ParseExact] FROM [sys_user] WHERE [UpdatedAt]>DATEADD(MILLISECOND,-1500000,DATEADD(DAY,-365,GETDATE()))");
 
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
@@ -115,6 +115,8 @@ public class SqlServerDateTimeUnitTest : UnitTestBase
                 ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
             })
             .FirstAsync();
+        repository.Commit();
+        Assert.True(sql == "SELECT DATEADD(DAY,365,[CreatedAt]) AS [Add],DATEADD(DAY,30,[CreatedAt]) AS [AddDays],DATEADD(MILLISECOND,300,[CreatedAt]) AS [AddMilliseconds],DATEADD(DAY,-365,[CreatedAt]) AS [Subtract1],DATEADD(DAY,-365,GETDATE()) AS [Subtract2],(CAST(DATEDIFF(DAY,'1900-01-01 00:00:00',[UpdatedAt]-[CreatedAt]) AS VARCHAR)+'.'+CONVERT(VARCHAR,[UpdatedAt]-[CreatedAt],108)) AS [Subtract3],DAY(EOMONTH(CAST(DATEPART(YEAR,GETDATE()) AS NVARCHAR(4))+'-'+CAST(DATEPART(MONTH,GETDATE()) AS NVARCHAR(2))+'-01')) AS [DayInMonth],(CASE WHEN (DATEPART(YEAR,GETDATE()))%4=0 AND (DATEPART(YEAR,GETDATE()))%100<>0 OR (DATEPART(YEAR,GETDATE()))%400=0 THEN 1 ELSE 0 END) AS [IsLeapYear1],1 AS [IsLeapYear2],CAST(FORMAT(GETDATE(),'yyyy-MM-dd HH:mm:ss') AS DATETIME) AS [Parse],'2023-05-07 13:08:45.000' AS [ParseExact] FROM [sys_user] WHERE [UpdatedAt]>DATEADD(MILLISECOND,-1500000,DATEADD(DAY,-365,GETDATE()))");
         Assert.True(result.Add == result.CreatedAt.Add(TimeSpan.FromDays(365)));
         Assert.True(result.AddDays == result.CreatedAt.AddDays(30));
         Assert.True(result.AddMilliseconds == result.CreatedAt.AddMilliseconds(300));
@@ -132,6 +134,7 @@ public class SqlServerDateTimeUnitTest : UnitTestBase
     {
         this.Initialize();
         using var repository = dbFactory.Create();
+        repository.BeginTransaction();
         var sql = repository.From<User>()
             .Where(f => DateTime.Compare(f.UpdatedAt, DateTime.Parse("2023-03-20")) > 0)
             .Select(f => new
@@ -146,7 +149,7 @@ public class SqlServerDateTimeUnitTest : UnitTestBase
                 ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (CASE WHEN [CreatedAt]='2023-03-03 00:00:00.000' THEN 0 WHEN [CreatedAt]>'2023-03-03 00:00:00.000' THEN 1 ELSE -1 END) AS [CompareTo],DATEADD(DAY,-365,[CreatedAt]) AS [OneYearsAgo1],(CAST(DATEDIFF(DAY,'1900-01-01 00:00:00',GETDATE()-'2023-03-20 00:00:00.000') AS VARCHAR)+'.'+CONVERT(VARCHAR,GETDATE()-'2023-03-20 00:00:00.000',108)) AS [OneYearsAgo2],DAY(EOMONTH(CAST(DATEPART(YEAR,GETDATE()) AS NVARCHAR(4))+'-'+CAST(DATEPART(MONTH,GETDATE()) AS NVARCHAR(2))+'-01')) AS [DayInMonth],(CASE WHEN (DATEPART(YEAR,GETDATE()))%4=0 AND (DATEPART(YEAR,GETDATE()))%100<>0 OR (DATEPART(YEAR,GETDATE()))%400=0 THEN 1 ELSE 0 END) AS [IsLeapYear1],1 AS [IsLeapYear2],CAST(FORMAT(GETDATE(),'yyyy-MM-dd HH:mm:ss') AS DATETIME) AS [Parse],'2023-05-07 13:08:45.000' AS [ParseExact] FROM [sys_user] WHERE (CASE WHEN [UpdatedAt]='2023-03-20 00:00:00.000' THEN 0 WHEN [UpdatedAt]>'2023-03-20 00:00:00.000' THEN 1 ELSE -1 END)>0");
+
         var result = await repository.From<User>()
              .Where(f => f.Id == 1)
              .Select(f => new
@@ -167,6 +170,9 @@ public class SqlServerDateTimeUnitTest : UnitTestBase
                  ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
              })
              .FirstAsync();
+        repository.Commit();
+        Assert.True(sql == "SELECT (CASE WHEN [CreatedAt]='2023-03-03 00:00:00.000' THEN 0 WHEN [CreatedAt]>'2023-03-03 00:00:00.000' THEN 1 ELSE -1 END) AS [CompareTo],DATEADD(DAY,-365,[CreatedAt]) AS [OneYearsAgo1],(CAST(DATEDIFF(DAY,'1900-01-01 00:00:00',GETDATE()-'2023-03-20 00:00:00.000') AS VARCHAR)+'.'+CONVERT(VARCHAR,GETDATE()-'2023-03-20 00:00:00.000',108)) AS [OneYearsAgo2],DAY(EOMONTH(CAST(DATEPART(YEAR,GETDATE()) AS NVARCHAR(4))+'-'+CAST(DATEPART(MONTH,GETDATE()) AS NVARCHAR(2))+'-01')) AS [DayInMonth],(CASE WHEN (DATEPART(YEAR,GETDATE()))%4=0 AND (DATEPART(YEAR,GETDATE()))%100<>0 OR (DATEPART(YEAR,GETDATE()))%400=0 THEN 1 ELSE 0 END) AS [IsLeapYear1],1 AS [IsLeapYear2],CAST(FORMAT(GETDATE(),'yyyy-MM-dd HH:mm:ss') AS DATETIME) AS [Parse],'2023-05-07 13:08:45.000' AS [ParseExact] FROM [sys_user] WHERE (CASE WHEN [UpdatedAt]='2023-03-20 00:00:00.000' THEN 0 WHEN [UpdatedAt]>'2023-03-20 00:00:00.000' THEN 1 ELSE -1 END)>0");
+
         Assert.True(result.Compare == DateTime.Compare(result.UpdatedAt, DateTime.Parse("2023-03-20")));
         Assert.True(result.CompareTo == result.CreatedAt.CompareTo(DateTime.Parse("2023-03-03")));
         Assert.True(result.OneYearsAgo1 == result.CreatedAt.Subtract(TimeSpan.FromDays(365)));

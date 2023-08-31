@@ -118,7 +118,7 @@ public class SqlServerWhereUnitTest : UnitTestBase
         var sql1 = repository.From<Order>()
            .Where(f => f.BuyerId.IsNull())
            .ToSql(out _);
-        Assert.True(sql1 == "SELECT [Id],[OrderNo],[ProductCount],[TotalAmount],[BuyerId],[SellerId],[Products],[Disputes],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy] FROM [sys_order] WHERE [BuyerId] IS NULL");
+        Assert.True(sql1 == "SELECT [Id],[OrderNo],[ProductCount],[TotalAmount],[BuyerId],[BuyerSource],[SellerId],[Products],[Disputes],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy] FROM [sys_order] WHERE [BuyerId] IS NULL");
         repository.BeginTransaction();
         repository.Update<Order>(f => new { BuyerId = DBNull.Value }, new { Id = 1 });
         var result1 = repository.From<Order>()

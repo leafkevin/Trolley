@@ -47,7 +47,7 @@ class Create<TEntity> : ICreate<TEntity>
     {
         if (insertObj == null)
             throw new ArgumentNullException(nameof(insertObj));
-        if (insertObj is IEnumerable && insertObj is not string && insertObj is not Dictionary<string, object>)
+        if (insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>)
             throw new NotSupportedException("只能插入单个实体，批量插入请使用WithBulk方法");
 
         return new ContinuedCreate<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider).WithBy(insertObj);
@@ -137,7 +137,7 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     {
         if (insertObj == null)
             throw new ArgumentNullException(nameof(insertObj));
-        if (insertObj is IEnumerable && insertObj is not string && insertObj is not Dictionary<string, object>)
+        if (insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>)
             throw new NotSupportedException("只能插入单个实体，批量插入请使用WithBulkBy方法");
 
         var entityType = typeof(TEntity);

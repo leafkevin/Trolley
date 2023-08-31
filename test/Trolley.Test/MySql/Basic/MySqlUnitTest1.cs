@@ -57,7 +57,7 @@ public class MySqlUnitTest1 : UnitTestBase
         repository.BeginTransaction();
         repository.Delete<Brand>().Where(new { Id = 1 }).Execute();
         var rawSql = "INSERT INTO sys_brand(Id,BrandNo,Name,IsEnabled,CreatedAt,CreatedBy,UpdatedAt,UpdatedBy) VALUES(@Id,@BrandNo,@Name,1,NOW(),@User,NOW(),@User)";
-        var count = await repository.CreateAsync<Brand>(rawSql, new
+        var count = await repository.ExecuteAsync(rawSql, new
         {
             Id = 1,
             BrandNo = "BN-001",
@@ -395,6 +395,7 @@ public class MySqlUnitTest1 : UnitTestBase
     public void Insert_Select_From_Table1()
     {
         using var repository = dbFactory.Create();
+        repository.BeginTransaction();
         repository.Delete<Product>(2);
         var brand = repository.Get<Brand>(1);
         var sql = repository.Create<Product>()
@@ -434,6 +435,7 @@ public class MySqlUnitTest1 : UnitTestBase
            .Where(f => f.Id == 1)
            .Execute();
         var product = repository.Get<Product>(2);
+        repository.Commit();
         Assert.True(count > 0);
         Assert.NotNull(product);
         Assert.True(product.ProductNo == "PN_" + brand.BrandNo);
@@ -552,7 +554,7 @@ public class MySqlUnitTest1 : UnitTestBase
             })
             .ToSql(out var parameters);
         Assert.True(sql == "INSERT INTO `sys_order` (`Id`,`OrderNo`,`TotalAmount`,`BuyerId`,`BuyerSource`,`SellerId`,`ProductCount`,`Products`,`Disputes`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) VALUES(@Id,@OrderNo,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@ProductCount,@Products,@Disputes,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
-		Assert.True(parameters[4].ParameterName == "@BuyerSource");
+        Assert.True(parameters[4].ParameterName == "@BuyerSource");
         Assert.True((string)parameters[4].Value == UserSourceType.Website.ToString());
         Assert.True(parameters[7].ParameterName == "@Products");
         Assert.True((string)parameters[7].Value == "[1,2]");

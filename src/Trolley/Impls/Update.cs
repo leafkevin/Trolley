@@ -119,14 +119,6 @@ class Update<TEntity> : IUpdate<TEntity>
     #endregion
 
     #region WithBulk
-    public IUpdateSet<TEntity> WithBulk(IEnumerable updateObjs, int bulkCount = 500)
-    {
-        if (updateObjs == null)
-            throw new ArgumentNullException(nameof(updateObjs));
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
-            .SetBulkFirst(null, updateObjs);
-        return new UpdateSet<TEntity>(this.connection, this.transaction, visitor, updateObjs, bulkCount);
-    }
     public IUpdateSet<TEntity> WithBulk<TFields>(Expression<Func<TEntity, TFields>> fieldsSelectorOrAssignment, IEnumerable updateObjs, int bulkCount = 500)
     {
         if (fieldsSelectorOrAssignment == null)

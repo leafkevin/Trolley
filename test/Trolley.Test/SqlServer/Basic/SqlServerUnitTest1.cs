@@ -57,7 +57,7 @@ public class SqlServerUnitTest1 : UnitTestBase
         repository.BeginTransaction();
         repository.Delete<Brand>().Where(new { Id = 1 }).Execute();
         var rawSql = "INSERT INTO sys_brand(Id,BrandNo,Name,IsEnabled,CreatedAt,CreatedBy,UpdatedAt,UpdatedBy) VALUES(@Id,@BrandNo,@Name,1,GETDATE(),@User,GETDATE(),@User)";
-        var count = await repository.CreateAsync<Brand>(rawSql, new
+        var count = await repository.ExecuteAsync(rawSql, new
         {
             Id = 1,
             BrandNo = "BN-001",

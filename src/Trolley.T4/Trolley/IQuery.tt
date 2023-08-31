@@ -220,6 +220,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回实体对象，带有导航属性</returns>
     IIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
+
     #region Join
     /// <summary>
     /// 添加TOther表，与现有表T做INNER JOIN关联，用法:
@@ -1056,7 +1057,6 @@ public interface IQuery<<#=tables#>> : IQueryBase
     IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, <#=tables#>, TTarget>> fieldsExpr);
     #endregion
 
-    #region Aggregate
     #region Count
     /// <summary>
     /// 返回某个字段的数据条数，用法：
@@ -1128,6 +1128,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     Task<long> LongCountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
 
+    #region Aggregate
     /// <summary>
     /// 计算指定字段的求和值
     /// <code>repository.From&lt;<#=tables#>&gt;().Sum((<#=tableAlias#>) =&gt; a.TotalAmount);</code>

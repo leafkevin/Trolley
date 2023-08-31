@@ -479,43 +479,127 @@ public class Repository : IRepository
 
     #region Create
     public ICreate<TEntity> Create<TEntity>() => new Create<TEntity>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, this.isParameterized);
+    public int Create<TEntity>(object insertObjs, int bulkCount = 500)
+    {
+        bool isMulti = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
+        if (isMulti) return this.Create<TEntity>().WithBulk(insertObjs as IEnumerable, bulkCount).Execute();
+        else return this.Create<TEntity>().WithBy(insertObjs).Execute();
+    }
+    public async Task<int> CreateAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
+    {
+        bool isMulti = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
+        if (isMulti) return await this.Create<TEntity>().WithBulk(insertObjs as IEnumerable, bulkCount).ExecuteAsync(cancellationToken);
+        else return await this.Create<TEntity>().WithBy(insertObjs).ExecuteAsync(cancellationToken);
+    }
     #endregion
 
     #region Update
     public IUpdate<TEntity> Update<TEntity>() => new Update<TEntity>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, this.isParameterized);
-    public int Update<TEntity>(object updateObj)
+    public int Update<TEntity>(object updateObjs, int bulkCount = 500)
     {
-        if (updateObj == null)
-            throw new ArgumentNullException(nameof(updateObj));
+        if (updateObjs == null)
+            throw new ArgumentNullException(nameof(updateObjs));
 
+        int result = 0;
         var entityType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildUpdateEntitySqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, updateObj);
+        bool isMulti = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
         using var command = this.connection.CreateCommand();
         command.CommandType = CommandType.Text;
         command.Transaction = this.Transaction;
-        command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, updateObj);
 
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
+        if (isMulti)
+        {
+            int index = 0;
+            var sqlBuilder = new StringBuilder();
+            var entities = updateObjs as IEnumerable;
+            var commandInitializer = RepositoryHelper.BuildUpdateBatchCommandInitializer(this.connection, this.OrmProvider, this.MapProvider, entityType, updateObjs);
+
+            foreach (var updateObj in entities)
+            {
+                if (index > 0) sqlBuilder.Append(';');
+                commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, sqlBuilder, index, updateObj);
+                if (index >= bulkCount)
+                {
+                    command.CommandText = sqlBuilder.ToString();
+                    this.connection.Open();
+                    result += command.ExecuteNonQuery();
+                    command.Parameters.Clear();
+                    sqlBuilder.Clear();
+                    index = 0;
+                    continue;
+                }
+                index++;
+            }
+            if (index > 0)
+            {
+                command.CommandText = sqlBuilder.ToString();
+                this.connection.Open();
+                result += command.ExecuteNonQuery();
+            }
+            sqlBuilder.Clear();
+        }
+        else
+        {
+            var commandInitializer = RepositoryHelper.BuildUpdateEntitySqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, updateObjs);
+            command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, updateObjs);
+            this.connection.Open();
+            result = command.ExecuteNonQuery();
+        }
         command.Dispose();
         return result;
     }
-    public async Task<int> UpdateAsync<TEntity>(object updateObj, CancellationToken cancellationToken = default)
+    public async Task<int> UpdateAsync<TEntity>(object updateObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
     {
-        if (updateObj == null)
-            throw new ArgumentNullException(nameof(updateObj));
+        if (updateObjs == null)
+            throw new ArgumentNullException(nameof(updateObjs));
 
+        int result = 0;
         var entityType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildUpdateEntitySqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, updateObj);
+        bool isMulti = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
         using var cmd = this.connection.CreateCommand();
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.Transaction;
-        cmd.CommandText = commandInitializer.Invoke(cmd, this.OrmProvider, this.MapProvider, updateObj);
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
+        if (isMulti)
+        {
+            int index = 0;
+            var sqlBuilder = new StringBuilder();
+            var entities = updateObjs as IEnumerable;
+            var commandInitializer = RepositoryHelper.BuildUpdateBatchCommandInitializer(this.connection, this.OrmProvider, this.MapProvider, entityType, updateObjs);
+
+            foreach (var updateObj in entities)
+            {
+                if (index > 0) sqlBuilder.Append(';');
+                commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, sqlBuilder, index, updateObj);
+                if (index >= bulkCount)
+                {
+                    command.CommandText = sqlBuilder.ToString();
+                    await this.connection.OpenAsync(cancellationToken);
+                    result += await command.ExecuteNonQueryAsync(cancellationToken);
+                    command.Parameters.Clear();
+                    sqlBuilder.Clear();
+                    index = 0;
+                    continue;
+                }
+                index++;
+            }
+            if (index > 0)
+            {
+                command.CommandText = sqlBuilder.ToString();
+                await this.connection.OpenAsync(cancellationToken);
+                result = await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            sqlBuilder.Clear();
+        }
+        else
+        {
+            var commandInitializer = RepositoryHelper.BuildUpdateEntitySqlParameters(this.connection, this.OrmProvider, this.MapProvider, entityType, updateObjs);
+            command.CommandText = commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, updateObjs);
+            await this.connection.OpenAsync(cancellationToken);
+            result = await command.ExecuteNonQueryAsync(cancellationToken);
+        }
         await command.DisposeAsync();
         return result;
     }
@@ -528,7 +612,7 @@ public class Repository : IRepository
 
         int result = 0;
         var entityType = typeof(TEntity);
-        bool isMulti = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not Dictionary<string, object>;
+        bool isMulti = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
         var visitor = this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, entityType, this.isParameterized);
         using var command = this.connection.CreateCommand();
         command.CommandType = CommandType.Text;
@@ -589,7 +673,7 @@ public class Repository : IRepository
 
         int result = 0;
         var entityType = typeof(TEntity);
-        bool isMulti = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not Dictionary<string, object>;
+        bool isMulti = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
         var visitor = this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, entityType, this.isParameterized);
         using var cmd = this.connection.CreateCommand();
         cmd.CommandType = CommandType.Text;
@@ -646,6 +730,10 @@ public class Repository : IRepository
 
     #region Delete
     public IDelete<TEntity> Delete<TEntity>() => new Delete<TEntity>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, this.isParameterized);
+    public int Delete<TEntity>(object keys)
+        => this.Delete<TEntity>().Where(keys).Execute();
+    public async Task<int> DeleteAsync<TEntity>(object keys, CancellationToken cancellationToken = default)
+        => await this.Delete<TEntity>().Where(keys).ExecuteAsync(cancellationToken);
     #endregion
 
     #region Exists

@@ -1,12 +1,12 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Trolley.MySqlConnector;
+using Trolley.SqlServer;
 using Xunit;
 
-namespace Trolley.Test.MySql;
+namespace Trolley.Test.SqlServer;
 
-public class MySqlUnitTest5 : UnitTestBase
+public class SqlServerUnitTest5 : UnitTestBase
 {
-    public MySqlUnitTest5()
+    public SqlServerUnitTest5()
     {
         var services = new ServiceCollection();
         services.AddSingleton(f =>
@@ -14,11 +14,11 @@ public class MySqlUnitTest5 : UnitTestBase
             var builder = new OrmDbFactoryBuilder()
             .Register("fengling", true, f =>
             {
-                var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
-                f.Add<MySqlProvider>(connectionString, true);
+                var connectionString = "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true";
+                f.Add<SqlServerProvider>(connectionString, true);
             })
             .AddTypeHandler<JsonTypeHandler>()
-            .Configure<MySqlProvider, MySqlModelConfiguration>();
+            .Configure<SqlServerProvider, SqlServerModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();

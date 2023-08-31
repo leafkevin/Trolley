@@ -391,23 +391,6 @@ public interface IUpdate<TEntity>
 
     #region WithBulk
     /// <summary>
-    /// 使用集合对象updateObjs部分字段批量更新，集合对象updateObjs中的单个元素实体中必须包含主键字段，支持分批次更新，更新条数超过设置的bulkCount值，将在下次更新，直到所有数据更新完毕，bulkCount默认500，用法：
-    /// <code>
-    /// var parameters = new []{ new { Id = 1, Name = "Name1" }, new { Id = 2, Name = "Name2" }};
-    /// repository.Update&lt;User&gt;()
-    ///     .WithBulk(parameters)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// UPDATE `sys_user` SET `Name`=@Name0 WHERE `Id`=@kId0;UPDATE `sys_user` SET `Name`=@Name1 WHERE `Id`=@kId1;
-    /// </code>
-    /// </summary>
-    /// <param name="updateObjs">更新对象参数集合，包含想要更新的必需栏位和主键字段</param>
-    /// <param name="bulkCount">单次更新的最大数据条数，默认是500</param>
-    /// <returns>返回更新对象</returns>
-    IUpdateSet<TEntity> WithBulk(IEnumerable updateObjs, int bulkCount = 500);
-    /// <summary>
     /// 使用表达式fieldsSelectorOrAssignment字段筛选和集合对象updateObjs部分字段批量更新，集合对象updateObjs中的单个元素实体中必须包含主键字段，支持分批次更新，更新条数超过设置的bulkCount值，将在下次更新，直到所有数据更新完毕，bulkCount默认500，用法：
     /// <code>
     /// var orders = await repository.From&lt;Order&gt;()

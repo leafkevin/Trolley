@@ -721,7 +721,7 @@ class Query<T> : QueryBase, IQuery<T>
         if (dbParameters != null && dbParameters.Count > 0)
             dbParameters.ForEach(f => command.Parameters.Add(f));
 
-        var result = new PagedList<T>();
+        var result = new PagedList<T> { Data = new List<T>() };
         this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess;
         using var reader = command.ExecuteReader(behavior);
@@ -775,7 +775,7 @@ class Query<T> : QueryBase, IQuery<T>
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
-        var result = new PagedList<T>();
+        var result = new PagedList<T> { Data = new List<T>() };
         await this.connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess;
         using var reader = await command.ExecuteReaderAsync(behavior, cancellationToken);

@@ -80,7 +80,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
     {
         string sql = null;
         var entityType = typeof(TEntity);
-        bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not Dictionary<string, object>;
+        bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not IDictionary<string, object>;
         using var command = this.connection.CreateCommand();
         if (isMulti)
         {
@@ -115,7 +115,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
     {
         string sql = null;
         var entityType = typeof(TEntity);
-        bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not Dictionary<string, object>;
+        bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not IDictionary<string, object>;
         using var cmd = this.connection.CreateCommand();
         if (isMulti)
         {
@@ -158,7 +158,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
         dbParameters = null;
         string sql = null;
         var entityType = typeof(TEntity);
-        bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not Dictionary<string, object>;
+        bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not IDictionary<string, object>;
         using var command = this.connection.CreateCommand();
         if (isMulti)
         {

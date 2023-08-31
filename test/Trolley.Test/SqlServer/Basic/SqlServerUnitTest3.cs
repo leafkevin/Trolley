@@ -162,15 +162,25 @@ public class SqlServerUnitTest3 : UnitTestBase
         }
     }
     [Fact]
-    public async void Update_WithBulk_Parameters_Multi()
+    public async void Update_MultiParameters()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
+        repository.BeginTransaction();
         var parameters = await repository.From<OrderDetail>()
             .Where(f => new int[] { 1, 2, 3, 4, 5, 6 }.Contains(f.Id))
             .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
             .ToListAsync();
-        var sql = repository.Update<OrderDetail>().WithBulk(parameters).ToSql(out _);
-        Assert.True(sql == "UPDATE [sys_order_detail] SET [Price]=@Price0,[Quantity]=@Quantity0,[Amount]=@Amount0 WHERE [Id]=@kId0;UPDATE [sys_order_detail] SET [Price]=@Price1,[Quantity]=@Quantity1,[Amount]=@Amount1 WHERE [Id]=@kId1;UPDATE [sys_order_detail] SET [Price]=@Price2,[Quantity]=@Quantity2,[Amount]=@Amount2 WHERE [Id]=@kId2;UPDATE [sys_order_detail] SET [Price]=@Price3,[Quantity]=@Quantity3,[Amount]=@Amount3 WHERE [Id]=@kId3;UPDATE [sys_order_detail] SET [Price]=@Price4,[Quantity]=@Quantity4,[Amount]=@Amount4 WHERE [Id]=@kId4;UPDATE [sys_order_detail] SET [Price]=@Price5,[Quantity]=@Quantity5,[Amount]=@Amount5 WHERE [Id]=@kId5");
+        var count = repository.Update<OrderDetail>(parameters);
+        var orderDetails = await repository.QueryAsync<OrderDetail>(f => new int[] { 1, 2, 3, 4, 5, 6 }.Contains(f.Id));
+        repository.Commit();
+        Assert.True(count > 0);
+        for (int i = 0; i < orderDetails.Count; i++)
+        {
+            Assert.True(orderDetails[i].Price == parameters[i].Price);
+            Assert.True(orderDetails[i].Quantity == parameters[i].Quantity);
+            Assert.True(orderDetails[i].Amount == parameters[i].Amount);
+        }
     }
     [Fact]
     public async void Update_WithBulk_Fields_Parameters_Multi()
