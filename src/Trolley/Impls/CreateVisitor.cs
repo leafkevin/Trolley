@@ -12,6 +12,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     protected bool isFrom = false;
     protected bool isUseIgnore = false;
     protected bool isUseUpdate = false;
+    private string bulkHeadSql;
     private Action<IDbCommand, ISqlVisitor, StringBuilder, int, object> bulkCommandInitializer;
 
     public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
@@ -33,9 +34,15 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var valuesBuilder = new StringBuilder();
         string fromTables = null;
         if (this.isFrom) valuesBuilder.Append(" SELECT ");
-        else valuesBuilder.Append(" VALUES (");
-        foreach (var insertField in this.insertFields)
+        else valuesBuilder.Append(" VALUES(");
+        for (int i = 0; i < this.insertFields.Count; i++)
         {
+            var insertField = this.insertFields[i];
+            if (i > 0)
+            {
+                fieldsBuilder.Append(',');
+                valuesBuilder.Append(',');
+            }
             fieldsBuilder.Append(insertField.Fields);
             valuesBuilder.Append(insertField.Values);
             if (insertField.Type == InsertFieldType.FromTables)
@@ -51,7 +58,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         else valuesBuilder.Append(')');
 
         var tailSql = this.BuildTailSql();
-        if (string.IsNullOrEmpty(tailSql))
+        if (!string.IsNullOrEmpty(tailSql))
             valuesBuilder.Append(tailSql);
         fieldsBuilder.Append(valuesBuilder);
         dbParameters = this.dbParameters;
@@ -91,7 +98,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public virtual ICreateVisitor WithBulkFirst(object insertObjs)
     {
         var entityTppe = this.tables[0].EntityType;
-        this.bulkCommandInitializer = RepositoryHelper.BuildCreateWithBulkCommandInitializer(this, entityTppe, insertObjs);
+        this.bulkCommandInitializer = RepositoryHelper.BuildCreateWithBulkCommandInitializer(this, entityTppe, insertObjs, out this.bulkHeadSql);
         return this;
     }
     public virtual ICreateVisitor WithBulk(IDbCommand command, StringBuilder builder, int index, object insertObj)
@@ -99,13 +106,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (index == 0)
         {
             var tableName = this.OrmProvider.GetTableName(this.tables[0].Mapper.TableName);
-            builder.Append($"{this.BuildHeadSql()} {tableName} (");
-            //TODO:
+            builder.Append($"{this.BuildHeadSql()} {tableName} ({this.bulkHeadSql}) VALUES ");
         }
         else builder.Append(',');
+        builder.Append('(');
         this.bulkCommandInitializer.Invoke(command, this, builder, index, insertObj);
+        builder.Append(')');
         var tailSql = this.BuildTailSql();
-        if (string.IsNullOrEmpty(tailSql))
+        if (!string.IsNullOrEmpty(tailSql))
             builder.Append(tailSql);
         return this;
     }
@@ -146,6 +154,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             fromTablesBuilder.Append(tableName + " " + tableSegment.AliasName);
         }
         insertFields.FromTables = fromTablesBuilder.ToString();
+        this.insertFields.Add(insertFields);
         this.isFrom = true;
         return this;
     }

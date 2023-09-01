@@ -3,7 +3,7 @@ using System;
 using Trolley.SqlServer;
 using Xunit;
 
-namespace Trolley.Test.SqlServer.Basic;
+namespace Trolley.Test.SqlServer;
 
 public class SqlServerWhereUnitTest : UnitTestBase
 {

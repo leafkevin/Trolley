@@ -371,7 +371,7 @@ class Created<TEntity> : ICreated<TEntity>
                 dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
             command.Dispose();
         }
-        else this.visitor.BuildSql(out dbParameters);
+        else sql = this.visitor.BuildSql(out dbParameters);
         return sql;
     }
     #endregion
