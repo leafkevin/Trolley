@@ -23,6 +23,7 @@ public class SqlVisitor : ISqlVisitor
     protected bool isSelect = false;
     protected bool isWhere = false;
     protected bool isFromQuery = false;
+    protected string whereSql = null;
     protected string multiParameterPrefix = string.Empty;
     protected OperationType lastWhereNodeType = OperationType.None;
 

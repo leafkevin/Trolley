@@ -125,29 +125,13 @@ public class SqlServerUnitTest1 : UnitTestBase
         repository.BeginTransaction();
         repository.Delete<Brand>().Where(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } }).Execute();
         var rawSql = "INSERT INTO sys_brand(Id,BrandNo,Name,IsEnabled,CreatedAt,CreatedBy,UpdatedAt,UpdatedBy) VALUES(@Id,@BrandNo,@Name,1,GETDATE(),@User,GETDATE(),@User)";
-        var count = await repository.Create<Brand>().RawSql(rawSql, new
+        var count = await repository.ExecuteAsync(rawSql, new
         {
             Id = 1,
             BrandNo = "BN-001",
             Name = "波司登",
             User = 1
-        }).ExecuteAsync();
-        Assert.Equal(1, count);
-        count = await repository.Create<Brand>().RawSql(rawSql, new
-        {
-            Id = 2,
-            BrandNo = "BN-002",
-            Name = "雪中飞",
-            User = 1
-        }).ExecuteAsync();
-        Assert.Equal(1, count);
-        count = await repository.Create<Brand>().RawSql(rawSql, new
-        {
-            Id = 3,
-            BrandNo = "BN-003",
-            Name = "优衣库",
-            User = 1
-        }).ExecuteAsync();
+        });
         Assert.Equal(1, count);
         repository.Commit();
     }

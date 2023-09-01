@@ -11,8 +11,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 {
     protected bool isFrom = false;
     protected bool isJoin = false;
-    protected string whereSql = string.Empty;
-    protected List<UpdateField> updateFields = new();
+    protected readonly List<UpdateField> updateFields = new();
     protected string fixedSql = null;
     protected List<IDbDataParameter> fixedDbParameters = new();
     protected Action<IDbCommand, UpdateVisitor, StringBuilder, object, int> bulkSetFieldsInitializer = null;

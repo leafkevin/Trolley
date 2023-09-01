@@ -15,7 +15,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     private static ConcurrentDictionary<int, object> getterCache = new();
     private static ConcurrentDictionary<int, object> setterCache = new();
     protected string sql = string.Empty;
-    protected string whereSql = string.Empty;
     protected string groupBySql = string.Empty;
     protected string havingSql = string.Empty;
     protected string orderBySql = string.Empty;

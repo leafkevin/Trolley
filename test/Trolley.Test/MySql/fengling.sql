@@ -220,7 +220,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- Table structure for sys_user
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_function`;
-CREATE TABLE `sys_user`  (
+CREATE TABLE `sys_function`  (
   `MenuId` int NOT NULL,
   `PageId` int NOT NULL,
   `FunctionName` varchar(50) NULL DEFAULT NULL,

@@ -22,11 +22,11 @@ public abstract class BaseOrmProvider : IOrmProvider
     public abstract IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
     public virtual IQueryVisitor NewQueryVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
         => new QueryVisitor(dbKey, this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
-    public virtual ICreateVisitor NewCreateVisitor(string dbKey, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
+    public virtual ICreateVisitor NewCreateVisitor(string dbKey, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         => new CreateVisitor(dbKey, this, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix);
-    public virtual IUpdateVisitor NewUpdateVisitor(string dbKey, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
+    public virtual IUpdateVisitor NewUpdateVisitor(string dbKey, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         => new UpdateVisitor(dbKey, this, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix);
-    public virtual IDeleteVisitor NewDeleteVisitor(string dbKey, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
+    public virtual IDeleteVisitor NewDeleteVisitor(string dbKey, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         => new DeleteVisitor(dbKey, this, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix);
     public virtual string GetTableName(string entityName) => entityName;
     public virtual string GetFieldName(string propertyName) => propertyName;

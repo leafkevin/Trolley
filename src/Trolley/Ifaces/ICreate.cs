@@ -14,22 +14,6 @@ namespace Trolley;
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface ICreate<TEntity>
 {
-    #region RawSql
-    /// <summary>
-    /// 使用原始SQL和参数插入数据，用法：
-    /// <code>
-    /// repository.Insert&lt;Order&gt;()
-    ///     .RawSql("INSERT INTO Table(Field1,Field2) VALUES(@Value1,@Value2)", new { Value1 = 1, Value2 = "xxx" });
-    /// </code>
-    /// </summary>
-    /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">SQL中使用的参数，匿名对象或是实体对象，不支持某个变量值，如：
-    /// <code>new { Value1 = 1, Value2 = "xxx" } 或 new Order{ ... }</code>
-    /// </param>
-    /// <returns>返回插入对象</returns>
-    ICreated<TEntity> RawSql(string rawSql, object parameters);
-    #endregion
-
     #region WithBy
     /// <summary>
     /// 使用插入对象部分字段插入，单个对象插入
@@ -236,7 +220,36 @@ public interface ICreate<TEntity>
 /// 插入数据
 /// </summary>
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
-public interface IContinuedCreate<TEntity>
+public interface ICreated<TEntity>
+{
+    #region ToSql
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <returns>返回插入行数</returns>
+    int Execute();
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <param name="cancellationToken">取消token</param>
+    /// <returns>返回插入行数</returns>
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToSql
+    /// <summary>
+    /// 返回当前查询的SQL和参数列表
+    /// </summary>
+    /// <param name="dbParameters">参数列表</param>
+    /// <returns>当前查询的SQL</returns>
+    string ToSql(out List<IDbDataParameter> dbParameters);
+    #endregion
+}
+/// <summary>
+/// 插入数据
+/// </summary>
+/// <typeparam name="TEntity">要插入的实体类型</typeparam>
+public interface IContinuedCreate<TEntity> : ICreated<TEntity>
 {
     #region WithBy
     /// <summary>
@@ -296,58 +309,7 @@ public interface IContinuedCreate<TEntity>
     /// <param name="insertObj">插入数据对象，包含想要插入的必需栏位值</param>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
-    #endregion
-
-    #region Execute
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion
-
-    #region ToSql
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
-    #endregion
-}
-/// <summary>
-/// 插入数据
-/// </summary>
-/// <typeparam name="TEntity">要插入的实体类型</typeparam>
-public interface ICreated<TEntity>
-{
-    #region ToSql
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion
-
-    #region ToSql
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
+    IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     #endregion
 }
 /// <summary>

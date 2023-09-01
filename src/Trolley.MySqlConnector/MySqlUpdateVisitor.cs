@@ -4,8 +4,8 @@ namespace Trolley.MySqlConnector;
 
 class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
 {
-    public MySqlUpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
-      : base(dbKey, ormProvider, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix)
+    public MySqlUpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+      : base(dbKey, ormProvider, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix)
     {
     }
     public override IUpdateVisitor From(params Type[] entityTypes)

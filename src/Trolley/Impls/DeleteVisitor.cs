@@ -9,7 +9,6 @@ namespace Trolley;
 public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 {
     protected readonly TableSegment tableSegment;
-    protected string whereSql = string.Empty;
 
     public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix)
