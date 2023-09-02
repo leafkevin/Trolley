@@ -61,12 +61,14 @@ class Update<TEntity> : IUpdate<TEntity>
         if (condition) visitor.Set(fieldSelector, fieldValue);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
-    public IUpdateSetting<TEntity> SetWith<TUpdateObj>(TUpdateObj updateObj)
-        => this.SetWith(true, updateObj);
-    public IUpdateSetting<TEntity> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public IUpdateSetting<TEntity> Set<TUpdateObj>(TUpdateObj updateObj)
+        => this.Set(true, updateObj);
+    public IUpdateSetting<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
+        if (!typeof(TUpdateObj).IsEntityType(out _))
+            throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
 
         var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
         if (condition) visitor.SetWith(null, updateObj);
@@ -412,9 +414,9 @@ class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
         return this;
     }
 
-    public IUpdateSetting<TEntity> SetWith<TUpdateObj>(TUpdateObj updateObj)
-        => this.SetWith(true, updateObj);
-    public IUpdateSetting<TEntity> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public IUpdateSetting<TEntity> Set<TUpdateObj>(TUpdateObj updateObj)
+        => this.Set(true, updateObj);
+    public IUpdateSetting<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
@@ -539,9 +541,9 @@ class UpdateFrom<TEntity, T1> : UpdateBase, IUpdateFrom<TEntity, T1>
         return this;
     }
 
-    public IUpdateFrom<TEntity, T1> SetWith<TUpdateObj>(TUpdateObj updateObj)
-        => this.SetWith(true, updateObj);
-    public IUpdateFrom<TEntity, T1> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public IUpdateFrom<TEntity, T1> Set<TUpdateObj>(TUpdateObj updateObj)
+        => this.Set(true, updateObj);
+    public IUpdateFrom<TEntity, T1> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
@@ -660,9 +662,9 @@ class UpdateFrom<TEntity, T1, T2> : UpdateBase, IUpdateFrom<TEntity, T1, T2>
         return this;
     }
 
-    public IUpdateFrom<TEntity, T1, T2> SetWith<TUpdateObj>(TUpdateObj updateObj)
-        => this.SetWith(true, updateObj);
-    public IUpdateFrom<TEntity, T1, T2> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public IUpdateFrom<TEntity, T1, T2> Set<TUpdateObj>(TUpdateObj updateObj)
+        => this.Set(true, updateObj);
+    public IUpdateFrom<TEntity, T1, T2> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
@@ -781,9 +783,9 @@ class UpdateFrom<TEntity, T1, T2, T3> : UpdateBase, IUpdateFrom<TEntity, T1, T2,
         return this;
     }
 
-    public IUpdateFrom<TEntity, T1, T2, T3> SetWith<TUpdateObj>(TUpdateObj updateObj)
-        => this.SetWith(true, updateObj);
-    public IUpdateFrom<TEntity, T1, T2, T3> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public IUpdateFrom<TEntity, T1, T2, T3> Set<TUpdateObj>(TUpdateObj updateObj)
+        => this.Set(true, updateObj);
+    public IUpdateFrom<TEntity, T1, T2, T3> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
@@ -902,9 +904,9 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateFrom<TEntity, T1,
         return this;
     }
 
-    public IUpdateFrom<TEntity, T1, T2, T3, T4> SetWith<TUpdateObj>(TUpdateObj updateObj)
-        => this.SetWith(true, updateObj);
-    public IUpdateFrom<TEntity, T1, T2, T3, T4> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TUpdateObj>(TUpdateObj updateObj)
+        => this.Set(true, updateObj);
+    public IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
@@ -1023,9 +1025,9 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateFrom<TEntity,
         return this;
     }
 
-    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetWith<TUpdateObj>(TUpdateObj updateObj)
-        => this.SetWith(true, updateObj);
-    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TUpdateObj>(TUpdateObj updateObj)
+        => this.Set(true, updateObj);
+    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
@@ -1163,9 +1165,9 @@ class UpdateJoin<TEntity, T1> : UpdateBase, IUpdateJoin<TEntity, T1>
         return this;
     }
 
-    public IUpdateJoin<TEntity, T1> SetWith<TUpdateObj>(TUpdateObj updateObj)
-        => this.SetWith(true, updateObj);
-    public IUpdateJoin<TEntity, T1> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public IUpdateJoin<TEntity, T1> Set<TUpdateObj>(TUpdateObj updateObj)
+        => this.Set(true, updateObj);
+    public IUpdateJoin<TEntity, T1> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
@@ -1303,9 +1305,9 @@ class UpdateJoin<TEntity, T1, T2> : UpdateBase, IUpdateJoin<TEntity, T1, T2>
         return this;
     }
 
-    public IUpdateJoin<TEntity, T1, T2> SetWith<TUpdateObj>(TUpdateObj updateObj)
-        => this.SetWith(true, updateObj);
-    public IUpdateJoin<TEntity, T1, T2> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public IUpdateJoin<TEntity, T1, T2> Set<TUpdateObj>(TUpdateObj updateObj)
+        => this.Set(true, updateObj);
+    public IUpdateJoin<TEntity, T1, T2> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
@@ -1443,9 +1445,9 @@ class UpdateJoin<TEntity, T1, T2, T3> : UpdateBase, IUpdateJoin<TEntity, T1, T2,
         return this;
     }
 
-    public IUpdateJoin<TEntity, T1, T2, T3> SetWith<TUpdateObj>(TUpdateObj updateObj)
-        => this.SetWith(true, updateObj);
-    public IUpdateJoin<TEntity, T1, T2, T3> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public IUpdateJoin<TEntity, T1, T2, T3> Set<TUpdateObj>(TUpdateObj updateObj)
+        => this.Set(true, updateObj);
+    public IUpdateJoin<TEntity, T1, T2, T3> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
@@ -1583,9 +1585,9 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateJoin<TEntity, T1,
         return this;
     }
 
-    public IUpdateJoin<TEntity, T1, T2, T3, T4> SetWith<TUpdateObj>(TUpdateObj updateObj)
-        => this.SetWith(true, updateObj);
-    public IUpdateJoin<TEntity, T1, T2, T3, T4> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TUpdateObj>(TUpdateObj updateObj)
+        => this.Set(true, updateObj);
+    public IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
@@ -1704,9 +1706,9 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateJoin<TEntity,
         return this;
     }
 
-    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetWith<TUpdateObj>(TUpdateObj updateObj)
-        => this.SetWith(true, updateObj);
-    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TUpdateObj>(TUpdateObj updateObj)
+        => this.Set(true, updateObj);
+    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));

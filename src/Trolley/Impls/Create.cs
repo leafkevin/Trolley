@@ -14,11 +14,11 @@ namespace Trolley;
 class Create<TEntity> : ICreate<TEntity>
 {
     #region Fields
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IOrmProvider ormProvider;
-    private readonly IEntityMapProvider mapProvider;
-    private readonly bool isParameterized;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly IOrmProvider ormProvider;
+    protected readonly IEntityMapProvider mapProvider;
+    protected readonly bool isParameterized;
     #endregion
 
     #region Constructor
@@ -106,87 +106,6 @@ class Create<TEntity> : ICreate<TEntity>
     }
     #endregion
 }
-
-//class CreatedBase<TEntity> : ICreated<TEntity>
-//{
-//    #region Fields
-//    protected readonly TheaConnection connection;
-//    protected readonly IDbTransaction transaction;
-//    protected readonly ICreateVisitor visitor;
-//    protected readonly IEntityMapProvider mapProvider;
-//    #endregion
-
-//    #region Constructor
-//    public CreatedBase(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
-//    {
-//        this.connection = connection;
-//        this.transaction = transaction;
-//        this.visitor = visitor;
-//    }
-//    #endregion
-
-//    #region Execute
-//    public int Execute()
-//    {
-//        int result = 0;
-//        var entityType = typeof(TEntity);
-//        var entityMapper = this.mapProvider.GetEntityMap(entityType);
-//        using var command = this.connection.CreateCommand();
-//        command.CommandType = CommandType.Text;
-//        command.Transaction = this.transaction;
-//        command.CommandText = this.visitor.BuildSql(out var dbParameters);
-//        if (dbParameters != null && dbParameters.Count > 0)
-//            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-//        this.connection.Open();
-//        if (entityMapper.IsAutoIncrement)
-//        {
-//            using var reader = command.ExecuteReader();
-//            if (reader.Read()) result = reader.To<int>();
-//            reader.Dispose();
-//            command.Dispose();
-//            return result;
-//        }
-//        result = command.ExecuteNonQuery();
-//        command.Dispose();
-//        return result;
-//    }
-//    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-//    {
-//        int result = 0;
-//        var entityType = typeof(TEntity);
-//        var entityMapper = this.mapProvider.GetEntityMap(entityType);
-//        using var cmd = this.connection.CreateCommand();
-//        cmd.CommandType = CommandType.Text;
-//        cmd.Transaction = this.transaction;
-//        cmd.CommandText = this.visitor.BuildSql(out var dbParameters);
-
-//        if (cmd is not DbCommand command)
-//            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-//        if (dbParameters != null && dbParameters.Count > 0)
-//            dbParameters.ForEach(f => command.Parameters.Add(f));
-
-//        await this.connection.OpenAsync(cancellationToken);
-//        if (entityMapper.IsAutoIncrement)
-//        {
-//            using var reader = await command.ExecuteReaderAsync(cancellationToken);
-//            if (await reader.ReadAsync(cancellationToken))
-//                result = reader.To<int>();
-//            await reader.DisposeAsync();
-//            await command.DisposeAsync();
-//            return result;
-//        }
-//        result = await command.ExecuteNonQueryAsync(cancellationToken);
-//        await command.DisposeAsync();
-//        return result;
-//    }
-//    #endregion
-
-//    #region ToSql
-//    public string ToSql(out List<IDbDataParameter> dbParameters)
-//        => this.visitor.BuildSql(out dbParameters);
-//    #endregion
-//}
 class Created<TEntity> : ICreated<TEntity>
 {
     #region Fields
@@ -206,6 +125,14 @@ class Created<TEntity> : ICreated<TEntity>
         this.transaction = transaction;
         this.visitor = visitor;
         this.mapProvider = visitor.MapProvider;
+    }
+    #endregion
+
+    #region UseIgnore
+    public ICreated<TEntity> UseIgnore()
+    {
+        this.visitor.UseIgnore();
+        return this;
     }
     #endregion
 

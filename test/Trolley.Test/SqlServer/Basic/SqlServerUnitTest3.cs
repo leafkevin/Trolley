@@ -36,13 +36,27 @@ public class SqlServerUnitTest3 : UnitTestBase
         var result = repository.Update<User>(f => new
         {
             Name = f.Name + "_1",
-            Gender = Gender.Female
+            Gender = Gender.Female,
+            SourceType = DBNull.Value
         }, t => t.Id == 1);
         var result1 = repository.Get<User>(1);
         Assert.True(result > 0);
         Assert.NotNull(result1);
-        Assert.True(result1.Name == result1.Name);
         Assert.True(result1.Name == "leafkevin_1");
+        Assert.True(result1.SourceType.HasValue == false);
+
+        var result2 = repository.Update<User>(new
+        {
+            Id = 1,
+            Name = "kevin",
+            Gender = Gender.Female,
+            SourceType = DBNull.Value
+        });
+        var result3 = repository.Get<User>(1);
+        Assert.True(result2 > 0);
+        Assert.NotNull(result3);
+        Assert.True(result3.Name == "kevin");
+        Assert.True(result3.SourceType.HasValue == false);
     }
     [Fact]
     public void Update_Fields_Where()
@@ -149,7 +163,7 @@ public class SqlServerUnitTest3 : UnitTestBase
         }
         repository.BeginTransaction();
         result = repository.Update<Order>()
-            .SetWith(new { ProductCount = 11 })
+            .Set(new { ProductCount = 11 })
             .Where(new { Id = 1 })
             .Execute();
         var result2 = repository.Get<Order>(new { Id = 1 });
@@ -268,7 +282,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             //Assert.True(updatedOrder.UpdatedAt == updateObj.UpdatedAt);
         }
         var result1 = repository.Update<Order>()
-            .SetWith(new { ProductCount = 10 })
+            .Set(new { ProductCount = 10, BuyerSource = DBNull.Value })
             .Where(new { Id = 1 })
             .Execute();
         updatedOrder = repository.Get<Order>(new { Id = 1 });
@@ -278,6 +292,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             Assert.NotNull(updatedOrder);
             Assert.True(updatedOrder.Id == 1);
             Assert.True(updatedOrder.ProductCount == 10);
+            Assert.True(updatedOrder.BuyerSource.HasValue == false);
         }
     }
     [Fact]
@@ -542,6 +557,37 @@ public class SqlServerUnitTest3 : UnitTestBase
             Assert.True(order.Products[2] == 3);
             Assert.True(order.TotalAmount == parameter.TotalAmount);
         }
+
+        repository.BeginTransaction();
+        parameter = repository.Get<Order>(1);
+        parameter.TotalAmount += 50;
+        result = repository.Update<Order>()
+            .Set(new
+            {
+                parameter.TotalAmount,
+                Products = new List<int> { 1, 2, 3 },
+                Disputes = new Dispute
+                {
+                    Id = 1,
+                    Content = "43dss",
+                    Users = "1,2",
+                    Result = "OK",
+                    CreatedAt = DateTime.Now
+                }
+            })
+          .Where(x => x.Id == 1)
+          .Execute();
+        order = repository.Get<Order>(1);
+        repository.Commit();
+        if (result > 0)
+        {
+            Assert.NotEmpty(order.Products);
+            Assert.True(order.Products.Count == 3);
+            Assert.True(order.Products[0] == 1);
+            Assert.True(order.Products[1] == 2);
+            Assert.True(order.Products[2] == 3);
+            Assert.True(order.TotalAmount == parameter.TotalAmount);
+        }
     }
     [Fact]
     public void Update_SetJson()
@@ -632,7 +678,7 @@ public class SqlServerUnitTest3 : UnitTestBase
         Assert.True((string)parameters[1].Value == JsonSerializer.Serialize(new List<int> { 1, 2, 3 }));
 
         var sql1 = repository.Update<User>()
-            .SetWith(new { Gender = Gender.Male })
+            .Set(new { Gender = Gender.Male })
             .Where(new { Id = 1 })
             .ToSql(out var parameters1);
         Assert.True(sql1 == "UPDATE [sys_user] SET [Gender]=@Gender WHERE [Id]=@kId");
@@ -670,7 +716,7 @@ public class SqlServerUnitTest3 : UnitTestBase
         Assert.True((byte)parameters7[0].Value == (byte)Gender.Male);
 
         var sql4 = repository.Update<Company>()
-             .SetWith(new { Nature = CompanyNature.Internet })
+             .Set(new { Nature = CompanyNature.Internet })
              .Where(new { Id = 1 })
              .ToSql(out var parameters4);
         Assert.True(sql4 == "UPDATE [sys_company] SET [Nature]=@Nature WHERE [Id]=@kId");
@@ -735,7 +781,7 @@ public class SqlServerUnitTest3 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         var sql1 = repository.Update<User>()
-            .SetWith(new { SomeTimes = TimeSpan.FromMinutes(1455) })
+            .Set(new { SomeTimes = TimeSpan.FromMinutes(1455) })
             .Where(new { Id = 1 })
             .ToSql(out var parameters1);
         Assert.True(sql1 == "UPDATE [sys_user] SET [SomeTimes]=@SomeTimes WHERE [Id]=@kId");
@@ -765,7 +811,7 @@ public class SqlServerUnitTest3 : UnitTestBase
         //TODO:SQL SERVER不支持超过1天的时间类型
         repository.BeginTransaction();
         await repository.Update<User>()
-            .SetWith(new { SomeTimes = TimeSpan.FromMinutes(55) })
+            .Set(new { SomeTimes = TimeSpan.FromMinutes(55) })
             .Where(new { Id = 1 })
             .ExecuteAsync();
         var userInfo = repository.Get<User>(1);

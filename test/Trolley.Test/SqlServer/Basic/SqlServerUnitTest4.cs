@@ -322,7 +322,7 @@ public class SqlServerUnitTest4 : UnitTestBase
         repository.Timeout(60);
         repository.BeginTransaction();
         repository.Update<User>()
-            .SetWith(new { Name = "leafkevin1" })
+            .Set(new { Name = "leafkevin1" })
             .Where(new { Id = 1 })
             .Execute();
         repository.Update<User>(new { Name = "leafkevin1", Id = 1 });

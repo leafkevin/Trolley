@@ -458,10 +458,10 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象内除主键字段外所有与当前实体表TEntity名称相同的栏位都将参与更新，updateObj对象必须包含主键字段，可单条也可多条数据更新，多条可分批次完成，每次更新bulkCount条数，用法：
     /// <code>
-    /// repository.UpdateAsync&lt;User&gt;(new { Id = 1, Name = "kevin"});
+    /// repository.UpdateAsync&lt;User&gt;(new { Id = 1, Name = "kevin", SourceType = DBNull.Value});
     /// repository.UpdateAsync&lt;User&gt;(new [] { new { Id = 1, Name = "kevin"}, new { Id = 2, Name = "cindy"} }, 200);
     /// SQL: 
-    /// UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@Id
+    /// UPDATE `sys_user` SET `Name`=@Name,SourceType=@SourceType WHERE `Id`=@Id
     /// UPDATE `sys_user` SET `Name`=@Name0 WHERE `Id`=@Id0;UPDATE `sys_user` SET `Name`=@Name1 WHERE `Id`=@Id1
     /// </code>
     /// </summary>
@@ -507,7 +507,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     ///     Products = this.GetProducts(), //直接赋值，使用本地函数
     ///     BuyerId = DBNull.Value, //直接赋值
     ///     f.ProductCount, //使用updateObjs对象中的参数
-    ///     f.Disputes //使用updateObjs对象中的参数
+    ///     f.Disputes //使用updateObjs对象中的参数，实体对象由TypeHandler处理
     /// }, orderInfo);
     /// private int[] GetProducts() => new int[] { 1, 2, 3 };
     /// SQL:

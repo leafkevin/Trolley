@@ -68,24 +68,14 @@ class Update<TEntity> : IUpdate<TEntity>
         if (condition) visitor.Set(fieldSelector, fieldValue);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
-
-    public IUpdateSetting<TEntity> SetRaw(string rawSql, object updateObj)
-        => this.SetRaw(true, rawSql, updateObj);
-    public IUpdateSetting<TEntity> SetRaw(bool condition, string rawSql, object updateObj)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
-        if (condition) visitor.SetRaw(rawSql, updateObj);
-        return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
-    }
-    public IUpdateSetting<TEntity> SetWith<TUpdateObj>(TUpdateObj updateObj)
-        => this.SetWith(true, updateObj);
-    public IUpdateSetting<TEntity> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public IUpdateSetting<TEntity> Set<TUpdateObj>(TUpdateObj updateObj)
+        => this.Set(true, updateObj);
+    public IUpdateSetting<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
+        if (!typeof(TUpdateObj).IsEntityType(out _))
+            throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
 
         var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
         if (condition) visitor.SetWith(null, updateObj);
@@ -422,24 +412,14 @@ class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
         if (condition) this.visitor.Set(fieldSelector, fieldValue);
         return this;
     }
-
-    public IUpdateSetting<TEntity> SetRaw(string rawSql, object updateObj)
-        => this.SetRaw(true, rawSql, updateObj);
-    public IUpdateSetting<TEntity> SetRaw(bool condition, string rawSql, object updateObj)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        if (condition) this.visitor.SetRaw(rawSql, updateObj);
-        return this;
-    }
-
-    public IUpdateSetting<TEntity> SetWith<TUpdateObj>(TUpdateObj updateObj)
-        => this.SetWith(true, updateObj);
-    public IUpdateSetting<TEntity> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public IUpdateSetting<TEntity> Set<TUpdateObj>(TUpdateObj updateObj)
+        => this.Set(true, updateObj);
+    public IUpdateSetting<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
+        if (!typeof(TUpdateObj).IsEntityType(out _))
+            throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
 
         if (condition) this.visitor.SetWith(null, updateObj);
         return this;
@@ -557,24 +537,14 @@ class UpdateFrom<<#=tables#>> : UpdateBase, IUpdateFrom<<#=tables#>>
             this.visitor.Set(fieldSelector, fieldValue);
         return this;
     }
-
-    public IUpdateFrom<<#=tables#>> SetRaw(string rawSql, object updateObj)
-        => this.SetRaw(true, rawSql, updateObj);
-    public IUpdateFrom<<#=tables#>> SetRaw(bool condition, string rawSql, object updateObj)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        if (condition) this.visitor.SetRaw(rawSql, updateObj);
-        return this;
-    }
-
-    public IUpdateFrom<<#=tables#>> SetWith<TUpdateObj>(TUpdateObj updateObj)
-        => this.SetWith(true, updateObj);
-    public IUpdateFrom<<#=tables#>> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public IUpdateFrom<<#=tables#>> Set<TUpdateObj>(TUpdateObj updateObj)
+        => this.Set(true, updateObj);
+    public IUpdateFrom<<#=tables#>> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
+        if (!typeof(TUpdateObj).IsEntityType(out _))
+            throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
 
         if (condition) this.visitor.SetWith(null, updateObj);
         return this;
@@ -720,24 +690,14 @@ class UpdateJoin<<#=tables#>> : UpdateBase, IUpdateJoin<<#=tables#>>
             this.visitor.Set(fieldSelector, fieldValue);
         return this;
     }
-
-    public IUpdateJoin<<#=tables#>> SetRaw(string rawSql, object updateObj)
-       => this.SetRaw(true, rawSql, updateObj);
-    public IUpdateJoin<<#=tables#>> SetRaw(bool condition, string rawSql, object updateObj)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-
-        if (condition) this.visitor.SetRaw(rawSql, updateObj);
-        return this;
-    }
-
-    public IUpdateJoin<<#=tables#>> SetWith<TUpdateObj>(TUpdateObj updateObj)
-        => this.SetWith(true, updateObj);
-    public IUpdateJoin<<#=tables#>> SetWith<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public IUpdateJoin<<#=tables#>> Set<TUpdateObj>(TUpdateObj updateObj)
+        => this.Set(true, updateObj);
+    public IUpdateJoin<<#=tables#>> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
+        if (!typeof(TUpdateObj).IsEntityType(out _))
+            throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
 
         if (condition) this.visitor.SetWith(null, updateObj);
         return this;

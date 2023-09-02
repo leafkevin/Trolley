@@ -66,7 +66,7 @@ public abstract class BaseOrmProvider : IOrmProvider
     }
     public virtual object ToFieldValue(MemberMap memberMapper, object fieldValue)
     {
-        if (fieldValue == null) return null;
+        if (fieldValue == null || fieldValue is DBNull) return fieldValue;
         if (memberMapper.TypeHandler != null)
             return memberMapper.TypeHandler.ToFieldValue(this, fieldValue);
 

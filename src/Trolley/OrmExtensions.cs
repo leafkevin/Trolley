@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading;
@@ -111,7 +110,6 @@ public static class OrmExtensions
     /// <summary>
     /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，用法：
     /// <code>
-    /// repository.Update&lt;User&gt;(f =&gt; new { SomeTimes = TimeSpan.FromMinutes(1455) }, x =&gt; x.Id == 1);
     /// var orderInfo = new OrderInfo { ... };
     /// var tmpObj = new { TotalAmount = 450, ... };
     /// repository.Update&lt;Order&gt;(f => new
@@ -122,9 +120,7 @@ public static class OrmExtensions
     ///     Disputes = new Dispute { ... } //使用updateObjs对象中的参数，实体对象由TypeHandler处理
     /// }, x =&gt; x.Id == 1);
     /// private int[] GetProducts() => new int[] { 1, 2, 3 };
-    /// SQL:
-    /// UPDATE `sys_user` SET `SomeTimes`=@SomeTimes WHERE `Id`=1
-    /// UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`Disputes`=@Disputes WHERE `Id`=1
+    /// SQL: UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`Disputes`=@Disputes WHERE `Id`=1
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
@@ -137,7 +133,6 @@ public static class OrmExtensions
     /// <summary>
     /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，用法：
     /// <code>
-    /// await repository.UpdateAsync&lt;User&gt;(f =&gt; new { SomeTimes = TimeSpan.FromMinutes(1455) }, x =&gt; x.Id == 1);
     /// var orderInfo = new OrderInfo { ... };
     /// var tmpObj = new { TotalAmount = 450, ... };
     /// await repository.UpdateAsync&lt;Order&gt;(f => new
@@ -148,9 +143,7 @@ public static class OrmExtensions
     ///     Disputes = new Dispute { ... } //使用updateObjs对象中的参数，实体对象由TypeHandler处理
     /// }, x =&gt; x.Id == 1);
     /// private int[] GetProducts() => new int[] { 1, 2, 3 };
-    /// SQL:
-    /// UPDATE `sys_user` SET `SomeTimes`=@SomeTimes WHERE `Id`=1
-    /// UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`Disputes`=@Disputes WHERE `Id`=1
+    /// SQL: UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`Disputes`=@Disputes WHERE `Id`=1
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
@@ -182,6 +175,6 @@ public static class OrmExtensions
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回删除行数</returns>
     public static async Task<int> DeleteAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> wherePredicate, CancellationToken cancellationToken = default)
-        => await repository.Delete<TEntity>().Where(wherePredicate).ExecuteAsync(cancellationToken);    
-    #endregion 
+        => await repository.Delete<TEntity>().Where(wherePredicate).ExecuteAsync(cancellationToken);
+    #endregion
 }

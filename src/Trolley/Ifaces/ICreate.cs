@@ -224,6 +224,15 @@ public interface ICreated<TEntity>
 {
     #region ToSql
     /// <summary>
+    /// 相同主键或是唯一索引的数据存在，将不插入
+    /// MySql,Mariadb数据库使用的是INSERT IGNORE INTO
+    /// </summary>
+    /// <returns></returns>
+    ICreated<TEntity> UseIgnore();
+    #endregion
+
+    #region ToSql
+    /// <summary>
     /// 执行插入操作，并返回插入行数
     /// </summary>
     /// <returns>返回插入行数</returns>
@@ -317,7 +326,7 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
 /// </summary>
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
 /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
-public interface IContinuedCreate<TEntity, TSource>
+public interface IContinuedCreate<TEntity, TSource> : ICreated<TEntity>
 {
     #region Where/And
     /// <summary>
@@ -351,29 +360,6 @@ public interface IContinuedCreate<TEntity, TSource>
     /// <returns>返回查询对象</returns>
     IContinuedCreate<TEntity, TSource> And(bool condition, Expression<Func<TSource, bool>> ifPredicate = null, Expression<Func<TSource, bool>> elsePredicate = null);
     #endregion
-
-    #region Execute
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion
-
-    #region ToSql
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
-    #endregion
 }
 /// <summary>
 /// 插入数据
@@ -381,7 +367,7 @@ public interface IContinuedCreate<TEntity, TSource>
 /// <typeparam name="TEntity">要插入数据表的实体类型</typeparam>
 /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
 /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
-public interface IContinuedCreate<TEntity, T1, T2>
+public interface IContinuedCreate<TEntity, T1, T2> : ICreated<TEntity>
 {
     #region Where/And
     /// <summary>
@@ -415,29 +401,6 @@ public interface IContinuedCreate<TEntity, T1, T2>
     /// <returns>返回查询对象</returns>
     IContinuedCreate<TEntity, T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null);
     #endregion
-
-    #region Execute
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion
-
-    #region ToSql
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
-    #endregion
 }
 /// <summary>
 /// 插入数据
@@ -446,7 +409,7 @@ public interface IContinuedCreate<TEntity, T1, T2>
 /// <typeparam name="T1">数据来源表T1实体类型</typeparam>
 /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
 /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
-public interface IContinuedCreate<TEntity, T1, T2, T3>
+public interface IContinuedCreate<TEntity, T1, T2, T3> : ICreated<TEntity>
 {
     #region Where/And
     /// <summary>
@@ -480,29 +443,6 @@ public interface IContinuedCreate<TEntity, T1, T2, T3>
     /// <returns>返回查询对象</returns>
     IContinuedCreate<TEntity, T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null);
     #endregion
-
-    #region Execute
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion
-
-    #region ToSql
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
-    #endregion
 }
 /// <summary>
 /// 插入数据
@@ -512,7 +452,7 @@ public interface IContinuedCreate<TEntity, T1, T2, T3>
 /// <typeparam name="T2">数据来源表T2实体类型</typeparam>
 /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
 /// <typeparam name="T4">数据来源表T4实体类型</typeparam>
-public interface IContinuedCreate<TEntity, T1, T2, T3, T4>
+public interface IContinuedCreate<TEntity, T1, T2, T3, T4> : ICreated<TEntity>
 {
     #region Where/And
     /// <summary>
@@ -546,29 +486,6 @@ public interface IContinuedCreate<TEntity, T1, T2, T3, T4>
     /// <returns>返回查询对象</returns>
     IContinuedCreate<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null);
     #endregion
-
-    #region Execute
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion
-
-    #region ToSql
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
-    #endregion
 }
 /// <summary>
 /// 插入数据
@@ -579,7 +496,7 @@ public interface IContinuedCreate<TEntity, T1, T2, T3, T4>
 /// <typeparam name="T3">数据来源表T3实体类型</typeparam>
 /// <typeparam name="T4">数据来源表T4实体类型</typeparam>
 /// <typeparam name="T5">数据来源表T5实体类型</typeparam>
-public interface IContinuedCreate<TEntity, T1, T2, T3, T4, T5>
+public interface IContinuedCreate<TEntity, T1, T2, T3, T4, T5> : ICreated<TEntity>
 {
     #region Where/And
     /// <summary>
@@ -612,28 +529,5 @@ public interface IContinuedCreate<TEntity, T1, T2, T3, T4, T5>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IContinuedCreate<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null);
-    #endregion
-
-    #region Execute
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion
-
-    #region ToSql
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
     #endregion
 }

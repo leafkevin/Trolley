@@ -8,12 +8,16 @@ namespace Trolley;
 
 public class CreateVisitor : SqlVisitor, ICreateVisitor
 {
-    protected readonly List<InsertField> insertFields = new();
-    protected bool isFrom = false;
-    protected bool isUseIgnore = false;
-    protected bool isUseUpdate = false;
     private string bulkHeadSql;
     private Action<IDbCommand, ISqlVisitor, StringBuilder, int, object> bulkCommandInitializer;
+
+    protected readonly List<InsertField> insertFields = new();
+    protected bool isFrom = false;
+    protected bool isUseIgnore;
+    protected bool isUseUpdate; 
+
+    public virtual bool IsSupportIgnore { get; }
+    public virtual bool IsSupportUpdate { get; }
 
     public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix)
@@ -66,6 +70,16 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual string BuildHeadSql() => $"INSERT INTO";
     public virtual string BuildTailSql() => string.Empty;
+    public virtual ICreateVisitor UseIgnore()
+    {
+        this.isUseIgnore = true;
+        return this;
+    }
+    public virtual ICreateVisitor UseUpdate()
+    {
+        this.isUseUpdate = true;
+        return this;
+    }
     public virtual ICreateVisitor WithBy(object insertObj)
     {
         var entityType = this.tables[0].EntityType;
