@@ -125,9 +125,9 @@ class Created<TEntity> : ICreated<TEntity>
     #endregion
 
     #region UseIgnore
-    public ICreated<TEntity> UseIgnore()
+    public ICreated<TEntity> UseIgnore(object keysOrUniqueKeys = null)
     {
-        this.visitor.UseIgnore();
+        this.visitor.UseIgnore(keysOrUniqueKeys);
         return this;
     }
     #endregion

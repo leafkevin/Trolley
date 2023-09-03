@@ -222,13 +222,15 @@ public interface ICreate<TEntity>
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface ICreated<TEntity>
 {
-    #region ToSql
+    #region UseIgnore
     /// <summary>
-    /// 相同主键或是唯一索引的数据存在，将不插入
-    /// MySql,Mariadb数据库使用的是INSERT IGNORE INTO
+    /// 判断对象keysOrUniqueKeys值是否存在，存在则不插入数据。MySql、Mariadb数据库，将使用INSERT IGNORE INTO语句。PostgreSql数据库，使用INSERT INTO ... ON CONFLICT DO NOTHING语句。
+    /// SqlServer将使用INSERT INTO ...WHERE NOT EXISTS(...)语句，必须传值。如果主键为自增长列，keysOrUniqueKeys可以赋判断数据唯一的值，如果未赋值将插入数据，Ignore不生效。
+    /// keysOrUniqueKeys值，单个字段主键，可以直接赋值或是对象，如：1，2 或是new { Id = 1 }，如果是多个字段主键或唯一索引，只能匿名对象，如：new { Col1 = ... , Col2 = ... }。
     /// </summary>
-    /// <returns></returns>
-    ICreated<TEntity> UseIgnore();
+    /// <param name="keysOrUniqueKeys">可确定数据唯一的列值或多字段匿名对象，主键是自增长列必须要赋值，否则不生效。主键非自增长列，MySql、Mariadb、PostgreSql数据库不需要赋值，SqlServer数据库必须要赋值。值示例：1，2 或是new { Id = 1 }</param>
+    /// <returns>返回插入对象</returns>
+    ICreated<TEntity> UseIgnore(object keysOrUniqueKeys = null);
     #endregion
 
     #region ToSql

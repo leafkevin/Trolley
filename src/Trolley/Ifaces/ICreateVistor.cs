@@ -12,7 +12,7 @@ public interface ICreateVisitor
     string BuildSql(out List<IDbDataParameter> dbParameters);
     string BuildHeadSql();
     string BuildTailSql();
-    ICreateVisitor UseIgnore();
+    ICreateVisitor UseIgnore(object keysOrUniqueKeys = null);
     ICreateVisitor WithBy(object insertObj);
     ICreateVisitor WithBy(Expression fieldSelector, object fieldValue);
     ICreateVisitor WithBulkFirst(object insertObjs);

@@ -15,9 +15,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     protected bool isFrom = false;
     protected bool isUseIgnore;
     protected bool isUseUpdate;
+    protected object ignoreKeysOrUniqueKeys;
 
-    public virtual bool IsSupportIgnore { get; }
-    public virtual bool IsSupportUpdate { get; }
+
     public virtual bool IsBulk { get; set; } = false;
 
     public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
@@ -71,8 +71,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual string BuildHeadSql() => $"INSERT INTO";
     public virtual string BuildTailSql() => string.Empty;
-    public virtual ICreateVisitor UseIgnore()
+    public virtual ICreateVisitor UseIgnore(object keysOrUniqueKeys = null)
     {
+        this.ignoreKeysOrUniqueKeys = keysOrUniqueKeys;
         this.isUseIgnore = true;
         return this;
     }
