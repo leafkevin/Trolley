@@ -1024,38 +1024,6 @@ public class SqlVisitor : ISqlVisitor
         isNeedAlias = queryVisitor.IsNeedAlias;
         return result;
     }
-    //public SqlSegment Change(SqlSegment sqlSegment, MemberMap memberMapper = null)
-    //{
-    //    if (sqlSegment.IsVariable || (sqlSegment.IsParameterized || this.IsParameterized) && sqlSegment.IsConstant)
-    //    {
-    //        string parameterName = null;
-    //        if (!string.IsNullOrEmpty(sqlSegment.ParameterName))
-    //        {
-    //            parameterName = this.OrmProvider.ParameterPrefix + sqlSegment.ParameterName;
-    //            if (this.dbParameters.Exists(f => f.ParameterName == parameterName))
-    //                parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
-    //        }
-    //        else parameterName = this.OrmProvider.ParameterPrefix + this.parameterPrefix + this.dbParameters.Count.ToString();
-
-    //        IDbDataParameter dbParameter = null;
-    //        if (memberMapper != null)
-    //            dbParameter = this.OrmProvider.CreateParameter(memberMapper, parameterName, sqlSegment.Value);
-    //        else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
-    //        this.dbParameters.Add(dbParameter);
-    //        sqlSegment.Value = parameterName;
-    //        sqlSegment.IsParameter = true;
-    //        sqlSegment.IsVariable = false;
-    //        sqlSegment.IsConstant = false;
-    //        return sqlSegment;
-    //    }
-    //    if (sqlSegment.IsConstant)
-    //    {
-    //        if (sqlSegment.ExpectType != sqlSegment.Expression.Type)
-    //            sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.MemberMapper, sqlSegment.Value);
-    //        sqlSegment.ExpectType = sqlSegment.TargetType;
-    //    }
-    //    return sqlSegment;
-    //}
     public virtual SqlSegment Merge(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue)
     {
         sqlSegment.IsConstant = sqlSegment.IsConstant && rightSegment.IsConstant;

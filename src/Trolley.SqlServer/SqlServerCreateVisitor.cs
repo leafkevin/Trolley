@@ -13,6 +13,10 @@ class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
     {
         if (this.isUseIgnore)
         {
+            if (this.tables[0].Mapper.IsAutoIncrement)
+                throw new NotSupportedException($"表{this.tables[0].Mapper.TableName}主键是自增长ID，无法使用Insert Ignore");
+
+
             //if (string.IsNullOrEmpty(this.whereSql))
             //    valuesBuilder.Append(" WHERE NOT EXISTS(" + this.whereSql);
         }

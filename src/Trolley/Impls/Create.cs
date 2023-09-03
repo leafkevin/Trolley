@@ -19,6 +19,7 @@ class Create<TEntity> : ICreate<TEntity>
     protected readonly IOrmProvider ormProvider;
     protected readonly IEntityMapProvider mapProvider;
     protected readonly bool isParameterized;
+    protected readonly ICreateVisitor visitor;
     #endregion
 
     #region Constructor
@@ -29,6 +30,8 @@ class Create<TEntity> : ICreate<TEntity>
         this.ormProvider = ormProvider;
         this.mapProvider = mapProvider;
         this.isParameterized = isParameterized;
+        var entityType = typeof(TEntity);
+        this.visitor = ormProvider.NewCreateVisitor(connection.DbKey, mapProvider, entityType, isParameterized);
     }
     #endregion
 
@@ -40,9 +43,8 @@ class Create<TEntity> : ICreate<TEntity>
         if (insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>)
             throw new NotSupportedException("只能插入单个实体，批量插入请使用WithBulk方法");
 
-        var entityType = typeof(TEntity);
-        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).WithBy(insertObj);
-        return new ContinuedCreate<TEntity>(this.connection, this.transaction, visitor);
+        this.visitor.WithBy(insertObj);
+        return new ContinuedCreate<TEntity>(this.connection, this.transaction, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -52,9 +54,8 @@ class Create<TEntity> : ICreate<TEntity>
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
 
-        var entityType = typeof(TEntity);
-        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).WithBulkFirst(insertObjs);
-        return new Created<TEntity>(this.connection, this.transaction, visitor).WithBulk(insertObjs, bulkCount);
+        this.visitor.WithBulkFirst(insertObjs);
+        return new Created<TEntity>(this.connection, this.transaction, this.mapProvider, this.visitor).WithBulk(insertObjs, bulkCount);
     }
     #endregion
 
@@ -64,45 +65,40 @@ class Create<TEntity> : ICreate<TEntity>
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
 
-        var entityType = typeof(TEntity);
-        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
-        return new ContinuedCreate<TEntity, TSource>(this.connection, this.transaction, visitor);
+        this.visitor.From(fieldSelector);
+        return new ContinuedCreate<TEntity, TSource>(this.connection, this.transaction, this.mapProvider, this.visitor);
     }
     public IContinuedCreate<TEntity, T1, T2> From<T1, T2>(Expression<Func<T1, T2, object>> fieldSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
 
-        var entityType = typeof(TEntity);
-        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
-        return new ContinuedCreate<TEntity, T1, T2>(this.connection, this.transaction, visitor);
+        this.visitor.From(fieldSelector);
+        return new ContinuedCreate<TEntity, T1, T2>(this.connection, this.transaction, this.mapProvider, this.visitor);
     }
     public IContinuedCreate<TEntity, T1, T2, T3> From<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> fieldSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
 
-        var entityType = typeof(TEntity);
-        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
-        return new ContinuedCreate<TEntity, T1, T2, T3>(this.connection, this.transaction, visitor);
+        this.visitor.From(fieldSelector);
+        return new ContinuedCreate<TEntity, T1, T2, T3>(this.connection, this.transaction, this.mapProvider, this.visitor);
     }
     public IContinuedCreate<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, object>> fieldSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
 
-        var entityType = typeof(TEntity);
-        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
-        return new ContinuedCreate<TEntity, T1, T2, T3, T4>(this.connection, this.transaction, visitor);
+        this.visitor.From(fieldSelector);
+        return new ContinuedCreate<TEntity, T1, T2, T3, T4>(this.connection, this.transaction, this.mapProvider, this.visitor);
     }
     public IContinuedCreate<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, object>> fieldSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
 
-        var entityType = typeof(TEntity);
-        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
-        return new ContinuedCreate<TEntity, T1, T2, T3, T4, T5>(this.connection, this.transaction, visitor);
+        this.visitor.From(fieldSelector);
+        return new ContinuedCreate<TEntity, T1, T2, T3, T4, T5>(this.connection, this.transaction, this.mapProvider, this.visitor);
     }
     #endregion
 }
@@ -119,12 +115,12 @@ class Created<TEntity> : ICreated<TEntity>
     #endregion
 
     #region Constructor
-    public Created(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
+    public Created(TheaConnection connection, IDbTransaction transaction, IEntityMapProvider mapProvider, ICreateVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
+        this.mapProvider = mapProvider;
         this.visitor = visitor;
-        this.mapProvider = visitor.MapProvider;
     }
     #endregion
 
@@ -306,8 +302,8 @@ class Created<TEntity> : ICreated<TEntity>
 class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEntity>
 {
     #region Constructor
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
-        : base(connection, transaction, visitor) { }
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, IEntityMapProvider mapProvider, ICreateVisitor visitor)
+        : base(connection, transaction, mapProvider, visitor) { }
     #endregion
 
     #region WithBy
@@ -340,8 +336,8 @@ class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEntity>
 class ContinuedCreate<TEntity, TSource> : Created<TEntity>, IContinuedCreate<TEntity, TSource>
 {
     #region Constructor
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
-        : base(connection, transaction, visitor) { }
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, IEntityMapProvider mapProvider, ICreateVisitor visitor)
+        : base(connection, transaction, mapProvider, visitor) { }
     #endregion
 
     #region Where/And
@@ -375,8 +371,8 @@ class ContinuedCreate<TEntity, TSource> : Created<TEntity>, IContinuedCreate<TEn
 class ContinuedCreate<TEntity, T1, T2> : Created<TEntity>, IContinuedCreate<TEntity, T1, T2>
 {
     #region Constructor
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
-        : base(connection, transaction, visitor) { }
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, IEntityMapProvider mapProvider, ICreateVisitor visitor)
+        : base(connection, transaction, mapProvider, visitor) { }
     #endregion
 
     #region Where/And
@@ -409,8 +405,8 @@ class ContinuedCreate<TEntity, T1, T2> : Created<TEntity>, IContinuedCreate<TEnt
 class ContinuedCreate<TEntity, T1, T2, T3> : Created<TEntity>, IContinuedCreate<TEntity, T1, T2, T3>
 {
     #region Constructor
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
-        : base(connection, transaction, visitor) { }
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, IEntityMapProvider mapProvider, ICreateVisitor visitor)
+        : base(connection, transaction, mapProvider, visitor) { }
     #endregion
 
     #region Where/And
@@ -443,8 +439,8 @@ class ContinuedCreate<TEntity, T1, T2, T3> : Created<TEntity>, IContinuedCreate<
 class ContinuedCreate<TEntity, T1, T2, T3, T4> : Created<TEntity>, IContinuedCreate<TEntity, T1, T2, T3, T4>
 {
     #region Constructor
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
-        : base(connection, transaction, visitor) { }
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, IEntityMapProvider mapProvider, ICreateVisitor visitor)
+        : base(connection, transaction, mapProvider, visitor) { }
     #endregion
 
     #region Where/And
@@ -477,8 +473,8 @@ class ContinuedCreate<TEntity, T1, T2, T3, T4> : Created<TEntity>, IContinuedCre
 class ContinuedCreate<TEntity, T1, T2, T3, T4, T5> : Created<TEntity>, IContinuedCreate<TEntity, T1, T2, T3, T4, T5>
 {
     #region Constructor
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, ICreateVisitor visitor)
-        : base(connection, transaction, visitor) { }
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, IEntityMapProvider mapProvider, ICreateVisitor visitor)
+        : base(connection, transaction, mapProvider, visitor) { }
     #endregion
 
     #region Where/And

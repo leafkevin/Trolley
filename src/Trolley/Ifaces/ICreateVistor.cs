@@ -7,12 +7,7 @@ namespace Trolley;
 
 public interface ICreateVisitor
 {
-    string DbKey { get; }
-    IEntityMapProvider MapProvider { get; }
-    IOrmProvider OrmProvider { get; }
-    bool IsParameterized { get; set; }
-    char TableAsStart { get; set; }
-    bool IsNeedAlias { get; set; }
+    bool IsBulk { get; set; }
 
     string BuildSql(out List<IDbDataParameter> dbParameters);
     string BuildHeadSql();

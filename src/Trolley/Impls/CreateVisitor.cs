@@ -14,10 +14,11 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     protected readonly List<InsertField> insertFields = new();
     protected bool isFrom = false;
     protected bool isUseIgnore;
-    protected bool isUseUpdate; 
+    protected bool isUseUpdate;
 
     public virtual bool IsSupportIgnore { get; }
     public virtual bool IsSupportUpdate { get; }
+    public virtual bool IsBulk { get; set; } = false;
 
     public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix)

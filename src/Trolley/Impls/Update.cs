@@ -14,11 +14,11 @@ namespace Trolley;
 class Update<TEntity> : IUpdate<TEntity>
 {
     #region Fields
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IOrmProvider ormProvider;
-    private readonly IEntityMapProvider mapProvider;
-    private readonly bool isParameterized;
+    protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
+    protected readonly IOrmProvider ormProvider;
+    protected readonly IEntityMapProvider mapProvider;
+    protected readonly bool isParameterized;
     #endregion
 
     #region Constructor
