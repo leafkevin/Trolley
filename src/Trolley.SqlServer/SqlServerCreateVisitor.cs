@@ -39,6 +39,8 @@ class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             builder.Append(')');
             return builder.ToString();
         }
+        if (!this.IsBulk && this.tables[0].Mapper.IsAutoIncrement)
+            return ";SELECT SCOPE_IDENTITY()";
         return string.Empty;
     }
 }

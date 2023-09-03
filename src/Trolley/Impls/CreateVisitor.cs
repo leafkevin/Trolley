@@ -70,7 +70,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         return fieldsBuilder.ToString();
     }
     public virtual string BuildHeadSql() => $"INSERT INTO";
-    public virtual string BuildTailSql() => string.Empty;
+    public virtual string BuildTailSql()
+    {
+        if (!this.IsBulk && this.tables[0].Mapper.IsAutoIncrement)
+            return ";SELECT LAST_INSERT_ID()";
+        return string.Empty;
+    }
     public virtual ICreateVisitor UseIgnore(object keysOrUniqueKeys = null)
     {
         this.ignoreKeysOrUniqueKeys = keysOrUniqueKeys;

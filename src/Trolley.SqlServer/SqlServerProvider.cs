@@ -12,7 +12,6 @@ public partial class SqlServerProvider : BaseOrmProvider
     private static Dictionary<Type, object> defaultDbTypes = new();
     private static Dictionary<Type, string> castTos = new();
 
-    public override string SelectIdentitySql => ";SELECT SCOPE_IDENTITY()";
     public override Type NativeDbTypeType => typeof(SqlDbType);
     static SqlServerProvider()
     {

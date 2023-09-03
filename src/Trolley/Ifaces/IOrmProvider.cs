@@ -11,7 +11,6 @@ public delegate SqlSegment MethodCallSqlFormatter(ISqlVisitor visitor, Expressio
 public interface IOrmProvider
 {
     string ParameterPrefix { get; }
-    string SelectIdentitySql { get; }
     Type NativeDbTypeType { get; }
     IDbConnection CreateConnection(string connectionString);
     IDbDataParameter CreateParameter(string parameterName, object value);
