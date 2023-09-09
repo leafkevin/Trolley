@@ -42,26 +42,10 @@ partial class SqlServerProvider
                             builder.Append(sqlArgument);
                         }
 
-                        int notIndex = 0;
-                        if (deferExprs != null && deferExprs.Count > 0)
-                        {
-                            while (deferExprs.TryPop(out var deferredExpr))
-                            {
-                                switch (deferredExpr.OperationType)
-                                {
-                                    case OperationType.Equal:
-                                        continue;
-                                    case OperationType.Not:
-                                        notIndex++;
-                                        break;
-                                }
-                            }
-                        }
-
-                        string notString = notIndex % 2 > 0 ? "NOT " : "";
                         if (builder.Length > 0)
                         {
                             var elementArgument = visitor.GetQuotedValue(elementSegment);
+                            var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
                             return visitor.Merge(elementSegment, arraySegment.ToParameter(visitor), $"{elementArgument} {notString}IN ({builder})", true, false);
                         }
                         else return visitor.Change(elementSegment, "1<>0", true, false);
@@ -92,26 +76,10 @@ partial class SqlServerProvider
                             builder.Append(sqlArgument);
                         }
 
-                        int notIndex = 0;
-                        if (deferExprs != null && deferExprs.Count > 0)
-                        {
-                            while (deferExprs.TryPop(out var deferredExpr))
-                            {
-                                switch (deferredExpr.OperationType)
-                                {
-                                    case OperationType.Equal:
-                                        continue;
-                                    case OperationType.Not:
-                                        notIndex++;
-                                        break;
-                                }
-                            }
-                        }
-
-                        string notString = notIndex % 2 > 0 ? "NOT " : "";
                         if (builder.Length > 0)
                         {
                             string elementArgument = visitor.GetQuotedValue(elementSegment);
+                            var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
                             return visitor.Merge(elementSegment, targetSegment.ToParameter(visitor), $"{elementArgument} {notString}IN ({builder})", true, false);
                         }
                         else return visitor.Change(elementSegment, "1<>0", true, false);

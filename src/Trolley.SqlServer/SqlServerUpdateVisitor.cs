@@ -11,19 +11,19 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
     public SqlServerUpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
         : base(dbKey, ormProvider, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix)
     {
-        this.tables[0].AliasName = this.OrmProvider.GetTableName(this.tables[0].Mapper.TableName);
+        this.Tables[0].AliasName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
     }
     public override string BuildSql(out List<IDbDataParameter> dbParameters)
     {
-        var entityTableName = this.OrmProvider.GetTableName(this.tables[0].Mapper.TableName);
+        var entityTableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
         var builder = new StringBuilder($"UPDATE {entityTableName} ");
-        var aliasName = this.tables[0].AliasName;
+        var aliasName = this.Tables[0].AliasName;
         int index = 0;
         bool hasWhere = false;
         builder.Append("SET ");
-        if (this.updateFields != null && this.updateFields.Count > 0)
+        if (this.UpdateFields != null && this.UpdateFields.Count > 0)
         {
-            foreach (var setField in this.updateFields)
+            foreach (var setField in this.UpdateFields)
             {
                 if (setField.Type == UpdateFieldType.Where)
                 {
@@ -45,12 +45,12 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
             }
         }
 
-        if (this.isFrom && this.tables.Count > 1)
+        if (this.IsFrom && this.Tables.Count > 1)
         {
             builder.Append(" FROM ");
-            for (var i = 1; i < this.tables.Count; i++)
+            for (var i = 1; i < this.Tables.Count; i++)
             {
-                var tableSegment = this.tables[i];
+                var tableSegment = this.Tables[i];
                 var tableName = tableSegment.Body;
                 if (string.IsNullOrEmpty(tableName))
                 {
@@ -60,12 +60,12 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                 builder.Append($"{tableName} {tableSegment.AliasName}");
             }
         }
-        if (!string.IsNullOrEmpty(this.whereSql) || hasWhere)
+        if (!string.IsNullOrEmpty(this.WhereSql) || hasWhere)
             builder.Append(" WHERE ");
         if (hasWhere)
         {
             index = 0;
-            foreach (var setField in this.updateFields)
+            foreach (var setField in this.UpdateFields)
             {
                 if (setField.Type != UpdateFieldType.Where)
                     continue;
@@ -75,14 +75,14 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                 index++;
             }
         }
-        if (!string.IsNullOrEmpty(this.whereSql))
+        if (!string.IsNullOrEmpty(this.WhereSql))
         {
             if (hasWhere)
                 builder.Append(" AND ");
-            builder.Append(this.whereSql);
+            builder.Append(this.WhereSql);
         }
 
-        dbParameters = this.dbParameters;
+        dbParameters = this.DbParameters;
         return builder.ToString();
     }
     public override IUpdateVisitor Join(string joinType, Type entityType, Expression joinOn)

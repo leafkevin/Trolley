@@ -8,57 +8,59 @@ namespace Trolley;
 
 public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 {
-    protected readonly TableSegment tableSegment;
 
     public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix)
     {
-        this.tableSegment = new TableSegment
+        this.Tables = new()
         {
-            EntityType = entityType,
-            Mapper = this.MapProvider.GetEntityMap(entityType)
+            new TableSegment
+            {
+                EntityType = entityType,
+                Mapper = this.MapProvider.GetEntityMap(entityType)
+            }
         };
-        this.dbParameters = new();
+        this.DbParameters = new();
     }
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
-        var entityMapper = this.tableSegment.Mapper;
+        var entityMapper = this.Tables[0].Mapper;
         var entityTableName = this.OrmProvider.GetTableName(entityMapper.TableName);
         var builder = new StringBuilder($"DELETE FROM {entityTableName}");
 
-        if (!string.IsNullOrEmpty(this.whereSql))
-            builder.Append(" WHERE " + this.whereSql);
-        dbParameters = this.dbParameters;
+        if (!string.IsNullOrEmpty(this.WhereSql))
+            builder.Append(" WHERE " + this.WhereSql);
+        dbParameters = this.DbParameters;
         return builder.ToString();
     }
     public virtual IDeleteVisitor Where(Expression whereExpr)
     {
-        this.isWhere = true;
+        this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
-        this.lastWhereNodeType = OperationType.None;
-        this.whereSql = this.VisitConditionExpr(lambdaExpr.Body);
-        this.isWhere = false;
+        this.LastWhereNodeType = OperationType.None;
+        this.WhereSql = this.VisitConditionExpr(lambdaExpr.Body);
+        this.IsWhere = false;
         return this;
     }
     public virtual IDeleteVisitor And(Expression whereExpr)
     {
-        this.isWhere = true;
+        this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
-        if (this.lastWhereNodeType == OperationType.Or)
+        if (this.LastWhereNodeType == OperationType.Or)
         {
-            this.whereSql = $"({this.whereSql})";
-            this.lastWhereNodeType = OperationType.And;
+            this.WhereSql = $"({this.WhereSql})";
+            this.LastWhereNodeType = OperationType.And;
         }
         var conditionSql = this.VisitConditionExpr(lambdaExpr.Body);
-        if (this.lastWhereNodeType == OperationType.Or)
+        if (this.LastWhereNodeType == OperationType.Or)
         {
             conditionSql = $"({conditionSql})";
-            this.lastWhereNodeType = OperationType.And;
+            this.LastWhereNodeType = OperationType.And;
         }
-        if (!string.IsNullOrEmpty(this.whereSql))
-            this.whereSql += " AND " + conditionSql;
-        else this.whereSql = conditionSql;
-        this.isWhere = false;
+        if (!string.IsNullOrEmpty(this.WhereSql))
+            this.WhereSql += " AND " + conditionSql;
+        else this.WhereSql = conditionSql;
+        this.IsWhere = false;
         return this;
     }
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
@@ -105,29 +107,24 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 //GroupBy(f=>f.Order.OrderId)
                 //OrderBy(f=>new {f.Order.OrderId, ...})
                 //OrderBy(f=>f.Order.OrderId)                
-                var memberMapper = this.tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
-
+                var memberMapper = this.Tables[0].Mapper.GetMemberMap(memberExpr.Member.Name);
                 if (memberMapper.IsIgnore)
-                    throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
+                    throw new Exception($"类{this.Tables[0].EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
                 if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
-                    throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
+                    throw new Exception($"类{this.Tables[0].EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
 
                 //.NET枚举类型总是解析成对应的UnderlyingType数值类型，如：a.Gender ?? Gender.Male == Gender.Male
                 //如果枚举类型对应的数据库类型是字符串就会有问题，需要把数字变为枚举，再把枚举的名字字符串完成后续操作。
-                if (memberMapper.MemberType.IsEnumType(out var expectType, out _))
+                if (memberMapper.MemberType.IsEnumType(out var expectType, out _) && memberMapper.DbDefaultType == typeof(string))
                 {
-                    var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
-                    if (targetType == typeof(string))
-                    {
-                        sqlSegment.ExpectType = expectType;
-                        sqlSegment.TargetType = targetType;
-                    }
+                    sqlSegment.ExpectType = expectType;
+                    sqlSegment.TargetType = memberMapper.DbDefaultType;
                 }
 
                 var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                 sqlSegment.HasField = true;
                 sqlSegment.IsConstant = false;
-                sqlSegment.TableSegment = tableSegment;
+                sqlSegment.TableSegment = this.Tables[0];
                 sqlSegment.FromMember = memberMapper.Member;
                 sqlSegment.MemberMapper = memberMapper;
                 sqlSegment.Value = fieldName;
@@ -152,8 +149,6 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         //这里不做参数化，后面统一走参数化处理
         sqlSegment.IsConstant = false;
         sqlSegment.IsVariable = true;
-        sqlSegment.IsExpression = false;
-        sqlSegment.IsMethodCall = false;
         return sqlSegment;
     }
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
@@ -162,7 +157,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         if (newExpr.Type.Name.StartsWith("<>"))
         {
             var builder = new StringBuilder();
-            var entityMapper = this.tableSegment.Mapper;
+            var entityMapper = this.Tables[0].Mapper;
             for (int i = 0; i < newExpr.Arguments.Count; i++)
             {
                 var memberInfo = newExpr.Members[i];
@@ -178,7 +173,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     {
         var memberInitExpr = sqlSegment.Expression as MemberInitExpression;
         var builder = new StringBuilder();
-        var entityMapper = this.tableSegment.Mapper;
+        var entityMapper = this.Tables[0].Mapper;
         for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
         {
             if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)

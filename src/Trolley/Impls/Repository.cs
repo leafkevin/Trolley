@@ -491,6 +491,18 @@ public class Repository : IRepository
         if (isMulti) return await this.Create<TEntity>().WithBulk(insertObjs as IEnumerable, bulkCount).ExecuteAsync(cancellationToken);
         else return await this.Create<TEntity>().WithBy(insertObjs).ExecuteAsync(cancellationToken);
     }
+    public long CreateLong<TEntity>(object insertObjs, int bulkCount = 500)
+    {
+        bool isMulti = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
+        if (isMulti) return this.Create<TEntity>().WithBulk(insertObjs as IEnumerable, bulkCount).ExecuteLong();
+        else return this.Create<TEntity>().WithBy(insertObjs).ExecuteLong();
+    }
+    public async Task<long> CreateLongAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
+    {
+        bool isMulti = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
+        if (isMulti) return await this.Create<TEntity>().WithBulk(insertObjs as IEnumerable, bulkCount).ExecuteLongAsync(cancellationToken);
+        else return await this.Create<TEntity>().WithBy(insertObjs).ExecuteLongAsync(cancellationToken);
+    }
     #endregion
 
     #region Update
@@ -914,6 +926,7 @@ public class Repository : IRepository
         this.Transaction?.Dispose();
         this.connection?.Dispose();
         this.Transaction = null;
+        GC.SuppressFinalize(this);
     }
     public async ValueTask DisposeAsync()
     {
@@ -921,6 +934,8 @@ public class Repository : IRepository
             await dbTransaction.DisposeAsync();
         await this.connection?.DisposeAsync();
         this.Transaction = null;
+        GC.SuppressFinalize(this);
     }
+    ~Repository() => this.Dispose();
     #endregion
 }

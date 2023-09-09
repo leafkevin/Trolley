@@ -59,6 +59,17 @@ class Create<TEntity> : ICreate<TEntity>
     }
     #endregion
 
+    #region Select
+    public IContinuedCreate<TEntity> Select<TInsertObject>(TInsertObject insertObjs)
+    {
+        if (insertObjs == null)
+            throw new ArgumentNullException(nameof(insertObjs));
+
+        this.visitor.WithBy(insertObjs);
+        return new ContinuedCreate<TEntity>(this.connection, this.transaction, this.mapProvider, this.visitor);
+    }
+    #endregion
+
     #region From
     public IContinuedCreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector)
     {
@@ -125,9 +136,9 @@ class Created<TEntity> : ICreated<TEntity>
     #endregion
 
     #region UseIgnore
-    public ICreated<TEntity> UseIgnore(object keysOrUniqueKeys = null)
+    public ICreated<TEntity> UseIgnore()
     {
-        this.visitor.UseIgnore(keysOrUniqueKeys);
+        this.visitor.UseIgnore();
         return this;
     }
     #endregion
@@ -145,7 +156,7 @@ class Created<TEntity> : ICreated<TEntity>
     }
     #endregion
 
-    #region Execute
+    #region Execute   
     public int Execute()
     {
         int result = 0;
@@ -196,10 +207,8 @@ class Created<TEntity> : ICreated<TEntity>
                 using var reader = command.ExecuteReader();
                 if (reader.Read()) result = reader.To<int>();
                 reader.Dispose();
-                command.Dispose();
-                return result;
             }
-            result = command.ExecuteNonQuery();
+            else result = command.ExecuteNonQuery();
         }
         command.Dispose();
         return result;
@@ -258,11 +267,123 @@ class Created<TEntity> : ICreated<TEntity>
                 if (await reader.ReadAsync(cancellationToken))
                     result = reader.To<int>();
                 await reader.DisposeAsync();
-                await command.DisposeAsync();
-                return result;
             }
-            result = await command.ExecuteNonQueryAsync(cancellationToken);
-            await command.DisposeAsync();
+            else result = await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        await command.DisposeAsync();
+        return result;
+    }
+    public long ExecuteLong()
+    {
+        long result = 0;
+        using var command = this.connection.CreateCommand();
+        command.CommandType = CommandType.Text;
+        command.Transaction = this.transaction;
+        if (this.isBulk)
+        {
+            int index = 0;
+            this.bulkCount ??= 500;
+            var sqlBuilder = new StringBuilder();
+            this.visitor.WithBulkFirst(this.parameters);
+
+            foreach (var entity in this.parameters)
+            {
+                this.visitor.WithBulk(command, sqlBuilder, index, entity);
+                if (index >= this.bulkCount)
+                {
+                    command.CommandText = sqlBuilder.ToString();
+                    this.connection.Open();
+                    result += command.ExecuteNonQuery();
+                    command.Parameters.Clear();
+                    sqlBuilder.Clear();
+                    index = 0;
+                    continue;
+                }
+                index++;
+            }
+            if (index > 0)
+            {
+                command.CommandText = sqlBuilder.ToString();
+                this.connection.Open();
+                result += command.ExecuteNonQuery();
+            }
+        }
+        else
+        {
+            var sql = this.visitor.BuildSql(out var dbParameters);
+            command.CommandText = sql;
+            if (dbParameters != null && dbParameters.Count > 0)
+                dbParameters.ForEach(f => command.Parameters.Add(f));
+
+            var entityType = typeof(TEntity);
+            var entityMapper = this.mapProvider.GetEntityMap(entityType);
+            if (entityMapper.IsAutoIncrement)
+            {
+                using var reader = command.ExecuteReader();
+                if (reader.Read()) result = reader.To<long>();
+                reader.Dispose();
+            }
+            else result = command.ExecuteNonQuery();
+        }
+        command.Dispose();
+        return result;
+    }
+    public async Task<long> ExecuteLongAsync(CancellationToken cancellationToken = default)
+    {
+        long result = 0;
+        using var cmd = this.connection.CreateCommand();
+        cmd.CommandType = CommandType.Text;
+        cmd.Transaction = this.transaction;
+        if (cmd is not DbCommand command)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+
+        if (this.isBulk)
+        {
+            int index = 0;
+            this.bulkCount ??= 500;
+            var sqlBuilder = new StringBuilder();
+            this.visitor.WithBulkFirst(this.parameters);
+
+            foreach (var entity in this.parameters)
+            {
+                this.visitor.WithBulk(cmd, sqlBuilder, index, entity);
+                if (index >= this.bulkCount)
+                {
+                    command.CommandText = sqlBuilder.ToString();
+                    await this.connection.OpenAsync(cancellationToken);
+                    result += await command.ExecuteNonQueryAsync(cancellationToken);
+                    command.Parameters.Clear();
+                    sqlBuilder.Clear();
+                    index = 0;
+                    continue;
+                }
+                index++;
+            }
+            if (index > 0)
+            {
+                command.CommandText = sqlBuilder.ToString();
+                await this.connection.OpenAsync(cancellationToken);
+                result += await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            var sql = this.visitor.BuildSql(out var dbParameters);
+            cmd.CommandText = sql;
+            if (dbParameters != null && dbParameters.Count > 0)
+                dbParameters.ForEach(f => command.Parameters.Add(f));
+
+            var entityType = typeof(TEntity);
+            var entityMapper = this.mapProvider.GetEntityMap(entityType);
+            await this.connection.OpenAsync(cancellationToken);
+            if (entityMapper.IsAutoIncrement)
+            {
+                using var reader = await command.ExecuteReaderAsync(cancellationToken);
+                if (await reader.ReadAsync(cancellationToken))
+                    result = reader.To<int>();
+                await reader.DisposeAsync();
+            }
+            else result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         await command.DisposeAsync();
         return result;
@@ -341,6 +462,14 @@ class ContinuedCreate<TEntity, TSource> : Created<TEntity>, IContinuedCreate<TEn
     #endregion
 
     #region Where/And
+    //public IContinuedCreate<TEntity, TSource> Where<TFields>(TFields whereObj)
+    //{
+    //    if (whereObj == null)
+    //        throw new ArgumentNullException(nameof(whereObj));
+    //    this.visitor.WhereWith(whereObj);
+    //    this.hasWhere = true;
+    //    return this;
+    //}
     public IContinuedCreate<TEntity, TSource> Where(Expression<Func<TSource, bool>> predicate)
         => this.Where(true, predicate);
     public IContinuedCreate<TEntity, TSource> Where(bool condition, Expression<Func<TSource, bool>> ifPredicate, Expression<Func<TSource, bool>> elsePredicate = null)

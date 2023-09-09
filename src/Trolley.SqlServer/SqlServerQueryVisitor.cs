@@ -9,15 +9,15 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
 {
     public SqlServerQueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
       : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix) { }
-    public override IQueryVisitor WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null)
+    public override void WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null)
     {
         var withTable = cteTableName;
         var builder = new StringBuilder();
-        if (string.IsNullOrEmpty(this.cteTableSql))
+        if (string.IsNullOrEmpty(this.CteTableSql))
             builder.Append($"WITH {withTable}(");
         else
         {
-            builder.Append(this.cteTableSql);
+            builder.Append(this.CteTableSql);
             builder.AppendLine(",");
             builder.Append($"{withTable}(");
         }
@@ -34,18 +34,13 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         builder.AppendLine("(");
         builder.AppendLine(rawSql);
         builder.Append(')');
-        this.cteTableSql = builder.ToString();
+        this.CteTableSql = builder.ToString();
 
         var tableSegment = this.AddTable(entityType, string.Empty, TableType.FromQuery, cteTableName, readerFields);
         this.InitFromQueryReaderFields(tableSegment, readerFields);
-        if (dbParameters != null)
-        {
-            if (this.dbParameters == null)
-                this.dbParameters = dbParameters;
-            else this.dbParameters.AddRange(dbParameters);
-        }
+        if (dbParameters != null && dbParameters.Count > 0)
+            this.DbParameters.AddRange(dbParameters);
         //清掉构建CTE表时Union产生的sql
-        this.sql = null;
-        return this;
+        this.Sql = null;
     }
 }

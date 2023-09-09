@@ -381,22 +381,7 @@ partial class MySqlProvider
                             var leftArgument = this.GetQuotedValue(leftSegment);
                             var rightArgument = this.GetQuotedValue(rightSegment);
 
-                            int notIndex = 0;
-                            if (deferExprs != null && deferExprs.Count > 0)
-                            {
-                                while (deferExprs.TryPop(out var deferredExpr))
-                                {
-                                    switch (deferredExpr.OperationType)
-                                    {
-                                        case OperationType.Equal:
-                                            continue;
-                                        case OperationType.Not:
-                                            notIndex++;
-                                            break;
-                                    }
-                                }
-                            }
-                            string equalsString = notIndex % 2 > 0 ? "<>" : "=";
+                            string equalsString = deferExprs.IsDeferredNot() ? "<>" : "=";
                             return visitor.Merge(leftSegment, rightSegment, $"{leftArgument}{equalsString}{rightArgument}", true, false);
                         });
                         result = true;
@@ -425,23 +410,8 @@ partial class MySqlProvider
                                 rightArgument = $"'%{rightSegment}%'";
                             else rightArgument = $"CONCAT('%',{visitor.GetQuotedValue(rightSegment)},'%')";
 
-                            int notIndex = 0;
-                            if (deferExprs != null && deferExprs.Count > 0)
-                            {
-                                while (deferExprs.TryPop(out var deferredExpr))
-                                {
-                                    switch (deferredExpr.OperationType)
-                                    {
-                                        case OperationType.Equal:
-                                            continue;
-                                        case OperationType.Not:
-                                            notIndex++;
-                                            break;
-                                    }
-                                }
-                            }
-                            string notString = notIndex % 2 > 0 ? " NOT" : "";
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
                             return visitor.Merge(targetSegment, rightSegment, $"{targetArgument}{notString} LIKE {rightArgument}", true, false);
                         });
                         result = true;
@@ -657,22 +627,7 @@ partial class MySqlProvider
                         var targetArgument = this.GetQuotedValue(targetSegment);
                         var rightArgument = this.GetQuotedValue(rightSegment);
 
-                        int notIndex = 0;
-                        if (deferExprs != null && deferExprs.Count > 0)
-                        {
-                            while (deferExprs.TryPop(out var deferredExpr))
-                            {
-                                switch (deferredExpr.OperationType)
-                                {
-                                    case OperationType.Equal:
-                                        continue;
-                                    case OperationType.Not:
-                                        notIndex++;
-                                        break;
-                                }
-                            }
-                        }
-                        string equalsString = notIndex % 2 > 0 ? "<>" : "=";
+                        var equalsString = deferExprs.IsDeferredNot() ? "<>" : "=";
                         return visitor.Merge(targetSegment, rightSegment, $"{targetArgument}{equalsString}{rightArgument}", true, false);
                     });
                     result = true;
@@ -690,23 +645,8 @@ partial class MySqlProvider
                             if (rightSegment.IsConstant)
                                 rightArgument = $"'{rightSegment}%'";
                             else rightArgument = $"CONCAT({visitor.GetQuotedValue(rightSegment)},'%')";
-                            int notIndex = 0;
 
-                            if (deferExprs != null && deferExprs.Count > 0)
-                            {
-                                while (deferExprs.TryPop(out var deferredExpr))
-                                {
-                                    switch (deferredExpr.OperationType)
-                                    {
-                                        case OperationType.Equal:
-                                            continue;
-                                        case OperationType.Not:
-                                            notIndex++;
-                                            break;
-                                    }
-                                }
-                            }
-                            string notString = notIndex % 2 > 0 ? " NOT" : "";
+                            var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
                             return visitor.Merge(targetSegment, rightSegment.ToParameter(visitor), $"{targetArgument}{notString} LIKE {rightArgument}", false, true);
                         });
                         result = true;
@@ -725,23 +665,8 @@ partial class MySqlProvider
                             if (rightSegment.IsConstant)
                                 rightArgument = $"'%{rightSegment}'";
                             else rightArgument = $"CONCAT('%',{visitor.GetQuotedValue(rightSegment)})";
-                            int notIndex = 0;
 
-                            if (deferExprs != null && deferExprs.Count > 0)
-                            {
-                                while (deferExprs.TryPop(out var deferredExpr))
-                                {
-                                    switch (deferredExpr.OperationType)
-                                    {
-                                        case OperationType.Equal:
-                                            continue;
-                                        case OperationType.Not:
-                                            notIndex++;
-                                            break;
-                                    }
-                                }
-                            }
-                            string notString = notIndex % 2 > 0 ? " NOT" : "";
+                            var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
                             return visitor.Merge(targetSegment, rightSegment.ToParameter(visitor), $"{targetSegment}{notString} LIKE {rightArgument}", true, false);
                         });
                         result = true;

@@ -82,8 +82,8 @@ class Update<TEntity> : IUpdate<TEntity>
             throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
-        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberAccess && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持MemberAccess、New、MemberInit三种类型表达式");
+        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持New、MemberInit三种类型表达式");
 
         var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
         if (condition) visitor.SetWith(fieldsSelectorOrAssignment, updateObj);
@@ -432,8 +432,8 @@ class UpdateSetting<TEntity> : UpdateBase, IUpdateSetting<TEntity>
             throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
-        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberAccess && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持MemberAccess、New、MemberInit三种类型表达式");
+        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持New、MemberInit三种类型表达式");
 
         if (condition) this.visitor.SetWith(fieldsSelectorOrAssignment, updateObj);
         return this;
@@ -559,8 +559,8 @@ class UpdateFrom<TEntity, T1> : UpdateBase, IUpdateFrom<TEntity, T1>
             throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
-        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberAccess && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持MemberAccess、New、MemberInit三种类型表达式");
+        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持New、MemberInit三种类型表达式");
 
         if (condition) this.visitor.SetWith(fieldsSelectorOrAssignment, updateObj);
         return this;
@@ -680,8 +680,8 @@ class UpdateFrom<TEntity, T1, T2> : UpdateBase, IUpdateFrom<TEntity, T1, T2>
             throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
-        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberAccess && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持MemberAccess、New、MemberInit三种类型表达式");
+        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持New、MemberInit三种类型表达式");
 
         if (condition) this.visitor.SetWith(fieldsSelectorOrAssignment, updateObj);
         return this;
@@ -801,8 +801,8 @@ class UpdateFrom<TEntity, T1, T2, T3> : UpdateBase, IUpdateFrom<TEntity, T1, T2,
             throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
-        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberAccess && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持MemberAccess、New、MemberInit三种类型表达式");
+        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持New、MemberInit三种类型表达式");
 
         if (condition) this.visitor.SetWith(fieldsSelectorOrAssignment, updateObj);
         return this;
@@ -922,8 +922,8 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateFrom<TEntity, T1,
             throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
-        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberAccess && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持MemberAccess、New、MemberInit三种类型表达式");
+        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持New、MemberInit三种类型表达式");
 
         if (condition) this.visitor.SetWith(fieldsSelectorOrAssignment, updateObj);
         return this;
@@ -1043,8 +1043,8 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateFrom<TEntity,
             throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
-        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberAccess && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持MemberAccess、New、MemberInit三种类型表达式");
+        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持New、MemberInit三种类型表达式");
 
         if (condition) this.visitor.SetWith(fieldsSelectorOrAssignment, updateObj);
         return this;
@@ -1183,8 +1183,8 @@ class UpdateJoin<TEntity, T1> : UpdateBase, IUpdateJoin<TEntity, T1>
             throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
-        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberAccess && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持MemberAccess、New、MemberInit三种类型表达式");
+        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持New、MemberInit三种类型表达式");
 
         if (condition) this.visitor.SetWith(fieldsSelectorOrAssignment, updateObj);
         return this;
@@ -1323,8 +1323,8 @@ class UpdateJoin<TEntity, T1, T2> : UpdateBase, IUpdateJoin<TEntity, T1, T2>
             throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
-        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberAccess && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持MemberAccess、New、MemberInit三种类型表达式");
+        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持New、MemberInit三种类型表达式");
 
         if (condition) this.visitor.SetWith(fieldsSelectorOrAssignment, updateObj);
         return this;
@@ -1463,8 +1463,8 @@ class UpdateJoin<TEntity, T1, T2, T3> : UpdateBase, IUpdateJoin<TEntity, T1, T2,
             throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
-        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberAccess && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持MemberAccess、New、MemberInit三种类型表达式");
+        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持New、MemberInit三种类型表达式");
 
         if (condition) this.visitor.SetWith(fieldsSelectorOrAssignment, updateObj);
         return this;
@@ -1603,8 +1603,8 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : UpdateBase, IUpdateJoin<TEntity, T1,
             throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
-        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberAccess && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持MemberAccess、New、MemberInit三种类型表达式");
+        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持New、MemberInit三种类型表达式");
 
         if (condition) this.visitor.SetWith(fieldsSelectorOrAssignment, updateObj);
         return this;
@@ -1724,8 +1724,8 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : UpdateBase, IUpdateJoin<TEntity,
             throw new ArgumentNullException(nameof(fieldsSelectorOrAssignment));
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
-        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberAccess && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持MemberAccess、New、MemberInit三种类型表达式");
+        if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持New、MemberInit三种类型表达式");
 
         if (condition) this.visitor.SetWith(fieldsSelectorOrAssignment, updateObj);
         return this;

@@ -472,7 +472,7 @@ public class RepositoryHelper
                         insertBuilder.Append(',');
                         valuesBuilder.Append(',');
                     }
-                    var parameterName = visitor.OrmProvider.ParameterPrefix + item.Key;
+                    var parameterName = visitor.OrmProvider.ParameterPrefix + propMapper.MemberName;
                     insertBuilder.Append(visitor.OrmProvider.GetFieldName(propMapper.FieldName));
                     valuesBuilder.Append(parameterName);
                     dbParameters.Add(visitor.OrmProvider.CreateParameter(propMapper, parameterName, item.Value));
@@ -524,18 +524,18 @@ public class RepositoryHelper
                         blockBodies.Add(Expression.Call(fieldsBuilderExpr, methodInfo1, Expression.Constant(',')));
                         blockBodies.Add(Expression.Call(valueBuilderExpr, methodInfo1, Expression.Constant(',')));
                     }
-                    var fieldName = sqlVisitor.OrmProvider.GetFieldName(propMapper.FieldName);
-                    var parameterName = sqlVisitor.OrmProvider.ParameterPrefix + propMapper.MemberName;
-                    var parameterNameExpr = Expression.Constant(parameterName);
-                    blockBodies.Add(Expression.Call(fieldsBuilderExpr, methodInfo2, Expression.Constant(fieldName)));
-                    blockBodies.Add(Expression.Call(valueBuilderExpr, methodInfo2, parameterNameExpr));
 
+                    var fieldName = sqlVisitor.OrmProvider.GetFieldName(propMapper.FieldName);
+                    blockBodies.Add(Expression.Call(fieldsBuilderExpr, methodInfo2, Expression.Constant(fieldName)));
+
+                    var parameterNameExpr = Expression.Constant(sqlVisitor.OrmProvider.ParameterPrefix + propMapper.MemberName);
                     Expression fieldValueExpr = Expression.PropertyOrField(typedParameterExpr, propMapper.MemberName);
                     if (fieldValueExpr.Type != typeof(object))
                         fieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
+
                     var memberMapperExpr = Expression.Constant(propMapper);
-                    var dbParameterExpr = Expression.Call(methodInfo4, ormProviderExpr, memberMapperExpr, parameterNameExpr, fieldValueExpr);
-                    blockBodies.Add(Expression.Call(dbParametersExpr, methodInfo3, dbParameterExpr));
+                    blockBodies.Add(Expression.Call(methodInfo4, memberMapperExpr, parameterNameExpr, fieldValueExpr));
+                    blockBodies.Add(Expression.Call(valueBuilderExpr, methodInfo2, parameterNameExpr));
                     columnIndex++;
                 }
                 commandInitializer = Expression.Lambda<Action<ISqlVisitor, List<IDbDataParameter>, object, StringBuilder, StringBuilder>>(
@@ -670,6 +670,106 @@ public class RepositoryHelper
         }
         return commandInitializer;
     }
+    //public static Action<ISqlVisitor, List<InsertField>, List<IDbDataParameter>, object> BuildCreateWhereWithCommandInitializer(ISqlVisitor sqlVisitor, Type entityType, object whereObj, bool isOnlyKeys)
+    //{
+    //    Action<ISqlVisitor, List<InsertField>, List<IDbDataParameter>, object> whereInitializer = null;
+    //    if (whereObj is IDictionary<string, object> dict)
+    //    {
+    //        Action<ISqlVisitor, List<InsertField>, List<IDbDataParameter>, IDictionary<string, object>> dictWhereInitializer = null;
+    //        var entityMapper = sqlVisitor.MapProvider.GetEntityMap(entityType);
+    //        if (isOnlyKeys)
+    //        {
+    //            dictWhereInitializer = (visitor, whereFields, dbParameters, dict) =>
+    //            {
+    //                foreach (var keyMapper in entityMapper.KeyMembers)
+    //                {
+    //                    if (!dict.TryGetValue(keyMapper.MemberName, out var fieldValue))
+    //                        throw new ArgumentNullException("whereObj", $"字典参数中缺少主键字段{keyMapper.MemberName}");
+
+    //                    var parameterName = $"{visitor.OrmProvider.ParameterPrefix}k{keyMapper.MemberName}";
+    //                    var dbParameter = visitor.OrmProvider.CreateParameter(keyMapper, parameterName, fieldValue);
+    //                    whereFields.Add(new InsertField { Fields = visitor.OrmProvider.GetFieldName(keyMapper.FieldName), Values = parameterName });
+    //                    dbParameters.Add(dbParameter);
+    //                }
+    //            };
+    //        }
+    //        else
+    //        {
+    //            dictWhereInitializer = (visitor, whereFields, dbParameters, dict) =>
+    //            {
+    //                foreach (var item in dict)
+    //                {
+    //                    if (!entityMapper.TryGetMemberMap(item.Key, out var memberMapper)
+    //                        || memberMapper.IsIgnore || memberMapper.IsNavigation
+    //                        || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+    //                        continue;
+
+    //                    var parameterName = $"{visitor.OrmProvider.ParameterPrefix}k{memberMapper.MemberName}";
+    //                    var dbParameter = visitor.OrmProvider.CreateParameter(memberMapper, parameterName, item.Value);
+    //                    whereFields.Add(new InsertField { Fields = visitor.OrmProvider.GetFieldName(memberMapper.FieldName), Values = parameterName });
+    //                    dbParameters.Add(dbParameter);
+    //                }
+    //            };
+    //        }
+    //        whereInitializer = (visitor, whereFields, dbParameters, parameters)
+    //            => dictWhereInitializer.Invoke(visitor, whereFields, dbParameters, dict);
+    //    }
+    //    else
+    //    {
+    //        var parameterType = whereObj.GetType();
+    //        var cacheKey = HashCode.Combine(sqlVisitor.DbKey, sqlVisitor.OrmProvider, sqlVisitor.MapProvider, entityType, parameterType);
+    //        if (!updateWhereWithCache.TryGetValue(cacheKey, out whereInitializer))
+    //        {
+    //            var entityMapper = sqlVisitor.MapProvider.GetEntityMap(entityType);
+    //            var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+    //                .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+    //            var visitorExpr = Expression.Parameter(typeof(ISqlVisitor), "visitor");
+    //            var whereFieldsExpr = Expression.Parameter(typeof(List<InsertField>), "whereFields");
+    //            var dbParametersExpr = Expression.Parameter(typeof(List<IDbDataParameter>), "dbParameters");
+    //            var parameterExpr = Expression.Parameter(typeof(object), "parameter");
+
+    //            var typedParameterExpr = Expression.Variable(parameterType, "typedParameter");
+    //            var blockParameters = new List<ParameterExpression>();
+    //            var blockBodies = new List<Expression>();
+
+    //            blockParameters.Add(typedParameterExpr);
+    //            blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
+    //            var ormProviderExpr = Expression.Property(visitorExpr, nameof(ISqlVisitor.OrmProvider));
+
+    //            var whereMemberMappers = isOnlyKeys ? entityMapper.KeyMembers : entityMapper.MemberMaps;
+    //            foreach (var memberMapper in whereMemberMappers)
+    //            {
+    //                if (!memberInfos.Exists(f => f.Name == memberMapper.MemberName))
+    //                {
+    //                    if (isOnlyKeys) throw new ArgumentNullException("whereObj", $"当前参数whereObj中缺少主键字段{memberMapper.MemberName}");
+    //                    else continue;
+    //                }
+    //                if (memberMapper.IsIgnore || memberMapper.IsNavigation
+    //                    || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+    //                    continue;
+
+    //                var parameterName = $"{sqlVisitor.OrmProvider.ParameterPrefix}k{memberMapper.MemberName}";
+    //                Expression fieldValueExpr = Expression.PropertyOrField(typedParameterExpr, memberMapper.MemberName);
+    //                if (fieldValueExpr.Type != typeof(object))
+    //                    fieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
+    //                var memberMapperExpr = Expression.Constant(memberMapper);
+    //                var parameterNameExpr = Expression.Constant(parameterName);
+    //                var methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.CreateParameter));
+
+    //                var dbParameterExpr = Expression.Call(methodInfo, ormProviderExpr, memberMapperExpr, parameterNameExpr, fieldValueExpr);
+    //                methodInfo = typeof(List<IDbDataParameter>).GetMethod(nameof(List<IDbDataParameter>.Add));
+    //                blockBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
+
+    //                methodInfo = typeof(List<UpdateField>).GetMethod(nameof(List<UpdateField>.Add));
+    //                var whereField = new UpdateField { Type = UpdateFieldType.Where, MemberMapper = memberMapper, Value = parameterName };
+    //                blockBodies.Add(Expression.Call(whereFieldsExpr, methodInfo, Expression.Constant(whereField)));
+    //            }
+    //            whereInitializer = Expression.Lambda<Action<ISqlVisitor, List<UpdateField>, List<IDbDataParameter>, object>>(Expression.Block(blockParameters, blockBodies), visitorExpr, whereFieldsExpr, dbParametersExpr, parameterExpr).Compile();
+    //            updateWhereWithCache.TryAdd(cacheKey, whereInitializer);
+    //        }
+    //    }
+    //    return whereInitializer;
+    //}
 
     public static Func<IDbCommand, IOrmProvider, IEntityMapProvider, object, string> BuildUpdateEntitySqlParameters(IDbConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object updateObj)
     {
@@ -823,15 +923,13 @@ public class RepositoryHelper
                     {
                         var parameterName = $"{ormProvider.ParameterPrefix}k{item.Key}{index}";
                         whereBuilder.Append($"{ormProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
-                        var dbParameter = ormProvider.CreateParameter(memberMapper, parameterName, dict[item.Key]);
-                        keyDbParameters.Add(dbParameter);
+                        keyDbParameters.Add(ormProvider.CreateParameter(memberMapper, parameterName, dict[item.Key]));
                     }
                     else
                     {
                         var parameterName = $"{ormProvider.ParameterPrefix}{item.Key}{index}";
                         builder.Append($"{ormProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
-                        var dbParameter = ormProvider.CreateParameter(memberMapper, parameterName, dict[item.Key]);
-                        command.Parameters.Add(dbParameter);
+                        command.Parameters.Add(ormProvider.CreateParameter(memberMapper, parameterName, dict[item.Key]));
                     }
                 }
                 builder.Append(whereBuilder);
@@ -964,8 +1062,7 @@ public class RepositoryHelper
 
                         var parameterName = $"{visitor.OrmProvider.ParameterPrefix}{item.Key}";
                         setFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
-                        var dbParameter = visitor.OrmProvider.CreateParameter(memberMapper, parameterName, dict[item.Key]);
-                        dbParameters.Add(dbParameter);
+                        dbParameters.Add(visitor.OrmProvider.CreateParameter(memberMapper, parameterName, dict[item.Key]));
                     }
                 };
             }
@@ -983,8 +1080,7 @@ public class RepositoryHelper
 
                         var parameterName = $"{visitor.OrmProvider.ParameterPrefix}{item.Key}";
                         setFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
-                        var dbParameter = visitor.OrmProvider.CreateParameter(memberMapper, parameterName, dict[item.Key]);
-                        dbParameters.Add(dbParameter);
+                        dbParameters.Add(visitor.OrmProvider.CreateParameter(memberMapper, parameterName, dict[item.Key]));
                     }
                 };
             }
@@ -1061,8 +1157,7 @@ public class RepositoryHelper
 
                         var parameterName = $"{visitor.OrmProvider.ParameterPrefix}k{keyMapper.MemberName}";
                         whereFields.Add(new UpdateField { MemberMapper = keyMapper, Value = parameterName });
-                        var dbParameter = visitor.OrmProvider.CreateParameter(keyMapper, parameterName, fieldValue);
-                        dbParameters.Add(dbParameter);
+                        dbParameters.Add(visitor.OrmProvider.CreateParameter(keyMapper, parameterName, fieldValue));
                     }
                 };
             }
@@ -1079,8 +1174,7 @@ public class RepositoryHelper
 
                         var parameterName = $"{visitor.OrmProvider.ParameterPrefix}k{memberMapper.MemberName}";
                         whereFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
-                        var dbParameter = visitor.OrmProvider.CreateParameter(memberMapper, parameterName, dict[item.Key]);
-                        dbParameters.Add(dbParameter);
+                        dbParameters.Add(visitor.OrmProvider.CreateParameter(memberMapper, parameterName, dict[item.Key]));
                     }
                 };
             }
@@ -1309,12 +1403,8 @@ public class RepositoryHelper
                     if (index > 0)
                         builder.Append(',');
                     var parameterName = ormProvider.ParameterPrefix + keyMapper.MemberName;
-
                     builder.Append($"{ormProvider.GetFieldName(keyMapper.MemberName)}={parameterName}");
-
-                    if (keyMapper.NativeDbType != null)
-                        command.Parameters.Add(ormProvider.CreateParameter(parameterName, keyMapper.NativeDbType, fieldValue));
-                    else command.Parameters.Add(ormProvider.CreateParameter(parameterName, fieldValue));
+                    command.Parameters.Add(ormProvider.CreateParameter(keyMapper, parameterName, fieldValue));
                     index++;
                 }
                 return builder.ToString();

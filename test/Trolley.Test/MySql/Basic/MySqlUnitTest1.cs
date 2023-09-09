@@ -620,4 +620,44 @@ public class MySqlUnitTest1 : UnitTestBase
         Assert.True(parameters2[2].Value.GetType() == typeof(string));
         Assert.True((string)parameters2[2].Value == CompanyNature.Internet.ToString());
     }
+    [Fact]
+    public async void Insert_Ignore()
+    {
+        this.Initialize();
+        using var repository = dbFactory.Create();
+        var sql1 = repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .UseIgnore()
+            .ToSql(out var parameters1);
+        Assert.True(sql1 == "INSERT IGNORE INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+        var count = await repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .UseIgnore()
+            .ExecuteAsync();
+        Assert.True(count == 0);
+    }
 }

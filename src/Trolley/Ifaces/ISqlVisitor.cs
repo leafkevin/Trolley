@@ -37,9 +37,8 @@ public interface ISqlVisitor
     SqlSegment Change(SqlSegment sqlSegment);
     SqlSegment Change(SqlSegment sqlSegment, object segmentValue);
     SqlSegment Change(SqlSegment sqlSegment, object segmentValue, bool isExpression, bool isMethodCall);
-    string GetQuotedValue(SqlSegment sqlSegment, List<IDbDataParameter> dbParameters = null, int? index = null);
-    string GetQuotedValue(object elementValue, SqlSegment arraySegment, int? index = null);
-    //IDbDataParameter CreateParameter(MemberMap memberMapper, string parameterName, object fieldValue);
+    string GetQuotedValue(SqlSegment sqlSegment);
+    string GetQuotedValue(object elementValue, SqlSegment arraySegment);
     SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment);
     bool IsStringConcatOperator(SqlSegment sqlSegment, out SqlSegment result);
     string VisitConditionExpr(Expression conditionExpr);

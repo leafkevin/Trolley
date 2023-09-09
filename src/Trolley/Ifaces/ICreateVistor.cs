@@ -7,12 +7,10 @@ namespace Trolley;
 
 public interface ICreateVisitor
 {
-    bool IsBulk { get; set; }
-
     string BuildSql(out List<IDbDataParameter> dbParameters);
     string BuildHeadSql();
     string BuildTailSql();
-    ICreateVisitor UseIgnore(object keysOrUniqueKeys = null);
+    ICreateVisitor UseIgnore();
     ICreateVisitor WithBy(object insertObj);
     ICreateVisitor WithBy(Expression fieldSelector, object fieldValue);
     ICreateVisitor WithBulkFirst(object insertObjs);

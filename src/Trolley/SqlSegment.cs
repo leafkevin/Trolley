@@ -150,6 +150,7 @@ public class SqlSegment
         }
         return this;
     }
+    public bool HasDeferrdNot() => this.DeferredExprs.IsDeferredNot();
     public void Push(DeferredExpr deferredExpr)
     {
         this.DeferredExprs ??= new();
@@ -163,15 +164,6 @@ public class SqlSegment
             return false;
         }
         return this.DeferredExprs.TryPop(out deferredExpr);
-    }
-    public bool TryPeek(out DeferredExpr deferredExpr)
-    {
-        if (!this.HasDeferred)
-        {
-            deferredExpr = default;
-            return false;
-        }
-        return this.DeferredExprs.TryPeek(out deferredExpr);
     }
     public override string ToString()
     {

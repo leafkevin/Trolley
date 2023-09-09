@@ -31,11 +31,7 @@ public sealed class TheaConnection : IDbConnection
         else throw new Exception("当前数据库驱动不支持异步操作");
     }
     public void ChangeDatabase(string databaseName) => this.BaseConnection.ChangeDatabase(databaseName);
-    public void Close()
-    {
-        if (this.BaseConnection.State != ConnectionState.Closed)
-            this.BaseConnection.Close();
-    }
+
     public IDbCommand CreateCommand()
     {
         var command = this.BaseConnection.CreateCommand();
@@ -67,6 +63,11 @@ public sealed class TheaConnection : IDbConnection
             }
         }
         else throw new Exception("当前数据库驱动不支持异步操作");
+    }
+    public void Close()
+    {
+        if (this.BaseConnection.State != ConnectionState.Closed)
+            this.BaseConnection.Close();
     }
     public async Task CloseAsync()
     {

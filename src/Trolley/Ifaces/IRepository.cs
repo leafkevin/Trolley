@@ -433,6 +433,48 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
     /// <returns>返回插入行数</returns>
     Task<int> CreateAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，用法：
+    /// <code>
+    /// repository.Create&lt;User&gt;(new
+    /// {
+    ///     Name = "leafkevin",
+    ///     Age = 25,
+    ///     UpdatedAt = DateTime.Now,
+    ///     UpdatedBy = 1
+    /// });
+    /// repository.Create&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
+    /// SQL:
+    /// INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
+    /// INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典，也可以是这些类型的IEnumerable类型，如：new { Value1 = 1, Value2 = "xxx" } 或 new Order{ ... }</param>
+    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
+    /// <returns>返回插入行数</returns>
+    long CreateLong<TEntity>(object insertObjs, int bulkCount = 500);
+    /// <summary>
+    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，用法：
+    /// <code>
+    /// await repository.CreateAsync&lt;User&gt;(new
+    /// {
+    ///     Name = "leafkevin",
+    ///     Age = 25,
+    ///     UpdatedAt = DateTime.Now,
+    ///     UpdatedBy = 1
+    /// });
+    /// await repository.CreateAsync&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
+    /// SQL:
+    /// INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
+    /// INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典，也可以是这些类型的IEnumerable类型，如：new { Value1 = 1, Value2 = "xxx" } 或 new Order{ ... }</param>
+    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
+    /// <returns>返回插入行数</returns>
+    Task<long> CreateLongAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default);
     #endregion
 
     #region Update

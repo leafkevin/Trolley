@@ -224,13 +224,11 @@ public interface ICreated<TEntity>
 {
     #region UseIgnore
     /// <summary>
-    /// 判断对象keysOrUniqueKeys值是否存在，存在则不插入数据。MySql、Mariadb数据库，将使用INSERT IGNORE INTO语句。PostgreSql数据库，使用INSERT INTO ... ON CONFLICT DO NOTHING语句。
-    /// SqlServer将使用INSERT INTO ...WHERE NOT EXISTS(...)语句，必须传值。如果主键为自增长列，keysOrUniqueKeys可以赋判断数据唯一的值，如果未赋值将插入数据，Ignore不生效。
-    /// keysOrUniqueKeys值，单个字段主键，可以直接赋值或是对象，如：1，2 或是new { Id = 1 }，如果是多个字段主键或唯一索引，只能匿名对象，如：new { Col1 = ... , Col2 = ... }。
+    /// 相同主键或是唯一索引存在时不插入数据。只有MySql、Mariadb、PostgreSql数据库支持。MySql、Mariadb数据库，使用INSERT IGNORE INTO语句。PostgreSql数据库，使用INSERT INTO ... ON CONFLICT DO NOTHING语句。
+    /// SqlServer数据库，可使用Create&lt;TEntity&gt;().From&lt;TEntity&gt;().Where(f=&gt;!Sql.Exists(...))来完成。
     /// </summary>
-    /// <param name="keysOrUniqueKeys">可确定数据唯一的列值或多字段匿名对象，主键是自增长列必须要赋值，否则不生效。主键非自增长列，MySql、Mariadb、PostgreSql数据库不需要赋值，SqlServer数据库必须要赋值。值示例：1，2 或是new { Id = 1 }</param>
     /// <returns>返回插入对象</returns>
-    ICreated<TEntity> UseIgnore(object keysOrUniqueKeys = null);
+    ICreated<TEntity> UseIgnore();
     #endregion
 
     #region ToSql
@@ -245,6 +243,17 @@ public interface ICreated<TEntity>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <returns>返回插入行数</returns>
+    long ExecuteLong();
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <param name="cancellationToken">取消token</param>
+    /// <returns>返回插入行数</returns>
+    Task<long> ExecuteLongAsync(CancellationToken cancellationToken = default);
     #endregion
 
     #region ToSql
@@ -331,6 +340,13 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
 public interface IContinuedCreate<TEntity, TSource> : ICreated<TEntity>
 {
     #region Where/And
+    /// <summary>
+    /// 使用whereObj生成Where条件，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，whereObj对象可以是匿名对象或是已有命名对象或是字典，推荐使用匿名对象，不能为null
+    /// </summary>
+    /// <typeparam name="TFields">where条件对象类型</typeparam>
+    /// <param name="whereObj">where条件对象，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，可以是匿名对象或是已有命名对象或是字典，推荐使用匿名对象，不能为null</param>
+    /// <returns>返回插入对象</returns>
+    //IContinuedCreate<TEntity, TSource> Where<TFields>(TFields whereObj);
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>

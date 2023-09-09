@@ -9,7 +9,13 @@ class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
 
     public override string BuildHeadSql()
     {
-        if (this.isUseIgnore) return "INSERT IGNORE INTO";
+        if (this.IsUseIgnore) return "INSERT IGNORE INTO";
         return "INSERT INTO";
+    }
+    public override string BuildTailSql()
+    {
+        if (!this.IsBulk && this.Tables[0].Mapper.IsAutoIncrement)
+            return ";SELECT LAST_INSERT_ID()";
+        return string.Empty;
     }
 }

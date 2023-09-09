@@ -83,7 +83,6 @@ public static class Extensions
         }
         return mapper;
     }
-
     public static IDbDataParameter CreateParameter(this IOrmProvider ormProvider, MemberMap memberMapper, string parameterName, object fieldValue)
     {
         IDbDataParameter dbParameter = null;
@@ -95,7 +94,6 @@ public static class Extensions
         else dbParameter = ormProvider.CreateParameter(parameterName, fieldValue);
         return dbParameter;
     }
-
     public static T Parse<T>(this ITypeHandler typeHandler, IOrmProvider ormProvider, object value)
         => (T)typeHandler.Parse(ormProvider, typeof(T), value);
     public static bool IsNullableType(this Type type, out Type underlyingType)
@@ -287,6 +285,31 @@ public static class Extensions
             queryReaderDeserializerCache.TryAdd(cacheKey, deserializer);
         }
         return ((Func<IDataReader, TEntity>)deserializer).Invoke(reader);
+    }
+    /// <summary>
+    /// 用在方法调用中，判断!=,NOT IN,NOT LIKE三种情况
+    /// </summary>
+    /// <param name="deferExprs"></param>
+    /// <returns></returns>
+    public static bool IsDeferredNot(this Stack<DeferredExpr> deferExprs)
+    {
+        int notIndex = 0;
+        if (deferExprs != null && deferExprs.Count > 0)
+        {
+            while (deferExprs.TryPop(out var deferredExpr))
+            {
+                switch (deferredExpr.OperationType)
+                {
+                    case OperationType.Equal:
+                        break;
+                    case OperationType.Not:
+                        notIndex++;
+                        break;
+                }
+            }
+            return notIndex % 2 > 0;
+        }
+        return false;
     }
     private static Delegate CreateReaderDeserializer(IOrmProvider ormProvider, IEntityMapProvider mapProvider, IDataReader reader, Type entityType, bool isValueTuple)
     {
