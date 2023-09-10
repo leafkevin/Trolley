@@ -6,7 +6,6 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace Trolley;
@@ -19,7 +18,6 @@ public class SqlVisitor : ISqlVisitor
     protected string ParameterPrefix { get; set; } = "p";
     protected List<TableSegment> Tables { get; set; }
     protected Dictionary<string, TableSegment> TableAlias { get; set; }
-    protected List<IDbDataParameter> DbParameters { get; set; }
     protected List<ReaderField> ReaderFields { get; set; }
     protected bool IsSelect { get; set; }
     protected bool IsWhere { get; set; }
@@ -27,15 +25,16 @@ public class SqlVisitor : ISqlVisitor
     protected string WhereSql { get; set; }
     protected string MultiParameterPrefix { get; set; } = string.Empty;
     protected OperationType LastWhereNodeType { get; set; } = OperationType.None;
+    protected char TableAsStart { get; set; }
 
     public string DbKey { get; private set; }
     public IEntityMapProvider MapProvider { get; private set; }
     public IOrmProvider OrmProvider { get; private set; }
-    public bool IsParameterized { get; set; }
-    public char TableAsStart { get; set; }
     public bool IsNeedAlias { get; set; }
+    public bool IsParameterized { get; set; }
+    public List<IDbDataParameter> DbParameters { get; protected set; }
 
-    public SqlVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
+    public SqlVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "", List<IDbDataParameter> dbParameters = null)
     {
         this.DbKey = dbKey;
         this.OrmProvider = ormProvider;
@@ -44,6 +43,7 @@ public class SqlVisitor : ISqlVisitor
         this.TableAsStart = tableAsStart;
         this.ParameterPrefix = parameterPrefix;
         this.MultiParameterPrefix = multiParameterPrefix;
+        this.DbParameters = dbParameters;
     }
     public virtual SqlSegment VisitAndDeferred(SqlSegment sqlSegment)
     {
@@ -1226,6 +1226,7 @@ public class SqlVisitor : ISqlVisitor
                 if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
                     sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
                 sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.MemberMapper, sqlSegment.Value);
+                return this.OrmProvider.GetQuotedValue(sqlSegment.Value);
             }
             return this.OrmProvider.GetQuotedValue(sqlSegment);
         }

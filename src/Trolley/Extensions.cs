@@ -59,6 +59,18 @@ public static class Extensions
         builder.Configure(typeof(TOrmProvider), new TModelConfiguration());
         return builder;
     }
+    public static IOrmDbFactory Configure<TOrmProvider>(this IOrmDbFactory dbFactory, IModelConfiguration configuration) where TOrmProvider : class, IOrmProvider, new()
+    {
+        dbFactory.Configure(typeof(TOrmProvider), configuration);
+        return dbFactory;
+    }
+    public static IOrmDbFactory Configure<TOrmProvider, TModelConfiguration>(this IOrmDbFactory dbFactory)
+        where TOrmProvider : class, IOrmProvider, new()
+        where TModelConfiguration : class, IModelConfiguration, new()
+    {
+        dbFactory.Configure(typeof(TOrmProvider), new TModelConfiguration());
+        return dbFactory;
+    }
     public static string GetQuotedValue(this IOrmProvider ormProvider, object value, string nullValue = "NULL")
     {
         if (value == null) return nullValue;

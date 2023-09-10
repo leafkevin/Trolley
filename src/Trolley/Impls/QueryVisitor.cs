@@ -18,7 +18,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     private int? skip;
     private int? limit;
 
-    protected string Sql = string.Empty;
+    protected string UnionSql = string.Empty;
     protected string GroupBySql { get; set; } = string.Empty;
     protected string HavingSql { get; set; } = string.Empty;
     protected string OrderBySql { get; set; } = string.Empty;
@@ -28,26 +28,20 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     protected TableSegment LastIncludeSegment { get; set; }
     protected List<ReaderField> GroupFields { get; set; }
 
-    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
-        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix)
+    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "", List<IDbDataParameter> dbParameters = null)
+        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix, dbParameters)
     {
         this.Tables = new();
         this.TableAlias = new();
-        this.DbParameters = new();
+        this.DbParameters ??= new();
     }
-    /// <summary>
-    /// Union,ToSql,Join,Cte，各种子查询,各种单值查询，但都有SELECT操作
-    /// </summary>
-    /// <param name="dbParameters"></param>
-    /// <param name="readerFields"></param>
-    /// <returns></returns>
-    public virtual string BuildSql(out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields, bool isUnion = false, char unionAlias = 'a')
+    public virtual string BuildSql(out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields, bool isUnion = false)
     {
-        if (!string.IsNullOrEmpty(this.Sql))
+        if (!string.IsNullOrEmpty(this.UnionSql))
         {
             dbParameters = this.DbParameters;
             readerFields = this.ReaderFields;
-            return this.Sql;
+            return this.UnionSql;
         }
         var builder = new StringBuilder();
         //各种单值查询，如：SELECT COUNT(*)/MAX(*)..等，都有SELECT操作
@@ -147,7 +141,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (isUnion && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
         {
             builder.Insert(0, "SELECT * FROM (");
-            builder.Append($") {unionAlias}");
+            builder.Append($") a");
         }
         return builder.ToString();
     }
@@ -225,6 +219,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void From(params Type[] entityTypes)
     {
+        this.UnionSql = null;
         int tableIndex = this.TableAsStart + this.Tables.Count;
         for (int i = 0; i < entityTypes.Length; i++)
         {
@@ -246,6 +241,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void From(char tableAsStart, Type entityType, string suffixRawSql)
     {
+        this.UnionSql = null;
         this.TableAsStart = tableAsStart;
         int tableIndex = tableAsStart + this.Tables.Count;
         this.Tables.Add(new TableSegment
@@ -259,17 +255,25 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             IsMaster = true
         });
     }
-    public virtual TableSegment WithTable(Type entityType, string body, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null, string joinType = "")
+    public virtual TableSegment WithTable(Type entityType)
+    {
+        var sql = this.BuildSql(out _, out _, true);
+        this.Tables.Clear();
+        var tableSegment = this.AddTable(entityType, "", TableType.FromQuery, $"({sql})", this.ReaderFields);
+        this.InitFromQueryReaderFields(tableSegment, this.ReaderFields);
+        //临时表需要有别名(SELECT ..) a
+        tableSegment.IsNeedAlais = true;
+        return tableSegment;
+    }
+    public virtual TableSegment WithTable(Type entityType, string body, List<ReaderField> readerFields = null, string joinType = "")
     {
         var tableSegment = this.AddTable(entityType, joinType, TableType.FromQuery, $"({body})", readerFields);
         //临时表需要有别名(SELECT ..) b
         tableSegment.IsNeedAlais = true;
         this.InitFromQueryReaderFields(tableSegment, readerFields);
-        if (dbParameters != null)
-            this.DbParameters.AddRange(dbParameters);
         return tableSegment;
     }
-    public virtual void WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null)
+    public virtual void WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<ReaderField> readerFields = null)
     {
         string withTable = cteTableName;
         if (isRecursive)
@@ -301,21 +305,23 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         var tableSegment = this.AddTable(entityType, string.Empty, TableType.FromQuery, cteTableName, readerFields);
         this.InitFromQueryReaderFields(tableSegment, readerFields);
-        if (dbParameters != null)
-            this.DbParameters.AddRange(dbParameters);
         //清掉构建CTE表时Union产生的sql
-        this.Sql = null;
+        this.UnionSql = null;
     }
-    public virtual void Union(string body, List<ReaderField> readerFields, List<IDbDataParameter> dbParameters = null, char tableAlias = 'a')
+    public virtual void Union(Type entityType, string newSql)
     {
-        var sql = this.BuildSql(out _, out _, true, tableAlias);
-        sql += body;
-        this.ReaderFields = readerFields;
-        readerFields.ForEach(f => f.TableSegment = this.Tables[0]);
+        var sql = this.BuildSql(out _, out _, true);
+        while (this.Tables.Count > 1)
+            this.Tables.RemoveAt(1);
+        sql += newSql;
+        this.Tables[0].EntityType = entityType;
+        this.Tables[0].TableType = TableType.FromQuery;
+        this.Tables[0].Body = $"({sql})";
+        if (this.Tables[0].ReaderFields == null)
+            this.Tables[0].ReaderFields = this.ReaderFields;
+        this.InitFromQueryReaderFields(this.Tables[0], this.Tables[0].ReaderFields);
         this.CteTableSql = null;
-        if (dbParameters != null)
-            this.DbParameters.AddRange(dbParameters);
-        this.Sql = sql;
+        this.UnionSql = sql;
     }
     public virtual void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null)
     {
@@ -389,8 +395,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (parameters.Count != 2)
             throw new NotSupportedException("Join操作，只支持两个表进行关联，但可以多次Join操作");
 
-        var joinTableSegment = this.AddTable(newEntityType, joinType);
-        this.InitTableAlias(lambdaExpr);
+        this.AddTable(newEntityType);
+        var joinTableSegment = this.InitTableAlias(lambdaExpr);
+        joinTableSegment.JoinType = joinType;
         joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body);
         this.IsWhere = false;
     }
@@ -895,17 +902,17 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual TableSegment AddTable(TableSegment tableSegment)
     {
+        this.UnionSql = null;
         this.Tables.Add(tableSegment);
         if (this.Tables.Count > 1)
-        {
             this.IsNeedAlias = true;
-            if (this.Tables.Count == 2 && this.Tables[0].TableType == TableType.FromQuery && this.Tables[0].ReaderFields != null)
-                this.InitFromQueryReaderFields(this.Tables[0], this.Tables[0].ReaderFields);
-        }
+        //if (this.Tables.Count == 2 && this.Tables[0].TableType == TableType.FromQuery && this.Tables[0].ReaderFields != null)
+        //    this.InitFromQueryReaderFields(this.Tables[0], this.Tables[0].ReaderFields);
         return tableSegment;
     }
     public virtual TableSegment AddTable(Type entityType, string joinType = "", TableType tableType = TableType.Entity, string body = null, List<ReaderField> readerFields = null)
     {
+        this.UnionSql = null;
         int tableIndex = this.TableAsStart + this.Tables.Count;
         return this.AddTable(new TableSegment
         {
@@ -923,11 +930,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         => this.TableAlias.TryAdd(aliasName, tableSegment);
     public virtual IQueryVisitor Clone(char tableAsStart = 'a', string parameterPrefix = "p")
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, parameterPrefix);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, parameterPrefix, dbParameters: this.DbParameters);
         visitor.IsNeedAlias = this.IsNeedAlias;
         return visitor;
     }
-
     protected void InitFromQueryReaderFields(TableSegment tableSegment, List<ReaderField> readerFields)
     {
         if (readerFields == null || readerFields.Count == 0)
@@ -944,11 +950,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             else
             {
                 readerField.TableSegment = tableSegment;
-                //中间临时表的字段，可能会有更改，优先取TargetMember，没有则取FromMember
-                readerField.FromMember = readerField.TargetMember ?? readerField.FromMember;
-                readerField.TargetMember = null;
-                //body后面再设置，现在不确定是否需要别名
-                readerField.Body = this.GetFieldName(tableSegment, readerField.FromMember.Name);
+                //重新设置body内容，表别名变更
+                var targetMember = readerField.TargetMember ?? readerField.FromMember;
+                readerField.Body = this.GetFieldName(tableSegment, targetMember.Name);
             }
         }
     }

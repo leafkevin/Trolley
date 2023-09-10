@@ -62,9 +62,9 @@ public interface IQuery<T> : IQueryBase
     /// <code>
     /// await repository.From&lt;Order&gt;()
     ///     ...
-    ///     .Union(f => f.From&lt;Order&gt;()
-    ///         .Where(x => x.Id > 1)
-    ///         .Select(x => new { ... }))
+    ///     .Union(f =&gt; f.From&lt;Order&gt;()
+    ///         .Where(x =&gt; x.Id > 1)
+    ///         .Select(x =&gt; new { ... }))
     ///     .ToListAsync();
     /// SQL:
     /// SELECT ... FROM `sys_order` ... UNION
@@ -72,7 +72,7 @@ public interface IQuery<T> : IQueryBase
     /// </code>
     /// </summary>
     /// <param name="subQuery">子查询，需要有Select语句，如：
-    /// <code>f.From&lt;Order&gt;() ... .Select(x => new { ... })</code>
+    /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
     IQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery);
@@ -81,9 +81,9 @@ public interface IQuery<T> : IQueryBase
     /// <code>
     /// await repository.From&lt;Order&gt;()
     ///     ...
-    ///     .UnionAll(f => f.From&lt;Order&gt;()
-    ///         .Where(x => x.Id > 1)
-    ///         .Select(x => new { ... }))
+    ///     .UnionAll(f =&gt; f.From&lt;Order&gt;()
+    ///         .Where(x =&gt; x.Id > 1)
+    ///         .Select(x =&gt; new { ... }))
     ///     .ToListAsync();
     /// SQL:
     /// SELECT ... FROM `sys_order` ... UNION ALL
@@ -91,7 +91,7 @@ public interface IQuery<T> : IQueryBase
     /// </code>
     /// </summary>
     /// <param name="subQuery">子查询，需要有Select语句，如：
-    /// <code>f.From&lt;Order&gt;() ... .Select(x => new { ... })</code>
+    /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
     IQuery<T> UnionAll(Func<IFromQuery, IFromQuery<T>> subQuery);
     #endregion
@@ -102,7 +102,7 @@ public interface IQuery<T> : IQueryBase
     /// <code>
     /// repository
     ///     .FromWith((f =&gt; ...), "MenuList")
-    ///     .NextWith(f => f.From&lt;Page&gt;() ...)
+    ///     .NextWith(f =&gt; f.From&lt;Page&gt;() ...)
     ///     ...
     /// SQL:
     /// WITH MenuList(Id,Name,ParentId) AS 
@@ -176,7 +176,7 @@ public interface IQuery<T> : IQueryBase
     /// <code>
     /// repository
     ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f => f.From&lt;Page, Menu&gt;('c') ... )
+    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
     ///     ...
     /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
     /// </code>
@@ -351,23 +351,26 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
     #endregion
 
-    #region GroupBy/OrderBy
+    #region GroupBy
     /// <summary>
     /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
     /// <code>
     /// repository.From&lt;User&gt;() ...
-    ///    .GroupBy((a, b) =&gt; new { a.Id, a.Name, b.CreatedAt.Date })
+    ///    .GroupBy(f =&gt; new { f.Id, f.Name, f.CreatedAt.Date })
     ///    ...
-    /// SQL: ... FROM `sys_user` a ... GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ...
+    /// SQL: ... FROM `sys_user` a ... GROUP BY a.`Id`,a.`Name`,CONVERT(a.`CreatedAt`,DATE) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TGrouping">分组后的实体对象类型，New类型表达式，可以一个或是多个字段</typeparam>
     /// <param name="groupingExpr">分组表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr);
+    #endregion
+
+    #region OrderBy
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
-    /// OrderBy((a, b) => new { a.Id, b.Id }) 或是 OrderBy(x => x.CreatedAt.Date)
+    /// OrderBy(f =&gt; new { f.Id, f.Id }) 或是 OrderBy(x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -375,7 +378,7 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
-    /// OrderBy(true, (a, b) => new { a.Id, b.Id }) 或是 OrderBy(true, x => x.CreatedAt.Date)
+    /// OrderBy(true, f =&gt; new { f.Id, f.Id }) 或是 OrderBy(true, x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
@@ -384,7 +387,7 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
     /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
-    /// OrderByDescending((a, b) => new { a.Id, b.Id }) 或是 OrderByDescending(x => x.CreatedAt.Date)
+    /// OrderByDescending(f =&gt; new { f.Id, f.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -392,7 +395,7 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
-    /// OrderByDescending(true, (a, b) => new { a.Id, b.Id }) 或是 OrderByDescending(true, x => x.CreatedAt.Date)
+    /// OrderByDescending(true, f =&gt; new { f.Id, f.Id }) 或是 OrderByDescending(true, x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
@@ -437,6 +440,13 @@ public interface IQuery<T> : IQueryBase
     /// </summary>
     /// <returns>返回查询对象</returns>
     IQuery<T> Select();
+    /// <summary>
+    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fields">原始字段字符串，默认值*</param>
+    /// <returns>返回查询对象</returns>
+    IFromQuery<TTarget> Select<TTarget>(string fields);
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select(f =&gt; new { f.Id, f.Name }) 或是 ...Select(x =&gt; x.CreatedAt.Date)</code>
@@ -769,7 +779,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <code>
     /// repository
     ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f => f.From&lt;Page, Menu&gt;('c') ... )
+    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
     ///     ...
     /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
     /// </code>
@@ -977,7 +987,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <code>
     /// repository.From&lt;User&gt;()
     ///    ...
-    ///    .GroupBy((a, b) =&gt; new { a.Id, a.Name, b.CreatedAt.Date })
+    ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
     ///    ...
     ///    .Select((x, a, b) =&gt; new
     ///    {
@@ -996,7 +1006,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     IGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr);
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
-    /// OrderBy((a, b) => new { a.Id, b.Id }) 或是 OrderBy(x => x.CreatedAt.Date)
+    /// OrderBy((a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderBy((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -1004,7 +1014,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     IQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
-    /// OrderBy(true, (a, b) => new { a.Id, b.Id }) 或是 OrderBy(true, x => x.CreatedAt.Date)
+    /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
@@ -1013,7 +1023,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     IQuery<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     /// <summary>
     /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
-    /// OrderByDescending((a, b) => new { a.Id, b.Id }) 或是 OrderByDescending(x => x.CreatedAt.Date)
+    /// OrderByDescending((a, b) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -1021,7 +1031,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     IQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
-    /// OrderByDescending(true, (a, b) => new { a.Id, b.Id }) 或是 OrderByDescending(true, x => x.CreatedAt.Date)
+    /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
@@ -1033,7 +1043,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
-    /// Select((<#=tableAlias#>) => new { f.Id, f.Name }) 或是 Select((<#=tableAlias#>) => x.CreatedAt.Date)
+    /// Select((<#=tableAlias#>) =&gt; new { f.Id, f.Name }) 或是 Select((<#=tableAlias#>) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>

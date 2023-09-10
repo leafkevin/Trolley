@@ -17,8 +17,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     protected List<IDbDataParameter> FixedDbParameters { get; set; } = new();
     protected Action<IDbCommand, UpdateVisitor, StringBuilder, object, int> BulkSetFieldsInitializer { get; set; }
 
-    public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
-        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix)
+    public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
+        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, "", dbParameters)
     {
         this.Tables = new()
         {
@@ -30,7 +30,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             }
         };
         this.TableAlias = new();
-        this.DbParameters = new();
+        this.DbParameters ??= new();
     }
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
@@ -616,6 +616,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             //sqlSegment.IsVariable = false;
             //sqlSegment.IsConstant = false;
         }
-        setFields.Add(new UpdateField { MemberMapper = memberMapper, Value = sqlSegment.ToString() });
+        setFields.Add(new UpdateField { MemberMapper = memberMapper, Value = sqlSegment.Value.ToString() });
     }
 }

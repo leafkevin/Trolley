@@ -383,22 +383,21 @@ public class MySqlUnitTest1 : UnitTestBase
         repository.Delete<Product>(2);
         var brand = repository.Get<Brand>(1);
         var sql = repository.Create<Product>()
-            .From<Brand>(f => new
-            {
-                Id = f.Id + 1,
-                ProductNo = "PN_" + f.BrandNo,
-                Name = "PName_" + f.Name,
-                BrandId = f.Id,
-                CategoryId = 1,
-                f.CompanyId,
-                f.IsEnabled,
-                f.CreatedBy,
-                f.CreatedAt,
-                f.UpdatedBy,
-                f.UpdatedAt
-            })
-            .Where(f => f.Id == 1)
-            .ToSql(out var parameters);
+           .From<Brand>(f => new
+           {
+               Id = f.Id + 1,
+               ProductNo = "PN_" + f.BrandNo,
+               Name = "PName_" + f.Name,
+               BrandId = f.Id,
+               CategoryId = 1,
+               f.CompanyId,
+               f.IsEnabled,
+               f.CreatedBy,
+               f.CreatedAt,
+               f.UpdatedBy,
+               f.UpdatedAt
+           })
+           .ToSql(out var parameters);
         Assert.True(sql == "INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT a.`Id`+1,CONCAT('PN_',a.`BrandNo`),CONCAT('PName_',a.`Name`),a.`Id`,@CategoryId,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1");
 
         var count = repository.Create<Product>()
@@ -539,7 +538,7 @@ public class MySqlUnitTest1 : UnitTestBase
             .ToSql(out var parameters);
         Assert.True(sql == "INSERT INTO `sys_order` (`Id`,`OrderNo`,`TotalAmount`,`BuyerId`,`BuyerSource`,`SellerId`,`ProductCount`,`Products`,`Disputes`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) VALUES(@Id,@OrderNo,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@ProductCount,@Products,@Disputes,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
         Assert.True(parameters[4].ParameterName == "@BuyerSource");
-        Assert.True((string)parameters[4].Value == UserSourceType.Website.ToString());
+        Assert.True(parameters[4].Value is DBNull);
         Assert.True(parameters[7].ParameterName == "@Products");
         Assert.True((string)parameters[7].Value == "[1,2]");
         Assert.True(parameters[8].ParameterName == "@Disputes");

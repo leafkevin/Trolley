@@ -8,9 +8,8 @@ namespace Trolley;
 
 public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 {
-
-    public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
-        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix)
+    public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
+        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, "", dbParameters)
     {
         this.Tables = new()
         {
@@ -20,7 +19,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 Mapper = this.MapProvider.GetEntityMap(entityType)
             }
         };
-        this.DbParameters = new();
+        this.DbParameters ??= new();
     }
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {

@@ -12,7 +12,7 @@ namespace Trolley;
 /// 插入数据
 /// </summary>
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
-public interface ICreate<TEntity>
+public interface ICreate<TEntity> //: IFromQuery
 {
     #region WithBy
     /// <summary>
@@ -222,13 +222,26 @@ public interface ICreate<TEntity>
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface ICreated<TEntity>
 {
-    #region UseIgnore
+    #region UseIgnore/IfNotExists
     /// <summary>
-    /// 相同主键或是唯一索引存在时不插入数据。只有MySql、Mariadb、PostgreSql数据库支持。MySql、Mariadb数据库，使用INSERT IGNORE INTO语句。PostgreSql数据库，使用INSERT INTO ... ON CONFLICT DO NOTHING语句。
-    /// SqlServer数据库，可使用Create&lt;TEntity&gt;().From&lt;TEntity&gt;().Where(f=&gt;!Sql.Exists(...))来完成。
+    /// 相同主键或是唯一索引存在时不插入数据，仅限MySql、Mariadb、PostgreSql数据库使用。MySql、Mariadb数据库，使用INSERT IGNORE INTO语句实现。PostgreSql数据库，使用INSERT INTO ... ON CONFLICT DO NOTHING语句实现。
+    /// SqlServer数据库，请使用IfNotExists方法。
     /// </summary>
     /// <returns>返回插入对象</returns>
     ICreated<TEntity> UseIgnore();
+    /// <summary>
+    /// 相同主键或是唯一索引存在时不插入数据，仅限SqlServer数据库使用。使用INSERT INTO ...SELECT ... WHERE NOT EXISTS(...)语句实现。MySql、Mariadb、PostgreSql数据库请使用UseIgnore方法。
+    /// </summary>
+    /// <typeparam name="TFields">主键或是唯一索引键字段类型</typeparam>
+    /// <param name="keys">主键或是唯一索引键字段值</param>
+    /// <returns>返回插入对象</returns>
+    //ICreated<TEntity> IfNotExists<TFields>(TFields keys);
+    /// <summary>
+    /// 相同主键或是唯一索引存在时不插入数据，仅限SqlServer数据库使用。
+    /// </summary>
+    /// <param name="keysPredicate">主键或是唯一索引键值断言表达式</param>
+    /// <returns>返回插入对象</returns>
+    //ICreated<TEntity> IfNotExists(Expression<Func<TEntity, bool>> keysPredicate);
     #endregion
 
     #region ToSql

@@ -11,6 +11,8 @@ public interface ICreateVisitor
     string BuildHeadSql();
     string BuildTailSql();
     ICreateVisitor UseIgnore();
+    //ICreateVisitor IfNotExists(object whereObj);
+    //ICreateVisitor IfNotExists(Expression keysPredicate);
     ICreateVisitor WithBy(object insertObj);
     ICreateVisitor WithBy(Expression fieldSelector, object fieldValue);
     ICreateVisitor WithBulkFirst(object insertObjs);

@@ -4,19 +4,61 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-class GroupingQuery<T, TGrouping> : IGroupingQuery<T, TGrouping>
+class GroupingQueryBase<TGrouping>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IQueryVisitor visitor;
+    #region Fields
+    protected TheaConnection connection;
+    protected IDbTransaction transaction;
+    protected IOrmProvider ormProvider;
+    protected IQueryVisitor visitor;
+    #endregion
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
+    #region Constructor
+    public GroupingQueryBase(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
+        this.ormProvider = ormProvider;
         this.visitor = visitor;
     }
+    #endregion
 
+    #region Constructor
+    public IQuery<TGrouping> Select()
+    {
+        this.visitor.SelectGrouping();
+        return new Query<TGrouping>(this.connection, this.transaction, this.ormProvider, this.visitor);
+    }
+    public IQuery<TTarget> Select<TTarget>(string fields = "*")
+    {
+        if (string.IsNullOrEmpty(fields))
+            throw new ArgumentNullException(nameof(fields));
+
+        this.visitor.Select(fields, null, true);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
+    }
+    #endregion
+}
+class GroupingQuery<T, TGrouping> : IGroupingQuery<T, TGrouping>
+{
+    #region Fields
+    protected TheaConnection connection;
+    protected IDbTransaction transaction;
+    protected IOrmProvider ormProvider;
+    protected IQueryVisitor visitor;
+    #endregion
+
+    #region Constructor
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+    {
+        this.connection = connection;
+        this.transaction = transaction;
+        this.ormProvider = ormProvider;
+        this.visitor = visitor;
+    }
+    #endregion
+
+    #region Having
     public IGroupingQuery<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
     {
         if (predicate == null)
@@ -34,6 +76,9 @@ class GroupingQuery<T, TGrouping> : IGroupingQuery<T, TGrouping>
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy/OrderByDescending
     public IGroupingQuery<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -50,10 +95,21 @@ class GroupingQuery<T, TGrouping> : IGroupingQuery<T, TGrouping>
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
+    #endregion
+
+    #region Select
     public IQuery<TGrouping> Select()
     {
         this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.transaction, this.visitor);
+        return new Query<TGrouping>(this.connection, this.transaction, this.ormProvider, this.visitor);
+    }
+    public IQuery<TTarget> Select<TTarget>(string fields)
+    {
+        if (string.IsNullOrEmpty(fields))
+            throw new ArgumentNullException(nameof(fields));
+
+        this.visitor.Select(fields, null, true);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
     {
@@ -61,22 +117,18 @@ class GroupingQuery<T, TGrouping> : IGroupingQuery<T, TGrouping>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }
-class GroupingQuery<T1, T2, TGrouping> : IGroupingQuery<T1, T2, TGrouping>
+class GroupingQuery<T1, T2, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, TGrouping>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IQueryVisitor visitor;
+    #region Constructor
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-
+    #region Having
     public IGroupingQuery<T1, T2, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate)
     {
         if (predicate == null)
@@ -94,6 +146,9 @@ class GroupingQuery<T1, T2, TGrouping> : IGroupingQuery<T1, T2, TGrouping>
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy
     public IGroupingQuery<T1, T2, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -110,33 +165,27 @@ class GroupingQuery<T1, T2, TGrouping> : IGroupingQuery<T1, T2, TGrouping>
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.transaction, this.visitor);
-    }
+    #endregion
+
+    #region Select
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }
-class GroupingQuery<T1, T2, T3, TGrouping> : IGroupingQuery<T1, T2, T3, TGrouping>
+class GroupingQuery<T1, T2, T3, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, TGrouping>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IQueryVisitor visitor;
+    #region Constructor
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-
+    #region Having
     public IGroupingQuery<T1, T2, T3, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate)
     {
         if (predicate == null)
@@ -154,6 +203,9 @@ class GroupingQuery<T1, T2, T3, TGrouping> : IGroupingQuery<T1, T2, T3, TGroupin
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy
     public IGroupingQuery<T1, T2, T3, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -170,33 +222,27 @@ class GroupingQuery<T1, T2, T3, TGrouping> : IGroupingQuery<T1, T2, T3, TGroupin
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.transaction, this.visitor);
-    }
+    #endregion
+
+    #region Select
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, TGrouping> : IGroupingQuery<T1, T2, T3, T4, TGrouping>
+class GroupingQuery<T1, T2, T3, T4, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, TGrouping>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IQueryVisitor visitor;
+    #region Constructor
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-
+    #region Having
     public IGroupingQuery<T1, T2, T3, T4, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate)
     {
         if (predicate == null)
@@ -214,6 +260,9 @@ class GroupingQuery<T1, T2, T3, T4, TGrouping> : IGroupingQuery<T1, T2, T3, T4, 
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy
     public IGroupingQuery<T1, T2, T3, T4, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -230,33 +279,27 @@ class GroupingQuery<T1, T2, T3, T4, TGrouping> : IGroupingQuery<T1, T2, T3, T4, 
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.transaction, this.visitor);
-    }
+    #endregion
+
+    #region Select
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, TGrouping>
+class GroupingQuery<T1, T2, T3, T4, T5, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, TGrouping>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IQueryVisitor visitor;
+    #region Constructor
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-
+    #region Having
     public IGroupingQuery<T1, T2, T3, T4, T5, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate)
     {
         if (predicate == null)
@@ -274,6 +317,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IGroupingQuery<T1, T2, T3, 
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy
     public IGroupingQuery<T1, T2, T3, T4, T5, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -290,33 +336,27 @@ class GroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IGroupingQuery<T1, T2, T3, 
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.transaction, this.visitor);
-    }
+    #endregion
+
+    #region Select
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>
+class GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IQueryVisitor visitor;
+    #region Constructor
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-
+    #region Having
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate)
     {
         if (predicate == null)
@@ -334,6 +374,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IGroupingQuery<T1, T2, 
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -350,33 +393,27 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IGroupingQuery<T1, T2, 
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.transaction, this.visitor);
-    }
+    #endregion
+
+    #region Select
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
+class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IQueryVisitor visitor;
+    #region Constructor
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-
+    #region Having
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
     {
         if (predicate == null)
@@ -394,6 +431,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IGroupingQuery<T1, 
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -410,33 +450,27 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IGroupingQuery<T1, 
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.transaction, this.visitor);
-    }
+    #endregion
+
+    #region Select
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>
+class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IQueryVisitor visitor;
+    #region Constructor
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-
+    #region Having
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
     {
         if (predicate == null)
@@ -454,6 +488,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : IGroupingQuery<
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -470,33 +507,27 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : IGroupingQuery<
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.transaction, this.visitor);
-    }
+    #endregion
+
+    #region Select
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>
+class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IQueryVisitor visitor;
+    #region Constructor
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-
+    #region Having
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
     {
         if (predicate == null)
@@ -514,6 +545,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : IGroupingQu
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -530,33 +564,27 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : IGroupingQu
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.transaction, this.visitor);
-    }
+    #endregion
+
+    #region Select
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>
+class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IQueryVisitor visitor;
+    #region Constructor
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-
+    #region Having
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
     {
         if (predicate == null)
@@ -574,6 +602,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : IGroup
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -590,33 +621,27 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : IGroup
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.transaction, this.visitor);
-    }
+    #endregion
+
+    #region Select
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>
+class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IQueryVisitor visitor;
+    #region Constructor
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-
+    #region Having
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
     {
         if (predicate == null)
@@ -634,6 +659,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : I
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -650,33 +678,27 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : I
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.transaction, this.visitor);
-    }
+    #endregion
+
+    #region Select
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>
+class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IQueryVisitor visitor;
+    #region Constructor
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-
+    #region Having
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
     {
         if (predicate == null)
@@ -694,6 +716,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -710,33 +735,27 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.transaction, this.visitor);
-    }
+    #endregion
+
+    #region Select
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>
+class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IQueryVisitor visitor;
+    #region Constructor
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-
+    #region Having
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
     {
         if (predicate == null)
@@ -754,6 +773,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGro
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -770,33 +792,27 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGro
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.transaction, this.visitor);
-    }
+    #endregion
+
+    #region Select
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>
+class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IQueryVisitor visitor;
+    #region Constructor
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-
+    #region Having
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
     {
         if (predicate == null)
@@ -814,6 +830,9 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14,
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -830,43 +849,34 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14,
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.transaction, this.visitor);
-    }
+    #endregion
+
+    #region Select
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>
+class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>
 {
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IQueryVisitor visitor;
+    #region Constructor
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
 
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IQueryVisitor visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
-    public IQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.transaction, this.visitor);
-    }
+    #region Select
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }

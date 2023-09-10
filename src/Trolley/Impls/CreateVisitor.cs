@@ -17,8 +17,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     protected bool IsUseUpdate { get; set; }
     protected virtual bool IsBulk { get; set; } = false;
 
-    public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
-        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix)
+    public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
+        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, "", dbParameters)
     {
         this.Tables = new()
         {
@@ -29,7 +29,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             }
         };
         this.TableAlias = new();
-        this.DbParameters = new();
+        this.DbParameters ??= new();
     }
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
@@ -176,7 +176,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.IsFrom = true;
         return this;
     }
-    //public virtual ICreateVisitor WhereWith(object whereObj, bool isOnlyKeys = false)
+    //public virtual ICreateVisitor IfNotExists(object whereObj)
+    //{
+    //    var entityMapper = this.Tables[0].Mapper;
+    //    var whereInitializer = RepositoryHelper.BuildCreateWhereWithSqlParameters(this, entityMapper.EntityType, whereObj);
+    //    whereInitializer.Invoke(this, this.InsertFields, this.DbParameters, whereObj);
+    //    return this;
+    //}
+    //public virtual ICreateVisitor IfNotExists(Expression keysPredicate)
     //{
     //    var entityMapper = this.Tables[0].Mapper;
     //    var whereInitializer = RepositoryHelper.BuildUpdateWhereWithParameters(this, entityMapper.EntityType, whereObj, isOnlyKeys);

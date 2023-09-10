@@ -128,10 +128,10 @@ public partial class MySqlProvider : BaseOrmProvider
         parameter.Value = value ?? DBNull.Value;
         return parameter;
     }
-    public override ICreateVisitor NewCreateVisitor(string dbKey, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-        => new MySqlCreateVisitor(dbKey, this, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix);
-    public override IUpdateVisitor NewUpdateVisitor(string dbKey, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-        => new MySqlUpdateVisitor(dbKey, this, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix);
+    public override ICreateVisitor NewCreateVisitor(string dbKey, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
+        => new MySqlCreateVisitor(dbKey, this, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix, dbParameters);
+    public override IUpdateVisitor NewUpdateVisitor(string dbKey, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
+        => new MySqlUpdateVisitor(dbKey, this, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix, dbParameters);
 
     public override string GetTableName(string entityName) => "`" + entityName + "`";
     public override string GetFieldName(string propertyName) => "`" + propertyName + "`";

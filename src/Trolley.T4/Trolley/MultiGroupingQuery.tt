@@ -10,23 +10,47 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-class MultiGroupingQueryBase
+class MultiGroupingQueryBase<TGrouping>
 {
+    #region Fields
     protected MultipleQuery multiQuery;
+    protected IOrmProvider ormProvider;
     protected IQueryVisitor visitor;
-    protected int withIndex;
-    public MultiGroupingQueryBase(MultipleQuery multiQuery, IQueryVisitor visitor, int withIndex)
+    #endregion
+
+    #region Constructor
+    public MultiGroupingQueryBase(MultipleQuery multiQuery, IOrmProvider ormProvider, IQueryVisitor visitor)
     {
         this.multiQuery = multiQuery;
+        this.ormProvider = ormProvider;
         this.visitor = visitor;
-        this.withIndex = withIndex;
     }
-}
-class MultiGroupingQuery<T, TGrouping> : MultiGroupingQueryBase, IMultiGroupingQuery<T, TGrouping>
-{
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor, int withIndex)
-        : base(multiQuery, visitor, withIndex) { }
+    #endregion
 
+    #region Select
+    public IMultiQuery<TGrouping> Select()
+    {
+        this.visitor.SelectGrouping(true);
+        return new MultiQuery<TGrouping>(this.multiQuery, this.ormProvider, this.visitor);
+    }
+    public IMultiQuery<TTarget> Select<TTarget>(string fields)
+    {
+        if (string.IsNullOrEmpty(fields))
+            throw new ArgumentNullException(nameof(fields));
+
+        this.visitor.Select(fields, null, true);
+        return new MultiQuery<TTarget>(this.multiQuery, this.ormProvider, this.visitor);
+    }
+    #endregion
+}
+class MultiGroupingQuery<T, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T, TGrouping>
+{
+    #region Constructor
+    public MultiGroupingQuery(MultipleQuery multiQuery, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(multiQuery, ormProvider, visitor) { }
+    #endregion
+
+    #region Having
     public IMultiGroupingQuery<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
     {
         if (predicate == null)
@@ -44,6 +68,9 @@ class MultiGroupingQuery<T, TGrouping> : MultiGroupingQueryBase, IMultiGroupingQ
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy/OrderByDescending
     public IMultiGroupingQuery<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -60,19 +87,18 @@ class MultiGroupingQuery<T, TGrouping> : MultiGroupingQueryBase, IMultiGroupingQ
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IMultiQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new MultiQuery<TGrouping>(this.multiQuery, this.visitor, this.withIndex);
-    }
+    #endregion
+
+    #region Select
     public IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor, this.withIndex);
+        return new MultiQuery<TTarget>(this.multiQuery, this.ormProvider, this.visitor);
     }
+    #endregion
 }
 <#
     var count = 16;
@@ -81,14 +107,18 @@ class MultiGroupingQuery<T, TGrouping> : MultiGroupingQueryBase, IMultiGroupingQ
     {
         tables += $", T{i}";
 #>
-class MultiGroupingQuery<<#=tables#>, TGrouping> : MultiGroupingQueryBase, IMultiGroupingQuery<<#=tables#>, TGrouping>
+class MultiGroupingQuery<<#=tables#>, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<<#=tables#>, TGrouping>
 {
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor, int withIndex)
-        : base(multiQuery, visitor, withIndex) { }
+    #region Constructor
+    public MultiGroupingQuery(MultipleQuery multiQuery, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(multiQuery, ormProvider, visitor) { }
+    #endregion
+
 <#
         if(i < count - 1)
         {
 #>
+    #region Having
     public IMultiGroupingQuery<<#=tables#>, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
     {
         if (predicate == null)
@@ -106,6 +136,9 @@ class MultiGroupingQuery<<#=tables#>, TGrouping> : MultiGroupingQueryBase, IMult
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy/OrderByDescending
     public IMultiGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -122,19 +155,18 @@ class MultiGroupingQuery<<#=tables#>, TGrouping> : MultiGroupingQueryBase, IMult
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
+    #endregion
+
 <#      }#>
-    public IMultiQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new MultiQuery<TGrouping>(this.multiQuery, this.visitor, this.withIndex);
-    }
+    #region Select
     public IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor, this.withIndex);
+        return new MultiQuery<TTarget>(this.multiQuery, this.ormProvider, this.visitor);
     }
+    #endregion
 }
 <#  }#>

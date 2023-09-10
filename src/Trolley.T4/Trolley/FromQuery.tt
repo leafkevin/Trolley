@@ -12,111 +12,137 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-class FromQuery : IFromQuery
+class QueryAnonymousObject : IQueryAnonymousObject
 {
+    #region Fields
     private readonly IQueryVisitor visitor;
+    #endregion
 
-    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
+    #region Constructor
+    public QueryAnonymousObject(IQueryVisitor visitor) => this.visitor = visitor;
+    #endregion
 
-    public IFromQuery<T> From<T>(char tableAsStart = 'a')
-    {
-        this.visitor.TableAsStart = tableAsStart;
-        this.visitor.From(tableAsStart, typeof(T));
-        return new FromQuery<T>(this.visitor);
-    }
-    public IFromQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
-    {
-        this.visitor.TableAsStart = tableAsStart;
-        this.visitor.From(tableAsStart, typeof(T1), typeof(T2));
-        return new FromQuery<T1, T2>(this.visitor);
-    }
-    public IFromQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a')
-    {
-        this.visitor.TableAsStart = tableAsStart;
-        this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3));
-        return new FromQuery<T1, T2, T3>(this.visitor);
-    }
-    public IFromQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a')
-    {
-        this.visitor.TableAsStart = tableAsStart;
-        this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-        return new FromQuery<T1, T2, T3, T4>(this.visitor);
-    }
-    public IFromQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a')
-    {
-        this.visitor.TableAsStart = tableAsStart;
-        this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
-        return new FromQuery<T1, T2, T3, T4, T5>(this.visitor);
-    }
-    public IFromQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a')
-    {
-        this.visitor.TableAsStart = tableAsStart;
-        this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
-        return new FromQuery<T1, T2, T3, T4, T5, T6>(this.visitor);
-    }
-    public IFromQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a')
-    {
-        this.visitor.TableAsStart = tableAsStart;
-        this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
-        return new FromQuery<T1, T2, T3, T4, T5, T6, T7>(this.visitor);
-    }
-    public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a')
-    {
-        this.visitor.TableAsStart = tableAsStart;
-        this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
-        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this.visitor);
-    }
-    public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a')
-    {
-        this.visitor.TableAsStart = tableAsStart;
-        this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
-        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.visitor);
-    }
-    public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')
-    {
-        this.visitor.TableAsStart = tableAsStart;
-        this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
-        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.visitor);
-    }
-    public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(char tableAsStart = 'a')
-    {
-        this.visitor.TableAsStart = tableAsStart;
-        this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10), typeof(T11));
-        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(this.visitor);
-    }
-    public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(char tableAsStart = 'a')
-    {
-        this.visitor.TableAsStart = tableAsStart;
-        this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10), typeof(T11), typeof(T12));
-        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(this.visitor);
-    }
-    public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(char tableAsStart = 'a')
-    {
-        this.visitor.TableAsStart = tableAsStart;
-        this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10), typeof(T11), typeof(T12), typeof(T13));
-        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(this.visitor);
-    }
-    public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(char tableAsStart = 'a')
-    {
-        this.visitor.TableAsStart = tableAsStart;
-        this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10), typeof(T11), typeof(T12), typeof(T13), typeof(T14));
-        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(this.visitor);
-    }
-    public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(char tableAsStart = 'a')
-    {
-        this.visitor.TableAsStart = tableAsStart;
-        this.visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10), typeof(T11), typeof(T12), typeof(T13), typeof(T14), typeof(T15));
-        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(this.visitor);
-    }
+    #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(out dbParameters, out _);
+    #endregion
+}
+class FromQueryBase
+{
+    #region Fields
+    protected string dbKey;
+    protected TheaConnection connection;
+    protected IDbTransaction transaction;
+    protected IOrmProvider ormProvider;
+    protected IQueryVisitor visitor;
+    #endregion
+
+    #region Constructor
+    public FromQueryBase(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+    {
+        this.connection = connection;
+        this.transaction = transaction;
+        this.ormProvider = ormProvider;
+        this.visitor = visitor;
+        this.dbKey = connection?.DbKey;
+    }
+    #endregion
+    
+    #region Select
+    public IQueryAnonymousObject Select(string fields = "*")
+    {
+        if(string.IsNullOrEmpty(fields))
+            throw new ArgumentNullException(nameof(fields));
+
+        this.visitor.Select(fields, null, true);
+        return new QueryAnonymousObject(this.visitor);
+    }
+    public IFromQuery<TTarget> Select<TTarget>(string fields = "*")
+    {
+        if (string.IsNullOrEmpty(fields))
+            throw new ArgumentNullException(nameof(fields));
+
+        this.visitor.Select(fields, null, true);
+        return new FromQuery<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
+    }
+    #endregion
+
+    #region ToSql
+    public string ToSql(out List<IDbDataParameter> dbParameters)
+        => this.visitor.BuildSql(out dbParameters, out _);
+    #endregion
+}
+class FromQuery : IFromQuery
+{
+    #region Fields
+    protected string dbKey;
+    protected TheaConnection connection;
+    protected IDbTransaction transaction;
+    protected IOrmProvider ormProvider;
+    protected IQueryVisitor visitor;
+    #endregion
+
+    #region Constructor
+    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+    {
+        this.connection = connection;
+        this.transaction = transaction;
+        this.ormProvider = ormProvider;
+        this.visitor = visitor;
+        this.dbKey = connection.DbKey;
+    }
+    #endregion
+
+    #region From
+    public IFromQuery<T> From<T>(char tableAsStart = 'a')
+    {
+        this.visitor.From(tableAsStart, typeof(T));
+        return new FromQuery<T>(this.connection, this.transaction, this.ormProvider, this.visitor);
+    }
+<#
+    var count = 16;
+    var tables = "T1";
+    var typeOfTables = "typeof(T1)";
+    for (int i = 2; i < count; i++)
+    {
+        tables += $", T{i}";
+        typeOfTables += $", typeof(T{i})";
+#>
+    public IFromQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a')
+    {
+        this.visitor.From(tableAsStart, <#=typeOfTables#>);
+        return new FromQuery<<#=tables#>>(this.connection, this.transaction, this.ormProvider, this.visitor);
+    }
+<#  }#>
+    #endregion
+
+    #region ToSql
+    public string ToSql(out List<IDbDataParameter> dbParameters)
+        => this.visitor.BuildSql(out dbParameters, out _);
+    #endregion
 }
 class FromQuery<T> : IFromQuery<T>
 {
-    private int unionIndex = 0;
-    private readonly IQueryVisitor visitor;
+    #region Fields
+    protected string dbKey;
+    protected TheaConnection connection;
+    protected IDbTransaction transaction;
+    protected IOrmProvider ormProvider;
+    protected IQueryVisitor visitor;
+    #endregion
 
+    #region Constructor
     public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
+    public FromQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+    {
+        this.connection = connection;
+        this.transaction = transaction;
+        this.ormProvider = ormProvider;
+        this.visitor = visitor;
+        this.dbKey = connection.DbKey;
+    }
+    #endregion
 
     #region Union/UnionAll
     public IFromQuery<T> Union(Func<IFromQuery, IFromQuery<T>> subQuery)
@@ -124,10 +150,10 @@ class FromQuery<T> : IFromQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone('a', $"p{this.unionIndex++}u");
+        var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = " UNION" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true);
-        this.visitor.Union(sql, readerFields, dbParameters);
+        var sql = " UNION" + Environment.NewLine + newVisitor.BuildSql(out _, out _, true);
+        this.visitor.Union(typeof(T), sql);
         return this;
     }
     public IFromQuery<T> UnionAll(Func<IFromQuery, IFromQuery<T>> subQuery)
@@ -135,10 +161,10 @@ class FromQuery<T> : IFromQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone('a', $"p{this.unionIndex++}u");
+        var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true);
-        this.visitor.Union(sql, readerFields, dbParameters);
+        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out _, out _, true);
+        this.visitor.Union(typeof(T), sql);
         return this;
     }
     public IFromQuery<T> UnionRecursive(Func<IFromQuery, IFromQuery<T>, IFromQuery<T>> subQuery)
@@ -146,10 +172,10 @@ class FromQuery<T> : IFromQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone('a', $"p{this.unionIndex++}u");
+        var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor), null);
-        var sql = " UNION" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true);
-        this.visitor.Union(sql, readerFields, dbParameters);
+        var sql = " UNION" + Environment.NewLine + newVisitor.BuildSql(out _, out _, true);
+        this.visitor.Union(typeof(T), sql);
         return this;
     }
     public IFromQuery<T> UnionAllRecursive(Func<IFromQuery, IFromQuery<T>, IFromQuery<T>> subQuery)
@@ -157,10 +183,10 @@ class FromQuery<T> : IFromQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone('a', $"p{this.unionIndex++}u");
+        var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor), null);
-        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out var dbParameters, out var readerFields, true);
-        this.visitor.Union(sql, readerFields, dbParameters);
+        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out _, out _, true);
+        this.visitor.Union(typeof(T), sql);
         return this;
     }
     #endregion
@@ -172,7 +198,7 @@ class FromQuery<T> : IFromQuery<T>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new FromQuery<T, TOther>(this.visitor);
+        return new FromQuery<T, TOther>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     public IFromQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
@@ -180,7 +206,7 @@ class FromQuery<T> : IFromQuery<T>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new FromQuery<T, TOther>(this.visitor);
+        return new FromQuery<T, TOther>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     public IFromQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
@@ -188,7 +214,7 @@ class FromQuery<T> : IFromQuery<T>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new FromQuery<T, TOther>(this.visitor);
+        return new FromQuery<T, TOther>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     public IFromQuery<T, TTarget> InnerJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<T, TTarget, bool>> joinOn)
     {
@@ -196,7 +222,7 @@ class FromQuery<T> : IFromQuery<T>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TTarget), cteTableName, joinOn);
-        return new FromQuery<T, TTarget>(this.visitor);
+        return new FromQuery<T, TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     public IFromQuery<T, TTarget> LeftJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<T, TTarget, bool>> joinOn)
     {
@@ -204,7 +230,7 @@ class FromQuery<T> : IFromQuery<T>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TTarget), cteTableName, joinOn);
-        return new FromQuery<T, TTarget>(this.visitor);
+        return new FromQuery<T, TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     public IFromQuery<T, TTarget> RightJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<T, TTarget, bool>> joinOn)
     {
@@ -212,7 +238,7 @@ class FromQuery<T> : IFromQuery<T>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TTarget), cteTableName, joinOn);
-        return new FromQuery<T, TTarget>(this.visitor);
+        return new FromQuery<T, TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     #endregion
 
@@ -262,7 +288,7 @@ class FromQuery<T> : IFromQuery<T>
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new FromGroupingQuery<T, TGrouping>(this.visitor);
+        return new FromGroupingQuery<T, TGrouping>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     public IFromQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
     {
@@ -299,16 +325,21 @@ class FromQuery<T> : IFromQuery<T>
     }
     #endregion
 
+    #region Distinct
     public IFromQuery<T> Distinct()
     {
         this.visitor.Distinct();
         return this;
     }
+    #endregion
+    
+    #region Take
     public IFromQuery<T> Take(int limit)
     {
         this.visitor.Take(limit);
         return this;
     }
+    #endregion
 
     #region Select
     public IFromQuery<T> Select()
@@ -317,13 +348,21 @@ class FromQuery<T> : IFromQuery<T>
         this.visitor.Select(null, defaultExpr, true);
         return this;
     }
-    public IQueryAnonymousObject Select(string fields = "*")
+    public IQueryAnonymousObject Select(string fields)
     {
         if(string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
         this.visitor.Select(fields, null, true);
         return new QueryAnonymousObject(this.visitor);
+    }
+    public IFromQuery<TTarget> Select<TTarget>(string fields)
+    {
+        if (string.IsNullOrEmpty(fields))
+            throw new ArgumentNullException(nameof(fields));
+
+        this.visitor.Select(fields, null, true);
+        return new FromQuery<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
     {
@@ -331,7 +370,7 @@ class FromQuery<T> : IFromQuery<T>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr, true);
-        return new FromQuery<TTarget>(this.visitor);
+        return new FromQuery<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
     {
@@ -339,25 +378,28 @@ class FromQuery<T> : IFromQuery<T>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr, true);
-        return new FromQuery<TTarget>(this.visitor);
+        return new FromQuery<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     #endregion
 
+    #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
         => this.visitor.BuildSql(out dbParameters, out _);
+    #endregion
 }
 <#
-    var count = 15;
-    string tables = "T1";
+    count = 16;
+    tables = "T1";
     for (int i = 2; i < count; i++)
     {
         tables += $", T{i}";
 #>
-class FromQuery<<#=tables#>> : IFromQuery<<#=tables#>>
+class FromQuery<<#=tables#>> : FromQueryBase, IFromQuery<<#=tables#>>
 {
-    private readonly IQueryVisitor visitor;
-
-    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
+    #region Constructor
+    public FromQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
 
     #region Join
     public IFromQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
@@ -384,13 +426,17 @@ class FromQuery<<#=tables#>> : IFromQuery<<#=tables#>>
         this.visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
+<#
+        if(i < count - 1)
+        {
+#>
     public IFromQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new FromQuery<<#=tables#>, TOther>(this.visitor);
+        return new FromQuery<<#=tables#>, TOther>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     public IFromQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
@@ -398,7 +444,7 @@ class FromQuery<<#=tables#>> : IFromQuery<<#=tables#>>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new FromQuery<<#=tables#>, TOther>(this.visitor);
+        return new FromQuery<<#=tables#>, TOther>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     public IFromQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
@@ -406,7 +452,7 @@ class FromQuery<<#=tables#>> : IFromQuery<<#=tables#>>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new FromQuery<<#=tables#>, TOther>(this.visitor);
+        return new FromQuery<<#=tables#>, TOther>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     public IFromQuery<<#=tables#>, TTarget> InnerJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<<#=tables#>, TTarget, bool>> joinOn)
     {
@@ -414,7 +460,7 @@ class FromQuery<<#=tables#>> : IFromQuery<<#=tables#>>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TTarget), cteTableName, joinOn);
-        return new FromQuery<<#=tables#>, TTarget>(this.visitor);
+        return new FromQuery<<#=tables#>, TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     public IFromQuery<<#=tables#>, TTarget> LeftJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<<#=tables#>, TTarget, bool>> joinOn)
     {
@@ -422,7 +468,7 @@ class FromQuery<<#=tables#>> : IFromQuery<<#=tables#>>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TTarget), cteTableName, joinOn);
-        return new FromQuery<<#=tables#>, TTarget>(this.visitor);
+        return new FromQuery<<#=tables#>, TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     public IFromQuery<<#=tables#>, TTarget> RightJoinRecursive<TTarget>(IFromQuery<TTarget> target, string cteTableName, Expression<Func<<#=tables#>, TTarget, bool>> joinOn)
     {
@@ -430,10 +476,30 @@ class FromQuery<<#=tables#>> : IFromQuery<<#=tables#>>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TTarget), cteTableName, joinOn);
-        return new FromQuery<<#=tables#>, TTarget>(this.visitor);
+        return new FromQuery<<#=tables#>, TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
+    }
+<#      }#>
+    #endregion
+<#
+        if(i < count - 1)
+        {
+#>
+
+    #region WithTable
+    public IQuery<<#=tables#>, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var newVisitor = this.visitor.Clone();
+        subQuery.Invoke(new FromQuery(newVisitor));
+        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        return new Query<<#=tables#>, TOther>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     #endregion
 
+<#      }#>
     #region Where/And
     public IFromQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
     {
@@ -473,162 +539,22 @@ class FromQuery<<#=tables#>> : IFromQuery<<#=tables#>>
     }
     #endregion
 
-    #region GroupBy/OrderBy
+<#
+        if(i < count - 1)
+        {
+#>
+    #region GroupBy
     public IFromGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new FromGroupingQuery<<#=tables#>, TGrouping>(this.visitor);
-    }
-    public IFromQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
-        this.visitor.OrderBy("ASC", fieldsExpr);
-        return this;
-    }
-    public IFromQuery<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
-        if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
-        return this;
-    }
-    public IFromQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
-        this.visitor.OrderBy("DESC", fieldsExpr);
-        return this;
-    }
-    public IFromQuery<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
-        if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
-        return this;
+        return new FromGroupingQuery<<#=tables#>, TGrouping>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     #endregion
 
-    public IFromQuery<<#=tables#>> Distinct()
-    {
-        this.visitor.Distinct();
-        return this;
-    }
-
-    #region Select
-    public IQueryAnonymousObject Select(string fields = "*")
-    {
-        if(string.IsNullOrEmpty(fields))
-            throw new ArgumentNullException(nameof(fields));
-
-        this.visitor.Select(fields, null, true);
-        return new QueryAnonymousObject(this.visitor);
-    }
-    public IFromQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
-        this.visitor.Select(null, fieldsExpr, true);
-        return new FromQuery<TTarget>(this.visitor);
-    }
-    public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, <#=tables#>, TTarget>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
-        this.visitor.Select(null, fieldsExpr, true);
-        return new FromQuery<TTarget>(this.visitor);
-    }
-    #endregion
-
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
-}
-<#  }
-    tables += $", T{count}";
-#>
-class FromQuery<<#=tables#>> : IFromQuery<<#=tables#>>
-{
-    private readonly IQueryVisitor visitor;
-
-    public FromQuery(IQueryVisitor visitor) => this.visitor = visitor;
-
-    #region Join
-    public IFromQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.visitor.Join("INNER JOIN", joinOn);
-        return this;
-    }
-    public IFromQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.visitor.Join("LEFT JOIN", joinOn);
-        return this;
-    }
-    public IFromQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.visitor.Join("RIGHT JOIN", joinOn);
-        return this;
-    }
-    #endregion
-
-    #region Where/And
-    public IFromQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.Where(predicate);
-        return this;
-    }
-    public IFromQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
-    {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
-        return this;
-    }
-    public IFromQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.visitor.And(predicate);
-        return this;
-    }
-    public IFromQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
-    {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
-        return this;
-    }
-    #endregion
-
+<#      }#>
     #region OrderBy
     public IFromQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
@@ -667,21 +593,13 @@ class FromQuery<<#=tables#>> : IFromQuery<<#=tables#>>
     #endregion
 
     #region Select
-    public IQueryAnonymousObject Select(string fields = "*")
-    {
-        if(string.IsNullOrEmpty(fields))
-            throw new ArgumentNullException(nameof(fields));
-
-        this.visitor.Select(fields, null, true);
-        return new QueryAnonymousObject(this.visitor);
-    }
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr, true);
-        return new FromQuery<TTarget>(this.visitor);
+        return new FromQuery<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     public IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, <#=tables#>, TTarget>> fieldsExpr)
     {
@@ -689,10 +607,8 @@ class FromQuery<<#=tables#>> : IFromQuery<<#=tables#>>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr, true);
-        return new FromQuery<TTarget>(this.visitor);
+        return new FromQuery<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
     #endregion
-
-    public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
 }
+<#  }#>

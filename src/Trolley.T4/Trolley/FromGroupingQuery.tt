@@ -6,16 +6,62 @@
 <#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
 <#@ output extension=".cs" #>
 using System;
+using System.Data;
 using System.Linq.Expressions;
 
 namespace Trolley;
 
-class FromGroupingQuery<T, TGrouping> : IFromGroupingQuery<T, TGrouping>
+class FromGroupingQueryBase<TGrouping>
 {
-    private readonly IQueryVisitor visitor;
+    #region Fields
+    protected TheaConnection connection;
+    protected IDbTransaction transaction;
+    protected IOrmProvider ormProvider;
+    protected IQueryVisitor visitor;
+    #endregion
 
-    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
+    #region Constructor
+    public FromGroupingQueryBase(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+    {
+        this.connection = connection;
+        this.transaction = transaction;
+        this.ormProvider = ormProvider;
+        this.visitor = visitor;
+    }
+    #endregion
 
+    #region Select
+    public IFromQuery<TGrouping> Select()
+    {
+        this.visitor.SelectGrouping(true);
+        return new FromQuery<TGrouping>(this.connection, this.transaction, this.ormProvider, this.visitor);
+    }
+    public IQueryAnonymousObject Select(string fields)
+    {
+        if (string.IsNullOrEmpty(fields))
+            throw new ArgumentNullException(nameof(fields));
+
+        this.visitor.Select(fields, null, true);
+        return new QueryAnonymousObject(this.visitor);
+    }
+    public IFromQuery<TTarget> Select<TTarget>(string fields)
+    {
+        if (string.IsNullOrEmpty(fields))
+            throw new ArgumentNullException(nameof(fields));
+
+        this.visitor.Select(fields, null, true);
+        return new FromQuery<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
+    }
+    #endregion
+}
+class FromGroupingQuery<T, TGrouping> : FromGroupingQueryBase<TGrouping>, IFromGroupingQuery<T, TGrouping>
+{
+    #region Constructor
+    public FromGroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
+
+    #region Having
     public IFromGroupingQuery<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
     {
         if (predicate == null)
@@ -32,6 +78,9 @@ class FromGroupingQuery<T, TGrouping> : IFromGroupingQuery<T, TGrouping>
         if (condition) this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region Having
     public IFromGroupingQuery<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -48,38 +97,35 @@ class FromGroupingQuery<T, TGrouping> : IFromGroupingQuery<T, TGrouping>
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IFromQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping(true);
-        return new FromQuery<TGrouping>(this.visitor);
-    }
-    public IQueryAnonymousObject Select(string fields = "*")
-    {
-        if (string.IsNullOrEmpty(fields))
-            throw new ArgumentNullException(nameof(fields));
+    #endregion
 
-        this.visitor.Select(fields, null, true);
-        return new QueryAnonymousObject(this.visitor);
-    }
+    #region Select
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
     {
         this.visitor.Select(null, fieldsExpr, true);
-        return new FromQuery<TTarget>(this.visitor);
+        return new FromQuery<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }
 <#
-    var count = 15;
+    var count = 16;
     var tables = "T1";
     for (int i = 2; i < count; i++)
     {
         tables += $", T{i}";
 #>
-class FromGroupingQuery<<#=tables#>, TGrouping> : IFromGroupingQuery<<#=tables#>, TGrouping>
+class FromGroupingQuery<<#=tables#>, TGrouping> : FromGroupingQueryBase<TGrouping>, IFromGroupingQuery<<#=tables#>, TGrouping>
 {
-    private readonly IQueryVisitor visitor;
+    #region Constructor
+    public FromGroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, visitor) { }
+    #endregion
 
-    public FromGroupingQuery(IQueryVisitor visitor) => this.visitor = visitor;
-
+<#
+        if(i < count - 1)
+        {
+#>
+    #region Having
     public IFromGroupingQuery<<#=tables#>, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
     {
         if (predicate == null)
@@ -97,6 +143,9 @@ class FromGroupingQuery<<#=tables#>, TGrouping> : IFromGroupingQuery<<#=tables#>
             this.visitor.Having(predicate);
         return this;
     }
+    #endregion
+
+    #region OrderBy/OrderByDescending
     public IFromGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -113,56 +162,18 @@ class FromGroupingQuery<<#=tables#>, TGrouping> : IFromGroupingQuery<<#=tables#>
         this.visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
-    public IFromQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping(true);
-        return new FromQuery<TGrouping>(this.visitor);
-    }
-    public IQueryAnonymousObject Select(string fields = "*")
-    {
-        if (string.IsNullOrEmpty(fields))
-            throw new ArgumentNullException(nameof(fields));
+    #endregion
 
-        this.visitor.Select(fields, null, true);
-        return new QueryAnonymousObject(this.visitor);
-    }
+<#      }#>
+    #region Select
     public IFromQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr, true);
-        return new FromQuery<TTarget>(this.visitor);
+        return new FromQuery<TTarget>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
+    #endregion
 }
-<#  }
-    tables += $", T{count}";
-#>
-class FromGroupingQuery<<#=tables#>, TGrouping> : IFromGroupingQuery<<#=tables#>, TGrouping>
-{
-    private readonly QueryVisitor visitor;
-
-    public FromGroupingQuery(QueryVisitor visitor) => this.visitor = visitor;
-
-    public IFromQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new FromQuery<TGrouping>(this.visitor);
-    }
-    public IQueryAnonymousObject Select(string fields = "*")
-    {
-        if (string.IsNullOrEmpty(fields))
-            throw new ArgumentNullException(nameof(fields));
-
-        this.visitor.Select(fields, null, true);
-        return new QueryAnonymousObject(this.visitor);
-    }
-    public IFromQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
-        this.visitor.Select(null, fieldsExpr, true);
-        return new FromQuery<TTarget>(this.visitor);
-    }
-}
+<#  }#>

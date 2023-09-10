@@ -8,17 +8,17 @@ namespace Trolley;
 public interface IQueryVisitor
 {
     bool IsNeedAlias { get; set; }
-    char TableAsStart { get; set; }
-    IOrmProvider OrmProvider { get; }
-    string BuildSql(out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields, bool isUnion = false, char unionAlias = 'a');
+    List<IDbDataParameter> DbParameters { get; }
+    string BuildSql(out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields, bool isUnion = false);
     bool HasIncludeTables();
     bool BuildIncludeSql(object parameter, out string sql);
     void SetIncludeValues(object parameter, IDataReader reader);
     void From(char tableAsStart, params Type[] entityTypes);
     void From(char tableAsStart, Type entityType, string suffixRawSql);
-    TableSegment WithTable(Type entityType, string body, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null, string joinType = "");
-    void WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null);
-    void Union(string body, List<ReaderField> readerFields, List<IDbDataParameter> dbParameters = null, char tableAlias = 'a');
+    TableSegment WithTable(Type entityType);
+    TableSegment WithTable(Type entityType, string body, List<ReaderField> readerFields = null, string joinType = "");
+    void WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<ReaderField> readerFields = null);
+    void Union(Type entityType, string body);
     void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null);
     void ThenInclude(Expression memberSelector, bool isIncludeMany = false, Expression filter = null);
     void Join(string joinType, Expression joinOn);

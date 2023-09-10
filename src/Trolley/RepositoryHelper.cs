@@ -534,7 +534,8 @@ public class RepositoryHelper
                         fieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
 
                     var memberMapperExpr = Expression.Constant(propMapper);
-                    blockBodies.Add(Expression.Call(methodInfo4, memberMapperExpr, parameterNameExpr, fieldValueExpr));
+                    var dbParameterExpr = Expression.Call(methodInfo4, ormProviderExpr, memberMapperExpr, parameterNameExpr, fieldValueExpr);
+                    blockBodies.Add(Expression.Call(dbParametersExpr, methodInfo3, dbParameterExpr));
                     blockBodies.Add(Expression.Call(valueBuilderExpr, methodInfo2, parameterNameExpr));
                     columnIndex++;
                 }
@@ -670,47 +671,27 @@ public class RepositoryHelper
         }
         return commandInitializer;
     }
-    //public static Action<ISqlVisitor, List<InsertField>, List<IDbDataParameter>, object> BuildCreateWhereWithCommandInitializer(ISqlVisitor sqlVisitor, Type entityType, object whereObj, bool isOnlyKeys)
+    //public static Func<ISqlVisitor, List<IDbDataParameter>, object, string> BuildCreateWhereWithSqlParameters(ISqlVisitor sqlVisitor, Type entityType, object whereObj)
     //{
-    //    Action<ISqlVisitor, List<InsertField>, List<IDbDataParameter>, object> whereInitializer = null;
+    //    Func<ISqlVisitor, List<IDbDataParameter>, object, string> whereInitializer = null;
     //    if (whereObj is IDictionary<string, object> dict)
     //    {
     //        Action<ISqlVisitor, List<InsertField>, List<IDbDataParameter>, IDictionary<string, object>> dictWhereInitializer = null;
     //        var entityMapper = sqlVisitor.MapProvider.GetEntityMap(entityType);
-    //        if (isOnlyKeys)
+    //        dictWhereInitializer = (visitor, whereFields, dbParameters, dict) =>
     //        {
-    //            dictWhereInitializer = (visitor, whereFields, dbParameters, dict) =>
+    //            foreach (var item in dict)
     //            {
-    //                foreach (var keyMapper in entityMapper.KeyMembers)
-    //                {
-    //                    if (!dict.TryGetValue(keyMapper.MemberName, out var fieldValue))
-    //                        throw new ArgumentNullException("whereObj", $"字典参数中缺少主键字段{keyMapper.MemberName}");
+    //                if (!entityMapper.TryGetMemberMap(item.Key, out var memberMapper)
+    //                    || memberMapper.IsIgnore || memberMapper.IsNavigation
+    //                    || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+    //                    continue;
 
-    //                    var parameterName = $"{visitor.OrmProvider.ParameterPrefix}k{keyMapper.MemberName}";
-    //                    var dbParameter = visitor.OrmProvider.CreateParameter(keyMapper, parameterName, fieldValue);
-    //                    whereFields.Add(new InsertField { Fields = visitor.OrmProvider.GetFieldName(keyMapper.FieldName), Values = parameterName });
-    //                    dbParameters.Add(dbParameter);
-    //                }
-    //            };
-    //        }
-    //        else
-    //        {
-    //            dictWhereInitializer = (visitor, whereFields, dbParameters, dict) =>
-    //            {
-    //                foreach (var item in dict)
-    //                {
-    //                    if (!entityMapper.TryGetMemberMap(item.Key, out var memberMapper)
-    //                        || memberMapper.IsIgnore || memberMapper.IsNavigation
-    //                        || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
-    //                        continue;
-
-    //                    var parameterName = $"{visitor.OrmProvider.ParameterPrefix}k{memberMapper.MemberName}";
-    //                    var dbParameter = visitor.OrmProvider.CreateParameter(memberMapper, parameterName, item.Value);
-    //                    whereFields.Add(new InsertField { Fields = visitor.OrmProvider.GetFieldName(memberMapper.FieldName), Values = parameterName });
-    //                    dbParameters.Add(dbParameter);
-    //                }
-    //            };
-    //        }
+    //                var parameterName = $"{visitor.OrmProvider.ParameterPrefix}k{memberMapper.MemberName}";
+    //                dbParameters.Add(visitor.OrmProvider.CreateParameter(memberMapper, parameterName, item.Value));
+    //                whereFields.Add(new InsertField { Fields = visitor.OrmProvider.GetFieldName(memberMapper.FieldName), Values = parameterName });
+    //            }
+    //        };
     //        whereInitializer = (visitor, whereFields, dbParameters, parameters)
     //            => dictWhereInitializer.Invoke(visitor, whereFields, dbParameters, dict);
     //    }
@@ -736,15 +717,10 @@ public class RepositoryHelper
     //            blockBodies.Add(Expression.Assign(typedParameterExpr, Expression.Convert(parameterExpr, parameterType)));
     //            var ormProviderExpr = Expression.Property(visitorExpr, nameof(ISqlVisitor.OrmProvider));
 
-    //            var whereMemberMappers = isOnlyKeys ? entityMapper.KeyMembers : entityMapper.MemberMaps;
-    //            foreach (var memberMapper in whereMemberMappers)
+    //            foreach (var memberInfo in memberInfos)
     //            {
-    //                if (!memberInfos.Exists(f => f.Name == memberMapper.MemberName))
-    //                {
-    //                    if (isOnlyKeys) throw new ArgumentNullException("whereObj", $"当前参数whereObj中缺少主键字段{memberMapper.MemberName}");
-    //                    else continue;
-    //                }
-    //                if (memberMapper.IsIgnore || memberMapper.IsNavigation
+    //                if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper)
+    //                    || memberMapper.IsIgnore || memberMapper.IsNavigation
     //                    || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
     //                    continue;
 

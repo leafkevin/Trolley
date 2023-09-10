@@ -7,9 +7,9 @@ namespace Trolley.SqlServer;
 
 public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
 {
-    public SqlServerQueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "")
-      : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix) { }
-    public override void WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<IDbDataParameter> dbParameters = null, List<ReaderField> readerFields = null)
+    public SqlServerQueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "", List<IDbDataParameter> dbParameters = null)
+      : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix, dbParameters) { }
+    public override void WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<ReaderField> readerFields = null)
     {
         var withTable = cteTableName;
         var builder = new StringBuilder();
@@ -38,9 +38,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
 
         var tableSegment = this.AddTable(entityType, string.Empty, TableType.FromQuery, cteTableName, readerFields);
         this.InitFromQueryReaderFields(tableSegment, readerFields);
-        if (dbParameters != null && dbParameters.Count > 0)
-            this.DbParameters.AddRange(dbParameters);
         //清掉构建CTE表时Union产生的sql
-        this.Sql = null;
+        this.UnionSql = null;
     }
 }

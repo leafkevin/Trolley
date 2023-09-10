@@ -57,18 +57,7 @@ class Create<TEntity> : ICreate<TEntity>
         this.visitor.WithBulkFirst(insertObjs);
         return new Created<TEntity>(this.connection, this.transaction, this.mapProvider, this.visitor).WithBulk(insertObjs, bulkCount);
     }
-    #endregion
-
-    #region Select
-    public IContinuedCreate<TEntity> Select<TInsertObject>(TInsertObject insertObjs)
-    {
-        if (insertObjs == null)
-            throw new ArgumentNullException(nameof(insertObjs));
-
-        this.visitor.WithBy(insertObjs);
-        return new ContinuedCreate<TEntity>(this.connection, this.transaction, this.mapProvider, this.visitor);
-    }
-    #endregion
+    #endregion     
 
     #region From
     public IContinuedCreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector)
@@ -135,12 +124,22 @@ class Created<TEntity> : ICreated<TEntity>
     }
     #endregion
 
-    #region UseIgnore
+    #region UseIgnore/IfNotExists
     public ICreated<TEntity> UseIgnore()
     {
         this.visitor.UseIgnore();
         return this;
     }
+    //public ICreated<TEntity> IfNotExists<TFields>(TFields keys)
+    //{
+    //    this.visitor.IfNotExists(keys);
+    //    return this;
+    //}
+    //public ICreated<TEntity> IfNotExists(Expression<Func<TEntity, bool>> keysPredicate)
+    //{
+    //    this.visitor.IfNotExists(keysPredicate);
+    //    return this;
+    //}
     #endregion
 
     #region WithBulk
