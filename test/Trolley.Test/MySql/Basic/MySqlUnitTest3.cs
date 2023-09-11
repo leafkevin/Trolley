@@ -223,7 +223,7 @@ public class MySqlUnitTest3 : UnitTestBase
                 ProductId = DBNull.Value
             }, parameters)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price,`UpdatedBy`=@UpdatedBy,`ProductId`=NULL,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5");
+        Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=@p0,`UpdatedBy`=@p1,`ProductId`=NULL,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@p0,`UpdatedBy`=@p1,`ProductId`=NULL,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@p0,`UpdatedBy`=@p1,`ProductId`=NULL,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@p0,`UpdatedBy`=@p1,`ProductId`=NULL,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@p0,`UpdatedBy`=@p1,`ProductId`=NULL,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@p0,`UpdatedBy`=@p1,`ProductId`=NULL,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5");
     }
     [Fact]
     public async void Update_Parameters_WithBulk()
@@ -352,10 +352,10 @@ public class MySqlUnitTest3 : UnitTestBase
             }, updateObj)
             .Where(new { updateObj.Id })
             .ToSql(out var dbParameters);
-        Assert.True(sql == "UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`Disputes`=@Disputes,`UpdatedAt`=@UpdatedAt WHERE `Id`=@kId");
-        Assert.True(dbParameters[0].ParameterName == "@TotalAmount");
+        Assert.True(sql == "UPDATE `sys_order` SET `TotalAmount`=@p0,`Products`=@p1,`Disputes`=@Disputes,`UpdatedAt`=@UpdatedAt WHERE `Id`=@kId");
+        Assert.True(dbParameters[0].ParameterName == "@p0");
         Assert.True((double)dbParameters[0].Value == this.CalcAmount(updateObj.TotalAmount + increasedAmount, 3));
-        Assert.True(dbParameters[1].ParameterName == "@Products");
+        Assert.True(dbParameters[1].ParameterName == "@p1");
         Assert.True((string)dbParameters[1].Value == JsonSerializer.Serialize(this.GetProducts()));
         Assert.True(dbParameters[2].ParameterName == "@Disputes");
         Assert.True((string)dbParameters[2].Value == JsonSerializer.Serialize(updateObj.Disputes));
@@ -378,9 +378,9 @@ public class MySqlUnitTest3 : UnitTestBase
             .Set(x => x.Products, new List<int> { 1, 2, 3 })
             .Where((a, b) => a.BuyerId == 1)
           .ToSql(out var dbParameters);
-        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1");
+        Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@p0,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1");
         Assert.NotNull(dbParameters);
-        Assert.True(dbParameters[0].ParameterName == "@TotalAmount");
+        Assert.True(dbParameters[0].ParameterName == "@p0");
         Assert.True((double)dbParameters[0].Value == 200.56);
         Assert.True(dbParameters[1].ParameterName == "@Products");
         Assert.True((string)dbParameters[1].Value == JsonSerializer.Serialize(new List<int> { 1, 2, 3 }));
@@ -797,8 +797,8 @@ public class MySqlUnitTest3 : UnitTestBase
             .Set(f => new { SomeTimes = TimeSpan.FromMinutes(1455) })
             .Where(f => f.Id == 1)
             .ToSql(out var parameters2);
-        Assert.True(sql2 == "UPDATE `sys_user` SET `SomeTimes`=@SomeTimes WHERE `Id`=1");
-        Assert.True(parameters2[0].ParameterName == "@SomeTimes");
+        Assert.True(sql2 == "UPDATE `sys_user` SET `SomeTimes`=@p0 WHERE `Id`=1");
+        Assert.True(parameters2[0].ParameterName == "@p0");
         Assert.True(parameters1[0].Value.GetType() == typeof(TimeSpan));
         Assert.True((TimeSpan)parameters1[0].Value == TimeSpan.FromMinutes(1455));
 
@@ -807,7 +807,7 @@ public class MySqlUnitTest3 : UnitTestBase
             .SetWith(f => new { f.SomeTimes, Age = age }, new { Id = 1, SomeTimes = TimeSpan.FromMinutes(1455) })
             .Where(new { Id = 1 })
             .ToSql(out var parameters7);
-        Assert.True(sql7 == "UPDATE `sys_user` SET `SomeTimes`=@SomeTimes,`Age`=@Age WHERE `Id`=@kId");
+        Assert.True(sql7 == "UPDATE `sys_user` SET `SomeTimes`=@SomeTimes,`Age`=@p1 WHERE `Id`=@kId");
         Assert.True(parameters7[0].ParameterName == "@SomeTimes");
         Assert.True(parameters1[0].Value.GetType() == typeof(TimeSpan));
         Assert.True((TimeSpan)parameters1[0].Value == TimeSpan.FromMinutes(1455));

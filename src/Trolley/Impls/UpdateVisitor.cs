@@ -611,7 +611,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
                 sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
 
-            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
+            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + dbParameters.Count.ToString();
             IDbDataParameter dbParameter = null;
             if (memberMapper != null)
                 dbParameter = this.OrmProvider.CreateParameter(memberMapper, parameterName, sqlSegment.Value);
