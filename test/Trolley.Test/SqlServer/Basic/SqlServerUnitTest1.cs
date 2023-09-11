@@ -141,8 +141,7 @@ public class SqlServerUnitTest1 : UnitTestBase
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
         var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
-        var sql =
-        repository.Create<User>()
+        var sql = repository.Create<User>()
             .WithBy(new
             {
                 Id = 1,
@@ -380,6 +379,7 @@ public class SqlServerUnitTest1 : UnitTestBase
     public void Insert_Select_From_Table1()
     {
         using var repository = dbFactory.Create();
+        repository.BeginTransaction();
         repository.Delete<Product>(2);
         var brand = repository.Get<Brand>(1);
         var sql = repository.Create<Product>()
@@ -419,6 +419,7 @@ public class SqlServerUnitTest1 : UnitTestBase
            .Where(f => f.Id == 1)
            .Execute();
         var product = repository.Get<Product>(2);
+        repository.Commit();
         Assert.True(count > 0);
         Assert.NotNull(product);
         Assert.True(product.ProductNo == "PN_" + brand.BrandNo);
@@ -538,7 +539,7 @@ public class SqlServerUnitTest1 : UnitTestBase
             .ToSql(out var parameters);
         Assert.True(sql == "INSERT INTO [sys_order] ([Id],[OrderNo],[TotalAmount],[BuyerId],[BuyerSource],[SellerId],[ProductCount],[Products],[Disputes],[IsEnabled],[CreatedBy],[CreatedAt],[UpdatedBy],[UpdatedAt]) VALUES(@Id,@OrderNo,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@ProductCount,@Products,@Disputes,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
         Assert.True(parameters[4].ParameterName == "@BuyerSource");
-        Assert.True((string)parameters[4].Value == UserSourceType.Website.ToString());
+        Assert.True(parameters[4].Value is DBNull);
         Assert.True(parameters[7].ParameterName == "@Products");
         Assert.True((string)parameters[7].Value == "[1,2]");
         Assert.True(parameters[8].ParameterName == "@Disputes");
