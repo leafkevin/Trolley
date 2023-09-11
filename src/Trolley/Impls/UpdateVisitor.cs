@@ -4,6 +4,7 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Security.Principal;
 using System.Text;
 
 namespace Trolley;
@@ -248,16 +249,22 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var entityMapper = this.Tables[0].Mapper;
         if (fieldsSelectorOrAssignment != null)
         {
+            MemberMap memberMapper = null;
             var lambdaExpr = fieldsSelectorOrAssignment as LambdaExpression;
             switch (lambdaExpr.Body.NodeType)
             {
+                case ExpressionType.MemberAccess:
+                    var memberExpr = lambdaExpr.Body as MemberExpression;
+                    memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
+                    this.AddMemberElement(memberMapper, updateObj);
+                    break;
                 case ExpressionType.New:
                     this.InitTableAlias(lambdaExpr);
                     var newExpr = lambdaExpr.Body as NewExpression;
                     for (int i = 0; i < newExpr.Arguments.Count; i++)
                     {
                         var memberInfo = newExpr.Members[i];
-                        if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
+                        if (!entityMapper.TryGetMemberMap(memberInfo.Name, out memberMapper))
                             continue;
 
                         var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i] });
@@ -272,7 +279,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
                     {
                         var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                        if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
+                        if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out memberMapper))
                             continue;
 
                         var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression });
@@ -606,11 +613,11 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
             IDbDataParameter dbParameter = null;
-            if (sqlSegment.MemberMapper != null)
-                dbParameter = this.OrmProvider.CreateParameter(sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
+            if (memberMapper != null)
+                dbParameter = this.OrmProvider.CreateParameter(memberMapper, parameterName, sqlSegment.Value);
             else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
 
-            this.DbParameters.Add(dbParameter);
+            dbParameters.Add(dbParameter);
             sqlSegment.Value = parameterName;
             //sqlSegment.IsParameter = true;
             //sqlSegment.IsVariable = false;
