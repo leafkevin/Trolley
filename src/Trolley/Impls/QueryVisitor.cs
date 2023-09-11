@@ -86,7 +86,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 }
                 builder.Append(tableName);
 
-                if (this.IsNeedAlias || tableSegment.IsNeedAlais)
+                //子查询要设置表别名
+                if (this.IsNeedAlias || tableSegment.IsNeedAlais
+                    || tableSegment.TableType == TableType.FromQuery)
                     builder.Append(" " + tableSegment.AliasName);
                 if (!string.IsNullOrEmpty(tableSegment.SuffixRawSql))
                     builder.Append(" " + tableSegment.SuffixRawSql);
@@ -223,7 +225,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         int tableIndex = this.TableAsStart + this.Tables.Count;
         for (int i = 0; i < entityTypes.Length; i++)
         {
-            this.Tables.Add(new TableSegment
+            this.AddTable(new TableSegment
             {
                 EntityType = entityTypes[i],
                 AliasName = $"{(char)(tableIndex + i)}",
@@ -232,7 +234,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 IsMaster = true
             });
         }
-        if (this.Tables.Count > 1) this.IsNeedAlias = true;
     }
     public virtual void From(char tableAsStart, params Type[] entityTypes)
     {
@@ -244,7 +245,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.UnionSql = null;
         this.TableAsStart = tableAsStart;
         int tableIndex = tableAsStart + this.Tables.Count;
-        this.Tables.Add(new TableSegment
+        this.AddTable(new TableSegment
         {
             EntityType = entityType,
             Mapper = this.MapProvider.GetEntityMap(entityType),
@@ -255,21 +256,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             IsMaster = true
         });
     }
-    public virtual TableSegment WithTable(Type entityType)
-    {
-        var sql = this.BuildSql(out _, out _, true);
-        this.Tables.Clear();
-        var tableSegment = this.AddTable(entityType, "", TableType.FromQuery, $"({sql})", this.ReaderFields);
-        this.InitFromQueryReaderFields(tableSegment, this.ReaderFields);
-        //临时表需要有别名(SELECT ..) a
-        tableSegment.IsNeedAlais = true;
-        return tableSegment;
-    }
     public virtual TableSegment WithTable(Type entityType, string body, List<ReaderField> readerFields = null, string joinType = "")
     {
         var tableSegment = this.AddTable(entityType, joinType, TableType.FromQuery, $"({body})", readerFields);
-        //临时表需要有别名(SELECT ..) b
-        tableSegment.IsNeedAlais = true;
+        //临时表需要有别名(SELECT ..) b       
         this.InitFromQueryReaderFields(tableSegment, readerFields);
         return tableSegment;
     }
@@ -373,7 +363,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void Join(string joinType, Expression joinOn)
     {
         this.IsWhere = true;
-        this.IsNeedAlias = true;
         var lambdaExpr = joinOn as LambdaExpression;
         if (!lambdaExpr.Body.GetParameters(out var parameters))
             throw new NotSupportedException("当前Join操作，没有表关联");
@@ -388,7 +377,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void Join(string joinType, Type newEntityType, Expression joinOn)
     {
         this.IsWhere = true;
-        this.IsNeedAlias = true;
         var lambdaExpr = joinOn as LambdaExpression;
         if (!lambdaExpr.Body.GetParameters(out var parameters))
             throw new NotSupportedException("当前Join操作，没有表关联");
@@ -404,7 +392,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void Join(string joinType, TableSegment joinTableSegment, Expression joinOn)
     {
         this.IsWhere = true;
-        this.IsNeedAlias = true;
         var lambdaExpr = joinOn as LambdaExpression;
         if (!lambdaExpr.Body.GetParameters(out var parameters))
             throw new NotSupportedException("当前Join操作，没有表关联");
@@ -419,7 +406,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void Join(string joinType, Type newEntityType, string cteTableName, Expression joinOn)
     {
         this.IsWhere = true;
-        this.IsNeedAlias = true;
         var lambdaExpr = joinOn as LambdaExpression;
         if (!lambdaExpr.Body.GetParameters(out var parameters))
             throw new NotSupportedException("当前Join操作，没有表关联");
@@ -904,10 +890,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         this.UnionSql = null;
         this.Tables.Add(tableSegment);
-        if (this.Tables.Count > 1)
+        if (this.Tables.Count == 2)
+        {
             this.IsNeedAlias = true;
-        //if (this.Tables.Count == 2 && this.Tables[0].TableType == TableType.FromQuery && this.Tables[0].ReaderFields != null)
-        //    this.InitFromQueryReaderFields(this.Tables[0], this.Tables[0].ReaderFields);
+            //子查询中，有固定设置别名，就取设置的别名，没有设置，就默认设置a
+            var readerFields = this.Tables[0].ReaderFields;
+            if (readerFields != null && readerFields.Count > 0)
+                this.InitFromQueryReaderFields(this.Tables[0], readerFields);
+        }
         return tableSegment;
     }
     public virtual TableSegment AddTable(Type entityType, string joinType = "", TableType tableType = TableType.Entity, string body = null, List<ReaderField> readerFields = null)
@@ -950,9 +940,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             else
             {
                 readerField.TableSegment = tableSegment;
+                //已经变成子查询了，原表字段名已经没意义了，直接变成新的字段名
+                if (readerField.TargetMember != null)
+                    readerField.FromMember = readerField.TargetMember;
                 //重新设置body内容，表别名变更
-                var targetMember = readerField.TargetMember ?? readerField.FromMember;
-                readerField.Body = this.GetFieldName(tableSegment, targetMember.Name);
+                readerField.Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(readerField.FromMember.Name);
             }
         }
     }

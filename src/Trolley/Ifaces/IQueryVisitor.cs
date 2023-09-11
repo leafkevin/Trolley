@@ -15,7 +15,6 @@ public interface IQueryVisitor
     void SetIncludeValues(object parameter, IDataReader reader);
     void From(char tableAsStart, params Type[] entityTypes);
     void From(char tableAsStart, Type entityType, string suffixRawSql);
-    TableSegment WithTable(Type entityType);
     TableSegment WithTable(Type entityType, string body, List<ReaderField> readerFields = null, string joinType = "");
     void WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<ReaderField> readerFields = null);
     void Union(Type entityType, string body);

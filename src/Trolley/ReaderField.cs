@@ -46,11 +46,11 @@ public class ReaderField
     /// ReaderField引用，查询数据库时，不会重复查询字段，在创建返回实体的时候，把对应数据再设置进去
     /// Include表引用时，主表数据返回，Include表引用才生效
     /// </summary>
-    public bool IsRef { get; set; }
+    //public bool IsRef { get; set; }
     /// <summary>
     /// ReaderField引用的索引位置，IsRef为true，才会有值
     /// </summary>
-    public int? RefIndex { get; set; }
+    //public int? RefIndex { get; set; }
     /// <summary>
     /// 是否有后续的Include表，当前是主表ReaderField时且有Include表，此值为true
     /// </summary>
@@ -76,6 +76,10 @@ public class ReaderField
     /// 字段查询后，执行函数调用的参数
     /// </summary>
     public List<Expression> DeferCallArgs { get; set; }
+    /// <summary>
+    /// 是否是最外层目标类型，通常用判断第一个字段是否是参数访问
+    /// </summary>
+    public bool IsTargetType { get; set; }
 }
 public enum ReaderFieldType : byte
 {

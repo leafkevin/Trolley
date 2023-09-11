@@ -92,10 +92,10 @@ public class Order
 }
 public class OrderInfo
 {
+    public string Description { get; set; }
     public int Id { get; set; }
     public string OrderNo { get; set; }
-    public int BuyerId { get; set; }
-    public string Description { get; set; }
+    public int BuyerId { get; set; }   
 }
 public class OrderDetail
 {

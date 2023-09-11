@@ -1015,7 +1015,7 @@ public class SqlVisitor : ISqlVisitor
                 currentExpr = callExpr.Object;
             }
         }
-        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, TableAsStart, ParameterPrefix);
+        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, TableAsStart, ParameterPrefix, this.MultiParameterPrefix, this.DbParameters);
         queryVisitor.IsNeedAlias = this.IsNeedAlias;
         while (callStack.TryPop(out var callExpr))
         {
@@ -1372,6 +1372,7 @@ public class SqlVisitor : ISqlVisitor
                 case ExpressionType.Parameter:
                     sqlSegment = this.VisitParameter(sqlSegment);
                     result = sqlSegment.Value as List<ReaderField>;
+                    result[0].IsTargetType = true;
                     break;
                 default:
                     //单个字段或是方法调用
