@@ -38,7 +38,7 @@ public class ReaderField
     /// </summary>
     public MemberInfo TargetMember { get; set; }
     /// <summary>
-    /// 单个字段或是*
+    /// 单个字段或是*，只有FromQuery类型表会赋值
     /// </summary>
     public string Body { get; set; }
     /// <summary>

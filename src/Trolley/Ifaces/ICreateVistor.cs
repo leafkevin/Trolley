@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using System.Text;
@@ -11,13 +12,13 @@ public interface ICreateVisitor
     string BuildHeadSql();
     string BuildTailSql();
     ICreateVisitor UseIgnore();
-    //ICreateVisitor IfNotExists(object whereObj);
-    //ICreateVisitor IfNotExists(Expression keysPredicate);
+    ICreateVisitor IfNotExists(object whereObj);
+    ICreateVisitor IfNotExists(Expression keysPredicate);
+    ICreateVisitor Set(Expression fieldsAssignment);
+    ICreateVisitor Set(object updateObj);
     ICreateVisitor WithBy(object insertObj);
     ICreateVisitor WithBy(Expression fieldSelector, object fieldValue);
     ICreateVisitor WithBulkFirst(object insertObjs);
     ICreateVisitor WithBulk(IDbCommand command, StringBuilder builder, int index, object insertObj);
-    ICreateVisitor From(Expression fieldSelector);
-    ICreateVisitor Where(Expression whereExpr);
-    ICreateVisitor And(Expression whereExpr);
+    IQueryVisitor CreateQuery(params Type[] sourceTypes);
 }

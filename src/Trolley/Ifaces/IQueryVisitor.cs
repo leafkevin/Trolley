@@ -37,6 +37,7 @@ public interface IQueryVisitor
     void Where(Expression whereExpr, bool isClearTableAlias = true);
     void And(Expression whereExpr);
     void Distinct();
+    void InsertTo(Type entityType);
     TableSegment InitTableAlias(LambdaExpression lambdaExpr);
     TableSegment AddTable(TableSegment tableSegment);
     TableSegment AddTable(Type entityType, string joinType = "", TableType tableType = TableType.Entity, string body = null, List<ReaderField> readerFields = null);

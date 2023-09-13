@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Trolley;
 
@@ -625,6 +628,31 @@ public interface IFromQuery<T>
     /// <param name="fieldsExpr">字段选择表达式，单个聚合字段或多个聚合字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IFromQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr);
+    #endregion
+
+    #region Execute
+    /// <summary>
+    /// 如果有插入操作，将执行插入操作，并返回插入行数，没有则忽略
+    /// </summary>
+    /// <returns>返回插入行数</returns>
+    int Execute();
+    /// <summary>
+    /// 如果有插入操作，将执行插入操作，并返回插入行数，没有则忽略
+    /// </summary>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回插入行数</returns>
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 如果有插入操作，将执行插入操作，并返回插入行数，没有则忽略
+    /// </summary>
+    /// <returns>返回插入行数</returns>
+    long ExecuteLong();
+    /// <summary>
+    /// 如果有插入操作，将执行插入操作，并返回插入行数，没有则忽略
+    /// </summary>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回插入行数</returns>
+    Task<long> ExecuteLongAsync(CancellationToken cancellationToken = default);
     #endregion
 
     #region ToSql

@@ -12,9 +12,10 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     private Action<IDbCommand, ISqlVisitor, StringBuilder, int, object> bulkCommandInitializer;
 
     protected List<InsertField> InsertFields { get; set; } = new();
-    protected bool IsFrom { get; set; } = false;
+    protected List<UpdateField> UpdateFields { get; set; } = new();
     protected bool IsUseIgnore { get; set; }
-    protected bool IsUseUpdate { get; set; }
+    protected bool IsUseIfNotExists { get; set; }
+    protected bool IsUseOrUpdate { get; set; }
     protected virtual bool IsBulk { get; set; } = false;
 
     public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
@@ -36,8 +37,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
         var fieldsBuilder = new StringBuilder($"{this.BuildHeadSql()} {tableName} (");
         var valuesBuilder = new StringBuilder();
-        string fromTables = null;
-        if (this.IsFrom) valuesBuilder.Append(" SELECT ");
+        if (this.IsUseIfNotExists) valuesBuilder.Append(" SELECT ");
         else valuesBuilder.Append(" VALUES(");
         for (int i = 0; i < this.InsertFields.Count; i++)
         {
@@ -49,13 +49,10 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             }
             fieldsBuilder.Append(insertField.Fields);
             valuesBuilder.Append(insertField.Values);
-            if (insertField.Type == InsertFieldType.FromTables)
-                fromTables = insertField.FromTables;
         }
         fieldsBuilder.Append(')');
-        if (this.IsFrom)
+        if (this.IsUseIfNotExists)
         {
-            valuesBuilder.Append($" FROM {fromTables}");
             if (!string.IsNullOrEmpty(this.WhereSql))
                 valuesBuilder.Append(" WHERE " + this.WhereSql);
         }
@@ -75,9 +72,72 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.IsUseIgnore = true;
         return this;
     }
-    public virtual ICreateVisitor UseUpdate()
+    public virtual ICreateVisitor IfNotExists(object whereObj)
     {
-        this.IsUseUpdate = true;
+        this.IsUseIfNotExists = true;
+        var commandInitializer = RepositoryHelper.BuildWhereWithKeysSqlParameters(this, this.Tables[0].EntityType, whereObj);
+        this.WhereSql = commandInitializer.Invoke(this, this.DbParameters, whereObj);
+        return this;
+    }
+    public virtual ICreateVisitor IfNotExists(Expression keysPredicate)
+    {
+        this.IsUseIfNotExists = true;
+        this.IsWhere = true;
+        var lambdaExpr = keysPredicate as LambdaExpression;
+        this.InitTableAlias(lambdaExpr);
+        this.LastWhereNodeType = OperationType.None;
+        this.WhereSql = this.VisitConditionExpr(lambdaExpr.Body);
+        this.IsWhere = false;
+        return this;
+    }
+    public virtual ICreateVisitor Set(Expression fieldsAssignment)
+    {
+        this.IsUseOrUpdate = true;
+        var lambdaExpr = fieldsAssignment as LambdaExpression;
+        var entityMapper = this.Tables[0].Mapper;
+        switch (lambdaExpr.Body.NodeType)
+        {
+            case ExpressionType.New:
+                this.InitTableAlias(lambdaExpr);
+                var newExpr = lambdaExpr.Body as NewExpression;
+                for (int i = 0; i < newExpr.Arguments.Count; i++)
+                {
+                    var memberInfo = newExpr.Members[i];
+                    if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
+                        continue;
+
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i], MemberMapper = memberMapper });
+                    //只一个成员访问，没有设置语句，什么也不做，忽略
+                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberInfo.Name)
+                        continue;
+                    this.AddMemberElement(sqlSegment, memberMapper);
+                }
+                break;
+            case ExpressionType.MemberInit:
+                this.InitTableAlias(lambdaExpr);
+                var memberInitExpr = lambdaExpr.Body as MemberInitExpression;
+                for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
+                {
+                    var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
+                    if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
+                        continue;
+
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression });
+                    //只一个成员访问，没有设置语句，什么也不做，忽略
+                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
+                        continue;
+                    this.AddMemberElement(sqlSegment, memberMapper);
+                }
+                break;
+        }
+        return this;
+    }
+    public virtual ICreateVisitor Set(object updateObj)
+    {
+        this.IsUseOrUpdate = true;
+        var entityMapper = this.Tables[0].Mapper;
+        var parametersInitializer = RepositoryHelper.BuildUpdateSetWithParameters(this, entityMapper.EntityType, updateObj, false);
+        parametersInitializer.Invoke(this, this.UpdateFields, this.DbParameters, updateObj);
         return this;
     }
     public virtual ICreateVisitor WithBy(object insertObj)
@@ -134,92 +194,11 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             builder.Append(tailSql);
         return this;
     }
-    public virtual ICreateVisitor From(Expression fieldSelector)
+    public virtual IQueryVisitor CreateQuery(params Type[] sourceTypes)
     {
-        if (this.IsFrom) throw new NotSupportedException("INSERT INTO数据，只允许有一次From操作");
-        this.IsNeedAlias = true;
-        var lambdaExpr = fieldSelector as LambdaExpression;
-        for (int i = 0; i < lambdaExpr.Parameters.Count; i++)
-        {
-            var parameterExpr = lambdaExpr.Parameters[i];
-            var tableSegment = new TableSegment
-            {
-                EntityType = parameterExpr.Type,
-                Mapper = this.MapProvider.GetEntityMap(parameterExpr.Type),
-                AliasName = $"{(char)(this.TableAsStart + i)}"
-            };
-            this.Tables.Add(tableSegment);
-        }
-        this.InitTableAlias(lambdaExpr);
-        var sqlSegment = lambdaExpr.Body.NodeType switch
-        {
-            ExpressionType.New => this.VisitNew(new SqlSegment { Expression = lambdaExpr.Body }),
-            ExpressionType.MemberInit => this.VisitMemberInit(new SqlSegment { Expression = lambdaExpr.Body }),
-            _ => throw new NotImplementedException("不支持的表达式，只支持New或MemberInit表达式，如: new { a.Id, b.Name + &quot;xxx&quot; } 或是new User { Id = a.Id, Name = b.Name + &quot;xxx&quot; }")
-        };
-        var insertFields = (InsertField)sqlSegment.Value;
-        var fromTablesBuilder = new StringBuilder();
-        for (var i = 1; i < this.Tables.Count; i++)
-        {
-            var tableSegment = this.Tables[i];
-            var tableName = tableSegment.Body;
-            if (string.IsNullOrEmpty(tableName))
-            {
-                tableSegment.Mapper ??= this.MapProvider.GetEntityMap(tableSegment.EntityType);
-                tableName = this.OrmProvider.GetTableName(tableSegment.Mapper.TableName);
-            }
-            if (i > 1) fromTablesBuilder.Append(',');
-            fromTablesBuilder.Append(tableName + " " + tableSegment.AliasName);
-        }
-        insertFields.FromTables = fromTablesBuilder.ToString();
-        this.InsertFields.Add(insertFields);
-        this.IsFrom = true;
-        return this;
-    }
-    //public virtual ICreateVisitor IfNotExists(object whereObj)
-    //{
-    //    var entityMapper = this.Tables[0].Mapper;
-    //    var whereInitializer = RepositoryHelper.BuildCreateWhereWithSqlParameters(this, entityMapper.EntityType, whereObj);
-    //    whereInitializer.Invoke(this, this.InsertFields, this.DbParameters, whereObj);
-    //    return this;
-    //}
-    //public virtual ICreateVisitor IfNotExists(Expression keysPredicate)
-    //{
-    //    var entityMapper = this.Tables[0].Mapper;
-    //    var whereInitializer = RepositoryHelper.BuildUpdateWhereWithParameters(this, entityMapper.EntityType, whereObj, isOnlyKeys);
-    //    whereInitializer.Invoke(this, this.IsUseUpdate, this.DbParameters, whereObj);
-    //    return this;
-    //}
-    public virtual ICreateVisitor Where(Expression whereExpr)
-    {
-        this.IsWhere = true;
-        var lambdaExpr = whereExpr as LambdaExpression;
-        this.InitTableAlias(lambdaExpr);
-        this.LastWhereNodeType = OperationType.None;
-        this.WhereSql = this.VisitConditionExpr(lambdaExpr.Body);
-        this.IsWhere = false;
-        return this;
-    }
-    public virtual ICreateVisitor And(Expression whereExpr)
-    {
-        this.IsWhere = true;
-        var lambdaExpr = whereExpr as LambdaExpression;
-        if (this.LastWhereNodeType == OperationType.Or)
-        {
-            this.WhereSql = $"({this.WhereSql})";
-            this.LastWhereNodeType = OperationType.And;
-        }
-        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body);
-        if (this.LastWhereNodeType == OperationType.Or)
-        {
-            conditionSql = $"({conditionSql})";
-            this.LastWhereNodeType = OperationType.And;
-        }
-        if (!string.IsNullOrEmpty(this.WhereSql))
-            this.WhereSql += " AND " + conditionSql;
-        else this.WhereSql = conditionSql;
-        this.IsWhere = false;
-        return this;
+        var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, "", this.DbParameters);
+        queryVisiter.From(this.TableAsStart, sourceTypes);
+        return queryVisiter;
     }
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
     {
@@ -280,7 +259,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             this.TableAlias.Add(parameterExpr.Name, this.Tables[i + 1]);
         }
     }
-    private void AddMemberElement(int index, SqlSegment sqlSegment, MemberMap memberMapper, StringBuilder fieldsBuilder, StringBuilder valuesBuilder)
+    protected void AddMemberElement(int index, SqlSegment sqlSegment, MemberMap memberMapper, StringBuilder fieldsBuilder, StringBuilder valuesBuilder)
     {
         sqlSegment = this.VisitAndDeferred(sqlSegment);
         if (index > 0)
@@ -299,6 +278,18 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             valuesBuilder.Append(this.GetQuotedValue(sqlSegment));
         }
     }
+    protected void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)
+    {
+        if (sqlSegment == SqlSegment.Null)
+        {
+            this.UpdateFields.Add(new UpdateField { Type = UpdateFieldType.SetValue, MemberMapper = memberMapper, Value = "NULL" });
+            return;
+        }
+        sqlSegment.IsParameterized = true;
+        sqlSegment.MemberMapper = memberMapper;
+        sqlSegment.ParameterName = "u" + memberMapper.MemberName;
+        this.UpdateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = this.GetQuotedValue(sqlSegment) });
+    }
 }
 public enum InsertFieldType
 {
@@ -310,5 +301,4 @@ public struct InsertField
     public InsertFieldType Type { get; set; }
     public string Fields { get; set; }
     public string Values { get; set; }
-    public string FromTables { get; set; }
 }

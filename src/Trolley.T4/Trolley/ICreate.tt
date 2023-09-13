@@ -83,36 +83,18 @@ public interface ICreate<TEntity>
 
     #region From
     /// <summary>
-    /// 从表TSource中捞取部分字段数据，并插入当前表TEntity中，用法：
+    /// 从表T中查询数据，用法：
     /// <code>
-    /// repository.Create&lt;Product&gt;()
-    ///     .From&lt;Brand&gt;(f =&gt; new
-    ///     {
-    ///         ProductNo = "PN_" + f.BrandNo,
-    ///         Name = "PName_" + f.Name,
-    ///         BrandId = f.Id,
-    ///         CategoryId = 1,
-    ///         f.CompanyId,
-    ///         f.IsEnabled,
-    ///         f.CreatedBy,
-    ///         f.CreatedAt,
-    ///         f.UpdatedBy,
-    ///         f.UpdatedAt
-    ///     })
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// INSERT INTO `sys_product` (`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT CONCAT('PN_',a.`BrandNo`),CONCAT('PName_',a.`Name`),a.`Id`,@CategoryId,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1
+    /// repository.From&lt;Menu&gt;() SQL:FROM `sys_menu`
     /// </code>
     /// </summary>
-    /// <typeparam name="TSource">实体类型，数据来源表</typeparam>
-    /// <param name="fieldSelector">插入的字段赋值表达式</param>
-    /// <returns>返回插入对象</returns>
-    IContinuedCreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector);
+    /// <typeparam name="T">实体类型</typeparam>
+    /// <param name="suffixRawSql">额外的原始SQL, SqlServer会有With用法，如：<cdoe>SELECT * FROM sys_user WITH(NOLOCK)</cdoe>
+    /// </param>
+    /// <returns>返回查询对象</returns>
+    IFromQuery<T> From<T>(string suffixRawSql = null);
 <#
-    var count = 5;
+    var count = 10;
     string tables = "T1";
     string currentTable = null;
     for (int i = 2; i <= count; i++)
@@ -120,29 +102,7 @@ public interface ICreate<TEntity>
         tables += $", T{i}";
 #>
     /// <summary>
-    /// 从表<#=tables#>中捞取部分字段数据，并插入当前表TEntity中，用法：
-    /// <code>
-    /// repository.Create&lt;Product&gt;()
-    ///     .From&lt;Brand&gt;(f =&gt; new
-    ///     {
-    ///         ProductNo = "PN_" + f.BrandNo,
-    ///         Name = "PName_" + f.Name,
-    ///         BrandId = f.Id,
-    ///         CategoryId = 1,
-    ///         f.CompanyId,
-    ///         f.IsEnabled,
-    ///         f.CreatedBy,
-    ///         f.CreatedAt,
-    ///         f.UpdatedBy,
-    ///         f.UpdatedAt
-    ///     })
-    ///     .Where(f =&gt; f.Id == 1)
-    ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// INSERT INTO `sys_product` (`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT CONCAT('PN_',a.`BrandNo`),CONCAT('PName_',a.`Name`),a.`Id`,@CategoryId,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1
-    /// </code>
+    /// 使用<#=i#>个表创建子查询对象
     /// </summary>
 <#
         for(int j = 1; j <= i; j++)
@@ -151,9 +111,8 @@ public interface ICreate<TEntity>
 #>
     /// <typeparam name="<#=currentTable#>">表T<#=j#>实体类型</typeparam>
 <#      }#>
-    /// <param name="fieldSelector">插入的字段赋值表达式</param>
-    /// <returns>返回插入对象</returns>
-    IContinuedCreate<TEntity, <#=tables#>> From<<#=tables#>>(Expression<Func<<#=tables#>, object>> fieldSelector);
+    /// <returns>返回查询对象</returns>
+    IFromQuery<<#=tables#>> From<<#=tables#>>();
 <#  }#>
     #endregion
 }
@@ -161,7 +120,36 @@ public interface ICreate<TEntity>
 /// 插入数据
 /// </summary>
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
-public interface IContinuedCreate<TEntity>
+public interface ICreated<TEntity>
+{
+    #region Execute
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <returns>返回插入行数</returns>
+    int Execute();
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <param name="cancellationToken">取消token</param>
+    /// <returns>返回插入行数</returns>
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToSql
+    /// <summary>
+    /// 返回当前查询的SQL和参数列表
+    /// </summary>
+    /// <param name="dbParameters">参数列表</param>
+    /// <returns>当前查询的SQL</returns>
+    string ToSql(out List<IDbDataParameter> dbParameters);
+    #endregion
+}
+/// <summary>
+/// 插入数据
+/// </summary>
+/// <typeparam name="TEntity">要插入的实体类型</typeparam>
+public interface IContinuedCreate<TEntity> : ICreated<TEntity>
 {
     #region WithBy
     /// <summary>
@@ -222,196 +210,4 @@ public interface IContinuedCreate<TEntity>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     #endregion
-
-    #region Execute
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion
-
-    #region ToSql
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
-    #endregion
 }
-/// <summary>
-/// 插入数据
-/// </summary>
-/// <typeparam name="TEntity">要插入的实体类型</typeparam>
-public interface ICreated<TEntity>
-{
-    #region ToSql
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion
-
-    #region ToSql
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
-    #endregion
-}
-/// <summary>
-/// 插入数据
-/// </summary>
-/// <typeparam name="TEntity">要插入的实体类型</typeparam>
-/// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
-public interface IContinuedCreate<TEntity, TSource>
-{
-    #region Where/And
-    /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
-    /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
-    /// <returns>返回插入对象</returns>
-    IContinuedCreate<TEntity, TSource> Where(Expression<Func<TSource, bool>> predicate);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
-    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
-    /// </summary>
-    /// <param name="condition">根据condition的值进行判断使用表达式</param>
-    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
-    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
-    /// <returns>返回查询对象</returns>
-    IContinuedCreate<TEntity, TSource> Where(bool condition, Expression<Func<TSource, bool>> ifPredicate, Expression<Func<TSource, bool>> elsePredicate = null);
-    /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
-    /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
-    /// <returns>返回查询对象</returns>
-    IContinuedCreate<TEntity, TSource> And(Expression<Func<TSource, bool>> predicate);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
-    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
-    /// </summary>
-    /// <param name="condition">根据condition的值进行判断使用表达式</param>
-    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
-    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
-    /// <returns>返回查询对象</returns>
-    IContinuedCreate<TEntity, TSource> And(bool condition, Expression<Func<TSource, bool>> ifPredicate = null, Expression<Func<TSource, bool>> elsePredicate = null);
-    #endregion
-
-    #region Execute
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion
-
-    #region ToSql
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
-    #endregion
-}
-<#
-    count = 6;
-    tables = "T1";
-    for (int i = 2; i < count; i++)
-    {
-        tables += $", T{i}";
-#>
-/// <summary>
-/// 插入数据
-/// </summary>
-/// <typeparam name="TEntity">要插入数据表的实体类型</typeparam>
-<#
-        for(int j = 1; j <= i; j++)
-        {
-            currentTable = $"T{j}";
-#>
-/// <typeparam name="<#=currentTable#>">数据来源表T<#=j#>实体类型</typeparam>
-<#      }#>
-public interface IContinuedCreate<TEntity, <#=tables#>>
-{
-    #region Where/And
-    /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
-    /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
-    /// <returns>返回插入对象</returns>
-    IContinuedCreate<TEntity, <#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
-    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
-    /// </summary>
-    /// <param name="condition">根据condition的值进行判断使用表达式</param>
-    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
-    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
-    /// <returns>返回查询对象</returns>
-    IContinuedCreate<TEntity, <#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
-    /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
-    /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
-    /// <returns>返回查询对象</returns>
-    IContinuedCreate<TEntity, <#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate);
-    /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
-    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
-    /// </summary>
-    /// <param name="condition">根据condition的值进行判断使用表达式</param>
-    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
-    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
-    /// <returns>返回查询对象</returns>
-    IContinuedCreate<TEntity, <#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
-    #endregion
-
-    #region Execute
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion
-
-    #region ToSql
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
-    #endregion
-}
-<#  }#>

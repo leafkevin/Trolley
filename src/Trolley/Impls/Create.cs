@@ -20,6 +20,7 @@ class Create<TEntity> : ICreate<TEntity>
     protected readonly IEntityMapProvider mapProvider;
     protected readonly bool isParameterized;
     protected readonly ICreateVisitor visitor;
+    protected readonly Type entityType;
     #endregion
 
     #region Constructor
@@ -30,8 +31,8 @@ class Create<TEntity> : ICreate<TEntity>
         this.ormProvider = ormProvider;
         this.mapProvider = mapProvider;
         this.isParameterized = isParameterized;
-        var entityType = typeof(TEntity);
-        this.visitor = ormProvider.NewCreateVisitor(connection.DbKey, mapProvider, entityType, isParameterized);
+        this.entityType = typeof(TEntity);
+        this.visitor = ormProvider.NewCreateVisitor(connection.DbKey, mapProvider, this.entityType, isParameterized);
     }
     #endregion
 
@@ -57,48 +58,97 @@ class Create<TEntity> : ICreate<TEntity>
         this.visitor.WithBulkFirst(insertObjs);
         return new Created<TEntity>(this.connection, this.transaction, this.mapProvider, this.visitor).WithBulk(insertObjs, bulkCount);
     }
-    #endregion     
+    #endregion
 
     #region From
-    public IContinuedCreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector)
+    public IFromQuery<T> From<T>(string suffixRawSql = null)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-
-        this.visitor.From(fieldSelector);
-        return new ContinuedCreate<TEntity, TSource>(this.connection, this.transaction, this.mapProvider, this.visitor);
+        var queryVisitor = this.visitor.CreateQuery(typeof(T));
+        queryVisitor.From('a', typeof(T), suffixRawSql);
+        var insertType = typeof(TEntity);
+        queryVisitor.InsertTo(insertType);
+        return new FromQuery<T>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
     }
-    public IContinuedCreate<TEntity, T1, T2> From<T1, T2>(Expression<Func<T1, T2, object>> fieldSelector)
+    public IFromQuery<T1, T2> From<T1, T2>()
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-
-        this.visitor.From(fieldSelector);
-        return new ContinuedCreate<TEntity, T1, T2>(this.connection, this.transaction, this.mapProvider, this.visitor);
+        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2));
+        var insertType = typeof(TEntity);
+        queryVisitor.InsertTo(insertType);
+        return new FromQuery<T1, T2>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
     }
-    public IContinuedCreate<TEntity, T1, T2, T3> From<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> fieldSelector)
+    public IFromQuery<T1, T2, T3> From<T1, T2, T3>()
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-
-        this.visitor.From(fieldSelector);
-        return new ContinuedCreate<TEntity, T1, T2, T3>(this.connection, this.transaction, this.mapProvider, this.visitor);
+        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3));
+        var insertType = typeof(TEntity);
+        queryVisitor.InsertTo(insertType);
+        return new FromQuery<T1, T2, T3>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
     }
-    public IContinuedCreate<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, object>> fieldSelector)
+    public IFromQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>()
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-
-        this.visitor.From(fieldSelector);
-        return new ContinuedCreate<TEntity, T1, T2, T3, T4>(this.connection, this.transaction, this.mapProvider, this.visitor);
+        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
+        var insertType = typeof(TEntity);
+        queryVisitor.InsertTo(insertType);
+        return new FromQuery<T1, T2, T3, T4>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
     }
-    public IContinuedCreate<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, object>> fieldSelector)
+    public IFromQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
+        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
+        var insertType = typeof(TEntity);
+        queryVisitor.InsertTo(insertType);
+        return new FromQuery<T1, T2, T3, T4, T5>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
+    }
+    public IFromQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
+    {
+        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
+        var insertType = typeof(TEntity);
+        queryVisitor.InsertTo(insertType);
+        return new FromQuery<T1, T2, T3, T4, T5, T6>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
+    }
+    public IFromQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>()
+    {
+        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
+        var insertType = typeof(TEntity);
+        queryVisitor.InsertTo(insertType);
+        return new FromQuery<T1, T2, T3, T4, T5, T6, T7>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
+    }
+    public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>()
+    {
+        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
+        var insertType = typeof(TEntity);
+        queryVisitor.InsertTo(insertType);
+        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
+    }
+    public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>()
+    {
+        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
+        var insertType = typeof(TEntity);
+        queryVisitor.InsertTo(insertType);
+        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
+    }
+    public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>()
+    {
+        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
+        var insertType = typeof(TEntity);
+        queryVisitor.InsertTo(insertType);
+        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
+    }
+    #endregion
 
-        this.visitor.From(fieldSelector);
-        return new ContinuedCreate<TEntity, T1, T2, T3, T4, T5>(this.connection, this.transaction, this.mapProvider, this.visitor);
+    #region UseIgnore/IfNotExists
+    public ICreate<TEntity> UseIgnore()
+    {
+        this.visitor.UseIgnore();
+        return this;
+    }
+    public ICreate<TEntity> IfNotExists<TFields>(TFields keys)
+    {
+        this.visitor.IfNotExists(keys);
+        return this;
+    }
+    public ICreate<TEntity> IfNotExists(Expression<Func<TEntity, bool>> keysPredicate)
+    {
+        this.visitor.IfNotExists(keysPredicate);
+        return this;
     }
     #endregion
 }
@@ -122,25 +172,7 @@ class Created<TEntity> : ICreated<TEntity>
         this.mapProvider = mapProvider;
         this.visitor = visitor;
     }
-    #endregion
-
-    #region UseIgnore/IfNotExists
-    public ICreated<TEntity> UseIgnore()
-    {
-        this.visitor.UseIgnore();
-        return this;
-    }
-    //public ICreated<TEntity> IfNotExists<TFields>(TFields keys)
-    //{
-    //    this.visitor.IfNotExists(keys);
-    //    return this;
-    //}
-    //public ICreated<TEntity> IfNotExists(Expression<Func<TEntity, bool>> keysPredicate)
-    //{
-    //    this.visitor.IfNotExists(keysPredicate);
-    //    return this;
-    //}
-    #endregion
+    #endregion   
 
     #region WithBulk
     public ICreated<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500)
@@ -151,6 +183,19 @@ class Created<TEntity> : ICreated<TEntity>
         this.parameters = insertObjs;
         this.bulkCount = bulkCount;
         this.isBulk = true;
+        return this;
+    }
+    #endregion
+
+    #region OrUpdate
+    public ICreated<TEntity> OrUpdate<TUpdateFields>(TUpdateFields updateObj)
+    {
+        this.visitor.Set(updateObj);
+        return this;
+    }
+    public ICreated<TEntity> OrUpdate<TUpdateFields>(Expression<Func<TEntity, TUpdateFields>> fieldsAssignment)
+    {
+        this.visitor.Set(fieldsAssignment);
         return this;
     }
     #endregion
@@ -448,186 +493,6 @@ class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEntity>
             throw new ArgumentNullException(nameof(fieldSelector));
 
         if (condition) this.visitor.WithBy(fieldSelector, fieldValue);
-        return this;
-    }
-    #endregion
-}
-
-class ContinuedCreate<TEntity, TSource> : Created<TEntity>, IContinuedCreate<TEntity, TSource>
-{
-    #region Constructor
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, IEntityMapProvider mapProvider, ICreateVisitor visitor)
-        : base(connection, transaction, mapProvider, visitor) { }
-    #endregion
-
-    #region Where/And
-    //public IContinuedCreate<TEntity, TSource> Where<TFields>(TFields whereObj)
-    //{
-    //    if (whereObj == null)
-    //        throw new ArgumentNullException(nameof(whereObj));
-    //    this.visitor.WhereWith(whereObj);
-    //    this.hasWhere = true;
-    //    return this;
-    //}
-    public IContinuedCreate<TEntity, TSource> Where(Expression<Func<TSource, bool>> predicate)
-        => this.Where(true, predicate);
-    public IContinuedCreate<TEntity, TSource> Where(bool condition, Expression<Func<TSource, bool>> ifPredicate, Expression<Func<TSource, bool>> elsePredicate = null)
-    {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
-        return this;
-    }
-    public IContinuedCreate<TEntity, TSource> And(Expression<Func<TSource, bool>> predicate)
-        => this.And(true, predicate);
-
-    public IContinuedCreate<TEntity, TSource> And(bool condition, Expression<Func<TSource, bool>> ifPredicate, Expression<Func<TSource, bool>> elsePredicate = null)
-    {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
-        return this;
-    }
-    #endregion
-}
-class ContinuedCreate<TEntity, T1, T2> : Created<TEntity>, IContinuedCreate<TEntity, T1, T2>
-{
-    #region Constructor
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, IEntityMapProvider mapProvider, ICreateVisitor visitor)
-        : base(connection, transaction, mapProvider, visitor) { }
-    #endregion
-
-    #region Where/And
-    public IContinuedCreate<TEntity, T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
-        => this.Where(true, predicate);
-    public IContinuedCreate<TEntity, T1, T2> Where(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
-    {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
-        return this;
-    }
-    public IContinuedCreate<TEntity, T1, T2> And(Expression<Func<T1, T2, bool>> predicate)
-        => this.And(true, predicate);
-    public IContinuedCreate<TEntity, T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
-    {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
-        return this;
-    }
-    #endregion
-}
-class ContinuedCreate<TEntity, T1, T2, T3> : Created<TEntity>, IContinuedCreate<TEntity, T1, T2, T3>
-{
-    #region Constructor
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, IEntityMapProvider mapProvider, ICreateVisitor visitor)
-        : base(connection, transaction, mapProvider, visitor) { }
-    #endregion
-
-    #region Where/And
-    public IContinuedCreate<TEntity, T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
-        => this.Where(true, predicate);
-    public IContinuedCreate<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
-    {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
-        return this;
-    }
-    public IContinuedCreate<TEntity, T1, T2, T3> And(Expression<Func<T1, T2, T3, bool>> predicate)
-        => this.And(true, predicate);
-    public IContinuedCreate<TEntity, T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
-    {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
-        return this;
-    }
-    #endregion
-}
-class ContinuedCreate<TEntity, T1, T2, T3, T4> : Created<TEntity>, IContinuedCreate<TEntity, T1, T2, T3, T4>
-{
-    #region Constructor
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, IEntityMapProvider mapProvider, ICreateVisitor visitor)
-        : base(connection, transaction, mapProvider, visitor) { }
-    #endregion
-
-    #region Where/And
-    public IContinuedCreate<TEntity, T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
-        => this.Where(true, predicate);
-    public IContinuedCreate<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
-    {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
-        return this;
-    }
-    public IContinuedCreate<TEntity, T1, T2, T3, T4> And(Expression<Func<T1, T2, T3, T4, bool>> predicate)
-        => this.And(true, predicate);
-    public IContinuedCreate<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
-    {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
-        return this;
-    }
-    #endregion
-}
-class ContinuedCreate<TEntity, T1, T2, T3, T4, T5> : Created<TEntity>, IContinuedCreate<TEntity, T1, T2, T3, T4, T5>
-{
-    #region Constructor
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, IEntityMapProvider mapProvider, ICreateVisitor visitor)
-        : base(connection, transaction, mapProvider, visitor) { }
-    #endregion
-
-    #region Where/And
-    public IContinuedCreate<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
-        => this.Where(true, predicate);
-    public IContinuedCreate<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
-    {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
-        return this;
-    }
-    public IContinuedCreate<TEntity, T1, T2, T3, T4, T5> And(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
-        => this.And(true, predicate);
-    public IContinuedCreate<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
-    {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
         return this;
     }
     #endregion

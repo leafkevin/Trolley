@@ -72,33 +72,29 @@ class Create<TEntity> : ICreate<TEntity>
     #endregion
 
     #region From
-    public IContinuedCreate<TEntity, TSource> From<TSource>(Expression<Func<TSource, object>> fieldSelector)
+    public IFromQuery<T> From<T>()
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-
-        var entityType = typeof(TEntity);
-        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
-        return new ContinuedCreate<TEntity, TSource>(this.connection, this.transaction, visitor);
+        var queryVisitor = this.visitor.CreateQuery(typeof(T));
+        return new FromQuery<T>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, typeof(TEntity));
     }
 <#
-    var count = 6;
+    var count = 11;
     var tables = "T1";
+    var typeOfTables = "typeof(T1)";
     for (int i = 2; i < count; i++)
     {
         tables += $", T{i}";
+        typeOfTables += $", typeof(T{i})";
 #>
-    public IContinuedCreate<TEntity, <#=tables#>> From<<#=tables#>>(Expression<Func<<#=tables#>, object>> fieldSelector)
+    public IFromQuery<<#=tables#>> From<<#=tables#>>()
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-
-        var entityType = typeof(TEntity);
-        var visitor = this.ormProvider.NewCreateVisitor(this.connection.DbKey, this.mapProvider, entityType, this.isParameterized).From(fieldSelector);
-        return new ContinuedCreate<TEntity, <#=tables#>>(this.connection, this.transaction, visitor);
+        var queryVisitor = this.visitor.CreateQuery(<#=typeOfTables#>);
+        var insertType = typeof(TEntity);
+        queryVisitor.InsertTo(insertType);
+        return new FromQuery<<#=tables#>>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
     }
 <#  }#>
-#endregion
+    #endregion
 }
 class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 {

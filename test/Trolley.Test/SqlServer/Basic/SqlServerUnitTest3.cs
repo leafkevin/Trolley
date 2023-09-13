@@ -669,8 +669,8 @@ public class SqlServerUnitTest3 : UnitTestBase
             .Set(x => x.Products, new List<int> { 1, 2, 3 })
             .Where((a, b) => a.BuyerId == b.Id && a.BuyerId == 1)
             .ToSql(out var parameters);
-        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=@TotalAmount,[OrderNo]=([sys_order].[OrderNo]+'-111'),[BuyerSource]=b.[SourceType],[Products]=@Products FROM [sys_user] b WHERE [sys_order].[BuyerId]=b.[Id] AND [sys_order].[BuyerId]=1");
-        Assert.True(parameters[0].ParameterName == "@TotalAmount");
+        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=@p0,[OrderNo]=([sys_order].[OrderNo]+'-111'),[BuyerSource]=b.[SourceType],[Products]=@Products FROM [sys_user] b WHERE [sys_order].[BuyerId]=b.[Id] AND [sys_order].[BuyerId]=1");
+        Assert.True(parameters[0].ParameterName == "@p0");
         Assert.True(parameters[0].Value.GetType() == typeof(double));
         Assert.True((double)parameters[0].Value == 200.56);
         Assert.True(parameters[1].ParameterName == "@Products");
@@ -690,8 +690,8 @@ public class SqlServerUnitTest3 : UnitTestBase
             .Set(f => new { Gender = Gender.Male })
             .Where(f => f.Id == 1)
             .ToSql(out var parameters2);
-        Assert.True(sql2 == "UPDATE [sys_user] SET [Gender]=@Gender WHERE [Id]=1");
-        Assert.True(parameters2[0].ParameterName == "@Gender");
+        Assert.True(sql2 == "UPDATE [sys_user] SET [Gender]=@p0 WHERE [Id]=1");
+        Assert.True(parameters2[0].ParameterName == "@p0");
         Assert.True(parameters2[0].Value.GetType() == typeof(byte));
         Assert.True((byte)parameters2[0].Value == (byte)Gender.Male);
 
@@ -700,8 +700,8 @@ public class SqlServerUnitTest3 : UnitTestBase
             .SetWith(f => new { f.Age, user.Gender }, new { Id = 1, Age = 20 })
             .Where(new { Id = 1 })
             .ToSql(out var parameters3);
-        Assert.True(sql3 == "UPDATE [sys_user] SET [Age]=@Age,[Gender]=@Gender WHERE [Id]=@kId");
-        Assert.True(parameters3[1].ParameterName == "@Gender");
+        Assert.True(sql3 == "UPDATE [sys_user] SET [Age]=@Age,[Gender]=@p1 WHERE [Id]=@kId");
+        Assert.True(parameters3[1].ParameterName == "@p1");
         Assert.True(parameters3[1].Value.GetType() == typeof(byte));
         Assert.True((byte)parameters3[1].Value == (byte)Gender.Female);
 
@@ -710,7 +710,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             .SetWith(f => new { f.Gender, Age = age }, new { Id = 1, Gender = Gender.Male })
             .Where(new { Id = 1 })
             .ToSql(out var parameters7);
-        Assert.True(sql7 == "UPDATE [sys_user] SET [Gender]=@Gender,[Age]=@Age WHERE [Id]=@kId");
+        Assert.True(sql7 == "UPDATE [sys_user] SET [Gender]=@Gender,[Age]=@p1 WHERE [Id]=@kId");
         Assert.True(parameters7[0].ParameterName == "@Gender");
         Assert.True(parameters7[0].Value.GetType() == typeof(byte));
         Assert.True((byte)parameters7[0].Value == (byte)Gender.Male);
@@ -728,8 +728,8 @@ public class SqlServerUnitTest3 : UnitTestBase
             .Set(f => new { Nature = CompanyNature.Internet })
             .Where(f => f.Id == 1)
             .ToSql(out var parameters5);
-        Assert.True(sql5 == "UPDATE [sys_company] SET [Nature]=@Nature WHERE [Id]=1");
-        Assert.True(parameters5[0].ParameterName == "@Nature");
+        Assert.True(sql5 == "UPDATE [sys_company] SET [Nature]=@p0 WHERE [Id]=1");
+        Assert.True(parameters5[0].ParameterName == "@p0");
         Assert.True(parameters5[0].Value.GetType() == typeof(string));
         Assert.True((string)parameters5[0].Value == CompanyNature.Internet.ToString());
 
@@ -747,8 +747,8 @@ public class SqlServerUnitTest3 : UnitTestBase
             .Set(f => new { Name = f.Name + "_New", company.Nature })
             .Where(f => f.Id == 1)
             .ToSql(out var parameters8);
-        Assert.True(sql8 == "UPDATE [sys_company] SET [Name]=([Name]+'_New'),[Nature]=@Nature WHERE [Id]=1");
-        Assert.True(parameters8[0].ParameterName == "@Nature");
+        Assert.True(sql8 == "UPDATE [sys_company] SET [Name]=([Name]+'_New'),[Nature]=@p0 WHERE [Id]=1");
+        Assert.True(parameters8[0].ParameterName == "@p0");
         Assert.True(parameters8[0].Value.GetType() == typeof(string));
         Assert.True((string)parameters8[0].Value == CompanyNature.Internet.ToString());
 
@@ -756,8 +756,8 @@ public class SqlServerUnitTest3 : UnitTestBase
         var sql9 = repository.Update<Company>()
             .WithBulk(f => new { f.Name, company.Nature }, new[] { new { Id = 1, Name = "google" }, new { Id = 2, Name = "facebook" } })
             .ToSql(out var parameters9);
-        Assert.True(sql9 == "UPDATE [sys_company] SET [Nature]=@Nature,[Name]=@Name0 WHERE [Id]=@kId0;UPDATE [sys_company] SET [Nature]=@Nature,[Name]=@Name1 WHERE [Id]=@kId1");
-        Assert.True(parameters9[0].ParameterName == "@Nature");
+        Assert.True(sql9 == "UPDATE [sys_company] SET [Nature]=@p0,[Name]=@Name0 WHERE [Id]=@kId0;UPDATE [sys_company] SET [Nature]=@p0,[Name]=@Name1 WHERE [Id]=@kId1");
+        Assert.True(parameters9[0].ParameterName == "@p0");
         Assert.True(parameters9[0].Value.GetType() == typeof(string));
         Assert.True((string)parameters9[0].Value == CompanyNature.Internet.ToString());
 
@@ -765,14 +765,14 @@ public class SqlServerUnitTest3 : UnitTestBase
         var sql10 = repository.Update<Company>()
             .WithBulk(f => new { f.Nature, company.Name }, new[] { new { Id = 1, company.Nature }, new { Id = 2, Nature = nature } })
             .ToSql(out var parameters10);
-        Assert.True(sql10 == "UPDATE [sys_company] SET [Name]=@Name,[Nature]=@Nature0 WHERE [Id]=@kId0;UPDATE [sys_company] SET [Name]=@Name,[Nature]=@Nature1 WHERE [Id]=@kId1");
+        Assert.True(sql10 == "UPDATE [sys_company] SET [Name]=@p0,[Nature]=@Nature0 WHERE [Id]=@kId0;UPDATE [sys_company] SET [Name]=@p0,[Nature]=@Nature1 WHERE [Id]=@kId1");
         Assert.True(parameters10[1].ParameterName == "@Nature0");
         Assert.True(parameters10[1].Value.GetType() == typeof(string));
         Assert.True((string)parameters10[1].Value == company.Nature.ToString());
         Assert.True(parameters10[3].ParameterName == "@Nature1");
         Assert.True(parameters10[3].Value.GetType() == typeof(string));
         Assert.True((string)parameters10[3].Value == CompanyNature.Production.ToString());
-        Assert.True(parameters10[0].ParameterName == "@Name");
+        Assert.True(parameters10[0].ParameterName == "@p0");
         Assert.True(parameters10[0].Value.GetType() == typeof(string));
         Assert.True((string)parameters10[0].Value == company.Name);
     }

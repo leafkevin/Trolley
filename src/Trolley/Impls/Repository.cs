@@ -109,7 +109,7 @@ public class Repository : IRepository
     public IQuery<T> From<T>(Func<IFromQuery, IFromQuery<T>> subQuery, char tableAsStart = 'a')
     {
         var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart);
-        subQuery.Invoke(new FromQuery(this.connection, this.Transaction, this.OrmProvider, visitor));
+        subQuery.Invoke(new FromQuery(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor));
         var sql = visitor.BuildSql(out _, out var readerFields);
         var newVisitor = visitor.Clone(tableAsStart);
         newVisitor.WithTable(typeof(T), sql, readerFields);
@@ -121,7 +121,7 @@ public class Repository : IRepository
     public IQuery<T> FromWith<T>(Func<IFromQuery, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
     {
         var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(this.connection, this.Transaction, this.OrmProvider, visitor));
+        cteSubQuery.Invoke(new FromQuery(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor));
         var rawSql = visitor.BuildSql(out _, out var readerFields);
         var newVisitor = visitor.Clone(tableAsStart);
         newVisitor.WithCteTable(typeof(T), cteTableName, false, rawSql, readerFields);
@@ -130,7 +130,7 @@ public class Repository : IRepository
     public IQuery<T> FromWithRecursive<T>(Func<IFromQuery, string, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
     {
         var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(this.connection, this.Transaction, this.OrmProvider, visitor), cteTableName);
+        cteSubQuery.Invoke(new FromQuery(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor), cteTableName);
         var rawSql = visitor.BuildSql(out _, out var readerFields);
         var newVisitor = visitor.Clone(tableAsStart);
         newVisitor.WithCteTable(typeof(T), cteTableName, true, rawSql, readerFields);

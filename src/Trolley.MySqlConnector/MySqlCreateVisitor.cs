@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Text;
 
 namespace Trolley.MySqlConnector;
 
@@ -16,7 +17,20 @@ class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
     }
     public override string BuildTailSql()
     {
-        if (!this.IsBulk && this.Tables[0].Mapper.IsAutoIncrement)
+        if (this.IsUseOrUpdate)
+        {
+            var index = 0;
+            var builder = new StringBuilder(" ON DUPLICATE KEY UPDATE ");
+            foreach (var updateField in this.UpdateFields)
+            {
+                if (index > 0) builder.Append(',');
+                var fieldName = this.OrmProvider.GetFieldName(updateField.MemberMapper.FieldName);
+                builder.Append($"{fieldName}={updateField.Value}");
+                index++;
+            }
+            return builder.ToString();
+        }
+        if (this.Tables[0].Mapper.IsAutoIncrement && !this.IsBulk && !this.IsUseOrUpdate)
             return ";SELECT LAST_INSERT_ID()";
         return string.Empty;
     }

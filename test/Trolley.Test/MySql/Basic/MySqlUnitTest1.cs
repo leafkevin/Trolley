@@ -55,6 +55,11 @@ public class MySqlUnitTest1 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
+        repository.Create<User>()
+            .From<Company>()
+            .Where(f => f.Id == 3)
+            .Select(f => new { f.Id, f.Nature, f.Name })
+            .Execute();
         repository.Delete<Brand>().Where(new { Id = 1 }).Execute();
         var rawSql = "INSERT INTO sys_brand(Id,BrandNo,Name,IsEnabled,CreatedAt,CreatedBy,UpdatedAt,UpdatedBy) VALUES(@Id,@BrandNo,@Name,1,NOW(),@User,NOW(),@User)";
         var count = await repository.ExecuteAsync(rawSql, new
@@ -382,14 +387,17 @@ public class MySqlUnitTest1 : UnitTestBase
         repository.BeginTransaction();
         repository.Delete<Product>(2);
         var brand = repository.Get<Brand>(1);
+        int category = 1;
         var sql = repository.Create<Product>()
-           .From<Brand>(f => new
+           .From<Brand>()
+           .Where(f => f.Id == 1)
+           .Select(f => new
            {
                Id = f.Id + 1,
                ProductNo = "PN_" + f.BrandNo,
                Name = "PName_" + f.Name,
                BrandId = f.Id,
-               CategoryId = 1,
+               CategoryId = category,
                f.CompanyId,
                f.IsEnabled,
                f.CreatedBy,
@@ -398,16 +406,17 @@ public class MySqlUnitTest1 : UnitTestBase
                f.UpdatedAt
            })
            .ToSql(out var parameters);
-        Assert.True(sql == "INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT a.`Id`+1,CONCAT('PN_',a.`BrandNo`),CONCAT('PName_',a.`Name`),a.`Id`,@CategoryId,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1");
+        Assert.True(sql == "INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT a.`Id`+1,CONCAT('PN_',a.`BrandNo`),CONCAT('PName_',a.`Name`),a.`Id`,@p0,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1");
 
         var count = repository.Create<Product>()
-           .From<Brand>(f => new
+           .From<Brand>()
+           .Select(f => new
            {
                Id = f.Id + 1,
                ProductNo = "PN_" + f.BrandNo,
                Name = "PName_" + f.Name,
                BrandId = f.Id,
-               CategoryId = 1,
+               CategoryId = category,
                f.CompanyId,
                f.IsEnabled,
                f.CreatedBy,
@@ -431,7 +440,9 @@ public class MySqlUnitTest1 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         var sql = repository.Create<OrderDetail>()
-            .From<Order, Product>((x, y) => new OrderDetail
+            .From<Order, Product>()
+            .Where((a, b) => a.Id == 3 && b.Id == 1)
+            .Select((x, y) => new OrderDetail
             {
                 Id = 7,
                 OrderId = x.Id,
@@ -445,16 +456,14 @@ public class MySqlUnitTest1 : UnitTestBase
                 UpdatedBy = x.UpdatedBy,
                 UpdatedAt = x.UpdatedAt
             })
-            .Where((a, b) => a.Id == 3 && b.Id == 1)
             .ToSql(out var parameters);
-        Assert.True(sql == "INSERT INTO `sys_order_detail` (`Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT @Id,a.`Id`,b.`Id`,b.`Price`,@Quantity,b.`Price`*3,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_order` a,`sys_product` b WHERE a.`Id`=3 AND b.`Id`=1");
-        Assert.True(parameters.Count == 2);
-        Assert.True((int)parameters[0].Value == 7);
-        Assert.True((int)parameters[1].Value == 3);
+        Assert.True(sql == "INSERT INTO `sys_order_detail` (`Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT 7,a.`Id`,b.`Id`,b.`Price`,3,b.`Price`*3,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_order` a,`sys_product` b WHERE a.`Id`=3 AND b.`Id`=1");
 
         repository.Delete<OrderDetail>(7);
         var result = await repository.Create<OrderDetail>()
-           .From<Order, Product>((x, y) => new OrderDetail
+           .From<Order, Product>()
+           .Where((a, b) => a.Id == 3 && b.Id == 1)
+           .Select((x, y) => new OrderDetail
            {
                Id = 7,
                OrderId = x.Id,
@@ -468,7 +477,6 @@ public class MySqlUnitTest1 : UnitTestBase
                UpdatedBy = x.UpdatedBy,
                UpdatedAt = x.UpdatedAt
            })
-           .Where((a, b) => a.Id == 3 && b.Id == 1)
            .ExecuteAsync();
         var orderDetail = repository.Get<OrderDetail>(7);
         var product = repository.Get<Product>(1);
@@ -625,6 +633,7 @@ public class MySqlUnitTest1 : UnitTestBase
         this.Initialize();
         using var repository = dbFactory.Create();
         var sql1 = repository.Create<User>()
+            .UseIgnore()
             .WithBy(new
             {
                 Id = 1,
@@ -638,10 +647,10 @@ public class MySqlUnitTest1 : UnitTestBase
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
             })
-            .UseIgnore()
             .ToSql(out var parameters1);
         Assert.True(sql1 == "INSERT IGNORE INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
         var count = await repository.Create<User>()
+            .UseIgnore()
             .WithBy(new
             {
                 Id = 1,
@@ -655,8 +664,61 @@ public class MySqlUnitTest1 : UnitTestBase
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
             })
-            .UseIgnore()
             .ExecuteAsync();
         Assert.True(count == 0);
+    }
+    [Fact]
+    public void Insert_IfNotExists()
+    {
+        using var repository = dbFactory.Create();
+        repository.BeginTransaction();
+        repository.Delete<Product>(2);
+        var brand = repository.Get<Brand>(1);
+        int category = 1;
+        var sql = repository.Create<Product>()
+           .IfNotExists(new { Id = 2 })
+           .WithBy(new
+           {
+               Id = 2,
+               ProductNo = "PN_111",
+               Name = "PName_111",
+               BrandId = 1,
+               CategoryId = category,
+               CompanyId = 1,
+               IsEnabled = true,
+               CreatedBy = 1,
+               CreatedAt = DateTime.Now,
+               UpdatedBy = 1,
+               UpdatedAt = DateTime.Now
+           })
+           .ToSql(out var parameters);
+        Assert.True(sql == "INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT a.`Id`+1,CONCAT('PN_',a.`BrandNo`),CONCAT('PName_',a.`Name`),a.`Id`,@p0,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1");
+
+        var count = repository.Create<Product>()
+           .From<Brand>()
+           .Select(f => new
+           {
+               Id = f.Id + 1,
+               ProductNo = "PN_" + f.BrandNo,
+               Name = "PName_" + f.Name,
+               BrandId = f.Id,
+               CategoryId = category,
+               f.CompanyId,
+               f.IsEnabled,
+               f.CreatedBy,
+               f.CreatedAt,
+               f.UpdatedBy,
+               f.UpdatedAt
+           })
+           .Where(f => f.Id == 1)
+           .Execute();
+        var product = repository.Get<Product>(2);
+        repository.Commit();
+        Assert.True(count > 0);
+        Assert.NotNull(product);
+        Assert.True(product.ProductNo == "PN_" + brand.BrandNo);
+        Assert.True(product.Name == "PName_" + brand.Name);
+        Assert.NotNull(parameters);
+        Assert.True(parameters.Count == 1);
     }
 }
