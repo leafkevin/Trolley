@@ -40,7 +40,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new Query<<#=tables#>, TOther>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
@@ -51,7 +51,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new Query<<#=tables#>, TOther>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
@@ -65,7 +65,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new Query<<#=tables#>, TOther>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }
@@ -171,7 +171,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
         return new Query<<#=tables#>, TOther>(this.connection, this.transaction, this.ormProvider, this.visitor);
@@ -183,7 +183,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
         return new Query<<#=tables#>, TOther>(this.connection, this.transaction, this.ormProvider, this.visitor);
@@ -195,7 +195,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new Query<<#=tables#>, TOther>(this.connection, this.transaction, this.ormProvider, this.visitor);

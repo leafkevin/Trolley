@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Trolley;
 
-class MultipleQuery : IMultipleQuery
+class MultipleQuery : IMultipleQuery, IDisposable
 {
     #region Fields;
     protected StringBuilder sqlBuilder = new();
@@ -56,7 +56,7 @@ class MultipleQuery : IMultipleQuery
     {
         var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart);
         subQuery.Invoke(new FromQuery(visitor));
-        var sql = visitor.BuildSql(out _, out var readerFields);
+        var sql = visitor.BuildSql(out var readerFields);
         var newVisitor = visitor.Clone(tableAsStart);
         newVisitor.WithTable(typeof(T), sql, readerFields);
         return new MultiQuery<T>(this, this.OrmProvider, newVisitor);
@@ -65,7 +65,7 @@ class MultipleQuery : IMultipleQuery
     {
         var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart);
         cteSubQuery.Invoke(new FromQuery(visitor));
-        var rawSql = visitor.BuildSql(out _, out var readerFields);
+        var rawSql = visitor.BuildSql(out var readerFields);
         var newVisitor = visitor.Clone(tableAsStart);
         newVisitor.WithCteTable(typeof(T), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T>(this, this.OrmProvider, newVisitor);
@@ -74,7 +74,7 @@ class MultipleQuery : IMultipleQuery
     {
         var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart);
         cteSubQuery.Invoke(new FromQuery(visitor), cteTableName);
-        var rawSql = visitor.BuildSql(out _, out var readerFields);
+        var rawSql = visitor.BuildSql(out var readerFields);
         var newVisitor = visitor.Clone(tableAsStart);
         newVisitor.WithCteTable(typeof(T), cteTableName, true, rawSql, readerFields);
         return new MultiQuery<T>(this, this.OrmProvider, newVisitor);
@@ -262,15 +262,15 @@ class MultipleQuery : IMultipleQuery
             throw new ArgumentNullException(nameof(wherePredicate));
 
         var sql = this.From<TEntity>().Where(wherePredicate)
-            .Select(f => Sql.Count()).ToSql(out var dbParameters);
+            .Select(f => Sql.Count()).ToSql(out _);
         Func<IDataReader, object> readerGetter = reader => reader.To<int>() > 0;
-        this.AddReader(sql, readerGetter, dbParameters);
+        this.AddReader(sql, readerGetter);
         return this;
     }
     #endregion
 
     #region AddReader/BuildSql
-    public void AddReader(string sql, Func<IDataReader, object> readerGetter, List<IDbDataParameter> dbParameters = null, IQueryVisitor queryVisitor = null, int pageIndex = 0, int pageSize = 0)
+    public void AddReader(string sql, Func<IDataReader, object> readerGetter, IQueryVisitor queryVisitor = null, int pageIndex = 0, int pageSize = 0)
     {
         if (this.sqlBuilder.Length > 0)
             this.sqlBuilder.Append(';');
@@ -282,23 +282,39 @@ class MultipleQuery : IMultipleQuery
             PageIndex = pageIndex,
             PageSize = pageSize
         });
-        if (dbParameters != null && dbParameters.Count > 0)
-        {
-            dbParameters.ForEach(f =>
-            {
-                if (this.Command.Parameters.Contains(f.ParameterName)
-                    && this.Command.Parameters[f.ParameterName] is IDbDataParameter dbParameter
-                    && dbParameter.Value != f.Value)
-                    throw new Exception($"名为{f.ParameterName}的参数已存在并与当前参数值不同，Value1:{dbParameter.Value},Value2:{f.Value}");
-                this.Command.Parameters.Add(f);
-            });
-        }
+        //if (dbParameters != null && dbParameters.Count > 0)
+        //{
+        //    dbParameters.ForEach(f =>
+        //    {
+        //        if (this.Command.Parameters.Contains(f.ParameterName)
+        //            && this.Command.Parameters[f.ParameterName] is IDbDataParameter dbParameter
+        //            && dbParameter.Value != f.Value)
+        //            throw new Exception($"名为{f.ParameterName}的参数已存在并与当前参数值不同，Value1:{dbParameter.Value},Value2:{f.Value}");
+        //        this.Command.Parameters.Add(f);
+        //    });
+        //}
     }
-    public string BuildSql()
+    public string BuildSql(out List<ReaderAfter> readerAfters)
     {
         var sql = this.sqlBuilder.ToString();
         this.sqlBuilder.Clear();
+        readerAfters = this.ReaderAfters;
         return sql;
+    }
+    #endregion
+
+    #region Dispose
+    public void Dispose()
+    {
+        this.sqlBuilder.Clear();
+        this.sqlBuilder = null;
+        this.OrmProvider = null;
+        this.MapProvider = null;
+        //command和connection在reader中进行释放，此处只是去掉引用
+        this.Connection = null;
+        this.Command = null;
+        this.ReaderAfters.Clear();
+        this.ReaderAfters = null;
     }
     #endregion
 }

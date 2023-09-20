@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 
 namespace Trolley;
@@ -35,7 +36,7 @@ class MultiQuery<T> : IMultiQuery<T>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = " UNION" + Environment.NewLine + newVisitor.BuildSql(out _, out _, true);
+        var sql = " UNION" + Environment.NewLine + newVisitor.BuildSql(out _, true);
         this.visitor.Union(typeof(T), sql);
         return this;
     }
@@ -46,7 +47,7 @@ class MultiQuery<T> : IMultiQuery<T>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out _, out _, true);
+        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out _, true);
         this.visitor.Union(typeof(T), sql);
         return this;
     }
@@ -60,7 +61,7 @@ class MultiQuery<T> : IMultiQuery<T>
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -71,7 +72,7 @@ class MultiQuery<T> : IMultiQuery<T>
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -85,7 +86,7 @@ class MultiQuery<T> : IMultiQuery<T>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new MultiQuery<T, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -123,7 +124,7 @@ class MultiQuery<T> : IMultiQuery<T>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
         return new MultiQuery<T, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -135,7 +136,7 @@ class MultiQuery<T> : IMultiQuery<T>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
         return new MultiQuery<T, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -147,7 +148,7 @@ class MultiQuery<T> : IMultiQuery<T>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new MultiQuery<T, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -406,9 +407,13 @@ class MultiQuery<T> : IMultiQuery<T>
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
+        dbParameters = null;
         Expression<Func<T, T>> defaultExpr = f => f;
         this.visitor.SelectDefault(defaultExpr);
-        return this.visitor.BuildSql(out dbParameters, out _);
+        var sql = this.visitor.BuildSql(out _);
+        if (this.visitor.Command.Parameters.Count > 0)
+            dbParameters = this.visitor.Command.Parameters.Cast<IDbDataParameter>().ToList();
+        return sql;
     }
     #endregion
 
@@ -417,7 +422,7 @@ class MultiQuery<T> : IMultiQuery<T>
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.visitor.SelectDefault(defaultExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out var readerFields);
+        var sql = this.visitor.BuildSql(out var readerFields);
         var targetType = typeof(T);
         Func<IDataReader, object> readerGetter = null;
         if (targetType.IsEntityType(out _))
@@ -426,15 +431,15 @@ class MultiQuery<T> : IMultiQuery<T>
         IQueryVisitor queryVisitor = null;
         if (this.visitor.HasIncludeTables())
             queryVisitor = this.visitor;
-        this.multiQuery.AddReader(sql, readerGetter, dbParameters, queryVisitor, this.pageIndex, this.pageSize);
+        this.multiQuery.AddReader(sql, readerGetter, queryVisitor, this.pageIndex, this.pageSize);
         return this.multiQuery;
     }
     private IMultipleQuery QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
+        var sql = this.visitor.BuildSql(out _);
         Func<IDataReader, object> readerGetter = reader => reader.To<TTarget>();
-        this.multiQuery.AddReader(sql, readerGetter, dbParameters);
+        this.multiQuery.AddReader(sql, readerGetter);
         return this.multiQuery;
     }
     #endregion
@@ -474,16 +479,22 @@ class MultiQueryBase : IMultiQueryBase
 
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
-        => this.visitor.BuildSql(out dbParameters, out _);
+    {
+        dbParameters = null;
+        var sql = this.visitor.BuildSql(out _);
+        if (this.visitor.Command.Parameters.Count > 0)
+            dbParameters = this.visitor.Command.Parameters.Cast<IDbDataParameter>().ToList();
+        return sql;
+    }
     #endregion
 
     #region QueryFirstValue
     protected IMultipleQuery QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.visitor.Select(sqlFormat, fieldExpr);
-        var sql = this.visitor.BuildSql(out var dbParameters, out _);
+        var sql = this.visitor.BuildSql(out _);
         Func<IDataReader, object> readerGetter = reader => reader.To<TTarget>();
-        this.multiQuery.AddReader(sql, readerGetter, dbParameters);
+        this.multiQuery.AddReader(sql, readerGetter);
         return this.multiQuery;
     }
     #endregion
@@ -503,7 +514,7 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -514,7 +525,7 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -528,7 +539,7 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -609,7 +620,7 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -621,7 +632,7 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -633,7 +644,7 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -823,7 +834,7 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -834,7 +845,7 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -848,7 +859,7 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -929,7 +940,7 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -941,7 +952,7 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -953,7 +964,7 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -1143,7 +1154,7 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -1154,7 +1165,7 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -1168,7 +1179,7 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -1249,7 +1260,7 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -1261,7 +1272,7 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -1273,7 +1284,7 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -1463,7 +1474,7 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -1474,7 +1485,7 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -1488,7 +1499,7 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -1569,7 +1580,7 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -1581,7 +1592,7 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -1593,7 +1604,7 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -1783,7 +1794,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -1794,7 +1805,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -1808,7 +1819,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -1889,7 +1900,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -1901,7 +1912,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -1913,7 +1924,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -2103,7 +2114,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -2114,7 +2125,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -2128,7 +2139,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -2209,7 +2220,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -2221,7 +2232,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -2233,7 +2244,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -2423,7 +2434,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -2434,7 +2445,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -2448,7 +2459,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -2529,7 +2540,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -2541,7 +2552,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -2553,7 +2564,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -2743,7 +2754,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -2754,7 +2765,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -2768,7 +2779,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -2849,7 +2860,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -2861,7 +2872,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -2873,7 +2884,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -3063,7 +3074,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -3074,7 +3085,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -3088,7 +3099,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -3169,7 +3180,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -3181,7 +3192,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -3193,7 +3204,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -3383,7 +3394,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -3394,7 +3405,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -3408,7 +3419,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -3489,7 +3500,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -3501,7 +3512,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -3513,7 +3524,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -3703,7 +3714,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -3714,7 +3725,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -3728,7 +3739,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -3809,7 +3820,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -3821,7 +3832,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -3833,7 +3844,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -4023,7 +4034,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -4034,7 +4045,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -4048,7 +4059,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -4129,7 +4140,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -4141,7 +4152,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -4153,7 +4164,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -4343,7 +4354,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -4354,7 +4365,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
 
         var newVisitor = this.visitor.Clone(tableAsStart);
         cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out _, out var readerFields);
+        var rawSql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -4368,7 +4379,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.multiQuery, this.ormProvider, this.visitor);
     }
@@ -4449,7 +4460,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -4461,7 +4472,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.multiQuery, this.ormProvider, this.visitor);
@@ -4473,7 +4484,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.multiQuery, this.ormProvider, this.visitor);

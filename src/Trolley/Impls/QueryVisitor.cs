@@ -30,18 +30,16 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     protected bool IsInsertTo { get; set; }
     protected Type InsertType { get; set; }
 
-    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "", List<IDbDataParameter> dbParameters = null)
-        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix, dbParameters)
+    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix)
     {
         this.Tables = new();
         this.TableAlias = new();
-        this.DbParameters ??= new();
     }
-    public virtual string BuildSql(out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields, bool isUnion = false)
+    public virtual string BuildSql(out List<ReaderField> readerFields, bool isUnion = false)
     {
         if (!string.IsNullOrEmpty(this.UnionSql) && !this.IsInsertTo)
         {
-            dbParameters = this.DbParameters;
             readerFields = this.ReaderFields;
             return this.UnionSql;
         }
@@ -57,7 +55,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             int index = 0;
             foreach (var readerField in this.ReaderFields)
             {
-                //通常Union后，没有select才会是实体类型，或是select分组对象
+                //Union后，如果没有select语句时，通常实体类型或是select分组对象
                 if (!entityMapper.TryGetMemberMap(readerField.TargetMember.Name, out var propMapper)
                     || propMapper.IsIgnore || propMapper.IsNavigation || propMapper.IsAutoIncrement
                     || (propMapper.MemberType.IsEntityType(out _) && propMapper.TypeHandler == null))
@@ -135,8 +133,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 builder.Append(" " + orderBy);
         }
         string others = builder.ToString();
-
-        dbParameters = this.DbParameters;
         readerFields = this.ReaderFields;
 
         builder.Clear();
@@ -279,7 +275,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual TableSegment WithTable(Type entityType, string body, List<ReaderField> readerFields = null, string joinType = "")
     {
         var tableSegment = this.AddTable(entityType, joinType, TableType.FromQuery, $"({body})", readerFields);
-        //临时表需要有别名(SELECT ..) b       
         this.InitFromQueryReaderFields(tableSegment, readerFields);
         return tableSegment;
     }
@@ -320,7 +315,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void Union(Type entityType, string newSql)
     {
-        var sql = this.BuildSql(out _, out _, true);
+        var sql = this.BuildSql(out _, true);
         while (this.Tables.Count > 1)
             this.Tables.RemoveAt(1);
         sql += newSql;
@@ -473,6 +468,39 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsFromQuery = false;
         this.IsSelect = false;
     }
+    //TODO:
+    //public virtual void Select(object parameters)
+    //{
+    //    this.IsSelect = true;
+    //    //从多个表中查询实体对象或是从分组查询中查询实体对象，此值为true
+    //    if (selectExpr != null)
+    //    {
+    //        var lambdaExpr = selectExpr as LambdaExpression;
+    //        this.InitTableAlias(lambdaExpr);
+    //        this.ReaderFields = this.ConstructorFieldsTo(lambdaExpr);
+    //    }
+    //    if (!string.IsNullOrEmpty(sqlFormat))
+    //    {
+    //        //单值操作，SELECT COUNT(DISTINCT b.Id),MAX(b.Amount)等
+    //        this.Tables.FindAll(f => f.IsMaster).ForEach(f => f.IsUsed = true);
+    //        if (this.ReaderFields != null && this.ReaderFields.Count == 1)
+    //        {
+    //            var readerField = this.ReaderFields[0];
+    //            readerField.Body = string.Format(sqlFormat, readerField.Body);
+    //        }
+    //        else
+    //        {
+    //            //单值操作，SELECT COUNT(1)等,或是From临时表，后续Union/Join操作
+    //            this.ReaderFields ??= new();
+    //            this.ReaderFields.Add(new ReaderField
+    //            {
+    //                Index = 0,
+    //                Body = sqlFormat
+    //            });
+    //        }
+    //    }
+    //    this.IsSelect = false;
+    //}
     public virtual void SelectGrouping(bool isFromQuery = false)
     {
         this.ReaderFields = this.GroupFields;
@@ -542,7 +570,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var lambdaExpr = whereExpr as LambdaExpression;
         if (isClearTableAlias)
             this.InitTableAlias(lambdaExpr);
-        //在Update的Value子查询语句中，更新主表别名是a，引用表别名从b开始，无需别名替换
         this.LastWhereNodeType = OperationType.None;
         this.WhereSql = this.VisitConditionExpr(lambdaExpr.Body);
         this.IsWhere = false;
@@ -948,7 +975,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         => this.TableAlias.TryAdd(aliasName, tableSegment);
     public virtual IQueryVisitor Clone(char tableAsStart = 'a', string parameterPrefix = "p")
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, parameterPrefix, dbParameters: this.DbParameters);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, parameterPrefix);
+        visitor.Command = this.Command;
         visitor.IsNeedAlias = this.IsNeedAlias;
         return visitor;
     }
@@ -1138,6 +1166,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     sqlSegment = this.VisitAndDeferred(sqlSegment);
                     //使用GetQuotedValue方法把常量都变成对应的字符串格式
                     //String和DateTime类型变成'...'数据,数字类型变成数字字符串
+                    //参数或是本地成员变量访问
                     fieldName = this.GetQuotedValue(sqlSegment);
                     if (sqlSegment.IsExpression && !this.IsInsertTo)
                         fieldName = $"({fieldName})";

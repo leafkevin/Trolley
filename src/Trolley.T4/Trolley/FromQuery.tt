@@ -152,7 +152,7 @@ class FromQuery<T> : IFromQuery<T>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = " UNION" + Environment.NewLine + newVisitor.BuildSql(out _, out _, true);
+        var sql = " UNION" + Environment.NewLine + newVisitor.BuildSql(out _, true);
         this.visitor.Union(typeof(T), sql);
         return this;
     }
@@ -163,7 +163,7 @@ class FromQuery<T> : IFromQuery<T>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out _, out _, true);
+        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out _, true);
         this.visitor.Union(typeof(T), sql);
         return this;
     }
@@ -174,7 +174,7 @@ class FromQuery<T> : IFromQuery<T>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor), null);
-        var sql = " UNION" + Environment.NewLine + newVisitor.BuildSql(out _, out _, true);
+        var sql = " UNION" + Environment.NewLine + newVisitor.BuildSql(out _, true);
         this.visitor.Union(typeof(T), sql);
         return this;
     }
@@ -185,7 +185,7 @@ class FromQuery<T> : IFromQuery<T>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor), null);
-        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out _, out _, true);
+        var sql = " UNION ALL" + Environment.NewLine + newVisitor.BuildSql(out _, true);
         this.visitor.Union(typeof(T), sql);
         return this;
     }
@@ -493,7 +493,7 @@ class FromQuery<<#=tables#>> : FromQueryBase, IFromQuery<<#=tables#>>
 
         var newVisitor = this.visitor.Clone();
         subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out _, out var readerFields);
+        var sql = newVisitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new Query<<#=tables#>, TOther>(this.connection, this.transaction, this.ormProvider, this.visitor);
     }

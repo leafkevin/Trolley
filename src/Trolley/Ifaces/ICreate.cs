@@ -243,6 +243,10 @@ public interface ICreated<TEntity>
     Task<long> ExecuteLongAsync(CancellationToken cancellationToken = default);
     #endregion
 
+    #region Execute
+    MultipleCommand ToMultipleCommand();
+    #endregion
+
     #region ToSql
     /// <summary>
     /// 返回当前查询的SQL和参数列表
@@ -302,5 +306,25 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// <param name="insertObj">插入数据对象，包含想要插入的必需栏位值</param>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用fieldValue单个字段插入，用法：
+    /// <code>
+    /// repository.Create&lt;User&gt;()
+    ///     .WithBy(new
+    ///     {
+    ///         Name = "kevin",
+    ///         Age = 25
+    ///     })
+    ///     .WithBy(true, f =&gt; f.Gender, Gender.Female)
+    ///     ...
+    ///     .Execute();
+    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`,`Gender`, ... ) VALUES(@Name,@Age,@Gender, ... )
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回插入对象</returns>
+    IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     #endregion
 }

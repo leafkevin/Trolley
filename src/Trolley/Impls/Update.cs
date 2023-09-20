@@ -42,7 +42,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized);
         if (condition) visitor.Set(fieldsAssignment);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
@@ -57,7 +57,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized);
         if (condition) visitor.Set(fieldSelector, fieldValue);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
@@ -70,7 +70,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (!typeof(TUpdateObj).IsEntityType(out _))
             throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
 
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized);
         if (condition) visitor.SetWith(null, updateObj);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
@@ -85,7 +85,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.New && fieldsSelectorOrAssignment.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelectorOrAssignment)},只支持New、MemberInit三种类型表达式");
 
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized);
         if (condition) visitor.SetWith(fieldsSelectorOrAssignment, updateObj);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
@@ -99,7 +99,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized);
         if (condition) visitor.SetFrom(fieldsAssignment);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
@@ -114,7 +114,7 @@ class Update<TEntity> : IUpdate<TEntity>
         if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized);
         if (condition) visitor.SetFrom(fieldSelector, valueSelector);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, visitor);
     }
@@ -138,7 +138,7 @@ class Update<TEntity> : IUpdate<TEntity>
                 throw new NotSupportedException("不支持的updateObjs元素类型，updateObjs元素类型可以是字典或是实体类或是多字段元组");
             break;
         }
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized)
             .SetBulkFirst(fieldsSelectorOrAssignment, updateObjType);
         return new UpdateSet<TEntity>(this.connection, this.transaction, visitor, updateObjs, bulkCount);
     }
@@ -147,31 +147,31 @@ class Update<TEntity> : IUpdate<TEntity>
     #region From
     public IUpdateFrom<TEntity, T> From<T>()
     {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized)
             .From(typeof(T));
         return new UpdateFrom<TEntity, T>(this.connection, this.transaction, visitor);
     }
     public IUpdateFrom<TEntity, T1, T2> From<T1, T2>()
     {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized)
             .From(typeof(T1), typeof(T2));
         return new UpdateFrom<TEntity, T1, T2>(this.connection, this.transaction, visitor);
     }
     public IUpdateFrom<TEntity, T1, T2, T3> From<T1, T2, T3>()
     {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized)
             .From(typeof(T1), typeof(T2), typeof(T3));
         return new UpdateFrom<TEntity, T1, T2, T3>(this.connection, this.transaction, visitor);
     }
     public IUpdateFrom<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>()
     {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized)
             .From(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         return new UpdateFrom<TEntity, T1, T2, T3, T4>(this.connection, this.transaction, visitor);
     }
     public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
     {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized)
             .From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
         return new UpdateFrom<TEntity, T1, T2, T3, T4, T5>(this.connection, this.transaction, visitor);
     }
@@ -180,13 +180,13 @@ class Update<TEntity> : IUpdate<TEntity>
     #region Join
     public IUpdateJoin<TEntity, T> InnerJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
     {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized)
             .Join("INNER JOIN", typeof(T), joinOn);
         return new UpdateJoin<TEntity, T>(this.connection, this.transaction, visitor);
     }
     public IUpdateJoin<TEntity, T> LeftJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
     {
-        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized)
+        var visitor = this.ormProvider.NewUpdateVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized)
            .Join("INNER JOIN", typeof(T), joinOn);
         return new UpdateJoin<TEntity, T>(this.connection, this.transaction, visitor);
     }
@@ -286,6 +286,10 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>
     }
     #endregion
 
+    #region Execute
+    //public MultipleCommand ToMultipleCommand() => this.visitor.CreateMultipleCommand();
+    #endregion
+
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
@@ -342,9 +346,7 @@ class UpdateBase
         using var command = this.connection.CreateCommand();
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
-        command.CommandText = this.visitor.BuildSql(out var dbParameters);
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
+        command.CommandText = this.visitor.BuildSql();
         this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
@@ -357,9 +359,7 @@ class UpdateBase
         using var cmd = this.connection.CreateCommand();
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
-        cmd.CommandText = this.visitor.BuildSql(out var dbParameters);
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
+        cmd.CommandText = this.visitor.BuildSql();
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
@@ -375,7 +375,14 @@ class UpdateBase
     {
         if (!hasWhere)
             throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
-        return this.visitor.BuildSql(out dbParameters);
+
+        dbParameters = null;
+        using var command = this.connection.CreateCommand();
+        var sql = this.visitor.BuildSql();
+        if (command.Parameters != null && command.Parameters.Count > 0)
+            dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+        command.Dispose();
+        return sql;
     }
     #endregion
 }

@@ -721,4 +721,76 @@ public class MySqlUnitTest1 : UnitTestBase
         Assert.NotNull(parameters);
         Assert.True(parameters.Count == 1);
     }
+    [Fact]
+    public void Insert_ToMultipleCommand()
+    {
+        using var repository = dbFactory.Create();
+        //repository.BeginTransaction();
+        repository.Delete<Product>(2);
+        var brand = repository.Get<Brand>(1);
+        int category = 1;
+        var multiCommand = repository.Create<Product>()
+           .WithBy(new
+           {
+               Id = 2,
+               ProductNo = "PN_111",
+               Name = "PName_111",
+               BrandId = 1,
+               CategoryId = category,
+               CompanyId = 1,
+               IsEnabled = true,
+               CreatedBy = 1,
+               CreatedAt = DateTime.Now,
+               UpdatedBy = 1,
+               UpdatedAt = DateTime.Now
+           })
+           .ToMultipleCommand();
+        repository.MultipleExecute(new List<MultipleCommand> { multiCommand });
+        //Assert.True(sql == "INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT a.`Id`+1,CONCAT('PN_',a.`BrandNo`),CONCAT('PName_',a.`Name`),a.`Id`,@p0,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1");
+        repository.Delete<User>(4);
+        var count = repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 4,
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1,
+                SomeTimes = TimeSpan.FromMinutes(35),
+                GuidField = Guid.NewGuid()
+            })
+            .Execute();
+        repository.Delete<Product>(2);
+        var count1 = repository.Create<Product>()
+           .From<Brand>()
+           .Select(f => new
+           {
+               Id = f.Id + 1,
+               ProductNo = "PN_" + f.BrandNo,
+               Name = "PName_" + f.Name,
+               BrandId = f.Id,
+               CategoryId = category,
+               f.CompanyId,
+               f.IsEnabled,
+               f.CreatedBy,
+               f.CreatedAt,
+               f.UpdatedBy,
+               f.UpdatedAt
+           })
+           .Where(f => f.Id == 1)
+           .Execute();
+        var product = repository.Get<Product>(2);
+        //repository.Commit();
+        //Assert.True(count > 0);
+        //Assert.NotNull(product);
+        //Assert.True(product.ProductNo == "PN_" + brand.BrandNo);
+        //Assert.True(product.Name == "PName_" + brand.Name);
+        //Assert.NotNull(parameters);
+        //Assert.True(parameters.Count == 1);
+    }
 }

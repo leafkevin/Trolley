@@ -7,9 +7,9 @@ namespace Trolley;
 
 public interface IQueryVisitor
 {
+    IDbCommand Command { get; set; }
     bool IsNeedAlias { get; set; }
-    List<IDbDataParameter> DbParameters { get; }
-    string BuildSql(out List<IDbDataParameter> dbParameters, out List<ReaderField> readerFields, bool isUnion = false);
+    string BuildSql(out List<ReaderField> readerFields, bool isUnion = false);
     bool HasIncludeTables();
     bool BuildIncludeSql(object parameter, out string sql);
     void SetIncludeValues(object parameter, IDataReader reader);

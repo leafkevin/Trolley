@@ -32,7 +32,8 @@ class Create<TEntity> : ICreate<TEntity>
         this.mapProvider = mapProvider;
         this.isParameterized = isParameterized;
         this.entityType = typeof(TEntity);
-        this.visitor = ormProvider.NewCreateVisitor(connection.DbKey, mapProvider, this.entityType, isParameterized);
+        this.visitor = ormProvider.NewCreateVisitor(connection.DbKey, mapProvider, isParameterized);
+        this.visitor.Initialize(entityType);
     }
     #endregion
 
@@ -55,7 +56,6 @@ class Create<TEntity> : ICreate<TEntity>
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
 
-        this.visitor.WithBulkFirst(insertObjs);
         return new Created<TEntity>(this.connection, this.transaction, this.mapProvider, this.visitor).WithBulk(insertObjs, bulkCount);
     }
     #endregion
@@ -65,72 +65,72 @@ class Create<TEntity> : ICreate<TEntity>
     {
         var queryVisitor = this.visitor.CreateQuery(typeof(T));
         queryVisitor.From('a', typeof(T), suffixRawSql);
-        var insertType = typeof(TEntity);
-        queryVisitor.InsertTo(insertType);
-        return new FromQuery<T>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
+        queryVisitor.InsertTo(this.entityType);
+        queryVisitor.Command = this.connection.CreateCommand();
+        return new FromQuery<T>(this.connection, this.ormProvider, this.mapProvider, queryVisitor, this.entityType);
     }
     public IFromQuery<T1, T2> From<T1, T2>()
     {
         var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2));
-        var insertType = typeof(TEntity);
-        queryVisitor.InsertTo(insertType);
-        return new FromQuery<T1, T2>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
+        queryVisitor.InsertTo(this.entityType);
+        queryVisitor.Command = this.connection.CreateCommand();
+        return new FromQuery<T1, T2>(this.connection, this.ormProvider, this.mapProvider, queryVisitor, this.entityType);
     }
     public IFromQuery<T1, T2, T3> From<T1, T2, T3>()
     {
         var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3));
-        var insertType = typeof(TEntity);
-        queryVisitor.InsertTo(insertType);
-        return new FromQuery<T1, T2, T3>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
+        queryVisitor.InsertTo(this.entityType);
+        queryVisitor.Command = this.connection.CreateCommand();
+        return new FromQuery<T1, T2, T3>(this.connection, this.ormProvider, this.mapProvider, queryVisitor, this.entityType);
     }
     public IFromQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>()
     {
         var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-        var insertType = typeof(TEntity);
-        queryVisitor.InsertTo(insertType);
-        return new FromQuery<T1, T2, T3, T4>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
+        queryVisitor.InsertTo(this.entityType);
+        queryVisitor.Command = this.connection.CreateCommand();
+        return new FromQuery<T1, T2, T3, T4>(this.connection, this.ormProvider, this.mapProvider, queryVisitor, this.entityType);
     }
     public IFromQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
     {
         var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
-        var insertType = typeof(TEntity);
-        queryVisitor.InsertTo(insertType);
-        return new FromQuery<T1, T2, T3, T4, T5>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
+        queryVisitor.InsertTo(this.entityType);
+        queryVisitor.Command = this.connection.CreateCommand();
+        return new FromQuery<T1, T2, T3, T4, T5>(this.connection, this.ormProvider, this.mapProvider, queryVisitor, this.entityType);
     }
     public IFromQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
     {
         var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
-        var insertType = typeof(TEntity);
-        queryVisitor.InsertTo(insertType);
-        return new FromQuery<T1, T2, T3, T4, T5, T6>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
+        queryVisitor.InsertTo(this.entityType);
+        queryVisitor.Command = this.connection.CreateCommand();
+        return new FromQuery<T1, T2, T3, T4, T5, T6>(this.connection, this.ormProvider, this.mapProvider, queryVisitor, this.entityType);
     }
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>()
     {
         var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
-        var insertType = typeof(TEntity);
-        queryVisitor.InsertTo(insertType);
-        return new FromQuery<T1, T2, T3, T4, T5, T6, T7>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
+        queryVisitor.InsertTo(this.entityType);
+        queryVisitor.Command = this.connection.CreateCommand();
+        return new FromQuery<T1, T2, T3, T4, T5, T6, T7>(this.connection, this.ormProvider, this.mapProvider, queryVisitor, this.entityType);
     }
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>()
     {
         var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
-        var insertType = typeof(TEntity);
-        queryVisitor.InsertTo(insertType);
-        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
+        queryVisitor.InsertTo(this.entityType);
+        queryVisitor.Command = this.connection.CreateCommand();
+        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this.connection, this.ormProvider, this.mapProvider, queryVisitor, this.entityType);
     }
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>()
     {
         var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
-        var insertType = typeof(TEntity);
-        queryVisitor.InsertTo(insertType);
-        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
+        queryVisitor.InsertTo(this.entityType);
+        queryVisitor.Command = this.connection.CreateCommand();
+        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.connection, this.ormProvider, this.mapProvider, queryVisitor, this.entityType);
     }
     public IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>()
     {
         var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
-        var insertType = typeof(TEntity);
-        queryVisitor.InsertTo(insertType);
-        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor, insertType);
+        queryVisitor.InsertTo(this.entityType);
+        queryVisitor.Command = this.connection.CreateCommand();
+        return new FromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.connection, this.ormProvider, this.mapProvider, queryVisitor, this.entityType);
     }
     #endregion
 
@@ -190,17 +190,17 @@ class Created<TEntity> : ICreated<TEntity>
     #region OrUpdate
     public ICreated<TEntity> OrUpdate<TUpdateFields>(TUpdateFields updateObj)
     {
-        this.visitor.Set(updateObj);
+        //this.visitor.Set(updateObj);
         return this;
     }
     public ICreated<TEntity> OrUpdate<TUpdateFields>(Expression<Func<TEntity, TUpdateFields>> fieldsAssignment)
     {
-        this.visitor.Set(fieldsAssignment);
+        //this.visitor.Set(fieldsAssignment);
         return this;
     }
     #endregion
 
-    #region Execute   
+    #region Execute
     public int Execute()
     {
         int result = 0;
@@ -213,11 +213,10 @@ class Created<TEntity> : ICreated<TEntity>
             int index = 0;
             this.bulkCount ??= 500;
             var sqlBuilder = new StringBuilder();
-            this.visitor.WithBulkFirst(this.parameters);
-
+            this.visitor.WithBulkFirst(command, this.parameters);
             foreach (var entity in this.parameters)
             {
-                this.visitor.WithBulk(command, sqlBuilder, index, entity);
+                this.visitor.WithBulk(sqlBuilder, entity, index);
                 if (index >= this.bulkCount)
                 {
                     command.CommandText = sqlBuilder.ToString();
@@ -239,13 +238,9 @@ class Created<TEntity> : ICreated<TEntity>
         }
         else
         {
-            var sql = this.visitor.BuildSql(out var dbParameters);
-            command.CommandText = sql;
-            if (dbParameters != null && dbParameters.Count > 0)
-                dbParameters.ForEach(f => command.Parameters.Add(f));
-
             var entityType = typeof(TEntity);
             var entityMapper = this.mapProvider.GetEntityMap(entityType);
+            command.CommandText = this.visitor.BuildCommand(command);
             if (entityMapper.IsAutoIncrement)
             {
                 using var reader = command.ExecuteReader();
@@ -271,11 +266,11 @@ class Created<TEntity> : ICreated<TEntity>
             int index = 0;
             this.bulkCount ??= 500;
             var sqlBuilder = new StringBuilder();
-            this.visitor.WithBulkFirst(this.parameters);
+            this.visitor.WithBulkFirst(command, this.parameters);
 
             foreach (var entity in this.parameters)
             {
-                this.visitor.WithBulk(cmd, sqlBuilder, index, entity);
+                this.visitor.WithBulk(sqlBuilder, entity, index);
                 if (index >= this.bulkCount)
                 {
                     command.CommandText = sqlBuilder.ToString();
@@ -297,13 +292,9 @@ class Created<TEntity> : ICreated<TEntity>
         }
         else
         {
-            var sql = this.visitor.BuildSql(out var dbParameters);
-            cmd.CommandText = sql;
-            if (dbParameters != null && dbParameters.Count > 0)
-                dbParameters.ForEach(f => command.Parameters.Add(f));
-
             var entityType = typeof(TEntity);
             var entityMapper = this.mapProvider.GetEntityMap(entityType);
+            command.CommandText = this.visitor.BuildCommand(command);
             await this.connection.OpenAsync(cancellationToken);
             if (entityMapper.IsAutoIncrement)
             {
@@ -328,11 +319,11 @@ class Created<TEntity> : ICreated<TEntity>
             int index = 0;
             this.bulkCount ??= 500;
             var sqlBuilder = new StringBuilder();
-            this.visitor.WithBulkFirst(this.parameters);
+            this.visitor.WithBulkFirst(command, this.parameters);
 
             foreach (var entity in this.parameters)
             {
-                this.visitor.WithBulk(command, sqlBuilder, index, entity);
+                this.visitor.WithBulk(sqlBuilder, entity, index);
                 if (index >= this.bulkCount)
                 {
                     command.CommandText = sqlBuilder.ToString();
@@ -354,13 +345,9 @@ class Created<TEntity> : ICreated<TEntity>
         }
         else
         {
-            var sql = this.visitor.BuildSql(out var dbParameters);
-            command.CommandText = sql;
-            if (dbParameters != null && dbParameters.Count > 0)
-                dbParameters.ForEach(f => command.Parameters.Add(f));
-
             var entityType = typeof(TEntity);
             var entityMapper = this.mapProvider.GetEntityMap(entityType);
+            command.CommandText = this.visitor.BuildCommand(command);
             if (entityMapper.IsAutoIncrement)
             {
                 using var reader = command.ExecuteReader();
@@ -386,11 +373,11 @@ class Created<TEntity> : ICreated<TEntity>
             int index = 0;
             this.bulkCount ??= 500;
             var sqlBuilder = new StringBuilder();
-            this.visitor.WithBulkFirst(this.parameters);
+            this.visitor.WithBulkFirst(command, this.parameters);
 
             foreach (var entity in this.parameters)
             {
-                this.visitor.WithBulk(cmd, sqlBuilder, index, entity);
+                this.visitor.WithBulk(sqlBuilder, entity, index);
                 if (index >= this.bulkCount)
                 {
                     command.CommandText = sqlBuilder.ToString();
@@ -412,19 +399,15 @@ class Created<TEntity> : ICreated<TEntity>
         }
         else
         {
-            var sql = this.visitor.BuildSql(out var dbParameters);
-            cmd.CommandText = sql;
-            if (dbParameters != null && dbParameters.Count > 0)
-                dbParameters.ForEach(f => command.Parameters.Add(f));
-
             var entityType = typeof(TEntity);
             var entityMapper = this.mapProvider.GetEntityMap(entityType);
+            command.CommandText = this.visitor.BuildCommand(command);
             await this.connection.OpenAsync(cancellationToken);
             if (entityMapper.IsAutoIncrement)
             {
                 using var reader = await command.ExecuteReaderAsync(cancellationToken);
                 if (await reader.ReadAsync(cancellationToken))
-                    result = reader.To<int>();
+                    result = reader.To<long>();
                 await reader.DisposeAsync();
             }
             else result = await command.ExecuteNonQueryAsync(cancellationToken);
@@ -434,32 +417,37 @@ class Created<TEntity> : ICreated<TEntity>
     }
     #endregion
 
+    #region Execute
+    public MultipleCommand ToMultipleCommand() => this.visitor.CreateMultipleCommand();
+    #endregion
+
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
         dbParameters = null;
         string sql = null;
+        using var command = this.connection.CreateCommand();
         if (this.isBulk)
         {
             int index = 0;
             var sqlBuilder = new StringBuilder();
-            using var command = this.connection.CreateCommand();
-            this.visitor.WithBulkFirst(this.parameters);
+            this.visitor.WithBulkFirst(command, this.parameters);
 
             foreach (var entity in this.parameters)
             {
-                this.visitor.WithBulk(command, sqlBuilder, index, entity);
+                this.visitor.WithBulk(sqlBuilder, entity, index);
                 if (index >= this.bulkCount)
                     break;
                 index++;
             }
             if (index > 0)
                 sql = sqlBuilder.ToString();
-            if (command.Parameters != null && command.Parameters.Count > 0)
-                dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+
             command.Dispose();
         }
-        else sql = this.visitor.BuildSql(out dbParameters);
+        else sql = this.visitor.BuildCommand(command);
+        if (command.Parameters != null && command.Parameters.Count > 0)
+            dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         return sql;
     }
     #endregion
@@ -492,7 +480,7 @@ class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEntity>
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
 
-        if (condition) this.visitor.WithBy(fieldSelector, fieldValue);
+        if (condition) this.visitor.WithByField(new FieldObject { Selector = fieldSelector, Value = fieldValue });
         return this;
     }
     #endregion

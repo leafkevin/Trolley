@@ -23,18 +23,19 @@ public class SqlVisitor : ISqlVisitor
     protected bool IsWhere { get; set; }
     protected bool IsFromQuery { get; set; }
     protected string WhereSql { get; set; }
-    protected string MultiParameterPrefix { get; set; } = string.Empty;
+    protected bool IsMultiple { get; set; }
+    protected int CommandIndex { get; set; }
     protected OperationType LastWhereNodeType { get; set; } = OperationType.None;
     protected char TableAsStart { get; set; }
 
     public string DbKey { get; private set; }
+    public IDbCommand Command { get; set; }
     public IEntityMapProvider MapProvider { get; private set; }
     public IOrmProvider OrmProvider { get; private set; }
     public bool IsNeedAlias { get; set; }
     public bool IsParameterized { get; set; }
-    public List<IDbDataParameter> DbParameters { get; protected set; }
 
-    public SqlVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "", List<IDbDataParameter> dbParameters = null)
+    public SqlVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
     {
         this.DbKey = dbKey;
         this.OrmProvider = ormProvider;
@@ -42,8 +43,15 @@ public class SqlVisitor : ISqlVisitor
         this.IsParameterized = isParameterized;
         this.TableAsStart = tableAsStart;
         this.ParameterPrefix = parameterPrefix;
-        this.MultiParameterPrefix = multiParameterPrefix;
-        this.DbParameters = dbParameters;
+    }
+    public virtual int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
+    {
+        return 0;
+    }
+    public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
+    {
+        dbParameters = null;
+        return null;
     }
     public virtual SqlSegment VisitAndDeferred(SqlSegment sqlSegment)
     {
@@ -263,7 +271,7 @@ public class SqlVisitor : ISqlVisitor
                 //就是枚举类型有问题，单独处理
                 //... WHERE (int)(a.Price * a.Quartity)>500
                 //SELECT TotalAmount = (int)(amount + (a.Price + increasedPrice) * (a.Quartity + increasedCount)) ...FROM ...
-                //SELECT OrderNo = $"OrderNo-{DateTime.Today.ToString("yyyyMMdd")}-{f.Id}"...FROM ...
+                //SELECT OrderNo = $"OrderNo-{f.CreatedAt.ToString("yyyyMMdd")}-{f.Id}"...FROM ...
 
                 var leftType = leftSegment.ExpectType ?? binaryExpr.Left.Type;
                 var rightType = rightSegment.ExpectType ?? binaryExpr.Right.Type;
@@ -668,7 +676,6 @@ public class SqlVisitor : ISqlVisitor
                 this.IsNeedAlias = true;
                 string existsSql = null;
                 var subTableTypes = methodCallExpr.Method.GetGenericArguments();
-                List<IDbDataParameter> parameters = null;
                 if (subTableTypes != null && subTableTypes.Length > 0)
                 {
                     var removeIndices = new List<int>();
@@ -698,8 +705,6 @@ public class SqlVisitor : ISqlVisitor
                     existsSql = builder.ToString();
                 }
                 else existsSql = this.VisitFromQuery(lambdaExpr, out _);
-                if (parameters != null && parameters.Count > 0)
-                    this.DbParameters.AddRange(parameters);
 
                 if (sqlSegment.HasDeferrdNot())
                     sqlSegment.Change($"NOT EXISTS({existsSql})", false, false, true);
@@ -1015,8 +1020,10 @@ public class SqlVisitor : ISqlVisitor
                 currentExpr = callExpr.Object;
             }
         }
-        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, TableAsStart, ParameterPrefix, this.MultiParameterPrefix, this.DbParameters);
+        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, TableAsStart, ParameterPrefix);
+        queryVisitor.Command = this.Command;
         queryVisitor.IsNeedAlias = this.IsNeedAlias;
+
         while (callStack.TryPop(out var callExpr))
         {
             var genericArguments = callExpr.Method.GetGenericArguments();
@@ -1112,10 +1119,7 @@ public class SqlVisitor : ISqlVisitor
                     break;
             }
         }
-        var result = queryVisitor.BuildSql(out var dbDataParameters, out _);
-        if (dbDataParameters != null && dbDataParameters.Count > 0)
-            this.DbParameters.AddRange(dbDataParameters);
-
+        var result = queryVisitor.BuildSql(out _);
         isNeedAlias = queryVisitor.IsNeedAlias;
         return result;
     }
@@ -1155,20 +1159,21 @@ public class SqlVisitor : ISqlVisitor
     {
         if (sqlSegment.IsVariable || (sqlSegment.IsParameterized || this.IsParameterized) && sqlSegment.IsConstant)
         {
-            string parameterName = null;
-            if (!string.IsNullOrEmpty(sqlSegment.ParameterName))
-            {
-                parameterName = this.OrmProvider.ParameterPrefix + sqlSegment.ParameterName;
-                if (this.DbParameters.Exists(f => f.ParameterName == parameterName))
-                    parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
-            }
-            else parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
+            //if (!string.IsNullOrEmpty(sqlSegment.ParameterName))
+            //{
+            //    parameterName = this.OrmProvider.ParameterPrefix + sqlSegment.ParameterName;
+            //    if (this.DbParameters.Exists(f => f.ParameterName == parameterName))
+            //        parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.Command.Parameters.Count.ToString();
+            //}
+            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.Command.Parameters.Count.ToString();
+            if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
             IDbDataParameter dbParameter = null;
             if (sqlSegment.MemberMapper != null)
                 dbParameter = this.OrmProvider.CreateParameter(sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
             else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
-            this.DbParameters.Add(dbParameter);
+
+            this.Command.Parameters.Add(dbParameter);
             sqlSegment.Value = parameterName;
             sqlSegment.IsParameter = true;
             sqlSegment.IsVariable = false;
@@ -1204,13 +1209,14 @@ public class SqlVisitor : ISqlVisitor
             if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
                 sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
 
-            var parameterName = this.OrmProvider.ParameterPrefix + this.MultiParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
+            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.Command.Parameters.Count.ToString();
+            if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
             IDbDataParameter dbParameter = null;
             if (sqlSegment.MemberMapper != null)
                 dbParameter = this.OrmProvider.CreateParameter(sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
             else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
 
-            this.DbParameters.Add(dbParameter);
+            this.Command.Parameters.Add(dbParameter);
             sqlSegment.Value = parameterName;
             sqlSegment.IsParameter = true;
             sqlSegment.IsVariable = false;
@@ -1239,12 +1245,14 @@ public class SqlVisitor : ISqlVisitor
             return "NULL";
         if (arraySegment.IsVariable || (this.IsParameterized || arraySegment.IsParameterized) && arraySegment.IsConstant)
         {
-            var parameterName = this.OrmProvider.ParameterPrefix + this.MultiParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
+            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.Command.Parameters.Count.ToString();
+            if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
+
             IDbDataParameter dbParameter = null;
             if (arraySegment.MemberMapper != null)
                 dbParameter = this.OrmProvider.CreateParameter(arraySegment.MemberMapper, parameterName, elementValue);
             else dbParameter = this.OrmProvider.CreateParameter(parameterName, elementValue);
-            this.DbParameters.Add(dbParameter);
+            this.Command.Parameters.Add(dbParameter);
             return parameterName;
         }
         if (arraySegment.IsConstant && arraySegment.MemberMapper != null && arraySegment.TargetType != arraySegment.ExpectType)
@@ -1546,6 +1554,14 @@ public class SqlVisitor : ISqlVisitor
         //    return true;
         //}
         return false;
+    }
+    public void Clear()
+    {
+        this.Tables?.Clear();
+        this.TableAlias?.Clear();
+        this.ReaderFields?.Clear();
+        this.WhereSql = null;
+        this.LastWhereNodeType = OperationType.None;
     }
     private List<ConditionExpression> VisitLogicBinaryExpr(Expression conditionExpr)
     {

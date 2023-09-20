@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -8,12 +6,12 @@ namespace Trolley.SqlServer;
 
 public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
 {
-    public SqlServerUpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
-        : base(dbKey, ormProvider, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix, dbParameters)
+    public SqlServerUpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix)
     {
         this.Tables[0].AliasName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
     }
-    public override string BuildSql(out List<IDbDataParameter> dbParameters)
+    public override string BuildSql()
     {
         var entityTableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
         var builder = new StringBuilder($"UPDATE {entityTableName} ");
@@ -82,7 +80,6 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
             builder.Append(this.WhereSql);
         }
 
-        dbParameters = this.DbParameters;
         return builder.ToString();
     }
     public override IUpdateVisitor Join(string joinType, Type entityType, Expression joinOn)

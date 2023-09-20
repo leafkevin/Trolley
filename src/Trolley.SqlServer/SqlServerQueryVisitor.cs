@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Text;
 
 namespace Trolley.SqlServer;
 
 public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
 {
-    public SqlServerQueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "", List<IDbDataParameter> dbParameters = null)
-      : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix, dbParameters) { }
+    public SqlServerQueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+      : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix) { }
     public override void WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<ReaderField> readerFields = null)
     {
         var withTable = cteTableName;

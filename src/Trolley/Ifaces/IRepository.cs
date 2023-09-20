@@ -656,6 +656,11 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default);
     #endregion
 
+    #region MultipleExecute
+    void MultipleExecute(List<MultipleCommand> commands);
+    Task MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default);
+    #endregion
+
     #region Others
     /// <summary>
     /// 关闭连接

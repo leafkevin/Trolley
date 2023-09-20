@@ -63,7 +63,7 @@ class MultipleQuery : IMultipleQuery
     {
         var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart);
         subQuery.Invoke(new FromQuery(visitor));
-        var sql = visitor.BuildSql(out _, out var readerFields);
+        var sql = visitor.BuildSql(out var readerFields);
         var newVisitor = visitor.Clone(tableAsStart);
         newVisitor.WithTable(typeof(T), sql, readerFields);
         return new MultiQuery<T>(this, this.OrmProvider, newVisitor);
@@ -72,7 +72,7 @@ class MultipleQuery : IMultipleQuery
     {
         var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart);
         cteSubQuery.Invoke(new FromQuery(visitor));
-        var rawSql = visitor.BuildSql(out _, out var readerFields);
+        var rawSql = visitor.BuildSql(out var readerFields);
         var newVisitor = visitor.Clone(tableAsStart);
         newVisitor.WithCteTable(typeof(T), cteTableName, false, rawSql, readerFields);
         return new MultiQuery<T>(this, this.OrmProvider, newVisitor);
@@ -81,7 +81,7 @@ class MultipleQuery : IMultipleQuery
     {
         var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart);
         cteSubQuery.Invoke(new FromQuery(visitor), cteTableName);
-        var rawSql = visitor.BuildSql(out _, out var readerFields);
+        var rawSql = visitor.BuildSql(out var readerFields);
         var newVisitor = visitor.Clone(tableAsStart);
         newVisitor.WithCteTable(typeof(T), cteTableName, true, rawSql, readerFields);
         return new MultiQuery<T>(this, this.OrmProvider, newVisitor);

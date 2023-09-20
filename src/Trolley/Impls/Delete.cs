@@ -47,7 +47,7 @@ class Delete<TEntity> : IDelete<TEntity>
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
 
-        var visitor = this.ormProvider.NewDeleteVisitor(this.connection.DbKey, this.mapProvider, typeof(TEntity), this.isParameterized);
+        var visitor = this.ormProvider.NewDeleteVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized);
         if (condition) visitor.Where(ifPredicate);
         else if (elsePredicate != null) visitor.Where(elsePredicate);
         return new Deleting<TEntity>(this.connection, this.transaction, visitor);
@@ -80,9 +80,9 @@ class Deleted<TEntity> : IDeleted<TEntity>
     {
         string sql = null;
         var entityType = typeof(TEntity);
-        bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not IDictionary<string, object>;
+        bool isBulk = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not IDictionary<string, object>;
         using var command = this.connection.CreateCommand();
-        if (isMulti)
+        if (isBulk)
         {
             var commandInitializer = RepositoryHelper.BuildDeleteBatchCommandInitializer(this.connection,
                  this.ormProvider, this.mapProvider, entityType, this.parameters, out var isNeedEndParenthesis);
@@ -115,9 +115,9 @@ class Deleted<TEntity> : IDeleted<TEntity>
     {
         string sql = null;
         var entityType = typeof(TEntity);
-        bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not IDictionary<string, object>;
+        bool isBulk = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not IDictionary<string, object>;
         using var cmd = this.connection.CreateCommand();
-        if (isMulti)
+        if (isBulk)
         {
             var commandInitializer = RepositoryHelper.BuildDeleteBatchCommandInitializer(this.connection,
                 this.ormProvider, this.mapProvider, entityType, this.parameters, out var isNeedEndParenthesis);
@@ -158,9 +158,9 @@ class Deleted<TEntity> : IDeleted<TEntity>
         dbParameters = null;
         string sql = null;
         var entityType = typeof(TEntity);
-        bool isMulti = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not IDictionary<string, object>;
+        bool isBulk = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not IDictionary<string, object>;
         using var command = this.connection.CreateCommand();
-        if (isMulti)
+        if (isBulk)
         {
             var commandInitializer = RepositoryHelper.BuildDeleteBatchCommandInitializer(this.connection,
                  this.ormProvider, this.mapProvider, entityType, this.parameters, out var isNeedEndParenthesis);

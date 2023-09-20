@@ -1,13 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data;
 
 namespace Trolley.MySqlConnector;
 
 class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
 {
-    public MySqlUpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
-      : base(dbKey, ormProvider, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix, dbParameters)
+    public MySqlUpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+      : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix)
     {
     }
     public override IUpdateVisitor From(params Type[] entityTypes)

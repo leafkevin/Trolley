@@ -8,20 +8,25 @@ namespace Trolley;
 
 public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 {
-    public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
-        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, "", dbParameters)
+    public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
+        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix) { }
+    public virtual void Initialize(Type entityType, bool isFirst = true)
     {
-        this.Tables = new()
+        if (isFirst)
         {
-            new TableSegment
+            this.Tables = new()
             {
-                EntityType = entityType,
-                Mapper = this.MapProvider.GetEntityMap(entityType)
-            }
-        };
-        this.DbParameters ??= new();
+                new TableSegment
+                {
+                    EntityType = entityType,
+                    Mapper = this.MapProvider.GetEntityMap(entityType)
+                }
+            };
+        }
+        //clear
+        else base.Clear();
     }
-    public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
+    public virtual string BuildSql()
     {
         var entityMapper = this.Tables[0].Mapper;
         var entityTableName = this.OrmProvider.GetTableName(entityMapper.TableName);
@@ -29,7 +34,6 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 
         if (!string.IsNullOrEmpty(this.WhereSql))
             builder.Append(" WHERE " + this.WhereSql);
-        dbParameters = this.DbParameters;
         return builder.ToString();
     }
     public virtual IDeleteVisitor Where(Expression whereExpr)

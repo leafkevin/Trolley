@@ -20,14 +20,14 @@ public abstract class BaseOrmProvider : IOrmProvider
     public abstract IDbConnection CreateConnection(string connectionString);
     public abstract IDbDataParameter CreateParameter(string parameterName, object value);
     public abstract IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
-    public virtual IQueryVisitor NewQueryVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", string multiParameterPrefix = "", List<IDbDataParameter> dbParameters = null)
-        => new QueryVisitor(dbKey, this, mapProvider, isParameterized, tableAsStart, parameterPrefix, multiParameterPrefix, dbParameters);
-    public virtual ICreateVisitor NewCreateVisitor(string dbKey, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
-        => new CreateVisitor(dbKey, this, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix, dbParameters);
-    public virtual IUpdateVisitor NewUpdateVisitor(string dbKey, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
-        => new UpdateVisitor(dbKey, this, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix, dbParameters);
-    public virtual IDeleteVisitor NewDeleteVisitor(string dbKey, IEntityMapProvider mapProvider, Type entityType, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
-        => new DeleteVisitor(dbKey, this, mapProvider, entityType, isParameterized, tableAsStart, parameterPrefix, dbParameters);
+    public virtual IQueryVisitor NewQueryVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+        => new QueryVisitor(dbKey, this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
+    public virtual ICreateVisitor NewCreateVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+        => new CreateVisitor(dbKey, this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
+    public virtual IUpdateVisitor NewUpdateVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+        => new UpdateVisitor(dbKey, this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
+    public virtual IDeleteVisitor NewDeleteVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+        => new DeleteVisitor(dbKey, this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
     public virtual string GetTableName(string entityName) => entityName;
     public virtual string GetFieldName(string propertyName) => propertyName;
     public virtual string GetPagingTemplate(int? skip, int? limit, string orderBy = null)

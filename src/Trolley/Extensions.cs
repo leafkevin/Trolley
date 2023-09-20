@@ -776,17 +776,6 @@ public static class Extensions
         }
         return hashCode.ToHashCode();
     }
-    //private static bool IsTarget(List<ReaderField> readerFields)
-    //{
-    //    if (readerFields.Count == 1)
-    //        return readerFields[0].IsTargetType;
-    //    if (readerFields.Exists(f => f.FieldType == ReaderFieldType.Field
-    //        || f.FieldType == ReaderFieldType.DeferredFields
-    //         //DeferFields类型，有函数调用，TableSegment为空
-    //         || (f.Index > 0 && f.TableSegment != null && f.TableSegment.FromTable == null)))
-    //        return false;
-    //    return true;
-    //}
     class EntityBuildInfo
     {
         public bool IsDefault { get; set; }
