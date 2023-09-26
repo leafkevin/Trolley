@@ -431,7 +431,7 @@ public class SqlServerUnitTest1 : UnitTestBase
         Assert.True(parameters.Count == 1);
     }
     [Fact]
-    public async void Insert_Select_From_Table2()
+    public void Insert_Select_From_Table2()
     {
         using var repository = dbFactory.Create();
         var sql = repository.Create<OrderDetail>()

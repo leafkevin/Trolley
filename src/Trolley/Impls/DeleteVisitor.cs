@@ -12,19 +12,15 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix) { }
     public virtual void Initialize(Type entityType, bool isFirst = true)
     {
-        if (isFirst)
-        {
-            this.Tables = new()
-            {
-                new TableSegment
-                {
-                    EntityType = entityType,
-                    Mapper = this.MapProvider.GetEntityMap(entityType)
-                }
-            };
-        }
+        if (isFirst) this.Tables = new();
         //clear
         else base.Clear();
+
+        this.Tables.Add(new TableSegment
+        {
+            EntityType = entityType,
+            Mapper = this.MapProvider.GetEntityMap(entityType)
+        });
     }
     public virtual string BuildSql()
     {

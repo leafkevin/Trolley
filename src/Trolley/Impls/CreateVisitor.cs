@@ -26,14 +26,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     {
         if (isFirst)
         {
-            this.Tables = new()
-            {
-                new TableSegment
-                {
-                    EntityType = entityType,
-                    Mapper = this.MapProvider.GetEntityMap(entityType)
-                }
-            };
+            this.Tables = new();
             this.TableAlias = new();
         }
         //clear
@@ -41,14 +34,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         {
             this.deferredSegments.Clear();
             this.InsertFields.Clear();
-            this.InsertFields.Clear();
             this.IsUseIgnore = false;
-            this.IsUseIfNotExists = false;
-            this.IsUseOrUpdate = false;
-            this.IsBulk = false;
-            this.bulkCommandInitializer = null;
             base.Clear();
         }
+        this.Tables.Add(new TableSegment
+        {
+            EntityType = entityType,
+            Mapper = this.MapProvider.GetEntityMap(entityType)
+        });
     }
     public string BuildCommand(IDbCommand command)
     {
@@ -68,12 +61,19 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     this.IsBulk = true;
                     var builder = new StringBuilder();
                     var bulkObject = (BulkObject)this.deferredSegments[0].Value;
-                    foreach (var entity in bulkObject.BulkObjects)
+                    var insertObjs = bulkObject.BulkObjects as IEnumerable;
+                    this.WithBulkHead(builder);
+                    var commandInitializer = this.bulkCommandInitializer as Action<IDbCommand, StringBuilder, object, int, int>;
+                    foreach (var insertObj in insertObjs)
                     {
-                        this.WithBulk(builder, entity, index);
+                        this.WithBulk(builder, commandInitializer, insertObj, index);
                         index++;
                     }
+                    this.WithBulkTail(builder);
                     return builder.ToString();
+                case DeferredInsertType.IfNotExists:
+                    this.VisitIfNotExists(deferredSegment.Value);
+                    break;
                     //case DeferredInsertType.SetObject:
                     //    this.VisitSet(command, deferredSegment.Value, this.CommandIndex);
                     //    break;
@@ -82,7 +82,29 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     //    break;
             }
         }
-
+        return this.BuildSql();
+    }
+    public virtual MultipleCommand CreateMultipleCommand()
+    {
+        return new MultipleCommand
+        {
+            CommandType = MultipleCommandType.Insert,
+            EntityType = this.Tables[0].EntityType,
+            Body = this.deferredSegments
+        };
+    }
+    public override int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
+    {
+        this.IsMultiple = true;
+        this.CommandIndex = commandIndex;
+        this.deferredSegments = multiCommand.Body as List<InsertDeferredSegment>;
+        int result = 1;
+        if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
+        sqlBuilder.Append(this.BuildCommand(command));
+        return result;
+    }
+    public virtual string BuildSql()
+    {
         var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
         var fieldsBuilder = new StringBuilder($"{this.BuildHeadSql()} {tableName} (");
         var valuesBuilder = new StringBuilder();
@@ -103,7 +125,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (this.IsUseIfNotExists)
         {
             if (!string.IsNullOrEmpty(this.WhereSql))
-                valuesBuilder.Append(" WHERE " + this.WhereSql);
+                valuesBuilder.Append($" WHERE NOT EXISTS(SELECT * FROM {tableName} WHERE {this.WhereSql})");
         }
         else valuesBuilder.Append(')');
 
@@ -112,30 +134,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             valuesBuilder.Append(tailSql);
         fieldsBuilder.Append(valuesBuilder);
         return fieldsBuilder.ToString();
-    }
-    public virtual MultipleCommand CreateMultipleCommand()
-    {
-        var multiCommand = new MultipleCommand
-        {
-            CommandType = MultipleCommandType.Insert,
-            Body = new InsertDeferredCommand
-            {
-                EntityType = this.Tables[0].EntityType,
-                Segments = this.deferredSegments
-            }
-        };
-        return multiCommand;
-    }
-    public override int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
-    {
-        this.IsMultiple = true;
-        this.CommandIndex = commandIndex;
-        var deferredCommand = (InsertDeferredCommand)multiCommand.Body;
-        this.deferredSegments = deferredCommand.Segments;
-        int result = 1;
-        if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
-        sqlBuilder.Append(this.BuildCommand(command));
-        return result;
     }
     public virtual string BuildHeadSql() => $"INSERT INTO";
     public virtual string BuildTailSql() => string.Empty;
@@ -146,20 +144,20 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual ICreateVisitor IfNotExists(object whereObj)
     {
-        this.IsUseIfNotExists = true;
-        //var commandInitializer = RepositoryHelper.BuildWhereWithKeysSqlParameters(this, this.Tables[0].EntityType, whereObj);
-        //this.WhereSql = commandInitializer.Invoke(this, this.DbParameters, whereObj);
+        this.deferredSegments.Add(new InsertDeferredSegment
+        {
+            Type = DeferredInsertType.IfNotExists,
+            Value = whereObj
+        });
         return this;
     }
     public virtual ICreateVisitor IfNotExists(Expression keysPredicate)
     {
-        this.IsUseIfNotExists = true;
-        this.IsWhere = true;
-        var lambdaExpr = keysPredicate as LambdaExpression;
-        this.InitTableAlias(lambdaExpr);
-        this.LastWhereNodeType = OperationType.None;
-        this.WhereSql = this.VisitConditionExpr(lambdaExpr.Body);
-        this.IsWhere = false;
+        this.deferredSegments.Add(new InsertDeferredSegment
+        {
+            Type = DeferredInsertType.IfNotExists,
+            Value = keysPredicate
+        });
         return this;
     }
     //public virtual ICreateVisitor Set(Expression fieldsAssignment, int commandIndex)
@@ -230,56 +228,47 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         });
         return this;
     }
-    public virtual ICreateVisitor WithBulkFirst(IDbCommand command, IEnumerable insertObjs)
+    public virtual Action<IDbCommand, StringBuilder, object, int> WithBulkFirst(IDbCommand command, object insertObjs)
     {
-        this.IsBulk = true;
         this.Command = command;
-        var entityTppe = this.Tables[0].EntityType;
-        var commandInitializer = RepositoryHelper.BuildCreateWithBulkCommandInitializer(this, entityTppe, insertObjs, this.IsMultiple, out var bulkHeadSql);
+        var entityType = this.Tables[0].EntityType;
+        this.bulkCommandInitializer = RepositoryHelper.BuildCreateWithBulkCommandInitializer(this, entityType, insertObjs, this.IsMultiple, out var bulkHeadSql);
+        this.bulkHeadSql = bulkHeadSql;
         if (this.IsMultiple)
         {
             this.deferredSegments.Add(new InsertDeferredSegment
             {
                 Type = DeferredInsertType.WithBulk,
-                Value = new BulkObject
-                {
-                    HeadSql = bulkHeadSql,
-                    CommandInitializer = commandInitializer,
-                    BulkObjects = insertObjs
-                }
+                Value = insertObjs
             });
         }
-        else
-        {
-            this.bulkHeadSql = bulkHeadSql;
-            this.bulkCommandInitializer = commandInitializer;
-        }
-        return this;
+        else return this.bulkCommandInitializer as Action<IDbCommand, StringBuilder, object, int>;
+        return null;
     }
-    public virtual ICreateVisitor WithBulk(StringBuilder builder, object insertObj, int index)
+    public virtual void WithBulkHead(StringBuilder builder)
     {
-        if (index == 0)
-        {
-            var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
-            builder.Append($"{this.BuildHeadSql()} {tableName} ({this.bulkHeadSql}) VALUES ");
-        }
-        else builder.Append(',');
+        var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
+        builder.Append($"{this.BuildHeadSql()} {tableName} ({this.bulkHeadSql}) VALUES ");
+    }
+    public virtual void WithBulk(StringBuilder builder, Action<IDbCommand, StringBuilder, object, int> commandInitializer, object insertObj, int index)
+    {
+        if (index > 0) builder.Append(',');
         builder.Append('(');
-        if (this.IsMultiple)
-        {
-            var multiCommandInitializer = this.bulkCommandInitializer as Action<IDbCommand, object, StringBuilder, int, int>;
-            multiCommandInitializer.Invoke(this.Command, insertObj, builder, index, this.CommandIndex);
-        }
-        else
-        {
-            var singleCommandInitializer = this.bulkCommandInitializer as Action<IDbCommand, object, StringBuilder, int>;
-            singleCommandInitializer.Invoke(this.Command, insertObj, builder, index);
-        }
+        commandInitializer.Invoke(this.Command, builder, insertObj, index);
         builder.Append(')');
+    }
+    public virtual void WithBulk(StringBuilder builder, Action<IDbCommand, StringBuilder, object, int, int> commandInitializer, object insertObj, int index)
+    {
+        if (index > 0) builder.Append(',');
+        builder.Append('(');
+        commandInitializer.Invoke(this.Command, builder, insertObj, index, this.CommandIndex);
+        builder.Append(')');
+    }
+    public virtual void WithBulkTail(StringBuilder builder)
+    {
         var tailSql = this.BuildTailSql();
         if (!string.IsNullOrEmpty(tailSql))
             builder.Append(tailSql);
-        return this;
     }
     public virtual IQueryVisitor CreateQuery(params Type[] sourceTypes)
     {
@@ -332,7 +321,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             Values = valuesBuilder.ToString()
         });
     }
-
     protected virtual void VisitWithBy(object insertObj)
     {
         var entityType = this.Tables[0].EntityType;
@@ -357,18 +345,45 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     protected virtual void VisitWithByField(FieldObject fieldObject)
     {
-        var lambdaExpr = fieldObject.Selector as LambdaExpression;
+        var lambdaExpr = fieldObject.FieldSelector as LambdaExpression;
         var memberExpr = lambdaExpr.Body as MemberExpression;
         var entityMapper = this.Tables[0].Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-        this.Command.Parameters.Add(this.OrmProvider.CreateParameter(memberMapper, parameterName, fieldObject.Value));
+        this.Command.Parameters.Add(this.OrmProvider.CreateParameter(memberMapper, parameterName, fieldObject.FieldValue));
         this.InsertFields.Add(new InsertField
         {
             Fields = this.OrmProvider.GetFieldName(memberMapper.FieldName),
             Values = parameterName
         });
+    }
+    protected virtual void VisitIfNotExists(object whereObj)
+    {
+        this.IsUseIfNotExists = true;
+        if (whereObj is Expression whereExpr)
+        {
+            this.IsWhere = true;
+            var lambdaExpr = whereExpr as LambdaExpression;
+            this.InitTableAlias(lambdaExpr);
+            this.LastWhereNodeType = OperationType.None;
+            this.WhereSql = this.VisitConditionExpr(lambdaExpr.Body);
+            this.IsWhere = false;
+        }
+        else
+        {
+            var commandInitializer = RepositoryHelper.BuildWhereWithKeysSqlParameters(this, this.Tables[0].EntityType, whereObj, this.IsMultiple);
+            if (this.IsMultiple)
+            {
+                var multiCommandInitializer = commandInitializer as Func<IDbCommand, object, int, string>;
+                this.WhereSql = multiCommandInitializer.Invoke(this.Command, whereObj, this.CommandIndex);
+            }
+            else
+            {
+                var singleCommandInitializer = commandInitializer as Func<IDbCommand, object, string>;
+                this.WhereSql = singleCommandInitializer.Invoke(this.Command, whereObj);
+            }
+        }
     }
     protected virtual void VisitSet(Expression fieldsAssignment)
     {
@@ -462,6 +477,25 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         sqlSegment.ParameterName = memberMapper.MemberName;
         if (this.IsMultiple) sqlSegment.ParameterName += $"_m{this.CommandIndex}";
         this.UpdateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = this.GetQuotedValue(sqlSegment) });
+    }
+    enum DeferredInsertType
+    {
+        WithBy,
+        WithBulk,
+        WithByField,
+        SetObject,
+        SetExpression,
+        IfNotExists
+    }
+    struct InsertDeferredSegment
+    {
+        public DeferredInsertType Type { get; set; }
+        public object Value { get; set; }
+    }
+    struct InsertDeferredCommand
+    {
+        public Type EntityType { get; set; }
+        public List<InsertDeferredSegment> Segments { get; set; }
     }
 }
 public struct InsertField

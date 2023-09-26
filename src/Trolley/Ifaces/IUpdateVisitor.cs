@@ -9,7 +9,6 @@ public enum UpdateFieldType
 {
     SetField,
     SetValue,
-    RawSql,
     Where
 }
 public struct UpdateField
@@ -22,6 +21,11 @@ public struct UpdateField
 }
 public interface IUpdateVisitor
 {
+    IDbCommand Command { get; set; }
+    string BuildCommand(IDbCommand command);
+    MultipleCommand CreateMultipleCommand();
+    int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
+    void Initialize(Type entityType, bool isFirst = true);
     string BuildSql();
     IUpdateVisitor From(params Type[] entityTypes);
     IUpdateVisitor Join(string joinType, Type entityType, Expression joinOn);
@@ -30,8 +34,10 @@ public interface IUpdateVisitor
     IUpdateVisitor SetWith(Expression fieldsSelectorOrAssignment, object updateObj);
     IUpdateVisitor SetFrom(Expression fieldsAssignment);
     IUpdateVisitor SetFrom(Expression fieldSelector, Expression valueSelector);
-    IUpdateVisitor SetBulkFirst(Expression fieldsSelectorOrAssignment, object updateObjs);
-    void SetBulk(StringBuilder builder, IDbCommand command, object updateObj, int index);
+    IUpdateVisitor SetBulkFirst(IDbCommand command, Expression fieldsSelectorOrAssignment, object updateObjs);
+    void SetBulkHead(StringBuilder builder);
+    void SetBulk(StringBuilder builder, object updateObj, int index);
+    void SetBulkTail(StringBuilder builder);
     IUpdateVisitor WhereWith(object whereObj);
     IUpdateVisitor Where(Expression whereExpr);
     IUpdateVisitor And(Expression whereExpr);

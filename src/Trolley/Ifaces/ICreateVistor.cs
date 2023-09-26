@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Data;
 using System.Linq.Expressions;
 using System.Text;
@@ -13,6 +12,7 @@ public interface ICreateVisitor
     MultipleCommand CreateMultipleCommand();
     int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
     void Initialize(Type entityType, bool isFirst = true);
+    string BuildSql();
     string BuildHeadSql();
     string BuildTailSql();
     ICreateVisitor UseIgnore();
@@ -22,7 +22,9 @@ public interface ICreateVisitor
     //ICreateVisitor Set(object updateObj);
     ICreateVisitor WithBy(object insertObj);
     ICreateVisitor WithByField(FieldObject fieldObject);
-    ICreateVisitor WithBulkFirst(IDbCommand command, IEnumerable insertObjs);
-    ICreateVisitor WithBulk(StringBuilder builder, object insertObj, int index);
+    Action<IDbCommand, StringBuilder, object, int> WithBulkFirst(IDbCommand command, object insertObjs);
+    void WithBulkHead(StringBuilder builder);
+    void WithBulk(StringBuilder builder, Action<IDbCommand, StringBuilder, object, int> commandInitializer, object insertObj, int index);
+    void WithBulkTail(StringBuilder builder);
     IQueryVisitor CreateQuery(params Type[] sourceTypes);
 }

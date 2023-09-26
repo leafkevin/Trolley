@@ -35,9 +35,6 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     case UpdateFieldType.SetValue:
                         builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={setField.Value}");
                         break;
-                    case UpdateFieldType.RawSql:
-                        builder.Append(setField.Value);
-                        break;
                 }
                 index++;
             }

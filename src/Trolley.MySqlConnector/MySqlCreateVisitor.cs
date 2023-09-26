@@ -29,6 +29,10 @@ class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
         }
         if (this.Tables[0].Mapper.IsAutoIncrement && !this.IsBulk && !this.IsUseOrUpdate)
             return ";SELECT LAST_INSERT_ID()";
-        return string.Empty;
+        if (this.IsUseIfNotExists)
+        {
+
+        }
+            return string.Empty;
     }
 }

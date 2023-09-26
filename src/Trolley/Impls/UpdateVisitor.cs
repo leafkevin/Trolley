@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -9,14 +10,15 @@ namespace Trolley;
 
 public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 {
-    private List<InsertDeferredSegment> deferredSegments = new();
+    private List<UpdateDeferredSegment> deferredSegments = new();
 
     protected bool IsFrom { get; set; } = false;
     protected bool IsJoin { get; set; } = false;
     protected List<UpdateField> UpdateFields { get; set; } = new();
+    protected bool HasFixedSet { get; set; }
     protected string FixedSql { get; set; }
     protected List<IDbDataParameter> FixedDbParameters { get; set; } = new();
-    protected Action<IDbCommand, UpdateVisitor, StringBuilder, object, int> BulkSetFieldsInitializer { get; set; }
+    protected object BulkSetFieldsInitializer { get; set; }
 
     public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix) { }
@@ -24,15 +26,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         if (isFirst)
         {
-            this.Tables = new()
-            {
-                new TableSegment
-                {
-                    EntityType = entityType,
-                    Mapper = this.MapProvider.GetEntityMap(entityType),
-                    AliasName = this.TableAsStart.ToString()
-                }
-            };
+            this.Tables = new();
             this.TableAlias = new();
         }
         //clear
@@ -47,75 +41,77 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.BulkSetFieldsInitializer = null;
             base.Clear();
         }
+        this.Tables.Add(new TableSegment
+        {
+            EntityType = entityType,
+            Mapper = this.MapProvider.GetEntityMap(entityType)
+        });
     }
-    //public string BuildCommand(IDbCommand command)
-    //{
-    //    foreach (var deferredSegment in this.deferredSegments)
-    //    {
-    //        switch (deferredSegment.Type)
-    //        {
-    //            case DeferredInsertType.WithBy:
-    //                this.VisitWithBy(command, deferredSegment.Value);
-    //                break;
-    //            case DeferredInsertType.WithByField:
-    //                this.VisitWithByField(command, (FieldObject)deferredSegment.Value);
-    //                break;
-    //                //case DeferredInsertType.SetObject:
-    //                //    this.VisitSet(command, deferredSegment.Value, this.CommandIndex);
-    //                //    break;
-    //                //case DeferredInsertType.SetExpression:
-    //                //    this.VisitSet(command, deferredSegment.Value as Expression, this.CommandIndex);
-    //                //    break;
-    //        }
-    //    }
-
-    //    var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
-    //    var fieldsBuilder = new StringBuilder($"{this.BuildHeadSql()} {tableName} (");
-    //    var valuesBuilder = new StringBuilder();
-    //    if (this.IsUseIfNotExists) valuesBuilder.Append(" SELECT ");
-    //    else valuesBuilder.Append(" VALUES(");
-    //    for (int i = 0; i < this.InsertFields.Count; i++)
-    //    {
-    //        var insertField = this.InsertFields[i];
-    //        if (i > 0)
-    //        {
-    //            fieldsBuilder.Append(',');
-    //            valuesBuilder.Append(',');
-    //        }
-    //        fieldsBuilder.Append(insertField.Fields);
-    //        valuesBuilder.Append(insertField.Values);
-    //    }
-    //    fieldsBuilder.Append(')');
-    //    if (this.IsUseIfNotExists)
-    //    {
-    //        if (!string.IsNullOrEmpty(this.WhereSql))
-    //            valuesBuilder.Append(" WHERE " + this.WhereSql);
-    //    }
-    //    else valuesBuilder.Append(')');
-
-    //    var tailSql = this.BuildTailSql();
-    //    if (!string.IsNullOrEmpty(tailSql))
-    //        valuesBuilder.Append(tailSql);
-    //    fieldsBuilder.Append(valuesBuilder);
-    //    return fieldsBuilder.ToString();
-    //}
-    //public virtual MultipleCommand CreateMultipleCommand()
-    //{
-    //    var multiCommand = new MultipleCommand
-    //    {
-    //        CommandType = MultipleCommandType.Insert,
-    //        Body = new InsertDeferredCommand
-    //        {
-    //            EntityType = this.Tables[0].EntityType,
-    //            IsUseIgnore = this.IsUseIgnore,
-    //            IsUseIfNotExists = this.IsUseIfNotExists,
-    //            IsUseOrUpdate = this.IsUseOrUpdate,
-    //            IsBulk = this.IsBulk,
-    //            Segments = this.deferredSegments
-    //        }
-    //    };
-    //    return multiCommand;
-    //}
+    public string BuildCommand(IDbCommand command)
+    {
+        this.Command = command;
+        int index = 0;
+        foreach (var deferredSegment in this.deferredSegments)
+        {
+            switch (deferredSegment.Type)
+            {
+                case DeferredUpdateType.Set:
+                    this.VisitSet(deferredSegment.Value as Expression);
+                    break;
+                case DeferredUpdateType.SetField:
+                    this.VisitSetField((FieldObject)deferredSegment.Value);
+                    break;
+                case DeferredUpdateType.SetWith:
+                    this.VisitSetWith((FieldsParameters)deferredSegment.Value);
+                    break;
+                case DeferredUpdateType.SetFrom:
+                    this.VisitSetFrom(deferredSegment.Value as Expression);
+                    break;
+                case DeferredUpdateType.SetFromField:
+                    this.VisitSetFromField((FieldFromQuery)deferredSegment.Value);
+                    break;
+                case DeferredUpdateType.SetBulk:
+                    var updateObjs = deferredSegment.Value as IEnumerable;
+                    var bulkBuilder = new StringBuilder();
+                    this.SetBulkHead(bulkBuilder);
+                    foreach (var updateObj in updateObjs)
+                    {
+                        this.SetBulkMulti(bulkBuilder, updateObj, index);
+                        index++;
+                    }
+                    return bulkBuilder.ToString();
+                case DeferredUpdateType.Where:
+                    this.VisitWhere(deferredSegment.Value as Expression);
+                    break;
+                case DeferredUpdateType.WhereWith:
+                    this.VisitWhereWith(deferredSegment.Value);
+                    break;
+                case DeferredUpdateType.And:
+                    this.VisitAnd(deferredSegment.Value as Expression);
+                    break;
+            }
+        }
+        return this.BuildSql();
+    }
+    public virtual MultipleCommand CreateMultipleCommand()
+    {
+        return new MultipleCommand
+        {
+            CommandType = MultipleCommandType.Update,
+            EntityType = this.Tables[0].EntityType,
+            Body = this.deferredSegments
+        };
+    }
+    public override int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
+    {
+        this.IsMultiple = true;
+        this.CommandIndex = commandIndex;
+        this.deferredSegments = multiCommand.Body as List<UpdateDeferredSegment>;
+        int result = 1;
+        if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
+        sqlBuilder.Append(this.BuildCommand(command));
+        return result;
+    }
     public virtual string BuildSql()
     {
         var entityTableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
@@ -158,9 +154,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     case UpdateFieldType.SetValue:
                         if (this.IsNeedAlias) builder.Append($"{aliasName}.");
                         builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={setField.Value}");
-                        break;
-                    case UpdateFieldType.RawSql:
-                        builder.Append(setField.Value);
                         break;
                 }
                 index++;
@@ -238,6 +231,268 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public virtual IUpdateVisitor Set(Expression fieldsAssignment)
     {
+        this.deferredSegments.Add(new UpdateDeferredSegment
+        {
+            Type = DeferredUpdateType.Set,
+            Value = fieldsAssignment
+        });
+        return this;
+    }
+    public virtual IUpdateVisitor Set(Expression fieldSelector, object fieldValue)
+    {
+        this.deferredSegments.Add(new UpdateDeferredSegment
+        {
+            Type = DeferredUpdateType.SetField,
+            Value = new FieldObject { FieldSelector = fieldSelector, FieldValue = fieldValue }
+        });
+        return this;
+    }
+    public virtual IUpdateVisitor SetWith(Expression fieldsSelectorOrAssignment, object updateObj)
+    {
+        this.deferredSegments.Add(new UpdateDeferredSegment
+        {
+            Type = DeferredUpdateType.SetWith,
+            Value = new FieldsParameters { SelectorOrAssignment = fieldsSelectorOrAssignment, Parameters = updateObj }
+        });
+        return this;
+    }
+    public virtual IUpdateVisitor SetFrom(Expression fieldsAssignment)
+    {
+        this.deferredSegments.Add(new UpdateDeferredSegment
+        {
+            Type = DeferredUpdateType.SetFrom,
+            Value = fieldsAssignment
+        });
+        return this;
+    }
+    public virtual IUpdateVisitor SetFrom(Expression fieldSelector, Expression valueSelector)
+    {
+        this.deferredSegments.Add(new UpdateDeferredSegment
+        {
+            Type = DeferredUpdateType.SetFrom,
+            Value = new FieldFromQuery { FieldSelector = fieldSelector, ValueSelector = valueSelector }
+        });
+        return this;
+    }
+    public virtual IUpdateVisitor SetBulkFirst(IDbCommand command, Expression fieldsSelectorOrAssignment, object updateObjs)
+    {
+        this.Command = command;
+        var entityMapper = this.Tables[0].Mapper;
+        var fixSetFields = new List<UpdateField>();
+        var lambdaExpr = fieldsSelectorOrAssignment as LambdaExpression;
+        switch (lambdaExpr.Body.NodeType)
+        {
+            case ExpressionType.MemberAccess:
+                {
+                    var memberExpr = lambdaExpr.Body as MemberExpression;
+                    var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
+                    var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberExpr.Member.Name}";
+                    this.UpdateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
+                }
+                break;
+            case ExpressionType.New:
+                this.InitTableAlias(lambdaExpr);
+                var newExpr = lambdaExpr.Body as NewExpression;
+                for (int i = 0; i < newExpr.Arguments.Count; i++)
+                {
+                    var memberInfo = newExpr.Members[i];
+                    if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
+                        continue;
+
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i] });
+                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberMapper.MemberName)
+                    {
+                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberInfo.Name}";
+                        this.UpdateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
+                    }
+                    else this.AddMemberElement(sqlSegment, memberMapper, fixSetFields, this.FixedDbParameters);
+                }
+                break;
+            case ExpressionType.MemberInit:
+                this.InitTableAlias(lambdaExpr);
+                var memberInitExpr = lambdaExpr.Body as MemberInitExpression;
+                for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
+                {
+                    var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
+                    if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
+                        continue;
+
+                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression });
+                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberMapper.MemberName)
+                    {
+                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}";
+                        this.UpdateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
+                    }
+                    else this.AddMemberElement(sqlSegment, memberMapper, fixSetFields, this.FixedDbParameters);
+                }
+                break;
+        }
+
+        var fixedBuilder = new StringBuilder($"UPDATE {this.OrmProvider.GetTableName(entityMapper.TableName)} SET ");
+        if (fixSetFields.Count > 0)
+        {
+            for (int i = 0; i < fixSetFields.Count; i++)
+            {
+                var fixSetField = fixSetFields[i];
+                if (i > 0) fixedBuilder.Append(',');
+                fixedBuilder.Append($"{this.OrmProvider.GetFieldName(fixSetField.MemberMapper.FieldName)}={fixSetField.Value}");
+            }
+            this.HasFixedSet = true;
+        }
+        this.FixedSql = fixedBuilder.ToString();
+        return this;
+    }
+    public virtual void SetBulkHead(StringBuilder builder)
+    {
+        if (this.FixedDbParameters != null && this.FixedDbParameters.Count > 0)
+            this.FixedDbParameters.ForEach(f => this.Command.Parameters.Add(f));
+    }
+    public virtual void SetBulk(StringBuilder builder, object updateObj, int index)
+    {
+        builder.Append(this.FixedSql);
+        if (this.HasFixedSet) builder.Append(',');
+        int setIndex = 0;
+        foreach (var setField in this.UpdateFields)
+        {
+            if (setIndex > 0) builder.Append(',');
+            if (setField.Type == UpdateFieldType.SetValue)
+                builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={setField.Value}");
+            //SetField
+            else
+            {
+                var fieldValue = this.EvaluateAndCache(updateObj, setField.MemberMapper.MemberName);
+                var parameterName = $"{setField.Value}{index}";
+                builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={parameterName}");
+                this.Command.Parameters.Add(this.OrmProvider.CreateParameter(setField.MemberMapper, parameterName, fieldValue));
+            }
+            setIndex++;
+        }
+        builder.Append(" WHERE ");
+        var keyMembers = this.Tables[0].Mapper.KeyMembers;
+        for (int i = 0; i < keyMembers.Count; i++)
+        {
+            var keyMember = keyMembers[i];
+            if (i > 0) builder.Append(" AND ");
+            var parameterName = $"{this.OrmProvider.ParameterPrefix}k{keyMember.MemberName}{index}";
+            builder.Append($"{this.OrmProvider.GetFieldName(keyMember.FieldName)}={parameterName}");
+            var fieldValue = this.EvaluateAndCache(updateObj, keyMember.MemberName);
+            this.Command.Parameters.Add(this.OrmProvider.CreateParameter(keyMember, parameterName, fieldValue));
+        }
+    }
+    protected virtual void SetBulkMulti(StringBuilder builder, object updateObj, int index)
+    {
+        builder.Append(this.FixedSql);
+        if (this.HasFixedSet) builder.Append(',');
+        int setIndex = 0;
+        foreach (var setField in this.UpdateFields)
+        {
+            if (setIndex > 0) builder.Append(',');
+            if (setField.Type == UpdateFieldType.SetValue)
+                builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={setField.Value}");
+            //SetField
+            else
+            {
+                var fieldValue = this.EvaluateAndCache(updateObj, setField.MemberMapper.MemberName);
+                var parameterName = $"{setField.Value}{index}_m{this.CommandIndex}";
+                builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={parameterName}");
+                this.Command.Parameters.Add(this.OrmProvider.CreateParameter(setField.MemberMapper, parameterName, fieldValue));
+            }
+            setIndex++;
+        }
+        builder.Append(" WHERE ");
+        var keyMembers = this.Tables[0].Mapper.KeyMembers;
+        for (int i = 0; i < keyMembers.Count; i++)
+        {
+            var keyMember = keyMembers[i];
+            if (i > 0) builder.Append(" AND ");
+            var parameterName = $"{this.OrmProvider.ParameterPrefix}k{keyMember.MemberName}{index}_m{this.CommandIndex}";
+            builder.Append($"{this.OrmProvider.GetFieldName(keyMember.FieldName)}={parameterName}");
+            var fieldValue = this.EvaluateAndCache(updateObj, keyMember.MemberName);
+            this.Command.Parameters.Add(this.OrmProvider.CreateParameter(keyMember, parameterName, fieldValue));
+        }
+    }
+    public virtual void SetBulkTail(StringBuilder builder) { }
+    public virtual IUpdateVisitor WhereWith(object whereObj)
+    {
+        this.deferredSegments.Add(new UpdateDeferredSegment
+        {
+            Type = DeferredUpdateType.WhereWith,
+            Value = whereObj
+        });
+        return this;
+    }
+    public virtual IUpdateVisitor Where(Expression whereExpr)
+    {
+        this.deferredSegments.Add(new UpdateDeferredSegment
+        {
+            Type = DeferredUpdateType.Where,
+            Value = whereExpr
+        });
+        return this;
+    }
+    public virtual IUpdateVisitor And(Expression whereExpr)
+    {
+        this.deferredSegments.Add(new UpdateDeferredSegment
+        {
+            Type = DeferredUpdateType.Where,
+            Value = whereExpr
+        });
+        return this;
+    }
+    public override SqlSegment VisitNew(SqlSegment sqlSegment)
+    {
+        if (sqlSegment.Expression.IsParameter(out _))
+            throw new NotSupportedException($"不支持的表达式访问,{sqlSegment.Expression}");
+        return this.Evaluate(sqlSegment);
+    }
+    public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
+    {
+        if (sqlSegment.Expression.IsParameter(out _))
+            throw new NotSupportedException($"不支持的表达式访问,{sqlSegment.Expression}");
+        return this.Evaluate(sqlSegment);
+    }
+    public override SqlSegment VisitMethodCall(SqlSegment sqlSegment)
+    {
+        var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
+        if (methodCallExpr.Method.DeclaringType == typeof(Sql)
+            || typeof(IAggregateSelect).IsAssignableFrom(methodCallExpr.Method.DeclaringType))
+            return this.VisitSqlMethodCall(sqlSegment);
+
+        if (!sqlSegment.IsDeferredFields && this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter))
+            return formatter.Invoke(this, methodCallExpr, methodCallExpr.Object, sqlSegment.DeferredExprs, methodCallExpr.Arguments.ToArray());
+
+        var lambdaExpr = Expression.Lambda(sqlSegment.Expression);
+        var objValue = lambdaExpr.Compile().DynamicInvoke();
+        if (objValue == null)
+            return SqlSegment.Null;
+
+        //把方法返回值当作常量处理
+        return sqlSegment.Change(objValue, true, false, false);
+    }
+    protected void InitTableAlias(LambdaExpression lambdaExpr)
+    {
+        this.TableAlias.Clear();
+        lambdaExpr.Body.GetParameterNames(out var parameters);
+        if (parameters == null || parameters.Count == 0)
+            return;
+        int index = 0;
+        foreach (var parameterExpr in lambdaExpr.Parameters)
+        {
+            if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
+                continue;
+            if (typeof(IFromQuery).IsAssignableFrom(parameterExpr.Type))
+                continue;
+            if (!parameters.Contains(parameterExpr.Name))
+            {
+                index++;
+                continue;
+            }
+            this.TableAlias.Add(parameterExpr.Name, this.Tables[index]);
+            index++;
+        }
+    }
+    protected virtual void VisitSet(Expression fieldsAssignment)
+    {
         var lambdaExpr = fieldsAssignment as LambdaExpression;
         var entityMapper = this.Tables[0].Mapper;
         switch (lambdaExpr.Body.NodeType)
@@ -275,30 +530,28 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 }
                 break;
         }
-        return this;
     }
-    public virtual IUpdateVisitor Set(Expression fieldSelector, object fieldValue)
+    protected virtual void VisitSetField(FieldObject fieldObject)
     {
-        var lambdaExpr = fieldSelector as LambdaExpression;
+        var lambdaExpr = fieldObject.FieldSelector as LambdaExpression;
         var memberExpr = lambdaExpr.Body as MemberExpression;
         var entityMapper = this.Tables[0].Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
-        this.AddMemberElement(memberMapper, fieldValue, false);
-        return this;
+        this.AddMemberElement(memberMapper, fieldObject.FieldValue, false);
     }
-    public virtual IUpdateVisitor SetWith(Expression fieldsSelectorOrAssignment, object updateObj)
+    protected virtual void VisitSetWith(FieldsParameters fieldsParameters)
     {
         var entityMapper = this.Tables[0].Mapper;
-        if (fieldsSelectorOrAssignment != null)
+        if (fieldsParameters.SelectorOrAssignment != null)
         {
             MemberMap memberMapper = null;
-            var lambdaExpr = fieldsSelectorOrAssignment as LambdaExpression;
+            var lambdaExpr = fieldsParameters.SelectorOrAssignment as LambdaExpression;
             switch (lambdaExpr.Body.NodeType)
             {
                 case ExpressionType.MemberAccess:
                     var memberExpr = lambdaExpr.Body as MemberExpression;
                     memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
-                    this.AddMemberElement(memberMapper, updateObj);
+                    this.AddMemberElement(memberMapper, fieldsParameters.Parameters);
                     break;
                 case ExpressionType.New:
                     this.InitTableAlias(lambdaExpr);
@@ -311,7 +564,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
                         var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i] });
                         if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberMapper.MemberName)
-                            this.AddMemberElement(memberMapper, updateObj);
+                            this.AddMemberElement(memberMapper, fieldsParameters.Parameters);
                         else this.AddMemberElement(sqlSegment, memberMapper);
                     }
                     break;
@@ -326,7 +579,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
                         var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression });
                         if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberMapper.MemberName)
-                            this.AddMemberElement(memberMapper, updateObj);
+                            this.AddMemberElement(memberMapper, fieldsParameters.Parameters);
                         else this.AddMemberElement(sqlSegment, memberMapper);
                     }
                     break;
@@ -334,21 +587,20 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         else
         {
-            var commandInitializer = RepositoryHelper.BuildUpdateWithParameters(this, entityMapper.EntityType, updateObj, false, this.IsMultiple);
+            var commandInitializer = RepositoryHelper.BuildUpdateWithParameters(this, entityMapper.EntityType, fieldsParameters.Parameters, false, this.IsMultiple);
             if (this.IsMultiple)
             {
                 var multiCommandInitializer = commandInitializer as Action<IDbCommand, List<UpdateField>, object, int>;
-                multiCommandInitializer.Invoke(this.Command, this.UpdateFields, updateObj, this.CommandIndex);
+                multiCommandInitializer.Invoke(this.Command, this.UpdateFields, fieldsParameters.Parameters, this.CommandIndex);
             }
             else
             {
                 var singleCommandInitializer = commandInitializer as Action<IDbCommand, List<UpdateField>, object>;
-                singleCommandInitializer.Invoke(this.Command, this.UpdateFields, updateObj);
+                singleCommandInitializer.Invoke(this.Command, this.UpdateFields, fieldsParameters.Parameters);
             }
         }
-        return this;
     }
-    public virtual IUpdateVisitor SetFrom(Expression fieldsAssignment)
+    protected virtual void VisitSetFrom(Expression fieldsAssignment)
     {
         this.IsNeedAlias = true;
         var entityMapper = this.Tables[0].Mapper;
@@ -412,128 +664,21 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 }
                 break;
         }
-        return this;
     }
-    public virtual IUpdateVisitor SetFrom(Expression fieldSelector, Expression valueSelector)
+    protected virtual void VisitSetFromField(FieldFromQuery fieldFrom)
     {
         this.IsNeedAlias = true;
         var entityMapper = this.Tables[0].Mapper;
-        var lambdaExpr = fieldSelector as LambdaExpression;
+        var lambdaExpr = fieldFrom.FieldSelector as LambdaExpression;
         var memberExpr = lambdaExpr.Body as MemberExpression;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
 
-        this.InitTableAlias(valueSelector as LambdaExpression);
-        var sql = this.VisitFromQuery(valueSelector as LambdaExpression, out var isNeedAlias);
+        this.InitTableAlias(fieldFrom.ValueSelector as LambdaExpression);
+        var sql = this.VisitFromQuery(fieldFrom.ValueSelector as LambdaExpression, out var isNeedAlias);
         if (isNeedAlias) this.IsNeedAlias = true;
         this.UpdateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = $"({sql})" });
-        return this;
     }
-    public virtual IUpdateVisitor SetBulkFirst(Expression fieldsSelectorOrAssignment, object updateObjs)
-    {
-        var entityMapper = this.Tables[0].Mapper;
-        var fixSetFields = new List<UpdateField>();
-        var lambdaExpr = fieldsSelectorOrAssignment as LambdaExpression;
-        switch (lambdaExpr.Body.NodeType)
-        {
-            case ExpressionType.MemberAccess:
-                {
-                    var memberExpr = lambdaExpr.Body as MemberExpression;
-                    var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
-                    var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberExpr.Member.Name}";
-                    this.UpdateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
-                }
-                break;
-            case ExpressionType.New:
-                this.InitTableAlias(lambdaExpr);
-                var newExpr = lambdaExpr.Body as NewExpression;
-                for (int i = 0; i < newExpr.Arguments.Count; i++)
-                {
-                    var memberInfo = newExpr.Members[i];
-                    if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
-                        continue;
-
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i] });
-                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberMapper.MemberName)
-                    {
-                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberInfo.Name}";
-                        this.UpdateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
-                    }
-                    else this.AddMemberElement(sqlSegment, memberMapper, fixSetFields, this.FixedDbParameters);
-                }
-                break;
-            case ExpressionType.MemberInit:
-                this.InitTableAlias(lambdaExpr);
-                var memberInitExpr = lambdaExpr.Body as MemberInitExpression;
-                for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
-                {
-                    var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                    if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
-                        continue;
-
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression });
-                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberMapper.MemberName)
-                    {
-                        var parameterName = $"{this.OrmProvider.ParameterPrefix}{memberMapper.MemberName}";
-                        this.UpdateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
-                    }
-                    else this.AddMemberElement(sqlSegment, memberMapper, fixSetFields, this.FixedDbParameters);
-                }
-                break;
-        }
-
-        var fixedBuilder = new StringBuilder($"UPDATE {this.OrmProvider.GetTableName(entityMapper.TableName)} SET ");
-        if (fixSetFields.Count > 0)
-        {
-            for (int i = 0; i < fixSetFields.Count; i++)
-            {
-                var fixSetField = fixSetFields[i];
-                if (i > 0) fixedBuilder.Append(',');
-                fixedBuilder.Append($"{this.OrmProvider.GetFieldName(fixSetField.MemberMapper.FieldName)}={fixSetField.Value}");
-            }
-        }
-        this.FixedSql = fixedBuilder.ToString();
-
-        var setFields = this.UpdateFields.FindAll(f => !f.MemberMapper.IsKey);
-        this.BulkSetFieldsInitializer = (command, visitor, builder, updateObj, index) =>
-        {
-            builder.Append(visitor.FixedSql);
-            if (visitor.FixedDbParameters != null && visitor.FixedDbParameters.Count > 0 && index == 0)
-                visitor.FixedDbParameters.ForEach(f => command.Parameters.Add(f));
-            if (fixSetFields.Count > 0) builder.Append(',');
-            int setIndex = 0;
-            foreach (var setField in visitor.UpdateFields)
-            {
-                if (setIndex > 0) builder.Append(',');
-                if (setField.Type == UpdateFieldType.SetValue)
-                    builder.Append($"{visitor.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={setField.Value}");
-                //SetField
-                else
-                {
-                    var fieldValue = visitor.EvaluateAndCache(updateObj, setField.MemberMapper.MemberName);
-                    var parameterName = $"{setField.Value}{index}";
-                    if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-                    builder.Append($"{visitor.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={parameterName}");
-                    command.Parameters.Add(visitor.OrmProvider.CreateParameter(setField.MemberMapper, parameterName, fieldValue));
-                }
-                setIndex++;
-            }
-            builder.Append(" WHERE ");
-            for (int i = 0; i < entityMapper.KeyMembers.Count; i++)
-            {
-                var keyMember = entityMapper.KeyMembers[i];
-                if (i > 0) builder.Append(" AND ");
-                var parameterName = $"{visitor.OrmProvider.ParameterPrefix}k{keyMember.MemberName}{index}";
-                if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-                builder.Append($"{visitor.OrmProvider.GetFieldName(keyMember.FieldName)}={parameterName}");
-                var fieldValue = visitor.EvaluateAndCache(updateObj, keyMember.MemberName);
-                command.Parameters.Add(visitor.OrmProvider.CreateParameter(keyMember, parameterName, fieldValue));
-            }
-        };
-        return this;
-    }
-    public virtual void SetBulk(StringBuilder builder, IDbCommand command, object updateObj, int index)
-        => this.BulkSetFieldsInitializer.Invoke(command, this, builder, updateObj, index);
-    public virtual IUpdateVisitor WhereWith(object whereObj)
+    protected virtual void VisitWhereWith(object whereObj)
     {
         var entityMapper = this.Tables[0].Mapper;
         var commandInitializer = RepositoryHelper.BuildUpdateWithParameters(this, entityMapper.EntityType, whereObj, true, this.IsMultiple);
@@ -547,9 +692,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             var singleCommandInitializer = commandInitializer as Action<IDbCommand, List<UpdateField>, object>;
             singleCommandInitializer.Invoke(this.Command, this.UpdateFields, whereObj);
         }
-        return this;
     }
-    public virtual IUpdateVisitor Where(Expression whereExpr)
+    protected virtual void VisitWhere(Expression whereExpr)
     {
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
@@ -560,9 +704,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.WhereSql += " AND ";
         this.WhereSql += whereSql;
         this.IsWhere = false;
-        return this;
     }
-    public virtual IUpdateVisitor And(Expression whereExpr)
+    protected virtual void VisitAnd(Expression whereExpr)
     {
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
@@ -582,59 +725,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.WhereSql += " AND " + conditionSql;
         else this.WhereSql = conditionSql;
         this.IsWhere = false;
-        return this;
-    }
-    public override SqlSegment VisitNew(SqlSegment sqlSegment)
-    {
-        if (sqlSegment.Expression.IsParameter(out _))
-            throw new NotSupportedException($"不支持的表达式访问,{sqlSegment.Expression}");
-        return this.Evaluate(sqlSegment);
-    }
-    public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
-    {
-        if (sqlSegment.Expression.IsParameter(out _))
-            throw new NotSupportedException($"不支持的表达式访问,{sqlSegment.Expression}");
-        return this.Evaluate(sqlSegment);
-    }
-    public override SqlSegment VisitMethodCall(SqlSegment sqlSegment)
-    {
-        var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
-        if (methodCallExpr.Method.DeclaringType == typeof(Sql)
-            || typeof(IAggregateSelect).IsAssignableFrom(methodCallExpr.Method.DeclaringType))
-            return this.VisitSqlMethodCall(sqlSegment);
-
-        if (!sqlSegment.IsDeferredFields && this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter))
-            return formatter.Invoke(this, methodCallExpr, methodCallExpr.Object, sqlSegment.DeferredExprs, methodCallExpr.Arguments.ToArray());
-
-        var lambdaExpr = Expression.Lambda(sqlSegment.Expression);
-        var objValue = lambdaExpr.Compile().DynamicInvoke();
-        if (objValue == null)
-            return SqlSegment.Null;
-
-        //把方法返回值当作常量处理
-        return sqlSegment.Change(objValue, true, false, false);
-    }
-    protected void InitTableAlias(LambdaExpression lambdaExpr)
-    {
-        this.TableAlias.Clear();
-        lambdaExpr.Body.GetParameterNames(out var parameters);
-        if (parameters == null || parameters.Count == 0)
-            return;
-        int index = 0;
-        foreach (var parameterExpr in lambdaExpr.Parameters)
-        {
-            if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
-                continue;
-            if (typeof(IFromQuery).IsAssignableFrom(parameterExpr.Type))
-                continue;
-            if (!parameters.Contains(parameterExpr.Name))
-            {
-                index++;
-                continue;
-            }
-            this.TableAlias.Add(parameterExpr.Name, this.Tables[index]);
-            index++;
-        }
     }
     protected void AddMemberElement(MemberMap memberMapper, object memberValue, bool isEntity = true)
     {
@@ -690,5 +780,27 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             //sqlSegment.IsConstant = false;
         }
         setFields.Add(new UpdateField { MemberMapper = memberMapper, Value = sqlSegment.Value.ToString() });
+    }
+    enum DeferredUpdateType
+    {
+        Set,
+        SetWith,
+        SetField,
+        SetFrom,
+        SetFromField,
+        SetBulk,
+        WhereWith,
+        Where,
+        And
+    }
+    struct UpdateDeferredSegment
+    {
+        public DeferredUpdateType Type { get; set; }
+        public object Value { get; set; }
+    }
+    struct UpdateDeferredCommand
+    {
+        public Type EntityType { get; set; }
+        public List<UpdateDeferredSegment> Segments { get; set; }
     }
 }
