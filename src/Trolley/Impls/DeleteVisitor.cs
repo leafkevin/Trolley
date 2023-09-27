@@ -8,6 +8,7 @@ namespace Trolley;
 
 public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 {
+    private List<Expression> deferredSegments = new();
     public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix) { }
     public virtual void Initialize(Type entityType, bool isFirst = true)
@@ -22,6 +23,36 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             Mapper = this.MapProvider.GetEntityMap(entityType)
         });
     }
+    public string BuildCommand(IDbCommand command)
+    {
+        this.Command = command;
+        int index = 0;
+        foreach (var deferredSegment in this.deferredSegments)
+        {
+            if (index == 0) this.VisitWhere(deferredSegment);
+            else this.VisitAnd(deferredSegment);
+            index++;
+        }
+        return this.BuildSql();
+    }
+    public virtual MultipleCommand CreateMultipleCommand()
+    {
+        return new MultipleCommand
+        {
+            CommandType = MultipleCommandType.Delete,
+            EntityType = this.Tables[0].EntityType,
+            Body = this.deferredSegments
+        };
+    }
+    public override int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
+    {
+        this.IsMultiple = true;
+        this.CommandIndex = commandIndex;
+        this.deferredSegments = multiCommand.Body as List<Expression>;
+        if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
+        sqlBuilder.Append(this.BuildCommand(command));
+        return 1;
+    }
     public virtual string BuildSql()
     {
         var entityMapper = this.Tables[0].Mapper;
@@ -34,34 +65,15 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     }
     public virtual IDeleteVisitor Where(Expression whereExpr)
     {
-        this.IsWhere = true;
-        var lambdaExpr = whereExpr as LambdaExpression;
-        this.LastWhereNodeType = OperationType.None;
-        this.WhereSql = this.VisitConditionExpr(lambdaExpr.Body);
-        this.IsWhere = false;
+        this.deferredSegments.Add(whereExpr);
         return this;
     }
     public virtual IDeleteVisitor And(Expression whereExpr)
     {
-        this.IsWhere = true;
-        var lambdaExpr = whereExpr as LambdaExpression;
-        if (this.LastWhereNodeType == OperationType.Or)
-        {
-            this.WhereSql = $"({this.WhereSql})";
-            this.LastWhereNodeType = OperationType.And;
-        }
-        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body);
-        if (this.LastWhereNodeType == OperationType.Or)
-        {
-            conditionSql = $"({conditionSql})";
-            this.LastWhereNodeType = OperationType.And;
-        }
-        if (!string.IsNullOrEmpty(this.WhereSql))
-            this.WhereSql += " AND " + conditionSql;
-        else this.WhereSql = conditionSql;
-        this.IsWhere = false;
+        this.deferredSegments.Add(whereExpr);
         return this;
     }
+
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
         var memberExpr = sqlSegment.Expression as MemberExpression;
@@ -183,6 +195,34 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             this.AddMemberElement(sqlSegment.Next(memberAssignment.Expression), memberMapper, builder);
         }
         return sqlSegment.ChangeValue(builder.ToString());
+    }
+    protected virtual void VisitWhere(Expression whereExpr)
+    {
+        this.IsWhere = true;
+        var lambdaExpr = whereExpr as LambdaExpression;
+        this.LastWhereNodeType = OperationType.None;
+        this.WhereSql = this.VisitConditionExpr(lambdaExpr.Body);
+        this.IsWhere = false;
+    }
+    protected virtual void VisitAnd(Expression whereExpr)
+    {
+        this.IsWhere = true;
+        var lambdaExpr = whereExpr as LambdaExpression;
+        if (this.LastWhereNodeType == OperationType.Or)
+        {
+            this.WhereSql = $"({this.WhereSql})";
+            this.LastWhereNodeType = OperationType.And;
+        }
+        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body);
+        if (this.LastWhereNodeType == OperationType.Or)
+        {
+            conditionSql = $"({conditionSql})";
+            this.LastWhereNodeType = OperationType.And;
+        }
+        if (!string.IsNullOrEmpty(this.WhereSql))
+            this.WhereSql += " AND " + conditionSql;
+        else this.WhereSql = conditionSql;
+        this.IsWhere = false;
     }
     private void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper, StringBuilder builder)
     {

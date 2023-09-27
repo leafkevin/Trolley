@@ -9,8 +9,6 @@ namespace Trolley;
 
 public class CreateVisitor : SqlVisitor, ICreateVisitor
 {
-    private string bulkHeadSql;
-    private object bulkCommandInitializer;
     private List<InsertDeferredSegment> deferredSegments = new();
 
     protected List<InsertField> InsertFields { get; set; } = new();
@@ -60,7 +58,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     int index = 0;
                     this.IsBulk = true;
                     var builder = new StringBuilder();
-                    var bulkObject = (BulkObject)this.deferredSegments[0].Value;
+                    var bulkObject = this.deferredSegments[0].Value;
                     var insertObjs = bulkObject.BulkObjects as IEnumerable;
                     this.WithBulkHead(builder);
                     var commandInitializer = this.bulkCommandInitializer as Action<IDbCommand, StringBuilder, object, int, int>;
@@ -228,27 +226,24 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         });
         return this;
     }
-    public virtual Action<IDbCommand, StringBuilder, object, int> WithBulkFirst(IDbCommand command, object insertObjs)
+    public virtual ICreateVisitor WithBulk(object insertObjs)
     {
-        this.Command = command;
-        var entityType = this.Tables[0].EntityType;
-        this.bulkCommandInitializer = RepositoryHelper.BuildCreateWithBulkCommandInitializer(this, entityType, insertObjs, this.IsMultiple, out var bulkHeadSql);
-        this.bulkHeadSql = bulkHeadSql;
-        if (this.IsMultiple)
+        this.deferredSegments.Add(new InsertDeferredSegment
         {
-            this.deferredSegments.Add(new InsertDeferredSegment
-            {
-                Type = DeferredInsertType.WithBulk,
-                Value = insertObjs
-            });
-        }
-        else return this.bulkCommandInitializer as Action<IDbCommand, StringBuilder, object, int>;
-        return null;
+            Type = DeferredInsertType.WithBulk,
+            Value = insertObjs
+        });
+        return this;
     }
-    public virtual void WithBulkHead(StringBuilder builder)
+    public virtual string BuildBulkHeadSql(StringBuilder builder, out object commandInitializer)
     {
+        var entityType = this.Tables[0].EntityType;
+        var insertObjs = this.deferredSegments[0].Value;
+        commandInitializer = RepositoryHelper.BuildCreateWithBulkCommandInitializer(this, entityType, insertObjs, this.IsMultiple, out var bulkHeadSql);
         var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
-        builder.Append($"{this.BuildHeadSql()} {tableName} ({this.bulkHeadSql}) VALUES ");
+        var headSql = $"{this.BuildHeadSql()} {tableName} ({bulkHeadSql}) VALUES ";
+        builder.Append(headSql);
+        return headSql;
     }
     public virtual void WithBulk(StringBuilder builder, Action<IDbCommand, StringBuilder, object, int> commandInitializer, object insertObj, int index)
     {

@@ -919,7 +919,7 @@ public class Repository : IRepository
                 case MultipleCommandType.Delete:
                     var deleteVisitor = visitor as IDeleteVisitor;
                     deleteVisitor.Initialize(multiCcommand.EntityType, isFirst);
-                    //commandIndex += deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+                    commandIndex += deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
                     break;
             }
         }
@@ -974,7 +974,7 @@ public class Repository : IRepository
                 case MultipleCommandType.Delete:
                     var deleteVisitor = visitor as IDeleteVisitor;
                     deleteVisitor.Initialize(multiCcommand.EntityType, isFirst);
-                    //commandIndex += deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+                    commandIndex += deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
                     break;
             }
         }

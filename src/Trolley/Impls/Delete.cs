@@ -38,7 +38,9 @@ class Delete<TEntity> : IDelete<TEntity>
         if (keys == null)
             throw new ArgumentNullException(nameof(keys));
 
-        return new Deleted<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider, keys);
+        var visitor = this.ormProvider.NewDeleteVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized);
+        visitor.Initialize(typeof(TEntity));
+        return new Deleted<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider);
     }
     public IDeleting<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
@@ -48,6 +50,7 @@ class Delete<TEntity> : IDelete<TEntity>
             throw new ArgumentNullException(nameof(ifPredicate));
 
         var visitor = this.ormProvider.NewDeleteVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized);
+        visitor.Initialize(typeof(TEntity));
         if (condition) visitor.Where(ifPredicate);
         else if (elsePredicate != null) visitor.Where(elsePredicate);
         return new Deleting<TEntity>(this.connection, this.transaction, visitor);
@@ -61,6 +64,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
     private readonly IDbTransaction transaction;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
+    private bool isBulk = false;
     private object parameters = null;
     #endregion
 
@@ -73,6 +77,17 @@ class Deleted<TEntity> : IDeleted<TEntity>
         this.mapProvider = mapProvider;
         this.parameters = parameters;
     }
+    #endregion
+
+    #region WhereKeys
+    public void Where(object keys)
+    {
+        string sql = null;
+        var entityType = typeof(TEntity);
+        this. isBulk = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not IDictionary<string, object>;
+       
+       
+    } 
     #endregion
 
     #region Execute
@@ -150,6 +165,10 @@ class Deleted<TEntity> : IDeleted<TEntity>
         command.Dispose();
         return result;
     }
+    #endregion
+
+    #region ToMultipleCommand
+    public MultipleCommand ToMultipleCommand() => this.visitor.CreateMultipleCommand();
     #endregion
 
     #region ToSql

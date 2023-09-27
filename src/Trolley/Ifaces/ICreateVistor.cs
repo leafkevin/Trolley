@@ -22,8 +22,8 @@ public interface ICreateVisitor
     //ICreateVisitor Set(object updateObj);
     ICreateVisitor WithBy(object insertObj);
     ICreateVisitor WithByField(FieldObject fieldObject);
-    Action<IDbCommand, StringBuilder, object, int> WithBulkFirst(IDbCommand command, object insertObjs);
-    void WithBulkHead(StringBuilder builder);
+    ICreateVisitor WithBulk(object insertObjs);
+    string BuildBulkHeadSql(StringBuilder builder, out object commandInitializer);
     void WithBulk(StringBuilder builder, Action<IDbCommand, StringBuilder, object, int> commandInitializer, object insertObj, int index);
     void WithBulkTail(StringBuilder builder);
     IQueryVisitor CreateQuery(params Type[] sourceTypes);

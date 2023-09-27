@@ -176,6 +176,7 @@ class Created<TEntity> : ICreated<TEntity>
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
 
+        this.visitor.WithBulk(insertObjs);
         this.parameters = insertObjs;
         this.bulkCount = bulkCount;
         this.isBulk = true;
@@ -197,116 +198,9 @@ class Created<TEntity> : ICreated<TEntity>
     #endregion
 
     #region Execute
-    public int Execute()
-    {
-        int result = 0;
-        using var command = this.connection.CreateCommand();
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (this.isBulk)
-        {
-            int index = 0;
-            this.bulkCount ??= 500;
-            var sqlBuilder = new StringBuilder();
-            var commandInitializer = this.visitor.WithBulkFirst(command, this.parameters);
-            this.visitor.WithBulkHead(sqlBuilder);
-            foreach (var entity in this.parameters)
-            {
-                this.visitor.WithBulk(sqlBuilder, commandInitializer, entity, index);
-                if (index >= this.bulkCount)
-                {
-                    this.visitor.WithBulkTail(sqlBuilder);
-                    command.CommandText = sqlBuilder.ToString();
-                    this.connection.Open();
-                    result += command.ExecuteNonQuery();
-                    command.Parameters.Clear();
-                    sqlBuilder.Clear();
-                    index = 0;
-                    continue;
-                }
-                index++;
-            }
-            if (index > 0)
-            {
-                command.CommandText = sqlBuilder.ToString();
-                this.connection.Open();
-                result += command.ExecuteNonQuery();
-            }
-        }
-        else
-        {
-            var entityType = typeof(TEntity);
-            var entityMapper = this.mapProvider.GetEntityMap(entityType);
-            command.CommandText = this.visitor.BuildCommand(command);
-            if (entityMapper.IsAutoIncrement)
-            {
-                using var reader = command.ExecuteReader();
-                if (reader.Read()) result = reader.To<int>();
-                reader.Dispose();
-            }
-            else result = command.ExecuteNonQuery();
-        }
-        command.Dispose();
-        return result;
-    }
+    public int Execute() => (int)this.ExecuteLong();
     public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        int result = 0;
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        if (this.isBulk)
-        {
-            int index = 0;
-            this.bulkCount ??= 500;
-            var sqlBuilder = new StringBuilder();
-            var commandInitializer = this.visitor.WithBulkFirst(command, this.parameters);
-            this.visitor.WithBulkHead(sqlBuilder);
-            foreach (var entity in this.parameters)
-            {
-                this.visitor.WithBulk(sqlBuilder, commandInitializer, entity, index);
-                if (index >= this.bulkCount)
-                {
-                    this.visitor.WithBulkTail(sqlBuilder);
-                    command.CommandText = sqlBuilder.ToString();
-                    await this.connection.OpenAsync(cancellationToken);
-                    result += await command.ExecuteNonQueryAsync(cancellationToken);
-                    command.Parameters.Clear();
-                    sqlBuilder.Clear();
-                    index = 0;
-                    continue;
-                }
-                index++;
-            }
-            if (index > 0)
-            {
-                command.CommandText = sqlBuilder.ToString();
-                await this.connection.OpenAsync(cancellationToken);
-                result += await command.ExecuteNonQueryAsync(cancellationToken);
-            }
-        }
-        else
-        {
-            var entityType = typeof(TEntity);
-            var entityMapper = this.mapProvider.GetEntityMap(entityType);
-            command.CommandText = this.visitor.BuildCommand(command);
-            await this.connection.OpenAsync(cancellationToken);
-            if (entityMapper.IsAutoIncrement)
-            {
-                using var reader = await command.ExecuteReaderAsync(cancellationToken);
-                if (await reader.ReadAsync(cancellationToken))
-                    result = reader.To<int>();
-                await reader.DisposeAsync();
-            }
-            else result = await command.ExecuteNonQueryAsync(cancellationToken);
-        }
-        await command.DisposeAsync();
-        return result;
-    }
+        => (int)await this.ExecuteLongAsync(cancellationToken);
     public long ExecuteLong()
     {
         long result = 0;
@@ -318,11 +212,11 @@ class Created<TEntity> : ICreated<TEntity>
             int index = 0;
             this.bulkCount ??= 500;
             var sqlBuilder = new StringBuilder();
-            var commandInitializer = this.visitor.WithBulkFirst(command, this.parameters);
-            this.visitor.WithBulkHead(sqlBuilder);
+            var headSql = this.visitor.BuildBulkHeadSql(sqlBuilder, out var commandInitializer);
+            var myCommandInitializer = commandInitializer as Action<IDbCommand, StringBuilder, object, int>;
             foreach (var entity in this.parameters)
             {
-                this.visitor.WithBulk(sqlBuilder, commandInitializer, entity, index);
+                this.visitor.WithBulk(sqlBuilder, myCommandInitializer, entity, index);
                 if (index >= this.bulkCount)
                 {
                     this.visitor.WithBulkTail(sqlBuilder);
@@ -332,6 +226,7 @@ class Created<TEntity> : ICreated<TEntity>
                     command.Parameters.Clear();
                     sqlBuilder.Clear();
                     index = 0;
+                    sqlBuilder.Append(headSql);
                     continue;
                 }
                 index++;
@@ -342,6 +237,7 @@ class Created<TEntity> : ICreated<TEntity>
                 this.connection.Open();
                 result += command.ExecuteNonQuery();
             }
+            sqlBuilder.Clear();
         }
         else
         {
@@ -373,11 +269,11 @@ class Created<TEntity> : ICreated<TEntity>
             int index = 0;
             this.bulkCount ??= 500;
             var sqlBuilder = new StringBuilder();
-            var commandInitializer = this.visitor.WithBulkFirst(command, this.parameters);
-            this.visitor.WithBulkHead(sqlBuilder);
+            var headSql = this.visitor.BuildBulkHeadSql(sqlBuilder, out var commandInitializer);
+            var myCommandInitializer = commandInitializer as Action<IDbCommand, StringBuilder, object, int>;
             foreach (var entity in this.parameters)
             {
-                this.visitor.WithBulk(sqlBuilder, commandInitializer, entity, index);
+                this.visitor.WithBulk(sqlBuilder, myCommandInitializer, entity, index);
                 if (index >= this.bulkCount)
                 {
                     this.visitor.WithBulkTail(sqlBuilder);
@@ -387,6 +283,7 @@ class Created<TEntity> : ICreated<TEntity>
                     command.Parameters.Clear();
                     sqlBuilder.Clear();
                     index = 0;
+                    sqlBuilder.Append(headSql);
                     continue;
                 }
                 index++;
@@ -397,6 +294,7 @@ class Created<TEntity> : ICreated<TEntity>
                 await this.connection.OpenAsync(cancellationToken);
                 result += await command.ExecuteNonQueryAsync(cancellationToken);
             }
+            sqlBuilder.Clear();
         }
         else
         {
@@ -418,7 +316,7 @@ class Created<TEntity> : ICreated<TEntity>
     }
     #endregion
 
-    #region Execute
+    #region ToMultipleCommand
     public MultipleCommand ToMultipleCommand() => this.visitor.CreateMultipleCommand();
     #endregion
 
@@ -432,11 +330,11 @@ class Created<TEntity> : ICreated<TEntity>
         {
             int index = 0;
             var sqlBuilder = new StringBuilder();
-            var commandInitializer = this.visitor.WithBulkFirst(command, this.parameters);
-            this.visitor.WithBulkHead(sqlBuilder);
+            var headSql = this.visitor.BuildBulkHeadSql(sqlBuilder, out var commandInitializer);
+            var myCommandInitializer = commandInitializer as Action<IDbCommand, StringBuilder, object, int>;
             foreach (var entity in this.parameters)
             {
-                this.visitor.WithBulk(sqlBuilder, commandInitializer, entity, index);
+                this.visitor.WithBulk(sqlBuilder, myCommandInitializer, entity, index);
                 if (index >= this.bulkCount)
                 {
                     this.visitor.WithBulkTail(sqlBuilder);
@@ -446,12 +344,12 @@ class Created<TEntity> : ICreated<TEntity>
             }
             if (index > 0)
                 sql = sqlBuilder.ToString();
-
-            command.Dispose();
         }
         else sql = this.visitor.BuildCommand(command);
+
         if (command.Parameters != null && command.Parameters.Count > 0)
             dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+        command.Dispose();
         return sql;
     }
     #endregion
