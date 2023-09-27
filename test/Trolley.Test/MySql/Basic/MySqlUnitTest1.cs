@@ -793,4 +793,38 @@ public class MySqlUnitTest1 : UnitTestBase
         //Assert.NotNull(parameters);
         //Assert.True(parameters.Count == 1);
     }
+    [Fact]
+    public void Insert_OrUpdate()
+    {
+        using var repository = dbFactory.Create();
+        var sql = repository.Create<Order>()
+             .WithBy(new
+             {
+                 Id = 9,
+                 OrderNo = "ON-001",
+                 BuyerId = 1,
+                 SellerId = 2,
+                 TotalAmount = 500,
+                 Products = new List<int> { 1, 2 },
+                 Disputes = new Dispute
+                 {
+                     Id = 2,
+                     Content = "无良商家",
+                     Result = "同意退款",
+                     Users = "Buyer2,Seller2",
+                     CreatedAt = DateTime.Now
+                 },
+                 IsEnabled = true,
+                 CreatedAt = DateTime.Now,
+                 CreatedBy = 1,
+                 UpdatedAt = DateTime.Now,
+                 UpdatedBy = 1
+             })
+             .OrUpdate((x, y) => x.Alias("row").Set(new
+             {
+                 TotalAmount = y.TotalAmount + x.Values(y.TotalAmount),
+                 Products = new List<int> { 1, 2 }
+             }))
+            .ToSql(out _);
+    }
 }

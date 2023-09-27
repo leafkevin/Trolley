@@ -69,13 +69,12 @@ class Deleted<TEntity> : IDeleted<TEntity>
     #endregion
 
     #region Constructor
-    public Deleted(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, object parameters)
+    public Deleted(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
     {
         this.connection = connection;
         this.transaction = transaction;
         this.ormProvider = ormProvider;
         this.mapProvider = mapProvider;
-        this.parameters = parameters;
     }
     #endregion
 
@@ -84,10 +83,9 @@ class Deleted<TEntity> : IDeleted<TEntity>
     {
         string sql = null;
         var entityType = typeof(TEntity);
-        this. isBulk = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not IDictionary<string, object>;
-       
-       
-    } 
+        this.isBulk = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not IDictionary<string, object>;
+        this.parameters = keys;
+    }
     #endregion
 
     #region Execute
@@ -168,7 +166,7 @@ class Deleted<TEntity> : IDeleted<TEntity>
     #endregion
 
     #region ToMultipleCommand
-    public MultipleCommand ToMultipleCommand() => this.visitor.CreateMultipleCommand();
+    //public MultipleCommand ToMultipleCommand() => this.visitor.CreateMultipleCommand();
     #endregion
 
     #region ToSql

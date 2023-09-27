@@ -18,8 +18,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     protected bool HasFixedSet { get; set; }
     protected string FixedSql { get; set; }
     protected List<IDbDataParameter> FixedDbParameters { get; set; } = new();
-    protected object BulkSetFieldsInitializer { get; set; }
-
     public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix) { }
     public virtual void Initialize(Type entityType, bool isFirst = true)
@@ -38,7 +36,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.UpdateFields.Clear();
             this.FixedSql = null;
             this.FixedDbParameters.Clear();
-            this.BulkSetFieldsInitializer = null;
             base.Clear();
         }
         this.Tables.Add(new TableSegment
@@ -71,9 +68,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     this.VisitSetFromField((FieldFromQuery)deferredSegment.Value);
                     break;
                 case DeferredUpdateType.SetBulk:
-                    var updateObjs = deferredSegment.Value as IEnumerable;
                     var bulkBuilder = new StringBuilder();
                     this.SetBulkHead(bulkBuilder);
+                    var updateObjs = deferredSegment.Value as IEnumerable;
                     foreach (var updateObj in updateObjs)
                     {
                         this.SetBulkMulti(bulkBuilder, updateObj, index);

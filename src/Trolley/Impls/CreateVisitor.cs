@@ -58,13 +58,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     int index = 0;
                     this.IsBulk = true;
                     var builder = new StringBuilder();
-                    var bulkObject = this.deferredSegments[0].Value;
-                    var insertObjs = bulkObject.BulkObjects as IEnumerable;
-                    this.WithBulkHead(builder);
-                    var commandInitializer = this.bulkCommandInitializer as Action<IDbCommand, StringBuilder, object, int, int>;
+                    var insertObjs = this.deferredSegments[0].Value as IEnumerable;
+                    this.BuildBulkHeadSql(builder, out var commandInitializer);
+                    var bulkCommandInitializer = commandInitializer as Action<IDbCommand, StringBuilder, object, int, int>;
                     foreach (var insertObj in insertObjs)
                     {
-                        this.WithBulk(builder, commandInitializer, insertObj, index);
+                        this.WithBulk(builder, bulkCommandInitializer, insertObj, index);
                         index++;
                     }
                     this.WithBulkTail(builder);
@@ -72,12 +71,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 case DeferredInsertType.IfNotExists:
                     this.VisitIfNotExists(deferredSegment.Value);
                     break;
-                    //case DeferredInsertType.SetObject:
-                    //    this.VisitSet(command, deferredSegment.Value, this.CommandIndex);
-                    //    break;
-                    //case DeferredInsertType.SetExpression:
-                    //    this.VisitSet(command, deferredSegment.Value as Expression, this.CommandIndex);
-                    //    break;
+                case DeferredInsertType.SetObject:
+                    //this.VisitSet(command, deferredSegment.Value, this.CommandIndex);
+                    break;
+                case DeferredInsertType.SetExpression:
+                    this.VisitSet(deferredSegment.Value as Expression);
+                    break;
             }
         }
         return this.BuildSql();
@@ -158,56 +157,24 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         });
         return this;
     }
-    //public virtual ICreateVisitor Set(Expression fieldsAssignment, int commandIndex)
-    //{
-    //    this.IsUseOrUpdate = true;
-    //    var lambdaExpr = fieldsAssignment as LambdaExpression;
-    //    var entityMapper = this.Tables[0].Mapper;
-    //    switch (lambdaExpr.Body.NodeType)
-    //    {
-    //        case ExpressionType.New:
-    //            this.InitTableAlias(lambdaExpr);
-    //            var newExpr = lambdaExpr.Body as NewExpression;
-    //            for (int i = 0; i < newExpr.Arguments.Count; i++)
-    //            {
-    //                var memberInfo = newExpr.Members[i];
-    //                if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
-    //                    continue;
-
-    //                var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i], MemberMapper = memberMapper });
-    //                //只一个成员访问，没有设置语句，什么也不做，忽略
-    //                if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberInfo.Name)
-    //                    continue;
-    //                this.AddMemberElement(sqlSegment, memberMapper, commandIndex);
-    //            }
-    //            break;
-    //        case ExpressionType.MemberInit:
-    //            this.InitTableAlias(lambdaExpr);
-    //            var memberInitExpr = lambdaExpr.Body as MemberInitExpression;
-    //            for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
-    //            {
-    //                var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-    //                if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
-    //                    continue;
-
-    //                var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression });
-    //                //只一个成员访问，没有设置语句，什么也不做，忽略
-    //                if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
-    //                    continue;
-    //                this.AddMemberElement(sqlSegment, memberMapper, commandIndex);
-    //            }
-    //            break;
-    //    }
-    //    return this;
-    //}
-    //public virtual ICreateVisitor Set(object updateObj, int commandIndex)
-    //{
-    //    this.IsUseOrUpdate = true;
-    //    var entityMapper = this.Tables[0].Mapper;
-    //    var parametersInitializer = RepositoryHelper.BuildUpdateSetWithParameters(this, entityMapper.EntityType, updateObj, this.IsMulti, commandIndex);
-    //    parametersInitializer.Invoke(this, this.UpdateFields, this.DbParameters, updateObj);
-    //    return this;
-    //}
+    public virtual ICreateVisitor Set(Expression fieldsAssignment)
+    {
+        this.deferredSegments.Add(new InsertDeferredSegment
+        {
+            Type = DeferredInsertType.SetExpression,
+            Value = fieldsAssignment
+        });
+        return this;
+    }
+    public virtual ICreateVisitor Set(object updateObj)
+    {
+        this.deferredSegments.Add(new InsertDeferredSegment
+        {
+            Type = DeferredInsertType.SetObject,
+            Value = updateObj
+        });
+        return this;
+    }
     public virtual ICreateVisitor WithBy(object insertObj)
     {
         this.deferredSegments.Add(new InsertDeferredSegment
@@ -380,6 +347,11 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             }
         }
     }
+    protected virtual void VisitSet()
+    {
+        this.IsUseOrUpdate = true;
+        //
+    }
     protected virtual void VisitSet(Expression fieldsAssignment)
     {
         this.IsUseOrUpdate = true;
@@ -424,9 +396,18 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     protected virtual void VisitSet(object updateObj)
     {
         this.IsUseOrUpdate = true;
-        var entityMapper = this.Tables[0].Mapper;
-        //var parametersInitializer = RepositoryHelper.BuildUpdateSetWithParameters(this, entityMapper.EntityType, updateObj);
-        //parametersInitializer.Invoke(this, this.UpdateFields, this.DbParameters, updateObj);
+        var entityType = this.Tables[0].Mapper.EntityType;
+        var commandInitializer = RepositoryHelper.BuildUpdateWithParameters(this, entityType, updateObj, false, this.IsMultiple);
+        if (this.IsMultiple)
+        {
+            var bulkCommandInitializer = commandInitializer as Action<IDbCommand, List<UpdateField>, object, int>;
+            bulkCommandInitializer.Invoke(this.Command, this.UpdateFields, updateObj, this.CommandIndex);
+        }
+        else
+        {
+            var bulkCommandInitializer = commandInitializer as Action<IDbCommand, List<UpdateField>, object>;
+            bulkCommandInitializer.Invoke(this.Command, this.UpdateFields, updateObj);
+        }
     }
     private void InitTableAlias(LambdaExpression lambdaExpr)
     {

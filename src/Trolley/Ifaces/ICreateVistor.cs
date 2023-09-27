@@ -18,7 +18,7 @@ public interface ICreateVisitor
     ICreateVisitor UseIgnore();
     ICreateVisitor IfNotExists(object whereObj);
     ICreateVisitor IfNotExists(Expression keysPredicate);
-    //ICreateVisitor Set(Expression fieldsAssignment);
+    ICreateVisitor Set(Expression fieldsAssignment);
     //ICreateVisitor Set(object updateObj);
     ICreateVisitor WithBy(object insertObj);
     ICreateVisitor WithByField(FieldObject fieldObject);

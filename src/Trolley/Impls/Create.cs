@@ -184,15 +184,15 @@ class Created<TEntity> : ICreated<TEntity>
     }
     #endregion
 
-    #region OrUpdate
+    #region OrUpdate  
     public ICreated<TEntity> OrUpdate<TUpdateFields>(TUpdateFields updateObj)
     {
         //this.visitor.Set(updateObj);
         return this;
     }
-    public ICreated<TEntity> OrUpdate<TUpdateFields>(Expression<Func<TEntity, TUpdateFields>> fieldsAssignment)
+    public ICreated<TEntity> OrUpdate<TUpdateFields>(Expression<Func<ICreateOrUpdate, TEntity, TUpdateFields>> fieldsAssignment)
     {
-        //this.visitor.Set(fieldsAssignment);
+        this.visitor.Set(fieldsAssignment);
         return this;
     }
     #endregion

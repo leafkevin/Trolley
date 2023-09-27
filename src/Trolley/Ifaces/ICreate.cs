@@ -215,7 +215,7 @@ public interface ICreated<TEntity>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
     /// <returns>返回插入对象</returns>
-    ICreated<TEntity> OrUpdate<TUpdateFields>(Expression<Func<TEntity, TUpdateFields>> fieldsAssignment);
+    ICreated<TEntity> OrUpdate<TUpdateFields>(Expression<Func<ICreateOrUpdate, TEntity, TUpdateFields>> fieldsAssignment);
     #endregion
 
     #region Execute
@@ -327,4 +327,12 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     #endregion
+}
+public interface ICreateOrUpdate
+{
+    ICreateOrUpdate Alias(string aliasName);
+    TField Values<TField>(TField fieldSelector);  
+    TFields Set<TFields>(TFields updateObj);
+    //TFields Set<TEntity, TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment);
+    //TFields Set<TEntity, TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);
 }

@@ -16,8 +16,7 @@ public struct UpdateField
     public UpdateFieldType Type { get; set; }
     public MemberMap MemberMapper { get; set; }
     public string Value { get; set; }
-    public override int GetHashCode()
-        => HashCode.Combine(this.Type, this.MemberMapper, this.Value);
+    public override int GetHashCode() => HashCode.Combine(this.Type, this.MemberMapper?.MemberName);
 }
 public interface IUpdateVisitor
 {
