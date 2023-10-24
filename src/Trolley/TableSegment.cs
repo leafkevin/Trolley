@@ -15,7 +15,11 @@ public enum TableType : byte
     /// <summary>
     /// 子查询表，临时表
     /// </summary>
-    FromQuery = 2
+    FromQuery = 2,
+    /// <summary>
+    /// CTE表自身引用，此时IsMaster=false
+    /// </summary>
+    CteSelfRef
 }
 public class TableSegment
 {
@@ -33,21 +37,25 @@ public class TableSegment
     /// </summary>
     public string AliasName { get; set; }
     /// <summary>
-    /// 父亲表，当前实体是Include表，是FromTable类型的属性，如：order.Buyer
+    /// 父亲表，当前实体表是FromTable实体表中的Include导航属性，如：order.Buyer，当前实体表是buyer表，FromTable值是order实体表
     /// </summary>
     public TableSegment FromTable { get; set; }
     /// <summary>
-    /// 父亲实体中的成员访问，如：order.Buyer
+    /// 父亲实体中的成员访问，如：order.Buyer中Buyer属性
     /// </summary>
     public MemberMap FromMember { get; set; }
     /// <summary>
-    /// 当前表的模型映射Mapper
+    /// 当前实体表的模型映射Mapper
     /// </summary>
     public EntityMap Mapper { get; set; }
     /// <summary>
     /// 实体表名或是子查询SQL，如：sys_user或是(select * from ...)
     /// </summary>
     public string Body { get; set; }
+    /// <summary>
+    /// 自身引用时的表名，主要用在cte自身引用时的表名，如：WITH CteTableName (...) AS ...中的CteTableName
+    /// </summary>
+    public string RefTableName { get; set; }
     /// <summary>
     /// 表后缀字符串，SqlServer在表名后，会接一个后缀字符串，如：select * from A WITH (UPDLOCK)
     /// </summary>
@@ -73,7 +81,7 @@ public class TableSegment
     /// </summary>
     public string OnExpr { get; set; }
     /// <summary>
-    /// 子查询表时，所有字段定义
+    /// 子查询表时，所有字段定义，包括CTE表
     /// </summary>
     public List<ReaderField> ReaderFields { get; set; }
     /// <summary>
@@ -85,12 +93,43 @@ public class TableSegment
     /// </summary>
     public bool IsUsed { get; set; }
 
+    /// <summary>
+    /// 生成一个自身引用的副本，主要用在cte表的自身引用
+    /// </summary>
+    /// <param name="aliasName"></param>
+    /// <param name="joinType"></param>
+    /// <param name="joinOnExpr"></param>
+    /// <returns></returns>
+    public TableSegment Clone(string aliasName = "a", string joinType = null, string joinOnExpr = null)
+    {
+        return new TableSegment
+        {
+            JoinType = joinType,
+            EntityType = this.EntityType,
+            AliasName = aliasName,
+            FromTable = this.FromTable,
+            FromMember = this.FromMember,
+            Mapper = this.Mapper,
+            Body = this.Body,
+            RefTableName = this.RefTableName,
+            SuffixRawSql = this.SuffixRawSql,
+            TableType = this.TableType,
+            IsMaster = this.IsMaster,
+            Path = this.Path,
+            Filter = this.Filter,
+            OnExpr = joinOnExpr,
+            ReaderFields = this.ReaderFields,
+            IsNeedAlais = this.IsNeedAlais,
+            IsUsed = false
+        };
+    }
+
     public override bool Equals(object obj)
     {
         if (obj == null) return false;
         var right = (TableSegment)obj;
         return this.Path == right.Path;
     }
-    public override int GetHashCode() 
+    public override int GetHashCode()
         => HashCode.Combine(this.EntityType, this.Path);
 }

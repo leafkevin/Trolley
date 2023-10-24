@@ -44,10 +44,10 @@ public class SqlVisitor : ISqlVisitor
         this.TableAsStart = tableAsStart;
         this.ParameterPrefix = parameterPrefix;
     }
-    public virtual int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
-    {
-        return 0;
-    }
+    //public virtual int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
+    //{
+    //    return 0;
+    //}
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
         dbParameters = null;
@@ -1021,7 +1021,8 @@ public class SqlVisitor : ISqlVisitor
             }
         }
         var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, TableAsStart, ParameterPrefix);
-        queryVisitor.Command = this.Command;
+        //TODO:参数与command
+        //queryVisitor.Command = this;
         queryVisitor.IsNeedAlias = this.IsNeedAlias;
 
         while (callStack.TryPop(out var callExpr))
@@ -1554,14 +1555,6 @@ public class SqlVisitor : ISqlVisitor
         //    return true;
         //}
         return false;
-    }
-    public void Clear()
-    {
-        this.Tables?.Clear();
-        this.TableAlias?.Clear();
-        this.ReaderFields?.Clear();
-        this.WhereSql = null;
-        this.LastWhereNodeType = OperationType.None;
     }
     private List<ConditionExpression> VisitLogicBinaryExpr(Expression conditionExpr)
     {

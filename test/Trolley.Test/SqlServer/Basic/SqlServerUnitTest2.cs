@@ -13,10 +13,9 @@ public class SqlServerUnitTest2 : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register("fengling", true, f =>
+            .Register<SqlServerProvider>("fengling", true, f =>
             {
-                var connectionString = "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true";
-                f.Add<SqlServerProvider>(connectionString, true);
+                f.Add("Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true);
             })
             .AddTypeHandler<JsonTypeHandler>()
             .Configure<SqlServerProvider, SqlServerModelConfiguration>();
@@ -1298,19 +1297,19 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM MenuList a INNER JOIN [sys_page
         this.Initialize();
         using var repository = dbFactory.Create();
         var sql = repository
-            .FromWithRecursive((f, cte) => f.From<Menu>()
+            .FromWith(f => f.From<Menu>()
                     .Where(x => x.Id == 1)
                     .Select(x => new { x.Id, x.Name, x.ParentId })
                 .UnionAllRecursive((x, y) => x.From<Menu>()
-                    .InnerJoinRecursive(y, cte, (a, b) => a.ParentId == b.Id)
-                    .Select((a, b) => new { a.Id, a.Name, a.ParentId })), "MenuList")
-            .NextWithRecursive((f, cte) => f.From<Page, Menu>()
+                    .InnerJoin(y, (a, b) => a.ParentId == b.Id)
+                    .Select((a, b) => new { a.Id, a.Name, a.ParentId }), "MenuList"))
+            .NextWith((f, cte) => f.From<Page, Menu>()
                     .Where((a, b) => a.Id == b.PageId)
                     .Select((x, y) => new { y.Id, y.ParentId, x.Url })
                 .UnionAll(x => x.From<Menu>()
                     .LeftJoin<Page>((a, b) => a.PageId == b.Id)
                     .Where((a, b) => a.Id > 1)
-                    .Select((x, y) => new { x.Id, x.ParentId, y.Url })), "MenuPageList")
+                    .Select((x, y) => new { x.Id, x.ParentId, y.Url })))
             .InnerJoin((a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
             .ToSql(out _);
@@ -1327,13 +1326,13 @@ SELECT a.[Id],a.[ParentId],b.[Url] FROM [sys_menu] a LEFT JOIN [sys_page] b ON a
 )
 SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM MenuList a INNER JOIN MenuPageList b ON a.[Id]=b.[Id]");
         sql = repository
-            .FromWithRecursive((f, cte) => f.From<Menu>()
+            .FromWith(f => f.From<Menu>()
                     .Where(x => x.Id == 1)
                     .Select(x => new { x.Id, x.Name, x.ParentId })
                 .UnionAllRecursive((x, y) => x.From<Menu>()
-                    .InnerJoinRecursive(y, cte, (a, b) => a.ParentId == b.Id)
-                    .Select((a, b) => new { a.Id, a.Name, a.ParentId })), "MenuList")
-            .NextWithRecursive((f, cte) => f.From<Page>()
+                    .InnerJoin(y, (a, b) => a.ParentId == b.Id)
+                    .Select((a, b) => new { a.Id, a.Name, a.ParentId }), "MenuList"))
+            .NextWith((f, cte1) => f.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == 1)
                     .Select((x, y) => new { y.Id, x.Url })
@@ -1356,13 +1355,13 @@ SELECT b.[Id],a.[Url] FROM [sys_page] a INNER JOIN [sys_menu] b ON a.[Id]=b.[Pag
 SELECT b.[Id],a.[Url] FROM [sys_page] a INNER JOIN [sys_menu] b ON a.[Id]=b.[PageId] WHERE a.[Id]>1
 )
 SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM MenuList a INNER JOIN MenuPageList b ON a.[Id]=b.[Id]");
-        var result = await repository.FromWithRecursive((f, cte) => f.From<Menu>()
+        var result = await repository.FromWith(f => f.From<Menu>()
                     .Where(x => x.Id == 1)
                     .Select(x => new { x.Id, x.Name, x.ParentId })
                 .UnionAllRecursive((x, y) => x.From<Menu>()
-                    .InnerJoinRecursive(y, cte, (a, b) => a.ParentId == b.Id)
-                    .Select((a, b) => new { a.Id, a.Name, a.ParentId })), "MenuList")
-            .NextWithRecursive((f, cte) => f.From<Page>()
+                    .InnerJoin(y, (a, b) => a.ParentId == b.Id)
+                    .Select((a, b) => new { a.Id, a.Name, a.ParentId }), "MenuList"))
+            .NextWith((f, cte1) => f.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == 1)
                     .Select((x, y) => new { y.Id, x.Url })
@@ -1390,20 +1389,20 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM MenuList a INNER JOIN MenuPageL
 
         Assert.True(sql == @"SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [sys_menu] a,(SELECT d.[Id],d.[ParentId],c.[Url] FROM [sys_page] c,[sys_menu] d WHERE c.[Id]=d.[PageId]) b WHERE a.[Id]=b.[Id]");
 
-        var result = await repository.FromWithRecursive((f, cte) => f.From<Menu>()
+        var result = await repository.FromWith(f => f.From<Menu>()
                     .Where(x => x.Id == 1)
                     .Select(x => new { x.Id, x.Name, x.ParentId })
                 .UnionAllRecursive((x, y) => x.From<Menu>()
-                    .InnerJoinRecursive(y, cte, (a, b) => a.ParentId == b.Id)
-                    .Select((a, b) => new { a.Id, a.Name, a.ParentId })), "MenuList")
-            .NextWithRecursive((f, cte) => f.From<Page>()
+                    .InnerJoin(y, (a, b) => a.ParentId == b.Id)
+                    .Select((a, b) => new { a.Id, a.Name, a.ParentId }), "MenuList"))
+            .NextWith((f, cte) => f.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == 1)
                     .Select((x, y) => new { y.Id, x.Url })
                 .UnionAll(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id > 1)
-                    .Select((x, y) => new { y.Id, x.Url })), "MenuPageList")
+                    .Select((x, y) => new { y.Id, x.Url })))
             .InnerJoin((a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
            .ToListAsync();

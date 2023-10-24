@@ -13,9 +13,11 @@ namespace Trolley;
 public class Repository : IRepository
 {
     #region Fields
-    private bool isParameterized = false;
+    protected bool isParameterized = false;
     protected TheaConnection connection;
+    protected IDbCommand command;
     #endregion
+
 
     #region Properties
     public string DbKey { get; private set; }
@@ -47,94 +49,92 @@ public class Repository : IRepository
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T), suffixRawSql);
-        return new Query<T>(this.connection, this.OrmProvider, visitor);
+        return new Query<T>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor);
     }
     public IQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2));
-        return new Query<T1, T2>(this.connection, this.OrmProvider, visitor);
+        return new Query<T1, T2>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor);
     }
     public IQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3));
-        return new Query<T1, T2, T3>(this.connection, this.OrmProvider, visitor);
+        return new Query<T1, T2, T3>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor);
     }
     public IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-        return new Query<T1, T2, T3, T4>(this.connection, this.OrmProvider, visitor);
+        return new Query<T1, T2, T3, T4>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
-        return new Query<T1, T2, T3, T4, T5>(this.connection, this.OrmProvider, visitor);
+        return new Query<T1, T2, T3, T4, T5>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
-        return new Query<T1, T2, T3, T4, T5, T6>(this.connection, this.OrmProvider, visitor);
+        return new Query<T1, T2, T3, T4, T5, T6>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
-        return new Query<T1, T2, T3, T4, T5, T6, T7>(this.connection, this.OrmProvider, visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8>(this.connection, this.OrmProvider, visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.connection, this.OrmProvider, visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.connection, this.OrmProvider, visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor);
     }
     #endregion
 
     #region From SubQuery
-    public IQuery<T> From<T>(Func<IFromQuery, IFromQuery<T>> subQuery, char tableAsStart = 'a')
+    public IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery, char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        subQuery.Invoke(new FromQuery(this.connection, this.OrmProvider, this.MapProvider, visitor));
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor));
         var sql = visitor.BuildSql(out var readerFields);
-        var newVisitor = visitor.Clone(tableAsStart);
-        newVisitor.WithTable(typeof(T), sql, readerFields);
-        return new Query<T>(this.connection, this.OrmProvider, newVisitor);
+        visitor.WithTable(typeof(T), sql, readerFields);
+        return query;
     }
     #endregion
 
-    #region FromWith/FromWithRecursive
-    public IQuery<T> FromWith<T>(Func<IFromQuery, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
+    #region FromWith
+    public IQuery<T> FromWith<T>(IQuery<T> cteSubQuery, string cteTableName = null, char tableAsStart = 'a')
     {
-        var visitor = this.CreateQueryVisitor(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(this.connection, this.OrmProvider, this.MapProvider, visitor));
-        var rawSql = visitor.BuildSql(out var readerFields);
-        var newVisitor = visitor.Clone(tableAsStart);
-        newVisitor.WithCteTable(typeof(T), cteTableName, false, rawSql, readerFields);
-        return new Query<T>(this.connection, this.OrmProvider, newVisitor);
+        var visitor = cteSubQuery.Visitor;
+        var rawSql = cteSubQuery.Visitor.BuildSql(out var readerFields);
+        visitor.BuildCteTable(cteTableName, rawSql, readerFields, cteSubQuery, true);
+        return cteSubQuery;
     }
-    public IQuery<T> FromWithRecursive<T>(Func<IFromQuery, string, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
+    public IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a')
     {
-        var visitor = this.CreateQueryVisitor(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(this.connection, this.OrmProvider, this.MapProvider, visitor), cteTableName);
-        var rawSql = visitor.BuildSql(out var readerFields);
-        var newVisitor = visitor.Clone(tableAsStart);
-        newVisitor.WithCteTable(typeof(T), cteTableName, true, rawSql, readerFields);
-        return new Query<T>(this.connection, this.OrmProvider, newVisitor);
+        var visitor = this.CreateQueryVisitor(tableAsStart, true);
+        var query = cteSubQuery.Invoke(new FromQuery(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor));
+        if (!visitor.Equals(query.Visitor))
+            visitor = query.Visitor;
+        var rawSql = visitor.BuildSql(out var readerFields, false);
+        visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
+        return query;
     }
     #endregion
 
@@ -478,30 +478,10 @@ public class Repository : IRepository
     #endregion
 
     #region Create
-    public ICreate<TEntity> Create<TEntity>() => new Create<TEntity>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, this.isParameterized);
-    public int Create<TEntity>(object insertObjs, int bulkCount = 500)
+    public ICreate<TEntity> Create<TEntity>()
     {
-        bool isMulti = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
-        if (isMulti) return this.Create<TEntity>().WithBulk(insertObjs as IEnumerable, bulkCount).Execute();
-        else return this.Create<TEntity>().WithBy(insertObjs).Execute();
-    }
-    public async Task<int> CreateAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
-    {
-        bool isMulti = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
-        if (isMulti) return await this.Create<TEntity>().WithBulk(insertObjs as IEnumerable, bulkCount).ExecuteAsync(cancellationToken);
-        else return await this.Create<TEntity>().WithBy(insertObjs).ExecuteAsync(cancellationToken);
-    }
-    public long CreateLong<TEntity>(object insertObjs, int bulkCount = 500)
-    {
-        bool isMulti = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
-        if (isMulti) return this.Create<TEntity>().WithBulk(insertObjs as IEnumerable, bulkCount).ExecuteLong();
-        else return this.Create<TEntity>().WithBy(insertObjs).ExecuteLong();
-    }
-    public async Task<long> CreateLongAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
-    {
-        bool isMulti = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
-        if (isMulti) return await this.Create<TEntity>().WithBulk(insertObjs as IEnumerable, bulkCount).ExecuteLongAsync(cancellationToken);
-        else return await this.Create<TEntity>().WithBy(insertObjs).ExecuteLongAsync(cancellationToken);
+        var visitor = this.CreateCreateVisitor();
+        return new Create<TEntity>(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor, this.isParameterized);
     }
     #endregion
 
@@ -839,151 +819,151 @@ public class Repository : IRepository
     }
     #endregion
 
-    #region QueryMultiple
-    public IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries)
-    {
-        if (subQueries == null)
-            throw new ArgumentNullException(nameof(subQueries));
+    //#region QueryMultiple
+    //public IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries)
+    //{
+    //    if (subQueries == null)
+    //        throw new ArgumentNullException(nameof(subQueries));
 
-        using var command = this.connection.CreateCommand();
-        using var multiQuery = new MultipleQuery(this.connection, this.OrmProvider, this.MapProvider, command, this.isParameterized);
-        subQueries.Invoke(multiQuery);
+    //    using var command = this.connection.CreateCommand();
+    //    using var multiQuery = new MultipleQuery(this.connection, this.OrmProvider, this.MapProvider, command, this.isParameterized);
+    //    subQueries.Invoke(multiQuery);
 
-        command.CommandText = multiQuery.BuildSql(out var readerAfters);
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.Transaction;
+    //    command.CommandText = multiQuery.BuildSql(out var readerAfters);
+    //    command.CommandType = CommandType.Text;
+    //    command.Transaction = this.Transaction;
 
-        this.connection.Open();
-        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-        return new MultiQueryReader(command, reader, readerAfters);
-    }
-    public async Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default)
-    {
-        if (subQueries == null)
-            throw new ArgumentNullException(nameof(subQueries));
+    //    this.connection.Open();
+    //    var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+    //    return new MultiQueryReader(command, reader, readerAfters);
+    //}
+    //public async Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default)
+    //{
+    //    if (subQueries == null)
+    //        throw new ArgumentNullException(nameof(subQueries));
 
-        var cmd = this.connection.CreateCommand();
-        using var multiQuery = new MultipleQuery(this.connection, this.OrmProvider, this.MapProvider, cmd, this.isParameterized);
-        subQueries.Invoke(multiQuery);
+    //    var cmd = this.connection.CreateCommand();
+    //    using var multiQuery = new MultipleQuery(this.connection, this.OrmProvider, this.MapProvider, cmd, this.isParameterized);
+    //    subQueries.Invoke(multiQuery);
 
-        cmd.CommandText = multiQuery.BuildSql(out var readerAfters);
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.Transaction;
+    //    cmd.CommandText = multiQuery.BuildSql(out var readerAfters);
+    //    cmd.CommandType = CommandType.Text;
+    //    cmd.Transaction = this.Transaction;
 
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-        await this.connection.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-        return new MultiQueryReader(command, reader, readerAfters);
-    }
-    #endregion
+    //    if (cmd is not DbCommand command)
+    //        throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+    //    await this.connection.OpenAsync(cancellationToken);
+    //    var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+    //    return new MultiQueryReader(command, reader, readerAfters);
+    //}
+    //#endregion
 
-    #region MultipleExecute
-    public void MultipleExecute(List<MultipleCommand> commands)
-    {
-        if (commands == null || commands.Count == 0)
-            throw new ArgumentNullException(nameof(commands));
+    //#region MultipleExecute
+    //public void MultipleExecute(List<MultipleCommand> commands)
+    //{
+    //    if (commands == null || commands.Count == 0)
+    //        throw new ArgumentNullException(nameof(commands));
 
-        int commandIndex = 0;
-        var sqlBuilder = new StringBuilder();
-        var visitors = new Dictionary<MultipleCommandType, object>();
-        using var command = this.connection.CreateCommand();
+    //    int commandIndex = 0;
+    //    var sqlBuilder = new StringBuilder();
+    //    var visitors = new Dictionary<MultipleCommandType, object>();
+    //    using var command = this.connection.CreateCommand();
 
-        foreach (var multiCcommand in commands)
-        {
-            bool isFirst = false;
-            if (!visitors.TryGetValue(multiCcommand.CommandType, out var visitor))
-            {
-                visitor = multiCcommand.CommandType switch
-                {
-                    MultipleCommandType.Insert => this.OrmProvider.NewCreateVisitor(this.DbKey, this.MapProvider, this.isParameterized),
-                    MultipleCommandType.Update => this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized),
-                    MultipleCommandType.Delete => this.OrmProvider.NewDeleteVisitor(this.DbKey, this.MapProvider, this.isParameterized),
-                    _ => this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized)
-                };
-                visitors.Add(multiCcommand.CommandType, visitor);
-                isFirst = true;
-            }
-            switch (multiCcommand.CommandType)
-            {
-                case MultipleCommandType.Insert:
-                    var insertVisitor = visitor as ICreateVisitor;
-                    insertVisitor.Initialize(multiCcommand.EntityType, isFirst);
-                    commandIndex += insertVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-                case MultipleCommandType.Update:
-                    var updateVisitor = visitor as IUpdateVisitor;
-                    updateVisitor.Initialize(multiCcommand.EntityType, isFirst);
-                    commandIndex += updateVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-                case MultipleCommandType.Delete:
-                    var deleteVisitor = visitor as IDeleteVisitor;
-                    deleteVisitor.Initialize(multiCcommand.EntityType, isFirst);
-                    commandIndex += deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-            }
-        }
-        command.CommandText = sqlBuilder.ToString();
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.Transaction;
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-    }
-    public async Task MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default)
-    {
-        if (commands == null || commands.Count == 0)
-            throw new ArgumentNullException(nameof(commands));
+    //    foreach (var multiCcommand in commands)
+    //    {
+    //        bool isFirst = false;
+    //        if (!visitors.TryGetValue(multiCcommand.CommandType, out var visitor))
+    //        {
+    //            visitor = multiCcommand.CommandType switch
+    //            {
+    //                MultipleCommandType.Insert => this.OrmProvider.NewCreateVisitor(this.DbKey, this.MapProvider, this.isParameterized),
+    //                MultipleCommandType.Update => this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized),
+    //                MultipleCommandType.Delete => this.OrmProvider.NewDeleteVisitor(this.DbKey, this.MapProvider, this.isParameterized),
+    //                _ => this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized)
+    //            };
+    //            visitors.Add(multiCcommand.CommandType, visitor);
+    //            isFirst = true;
+    //        }
+    //        switch (multiCcommand.CommandType)
+    //        {
+    //            case MultipleCommandType.Insert:
+    //                var insertVisitor = visitor as ICreateVisitor;
+    //                insertVisitor.Initialize(multiCcommand.EntityType, isFirst);
+    //                commandIndex += insertVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+    //                break;
+    //            case MultipleCommandType.Update:
+    //                var updateVisitor = visitor as IUpdateVisitor;
+    //                updateVisitor.Initialize(multiCcommand.EntityType, isFirst);
+    //                commandIndex += updateVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+    //                break;
+    //            case MultipleCommandType.Delete:
+    //                var deleteVisitor = visitor as IDeleteVisitor;
+    //                deleteVisitor.Initialize(multiCcommand.EntityType, isFirst);
+    //                commandIndex += deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+    //                break;
+    //        }
+    //    }
+    //    command.CommandText = sqlBuilder.ToString();
+    //    command.CommandType = CommandType.Text;
+    //    command.Transaction = this.Transaction;
+    //    this.connection.Open();
+    //    var result = command.ExecuteNonQuery();
+    //    command.Dispose();
+    //}
+    //public async Task MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default)
+    //{
+    //    if (commands == null || commands.Count == 0)
+    //        throw new ArgumentNullException(nameof(commands));
 
-        int commandIndex = 0;
-        var sqlBuilder = new StringBuilder();
-        var visitors = new Dictionary<MultipleCommandType, object>();
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.Transaction;
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+    //    int commandIndex = 0;
+    //    var sqlBuilder = new StringBuilder();
+    //    var visitors = new Dictionary<MultipleCommandType, object>();
+    //    using var cmd = this.connection.CreateCommand();
+    //    cmd.CommandType = CommandType.Text;
+    //    cmd.Transaction = this.Transaction;
+    //    if (cmd is not DbCommand command)
+    //        throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
-        foreach (var multiCcommand in commands)
-        {
-            bool isFirst = false;
-            if (!visitors.TryGetValue(multiCcommand.CommandType, out var visitor))
-            {
-                visitor = multiCcommand.CommandType switch
-                {
-                    MultipleCommandType.Insert => this.OrmProvider.NewCreateVisitor(this.DbKey, this.MapProvider, this.isParameterized),
-                    MultipleCommandType.Update => this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized),
-                    MultipleCommandType.Delete => this.OrmProvider.NewDeleteVisitor(this.DbKey, this.MapProvider, this.isParameterized),
-                    _ => this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized)
-                };
-                visitors.Add(multiCcommand.CommandType, visitor);
-                isFirst = true;
-            }
-            switch (multiCcommand.CommandType)
-            {
-                case MultipleCommandType.Insert:
-                    var insertVisitor = visitor as ICreateVisitor;
-                    insertVisitor.Initialize(multiCcommand.EntityType, isFirst);
-                    commandIndex += insertVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-                case MultipleCommandType.Update:
-                    var updateVisitor = visitor as IUpdateVisitor;
-                    updateVisitor.Initialize(multiCcommand.EntityType, isFirst);
-                    commandIndex += updateVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-                case MultipleCommandType.Delete:
-                    var deleteVisitor = visitor as IDeleteVisitor;
-                    deleteVisitor.Initialize(multiCcommand.EntityType, isFirst);
-                    commandIndex += deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-            }
-        }
-        cmd.CommandText = sqlBuilder.ToString();
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        await command.DisposeAsync();
-    }
-    #endregion
+    //    foreach (var multiCcommand in commands)
+    //    {
+    //        bool isFirst = false;
+    //        if (!visitors.TryGetValue(multiCcommand.CommandType, out var visitor))
+    //        {
+    //            visitor = multiCcommand.CommandType switch
+    //            {
+    //                MultipleCommandType.Insert => this.OrmProvider.NewCreateVisitor(this.DbKey, this.MapProvider, this.isParameterized),
+    //                MultipleCommandType.Update => this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized),
+    //                MultipleCommandType.Delete => this.OrmProvider.NewDeleteVisitor(this.DbKey, this.MapProvider, this.isParameterized),
+    //                _ => this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized)
+    //            };
+    //            visitors.Add(multiCcommand.CommandType, visitor);
+    //            isFirst = true;
+    //        }
+    //        switch (multiCcommand.CommandType)
+    //        {
+    //            case MultipleCommandType.Insert:
+    //                var insertVisitor = visitor as ICreateVisitor;
+    //                insertVisitor.Initialize(multiCcommand.EntityType, isFirst);
+    //                commandIndex += insertVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+    //                break;
+    //            case MultipleCommandType.Update:
+    //                var updateVisitor = visitor as IUpdateVisitor;
+    //                updateVisitor.Initialize(multiCcommand.EntityType, isFirst);
+    //                commandIndex += updateVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+    //                break;
+    //            case MultipleCommandType.Delete:
+    //                var deleteVisitor = visitor as IDeleteVisitor;
+    //                deleteVisitor.Initialize(multiCcommand.EntityType, isFirst);
+    //                commandIndex += deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+    //                break;
+    //        }
+    //    }
+    //    cmd.CommandText = sqlBuilder.ToString();
+    //    await this.connection.OpenAsync(cancellationToken);
+    //    var result = await command.ExecuteNonQueryAsync(cancellationToken);
+    //    await command.DisposeAsync();
+    //}
+    //#endregion
 
     #region Others
     public void Close() => this.Dispose();
@@ -1038,12 +1018,43 @@ public class Repository : IRepository
         GC.SuppressFinalize(this);
     }
     ~Repository() => this.Dispose();
-    private IQueryVisitor CreateQueryVisitor(char tableAsStart)
+
+    private IQueryVisitor CreateQueryVisitor(char tableAsStart, bool isCteQuery = false)
     {
-        var command = this.connection.CreateCommand();
-        command.Transaction = this.Transaction;
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, isParameterized, tableAsStart);
-        visitor.Command = command;
+        if (this.command == null)
+        {
+            this.command = this.connection.CreateCommand();
+            this.command.Transaction = this.Transaction;
+        }
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart);
+        if (isCteQuery)
+        {
+            visitor.CteTables = new();
+            visitor.CteQueries = new();
+            visitor.CteTableSegments = new();
+        }
+        return visitor;
+    }
+    private ICreateVisitor CreateCreateVisitor()
+    {
+        if (this.command == null)
+        {
+            this.command = this.connection.CreateCommand();
+            this.command.Transaction = this.Transaction;
+        }
+        var visitor = this.OrmProvider.NewCreateVisitor(this.DbKey, this.MapProvider, this.isParameterized);
+        visitor.Command = this.command;
+        return visitor;
+    }
+    private IUpdateVisitor CreateUpdateVisitor()
+    {
+        if (this.command == null)
+        {
+            this.command = this.connection.CreateCommand();
+            this.command.Transaction = this.Transaction;
+        }
+        var visitor = this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized);
+        visitor.Command = this.command;
         return visitor;
     }
     #endregion

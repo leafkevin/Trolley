@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,46 +10,35 @@ namespace Trolley;
 class Query<T1, T2> : QueryBase, IQuery<T1, T2>
 {
     #region Constructor
-    public Query(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public Query(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
-    #region CTE NextWith/NextWithRecursive
-    public IQuery<T1, T2, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
+    #region CTE NextWith
+    public IQuery<T1, T2, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
     {
         if (cteSubQuery == null)
             throw new ArgumentNullException(nameof(cteSubQuery));
 
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
-    public IQuery<T1, T2, TOther> NextWithRecursive<TOther>(Func<IFromQuery, string, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, TOther>(this.connection, this.ormProvider, this.visitor);
+        this.visitor.Clear(true);
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.visitor.CteQueries[0], this.visitor.CteQueries[1]);
+        var rawSql = this.visitor.BuildSql(out var readerFields);
+        this.visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
+        return new Query<T1, T2, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
     #region WithTable
-    public IQuery<T1, T2, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery)
+    public IQuery<T1, T2, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new Query<T1, T2, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -59,7 +49,7 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, TMember>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IIncludableQuery<T1, T2, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
@@ -67,7 +57,7 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, TElment>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -102,7 +92,7 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
@@ -110,7 +100,7 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
@@ -118,43 +108,102 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
+    public IQuery<T1, T2, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
+
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.visitor);
+
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
+    public IQuery<T1, T2, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.visitor);
+
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
+    public IQuery<T1, T2, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
+    {
+
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.visitor);
+
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = query.Visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = query.Visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = query.Visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -204,7 +253,7 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, TGrouping>(this.connection, this.ormProvider, this.visitor);
+        return new GroupingQuery<T1, T2, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2> OrderBy<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr)
     {
@@ -249,7 +298,7 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, TTarget>> fieldsExpr)
     {
@@ -257,7 +306,7 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -383,46 +432,35 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
 class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
 {
     #region Constructor
-    public Query(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public Query(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
-    #region CTE NextWith/NextWithRecursive
-    public IQuery<T1, T2, T3, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
+    #region CTE NextWith
+    public IQuery<T1, T2, T3, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
     {
         if (cteSubQuery == null)
             throw new ArgumentNullException(nameof(cteSubQuery));
 
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
-    public IQuery<T1, T2, T3, TOther> NextWithRecursive<TOther>(Func<IFromQuery, string, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, TOther>(this.connection, this.ormProvider, this.visitor);
+        this.visitor.Clear(true);
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.visitor.CteQueries[0], this.visitor.CteQueries[1], this.visitor.CteQueries[2]);
+        var rawSql = this.visitor.BuildSql(out var readerFields);
+        this.visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
+        return new Query<T1, T2, T3, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
     #region WithTable
-    public IQuery<T1, T2, T3, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery)
+    public IQuery<T1, T2, T3, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new Query<T1, T2, T3, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -433,7 +471,7 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, TMember>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
@@ -441,7 +479,7 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, TElment>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -476,7 +514,7 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
@@ -484,7 +522,7 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
@@ -492,43 +530,70 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -578,7 +643,7 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, TGrouping>(this.connection, this.ormProvider, this.visitor);
+        return new GroupingQuery<T1, T2, T3, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3> OrderBy<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
     {
@@ -623,7 +688,7 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, TTarget>> fieldsExpr)
     {
@@ -631,7 +696,7 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -757,46 +822,35 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
 class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
 {
     #region Constructor
-    public Query(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public Query(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
-    #region CTE NextWith/NextWithRecursive
-    public IQuery<T1, T2, T3, T4, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
+    #region CTE NextWith
+    public IQuery<T1, T2, T3, T4, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<T4>, IQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
     {
         if (cteSubQuery == null)
             throw new ArgumentNullException(nameof(cteSubQuery));
 
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
-    public IQuery<T1, T2, T3, T4, TOther> NextWithRecursive<TOther>(Func<IFromQuery, string, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.ormProvider, this.visitor);
+        this.visitor.Clear(true);
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.visitor.CteQueries[0], this.visitor.CteQueries[1], this.visitor.CteQueries[2], this.visitor.CteQueries[3]);
+        var rawSql = this.visitor.BuildSql(out var readerFields);
+        this.visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
+        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
     #region WithTable
-    public IQuery<T1, T2, T3, T4, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery)
+    public IQuery<T1, T2, T3, T4, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -807,7 +861,7 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, TMember>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
@@ -815,7 +869,7 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, TElment>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -850,7 +904,7 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
@@ -858,7 +912,7 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
@@ -866,43 +920,70 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -952,7 +1033,7 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, TGrouping>(this.connection, this.ormProvider, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
     {
@@ -997,7 +1078,7 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, TTarget>> fieldsExpr)
     {
@@ -1005,7 +1086,7 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1131,46 +1212,35 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
 class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
 {
     #region Constructor
-    public Query(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public Query(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
-    #region CTE NextWith/NextWithRecursive
-    public IQuery<T1, T2, T3, T4, T5, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
+    #region CTE NextWith
+    public IQuery<T1, T2, T3, T4, T5, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<T4>, IQuery<T5>, IQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
     {
         if (cteSubQuery == null)
             throw new ArgumentNullException(nameof(cteSubQuery));
 
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
-    public IQuery<T1, T2, T3, T4, T5, TOther> NextWithRecursive<TOther>(Func<IFromQuery, string, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.ormProvider, this.visitor);
+        this.visitor.Clear(true);
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.visitor.CteQueries[0], this.visitor.CteQueries[1], this.visitor.CteQueries[2], this.visitor.CteQueries[3], this.visitor.CteQueries[4]);
+        var rawSql = this.visitor.BuildSql(out var readerFields);
+        this.visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
+        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
     #region WithTable
-    public IQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery)
+    public IQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1181,7 +1251,7 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, TMember>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
@@ -1189,7 +1259,7 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, TElment>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1224,7 +1294,7 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
@@ -1232,7 +1302,7 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
@@ -1240,43 +1310,70 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1326,7 +1423,7 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, TGrouping>(this.connection, this.ormProvider, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
     {
@@ -1371,7 +1468,7 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
     {
@@ -1379,7 +1476,7 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1505,46 +1602,35 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
 class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
 {
     #region Constructor
-    public Query(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public Query(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
-    #region CTE NextWith/NextWithRecursive
-    public IQuery<T1, T2, T3, T4, T5, T6, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
+    #region CTE NextWith
+    public IQuery<T1, T2, T3, T4, T5, T6, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<T4>, IQuery<T5>, IQuery<T6>, IQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
     {
         if (cteSubQuery == null)
             throw new ArgumentNullException(nameof(cteSubQuery));
 
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, TOther> NextWithRecursive<TOther>(Func<IFromQuery, string, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.ormProvider, this.visitor);
+        this.visitor.Clear(true);
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.visitor.CteQueries[0], this.visitor.CteQueries[1], this.visitor.CteQueries[2], this.visitor.CteQueries[3], this.visitor.CteQueries[4], this.visitor.CteQueries[5]);
+        var rawSql = this.visitor.BuildSql(out var readerFields);
+        this.visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
+        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
     #region WithTable
-    public IQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery)
+    public IQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1555,7 +1641,7 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, TMember>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
@@ -1563,7 +1649,7 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, TElment>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1598,7 +1684,7 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
@@ -1606,7 +1692,7 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
@@ -1614,43 +1700,70 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1700,7 +1813,7 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>(this.connection, this.ormProvider, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
     {
@@ -1745,7 +1858,7 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
     {
@@ -1753,7 +1866,7 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1879,46 +1992,20 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
 class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7>
 {
     #region Constructor
-    public Query(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
-    #endregion
-
-    #region CTE NextWith/NextWithRecursive
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> NextWithRecursive<TOther>(Func<IFromQuery, string, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
+    public Query(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region WithTable
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1929,7 +2016,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
@@ -1937,7 +2024,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1972,7 +2059,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
@@ -1980,7 +2067,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
@@ -1988,43 +2075,70 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -2074,7 +2188,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>(this.connection, this.ormProvider, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr)
     {
@@ -2119,7 +2233,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr)
     {
@@ -2127,7 +2241,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -2253,46 +2367,20 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
 class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
 {
     #region Constructor
-    public Query(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
-    #endregion
-
-    #region CTE NextWith/NextWithRecursive
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> NextWithRecursive<TOther>(Func<IFromQuery, string, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
+    public Query(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region WithTable
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -2303,7 +2391,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
@@ -2311,7 +2399,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -2346,7 +2434,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
@@ -2354,7 +2442,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
@@ -2362,43 +2450,70 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -2448,7 +2563,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>(this.connection, this.ormProvider, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr)
     {
@@ -2493,7 +2608,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr)
     {
@@ -2501,7 +2616,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -2627,46 +2742,20 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
 class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
 {
     #region Constructor
-    public Query(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
-    #endregion
-
-    #region CTE NextWith/NextWithRecursive
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> NextWithRecursive<TOther>(Func<IFromQuery, string, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
+    public Query(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region WithTable
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -2677,7 +2766,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
@@ -2685,7 +2774,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -2720,7 +2809,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
@@ -2728,7 +2817,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
@@ -2736,43 +2825,70 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -2822,7 +2938,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>(this.connection, this.ormProvider, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr)
     {
@@ -2867,7 +2983,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr)
     {
@@ -2875,7 +2991,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3001,46 +3117,20 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
 class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
 {
     #region Constructor
-    public Query(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
-    #endregion
-
-    #region CTE NextWith/NextWithRecursive
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> NextWithRecursive<TOther>(Func<IFromQuery, string, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
+    public Query(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region WithTable
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3051,7 +3141,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
@@ -3059,7 +3149,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3094,7 +3184,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
@@ -3102,7 +3192,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
@@ -3110,43 +3200,70 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3196,7 +3313,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>(this.connection, this.ormProvider, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr)
     {
@@ -3241,7 +3358,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr)
     {
@@ -3249,7 +3366,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3375,46 +3492,20 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
 class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
 {
     #region Constructor
-    public Query(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
-    #endregion
-
-    #region CTE NextWith/NextWithRecursive
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> NextWithRecursive<TOther>(Func<IFromQuery, string, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
+    public Query(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region WithTable
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3425,7 +3516,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
@@ -3433,7 +3524,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3468,7 +3559,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
@@ -3476,7 +3567,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
@@ -3484,43 +3575,70 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3570,7 +3688,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>(this.connection, this.ormProvider, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr)
     {
@@ -3615,7 +3733,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr)
     {
@@ -3623,7 +3741,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3749,46 +3867,20 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
 class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
 {
     #region Constructor
-    public Query(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
-    #endregion
-
-    #region CTE NextWith/NextWithRecursive
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> NextWithRecursive<TOther>(Func<IFromQuery, string, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
+    public Query(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region WithTable
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3799,7 +3891,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
@@ -3807,7 +3899,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3842,7 +3934,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
@@ -3850,7 +3942,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
@@ -3858,43 +3950,70 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3944,7 +4063,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>(this.connection, this.ormProvider, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr)
     {
@@ -3989,7 +4108,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr)
     {
@@ -3997,7 +4116,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -4123,46 +4242,20 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
 class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
 {
     #region Constructor
-    public Query(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
-    #endregion
-
-    #region CTE NextWith/NextWithRecursive
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> NextWithRecursive<TOther>(Func<IFromQuery, string, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
+    public Query(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region WithTable
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -4173,7 +4266,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
@@ -4181,7 +4274,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -4216,7 +4309,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
@@ -4224,7 +4317,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
@@ -4232,43 +4325,70 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -4318,7 +4438,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>(this.connection, this.ormProvider, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr)
     {
@@ -4363,7 +4483,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr)
     {
@@ -4371,7 +4491,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -4497,46 +4617,20 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
 class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
 {
     #region Constructor
-    public Query(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
-    #endregion
-
-    #region CTE NextWith/NextWithRecursive
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> NextWith<TOther>(Func<IFromQuery, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor));
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> NextWithRecursive<TOther>(Func<IFromQuery, string, IFromQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a')
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        var newVisitor = this.visitor.Clone(tableAsStart);
-        cteSubQuery.Invoke(new FromQuery(newVisitor), cteTableName);
-        var rawSql = newVisitor.BuildSql(out var readerFields);
-        this.visitor.WithCteTable(typeof(TOther), cteTableName, false, rawSql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.ormProvider, this.visitor);
-    }
+    public Query(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region WithTable
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -4547,7 +4641,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
@@ -4555,7 +4649,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -4590,7 +4684,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
@@ -4598,7 +4692,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
@@ -4606,43 +4700,70 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
             throw new ArgumentNullException(nameof(joinOn));
 
         this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
         this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Func<IFromQuery, IFromQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var sql = subQuery.Visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var newVisitor = this.visitor.Clone();
-        subQuery.Invoke(new FromQuery(newVisitor));
-        var sql = newVisitor.BuildSql(out var readerFields);
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var sql = this.visitor.BuildSql(out var readerFields);
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.ormProvider, this.visitor);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -4692,7 +4813,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>(this.connection, this.ormProvider, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr)
     {
@@ -4737,7 +4858,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr)
     {
@@ -4745,7 +4866,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -4871,8 +4992,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
 class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
 {
     #region Constructor
-    public Query(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public Query(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region Include
@@ -4882,7 +5003,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
@@ -4890,7 +5011,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment>(this.connection, this.ormProvider, this.visitor);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -4967,7 +5088,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(this.connection, this.ormProvider, this.visitor);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr)
     {
@@ -5012,7 +5133,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr)
     {
@@ -5020,7 +5141,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 

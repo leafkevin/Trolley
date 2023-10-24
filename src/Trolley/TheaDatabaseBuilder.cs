@@ -1,18 +1,18 @@
-﻿using System;
-
-namespace Trolley;
+﻿namespace Trolley;
 
 public class TheaDatabaseBuilder
 {
-    private readonly TheaDatabaseProvider database;
+    private readonly TheaDatabase database;
 
-    public TheaDatabaseBuilder(TheaDatabaseProvider database) => this.database = database;
-    public TenantDatabaseBuilder Add(TheaDatabase connectionInfo)
+    public TheaDatabaseBuilder(TheaDatabase database) => this.database = database;
+    public TheaDatabaseBuilder Add(string connectionString, bool isDefault, params string[] tenantIds)
     {
-        if (connectionInfo == null)
-            throw new ArgumentNullException(nameof(connectionInfo));
-
-        this.database.AddDatabase(connectionInfo);
-        return new TenantDatabaseBuilder(this.database, connectionInfo);
-    }
+        this.database.AddTenantDatabase(new TenantDatabase
+        {
+            ConnectionString = connectionString,
+            IsDefault = isDefault,
+            TenantIds = tenantIds
+        }); 
+        return this;
+    } 
 }

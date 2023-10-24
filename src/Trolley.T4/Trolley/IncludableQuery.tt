@@ -15,20 +15,20 @@ namespace Trolley;
 class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember>
 {
     #region Constructor
-    public IncludableQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, transaction, ormProvider, visitor) { }
+    public IncludableQuery(TheaConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region ThenInclude/ThenIncludeMany
     public IIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
         this.visitor.ThenInclude(member);
-        return new IncludableQuery<T, TNavigation>(this.connection, this.transaction, ormProvider, this.visitor);
+        return new IncludableQuery<T, TNavigation>(this.connection, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IIncludableQuery<T, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.ThenInclude(member, true, filter);
-        return new IncludableQuery<T, TElment>(this.connection, this.transaction, ormProvider, this.visitor);
+        return new IncludableQuery<T, TElment>(this.connection, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 }
@@ -42,8 +42,8 @@ class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember>
 class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IIncludableQuery<<#=tables#>, TMember>
 {
     #region Constructor
-    public IncludableQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, transaction, ormProvider, visitor) { }
+    public IncludableQuery(TheaConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, ormProvider, mapProvider, visitor) { }
     #endregion
 <#
         if( i < count - 1)
@@ -54,12 +54,12 @@ class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IIncludableQue
     public IIncludableQuery<<#=tables#>, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
         this.visitor.ThenInclude(member);
-        return new IncludableQuery<<#=tables#>, TNavigation>(this.connection, this.transaction, this.ormProvider, this.visitor);
+        return new IncludableQuery<<#=tables#>, TNavigation>(this.connection, this.ormProvider, this.mapProvider, this.visitor);
     }
     public IIncludableQuery<<#=tables#>, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
     {
         this.visitor.ThenInclude(member, true, filter);
-        return new IncludableQuery<<#=tables#>, TElment>(this.connection, this.transaction, this.ormProvider, this.visitor);
+        return new IncludableQuery<<#=tables#>, TElment>(this.connection, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 <#      }#>

@@ -14,10 +14,9 @@ public class SqlServerSqlMethodUnitTest : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register("fengling", true, f =>
+            .Register<SqlServerProvider>("fengling", true, f =>
             {
-                var connectionString = "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true";
-                f.Add<SqlServerProvider>(connectionString, true);
+                f.Add("Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true);
             })
             .AddTypeHandler<JsonTypeHandler>()
             .Configure<SqlServerProvider, SqlServerModelConfiguration>();

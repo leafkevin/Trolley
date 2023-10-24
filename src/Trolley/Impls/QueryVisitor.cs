@@ -23,12 +23,22 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     protected string HavingSql { get; set; } = string.Empty;
     protected string OrderBySql { get; set; } = string.Empty;
     protected bool IsDistinct { get; set; }
+    protected bool IsRecursive { get; set; }
     protected string CteTableSql { get; set; }
     protected List<TableSegment> IncludeSegments { get; set; }
+    /// <summary>
+    /// 只有使用CTE时候有值，当前CTE子查询自身引用，因为不确定后面是否会引用自身，先把自身引用保存起来，方便后面引用
+    /// </summary>
+    protected TableSegment SelfTableSegment { get; set; }
     protected TableSegment LastIncludeSegment { get; set; }
     protected List<ReaderField> GroupFields { get; set; }
     protected bool IsInsertTo { get; set; }
     protected Type InsertType { get; set; }
+
+    public List<TableSegment> CteTables { get; set; }
+    public List<object> CteQueries { get; set; }
+    public Dictionary<object, TableSegment> CteTableSegments { get; set; }
+    public List<IDbDataParameter> DbParameters { get; set; }
 
     public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix)
@@ -36,7 +46,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.Tables = new();
         this.TableAlias = new();
     }
-    public virtual string BuildSql(out List<ReaderField> readerFields, bool isUnion = false)
+    public virtual string BuildSql(out List<ReaderField> readerFields, bool isContainsCteSql = true, bool isUnion = false)
     {
         if (!string.IsNullOrEmpty(this.UnionSql) && !this.IsInsertTo)
         {
@@ -84,11 +94,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //在Update的Value子查询语句中，where子句中有更新主表的关联条件，此时IsUsed=false
                 //在Include的1:1子表，通常不参与Select语句,如果有Parameter类型的主表查询时，IsUsed=true，没有则IsUsed=false
                 if (!tableSegment.IsUsed) continue;
-                var tableName = tableSegment.Body;
-                if (string.IsNullOrEmpty(tableName))
+                string tableName = string.Empty;
+                if (tableSegment.TableType == TableType.CteSelfRef)
+                    tableName = this.OrmProvider.GetTableName(tableSegment.RefTableName);
+                else
                 {
-                    tableSegment.Mapper ??= this.MapProvider.GetEntityMap(tableSegment.EntityType);
-                    tableName = this.OrmProvider.GetTableName(tableSegment.Mapper.TableName);
+                    tableName = tableSegment.Body;
+                    if (string.IsNullOrEmpty(tableName))
+                        tableName = this.OrmProvider.GetTableName(tableSegment.Mapper.TableName);
                 }
 
                 if (builder.Length > 0)
@@ -101,7 +114,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     else builder.Append(',');
                 }
                 builder.Append(tableName);
-
                 //子查询要设置表别名
                 if (this.IsNeedAlias || tableSegment.IsNeedAlais
                     || tableSegment.TableType == TableType.FromQuery)
@@ -136,8 +148,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         readerFields = this.ReaderFields;
 
         builder.Clear();
-        if (!string.IsNullOrEmpty(this.CteTableSql))
-            builder.AppendLine(this.CteTableSql);
+        if (isContainsCteSql) builder.AppendLine(this.CteTableSql);
 
         if (this.IsInsertTo) builder.Append(insertSql);
         if (this.skip.HasValue || this.limit.HasValue)
@@ -238,6 +249,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         this.UnionSql = null;
         int tableIndex = this.TableAsStart + this.Tables.Count;
+
         for (int i = 0; i < entityTypes.Length; i++)
         {
             this.AddTable(new TableSegment
@@ -272,61 +284,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             IsMaster = true
         });
     }
-    public virtual TableSegment WithTable(Type entityType, string body, List<ReaderField> readerFields = null, string joinType = "")
-    {
-        var tableSegment = this.AddTable(entityType, joinType, TableType.FromQuery, $"({body})", readerFields);
-        this.InitFromQueryReaderFields(tableSegment, readerFields);
-        return tableSegment;
-    }
-    public virtual void WithCteTable(Type entityType, string cteTableName, bool isRecursive, string rawSql, List<ReaderField> readerFields = null)
-    {
-        string withTable = cteTableName;
-        if (isRecursive)
-            withTable = "RECURSIVE " + cteTableName;
 
-        var builder = new StringBuilder();
-        if (string.IsNullOrEmpty(this.CteTableSql))
-            builder.Append($"WITH {withTable}(");
-        else
-        {
-            builder.Append(this.CteTableSql);
-            builder.AppendLine(",");
-            builder.Append($"{withTable}(");
-        }
-
-        int index = 0;
-        foreach (var readerField in readerFields)
-        {
-            var memberInfo = readerField.FromMember;
-            if (index > 0) builder.Append(',');
-            builder.Append(memberInfo.Name);
-            index++;
-        }
-        builder.AppendLine(") AS ");
-        builder.AppendLine("(");
-        builder.AppendLine(rawSql);
-        builder.Append(')');
-        this.CteTableSql = builder.ToString();
-
-        var tableSegment = this.AddTable(entityType, string.Empty, TableType.FromQuery, cteTableName, readerFields);
-        this.InitFromQueryReaderFields(tableSegment, readerFields);
-        //清掉构建CTE表时Union产生的sql
-        this.UnionSql = null;
-    }
-    public virtual void Union(Type entityType, string newSql)
+    public virtual void Union(TableSegment tableSegment, string rawSql)
     {
-        var sql = this.BuildSql(out _, true);
-        while (this.Tables.Count > 1)
-            this.Tables.RemoveAt(1);
-        sql += newSql;
-        this.Tables[0].EntityType = entityType;
-        this.Tables[0].TableType = TableType.FromQuery;
-        this.Tables[0].Body = $"({sql})";
-        if (this.Tables[0].ReaderFields == null)
-            this.Tables[0].ReaderFields = this.ReaderFields;
-        this.InitFromQueryReaderFields(this.Tables[0], this.Tables[0].ReaderFields);
-        this.CteTableSql = null;
-        this.UnionSql = sql;
+        tableSegment.Body = $"({rawSql})";
+        this.UnionSql = rawSql;
     }
     public virtual void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null)
     {
@@ -389,6 +351,20 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body);
         this.IsWhere = false;
     }
+    public virtual void Join(string joinType, TableSegment joinTableSegment, Expression joinOn)
+    {
+        this.IsWhere = true;
+        var lambdaExpr = joinOn as LambdaExpression;
+        if (!lambdaExpr.Body.GetParameters(out var parameters))
+            throw new NotSupportedException("当前Join操作，没有表关联");
+        if (parameters.Count != 2)
+            throw new NotSupportedException("Join操作，只支持两个表进行关联，但可以多次Join操作");
+
+        this.InitTableAlias(lambdaExpr);
+        joinTableSegment.JoinType = joinType;
+        joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body);
+        this.IsWhere = false;
+    }
     public virtual void Join(string joinType, Type newEntityType, Expression joinOn)
     {
         this.IsWhere = true;
@@ -404,7 +380,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body);
         this.IsWhere = false;
     }
-    public virtual void Join(string joinType, TableSegment joinTableSegment, Expression joinOn)
+    public virtual void JoinCteTable(string joinType, string cteTableName, Expression joinOn)
     {
         this.IsWhere = true;
         var lambdaExpr = joinOn as LambdaExpression;
@@ -413,25 +389,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (parameters.Count != 2)
             throw new NotSupportedException("Join操作，只支持两个表进行关联，但可以多次Join操作");
 
-        this.InitTableAlias(lambdaExpr);
-        joinTableSegment.JoinType = joinType;
-        joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body);
-        this.IsWhere = false;
-    }
-    public virtual void Join(string joinType, Type newEntityType, string cteTableName, Expression joinOn)
-    {
-        this.IsWhere = true;
-        var lambdaExpr = joinOn as LambdaExpression;
-        if (!lambdaExpr.Body.GetParameters(out var parameters))
-            throw new NotSupportedException("当前Join操作，没有表关联");
-        if (parameters.Count != 2)
-            throw new NotSupportedException("Join操作，只支持两个表进行关联，但可以多次Join操作");
+        var tableSegment = this.CteTables.Find(f => f.RefTableName == cteTableName);
+        if (tableSegment == null)
+            throw new Exception($"请先使用AddCteTable方法把CTE表{cteTableName}添加进来，再使用join操作");
 
-        var joinTableSegment = this.AddTable(newEntityType, joinType, TableType.FromQuery, cteTableName);
-        var readerFields = this.FlattenTableFields(joinTableSegment);
-        joinTableSegment.ReaderFields = readerFields;
-        this.InitTableAlias(lambdaExpr);
-        joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body);
+        var aliasName = $"{(char)(this.TableAsStart + this.Tables.Count)}";
+        var joinOnExpr = this.VisitConditionExpr(lambdaExpr.Body);
+        this.AddTable(tableSegment.Clone(aliasName, joinType, joinOnExpr));
         this.IsWhere = false;
     }
     public virtual void Select(string sqlFormat, Expression selectExpr = null, bool isFromQuery = false)
@@ -971,14 +935,144 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             IsMaster = true
         });
     }
+    public virtual TableSegment WithTable(Type entityType, string rawSql, List<ReaderField> readerFields, bool isUnion = false, object queryObject = null, bool isRecursive = false)
+    {
+        TableSegment tableSegment = null;
+        if (isUnion && isRecursive)
+        {
+            //CTE 自身引用
+            if (this.CteTables == null)
+            {
+                this.CteTables = new();
+                this.CteQueries = new();
+                this.CteTableSegments = new();
+            }
+            if (!this.CteTableSegments.TryGetValue(queryObject, out tableSegment))
+            {
+                tableSegment = this.AddTable(entityType, "", TableType.CteSelfRef, $"({rawSql})", readerFields);
+                this.CteQueries.Add(queryObject);
+                this.CteTableSegments.Add(queryObject, tableSegment);
+                this.SelfTableSegment = tableSegment;
+            }
+            this.IsRecursive = true;
+        }
+        //有可能是以前的CTE表，也可能是Union新子查询，使用第一个表
+        else if (this.CteTableSegments.TryGetValue(queryObject, out tableSegment))
+        {
+            var aliasName = $"{(char)(this.TableAsStart + this.Tables.Count)}";
+            this.AddTable(tableSegment = tableSegment.Clone(aliasName));
+        }
+        else tableSegment = this.AddTable(entityType, null, TableType.FromQuery, $"({rawSql})", readerFields);
+        if (isUnion) this.InitFromQueryReaderFields(tableSegment, readerFields);
+        return tableSegment;
+    }
+    public virtual TableSegment WithTable(Type entityType, string rawSql, List<ReaderField> readerFields, string cteTableName, object queryObject)
+    {
+        TableSegment tableSegment = null;
+        //CTE 自身引用
+        if (this.CteTables == null)
+        {
+            this.CteTables = new();
+            this.CteQueries = new();
+            this.CteTableSegments = new();
+        }
+        if (!this.CteTableSegments.TryGetValue(queryObject, out tableSegment))
+        {
+            tableSegment = this.AddTable(entityType, null, TableType.CteSelfRef, $"({rawSql})", readerFields);
+            tableSegment.RefTableName = cteTableName;
+            this.CteTables.Add(tableSegment);
+            this.CteQueries.Add(queryObject);
+            this.CteTableSegments.Add(queryObject, tableSegment);
+            this.SelfTableSegment = tableSegment;
+        }
+        else
+        {
+            var aliasName = $"{(char)(this.TableAsStart + this.Tables.Count)}";
+            this.AddTable(tableSegment = tableSegment.Clone(aliasName));
+        }
+        this.InitFromQueryReaderFields(tableSegment, readerFields);
+        this.IsRecursive = true;
+        return tableSegment;
+    }
+    public virtual void BuildCteTable(string cteTableName, string rawSql, List<ReaderField> readerFields, object queryObject, bool isClear = false)
+    {
+        if (isClear) this.Clear(true);
+
+        string withTable = this.SelfTableSegment.RefTableName ?? cteTableName;
+        bool isFirst = this.CteTables.Count == 1;
+        var builder = new StringBuilder();
+        if (isFirst)
+        {
+            builder.Append("WITH ");
+            if (this.IsRecursive)
+                builder.Append("RECURSIVE ");
+        }
+        else
+        {
+            builder.Append(this.CteTableSql);
+            builder.AppendLine(",");
+        }
+        builder.Append($"{withTable}(");
+        int index = 0;
+        foreach (var readerField in readerFields)
+        {
+            var memberInfo = readerField.FromMember;
+            if (index > 0) builder.Append(',');
+            builder.Append(memberInfo.Name);
+            index++;
+        }
+        builder.AppendLine(") AS ");
+        builder.AppendLine("(");
+        builder.AppendLine(rawSql);
+        builder.Append(')');
+        this.CteTableSql = builder.ToString();
+        this.SelfTableSegment.Body = rawSql;
+        this.Tables.AddRange(this.CteTables);
+        this.UnionSql = null;
+        this.IsRecursive = false;
+    }
     public virtual void AddAliasTable(string aliasName, TableSegment tableSegment)
         => this.TableAlias.TryAdd(aliasName, tableSegment);
-    public virtual IQueryVisitor Clone(char tableAsStart = 'a', string parameterPrefix = "p")
+    public void Clear(bool isClearTables = false, bool isClearReaderFields = false)
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, tableAsStart, parameterPrefix);
-        visitor.Command = this.Command;
-        visitor.IsNeedAlias = this.IsNeedAlias;
-        return visitor;
+        if (isClearTables)
+            this.Tables.Clear();
+        if (isClearReaderFields)
+            this.ReaderFields?.Clear();
+        this.WhereSql = null;
+        //this.IsFromQuery = false;
+        this.TableAsStart = 'a';
+        this.IsNeedAlias = false;
+
+        this.skip = null;
+        this.limit = null;
+        this.UnionSql = string.Empty;
+        this.GroupBySql = string.Empty;
+        this.HavingSql = string.Empty;
+        this.OrderBySql = string.Empty;
+        this.IsDistinct = false;
+        this.IncludeSegments?.Clear();
+        this.LastIncludeSegment = null;
+        this.GroupFields?.Clear();
+        //this.IsInsertTo = false;
+        //this.InsertType = null;
+    }
+    public void CopyTo(IQueryVisitor visitor)
+    {
+        visitor.IsNeedAlias |= this.IsNeedAlias;
+        if (this.DbParameters != null && this.DbParameters.Count > 0)
+        {
+            if (visitor.DbParameters == null || visitor.DbParameters.Count == 0)
+                visitor.DbParameters = this.DbParameters;
+            else visitor.DbParameters.AddRange(this.DbParameters);
+        }
+        if (this.CteTables == null || this.CteTables.Count == 0)
+            return;
+
+        visitor.CteTables.AddRange(this.CteTables);
+        visitor.CteQueries.AddRange(this.CteQueries);
+        foreach (var queryTableSegment in this.CteTableSegments)
+            visitor.CteTableSegments.TryAdd(queryTableSegment.Key, queryTableSegment.Value);
     }
     protected void InitFromQueryReaderFields(TableSegment tableSegment, List<ReaderField> readerFields)
     {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Linq.Expressions;
 
 namespace Trolley;
@@ -7,50 +8,44 @@ class GroupingQueryBase<TGrouping>
 {
     #region Fields
     protected TheaConnection connection;
+    protected IDbTransaction transaction;
     protected IOrmProvider ormProvider;
+    protected IEntityMapProvider mapProvider;
     protected IQueryVisitor visitor;
     #endregion
 
     #region Constructor
-    public GroupingQueryBase(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
+    public GroupingQueryBase(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
     {
         this.connection = connection;
+        this.transaction = transaction;
         this.ormProvider = ormProvider;
+        this.mapProvider = mapProvider;
         this.visitor = visitor;
     }
     #endregion
 
-    #region Constructor
-    public IQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.ormProvider, this.visitor);
-    }
-    public IQuery<TTarget> Select<TTarget>(string fields = "*")
+    #region Select/SelectAnonymous
+    public IQueryAnonymousObject SelectAnonymous(string fields = "*")
     {
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
         this.visitor.Select(fields, null, true);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new QueryAnonymousObject(this.visitor);
     }
+    public IQuery<TGrouping> Select()
+    {
+        this.visitor.SelectGrouping();
+        return new Query<TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }    
     #endregion
 }
-class GroupingQuery<T, TGrouping> : IGroupingQuery<T, TGrouping>
+class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T, TGrouping>
 {
-    #region Fields
-    protected TheaConnection connection;
-    protected IOrmProvider ormProvider;
-    protected IQueryVisitor visitor;
-    #endregion
-
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-    {
-        this.connection = connection;
-        this.ormProvider = ormProvider;
-        this.visitor = visitor;
-    }
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region Having
@@ -93,34 +88,21 @@ class GroupingQuery<T, TGrouping> : IGroupingQuery<T, TGrouping>
     #endregion
 
     #region Select
-    public IQuery<TGrouping> Select()
-    {
-        this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.ormProvider, this.visitor);
-    }
-    public IQuery<TTarget> Select<TTarget>(string fields)
-    {
-        if (string.IsNullOrEmpty(fields))
-            throw new ArgumentNullException(nameof(fields));
-
-        this.visitor.Select(fields, null, true);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
-    }
     public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 }
 class GroupingQuery<T1, T2, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, TGrouping>
 {
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region Having
@@ -169,15 +151,15 @@ class GroupingQuery<T1, T2, TGrouping> : GroupingQueryBase<TGrouping>, IGrouping
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 }
 class GroupingQuery<T1, T2, T3, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, TGrouping>
 {
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region Having
@@ -226,15 +208,15 @@ class GroupingQuery<T1, T2, T3, TGrouping> : GroupingQueryBase<TGrouping>, IGrou
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 }
 class GroupingQuery<T1, T2, T3, T4, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, TGrouping>
 {
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region Having
@@ -283,15 +265,15 @@ class GroupingQuery<T1, T2, T3, T4, TGrouping> : GroupingQueryBase<TGrouping>, I
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 }
 class GroupingQuery<T1, T2, T3, T4, T5, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, TGrouping>
 {
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region Having
@@ -340,15 +322,15 @@ class GroupingQuery<T1, T2, T3, T4, T5, TGrouping> : GroupingQueryBase<TGrouping
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 }
 class GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>
 {
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region Having
@@ -397,15 +379,15 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : GroupingQueryBase<TGrou
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 }
 class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
 {
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region Having
@@ -454,15 +436,15 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : GroupingQueryBase<T
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 }
 class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>
 {
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region Having
@@ -511,15 +493,15 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : GroupingQueryBa
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 }
 class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>
 {
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region Having
@@ -568,15 +550,15 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : GroupingQue
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 }
 class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>
 {
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region Having
@@ -625,15 +607,15 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : Groupi
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 }
 class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>
 {
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region Having
@@ -682,15 +664,15 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : G
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 }
 class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>
 {
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region Having
@@ -739,15 +721,15 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 }
 class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>
 {
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region Having
@@ -796,15 +778,15 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGro
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 }
 class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>
 {
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region Having
@@ -853,15 +835,15 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14,
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 }
 class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>
 {
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IOrmProvider ormProvider, IQueryVisitor visitor)
-        : base(connection, ormProvider, visitor) { }
+    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region Select
@@ -871,7 +853,7 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14,
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.ormProvider, this.visitor);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 }

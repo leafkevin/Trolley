@@ -176,17 +176,16 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <param name="subQuery">子查询</param>
     /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> From<T>(Func<IFromQuery, IFromQuery<T>> subQuery, char tableAsStart = 'a');
+    IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery, char tableAsStart = 'a');
     #endregion
 
     #region FromWith CTE
     /// <summary>
     /// 使用CTE子句创建查询对象，不能自我引用不能递归查询，用法：
     /// <code>
-    /// repository
-    ///     .FromWith(f =&gt; f.From&lt;Menu&gt;()
-    ///         .Select(x =&gt; new { x.Id, x.Name, x.ParentId, x.PageId }), "MenuList")
-    ///     ...
+    /// var subQuery = repository.From&lt;Menu&gt;()
+    ///     .Select(x =&gt; new { x.Id, x.Name, x.ParentId, x.PageId });
+    /// repository.FromWith(subQuery, "MenuList") ...
     /// SQL:
     /// WITH MenuList(Id,Name,ParentId,PageId) AS 
     /// (
@@ -197,21 +196,20 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// </summary>
     /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
     /// <param name="cteSubQuery">CTE 查询子句</param>
-    /// <param name="cteTableName">CTE子句的临时表名，默认值：cte</param>
+    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
     /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> FromWith<T>(Func<IFromQuery, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    IQuery<T> FromWith<T>(IQuery<T> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
     /// <summary>
-    /// 使用可递归CTE子句创建查询对象，可以自我引用递归查询，要有包含自我引用的Union或Union All查询子句，通常用来查询树型数据，查找叶子或是查找根，用法：
+    /// 使用CTE子句创建查询对象，包含UnionRecursive或UnionAllRecursive子句可以自我引用递归查询，用法：
     /// <code>
     /// repository
-    ///     .FromWithRecursive((f, cte) =&gt; f.From&lt;Menu&gt;()
+    ///     .FromWith(f =&gt; f.From&lt;Menu&gt;()
     ///             .Where(x =&gt; x.Id == 1)
     ///             .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
-    ///         .UnionAllRecursive((x, y) =&gt; x.From&lt;Menu&gt;()
-    ///             .InnerJoinRecursive(y, cte, (a, b) =&gt; a.ParentId == b.Id)
-    ///             .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId })), "MenuList")
-    ///     ...
+    ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+    ///             .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId })), "MenuList") ...
     /// SQL:
     /// WITH RECURSIVE MenuList(Id,Name,ParentId) AS
     /// (
@@ -221,11 +219,11 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// </code>
     /// </summary>
     /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
-    /// <param name="cteSubQuery">CTE 查询子句，带有Union或Union All查询子句</param>
-    /// <param name="cteTableName">CTE子句的临时表名，默认值：cte</param>
+    /// <param name="cteSubQuery">CTE 查询子句</param>
+    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
     /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> FromWithRecursive<T>(Func<IFromQuery, string, IFromQuery<T>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
     #endregion
 
     #region QueryFirst/Query
@@ -391,90 +389,6 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <typeparam name="TEntity">插入实体类型</typeparam>
     /// <returns>返回插入对象</returns>
     ICreate<TEntity> Create<TEntity>();
-    /// <summary>
-    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，用法：
-    /// <code>
-    /// repository.Create&lt;User&gt;(new
-    /// {
-    ///     Name = "leafkevin",
-    ///     Age = 25,
-    ///     UpdatedAt = DateTime.Now,
-    ///     UpdatedBy = 1
-    /// });
-    /// repository.Create&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
-    /// SQL:
-    /// INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
-    /// INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典，也可以是这些类型的IEnumerable类型，如：new { Value1 = 1, Value2 = "xxx" } 或 new Order{ ... }</param>
-    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
-    /// <returns>返回插入行数</returns>
-    int Create<TEntity>(object insertObjs, int bulkCount = 500);
-    /// <summary>
-    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，用法：
-    /// <code>
-    /// await repository.CreateAsync&lt;User&gt;(new
-    /// {
-    ///     Name = "leafkevin",
-    ///     Age = 25,
-    ///     UpdatedAt = DateTime.Now,
-    ///     UpdatedBy = 1
-    /// });
-    /// await repository.CreateAsync&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
-    /// SQL:
-    /// INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
-    /// INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典，也可以是这些类型的IEnumerable类型，如：new { Value1 = 1, Value2 = "xxx" } 或 new Order{ ... }</param>
-    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
-    /// <returns>返回插入行数</returns>
-    Task<int> CreateAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，用法：
-    /// <code>
-    /// repository.Create&lt;User&gt;(new
-    /// {
-    ///     Name = "leafkevin",
-    ///     Age = 25,
-    ///     UpdatedAt = DateTime.Now,
-    ///     UpdatedBy = 1
-    /// });
-    /// repository.Create&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
-    /// SQL:
-    /// INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
-    /// INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典，也可以是这些类型的IEnumerable类型，如：new { Value1 = 1, Value2 = "xxx" } 或 new Order{ ... }</param>
-    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
-    /// <returns>返回插入行数</returns>
-    long CreateLong<TEntity>(object insertObjs, int bulkCount = 500);
-    /// <summary>
-    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，用法：
-    /// <code>
-    /// await repository.CreateAsync&lt;User&gt;(new
-    /// {
-    ///     Name = "leafkevin",
-    ///     Age = 25,
-    ///     UpdatedAt = DateTime.Now,
-    ///     UpdatedBy = 1
-    /// });
-    /// await repository.CreateAsync&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
-    /// SQL:
-    /// INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
-    /// INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典，也可以是这些类型的IEnumerable类型，如：new { Value1 = 1, Value2 = "xxx" } 或 new Order{ ... }</param>
-    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
-    /// <returns>返回插入行数</returns>
-    Task<long> CreateLongAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default);
     #endregion
 
     #region Update
@@ -623,43 +537,43 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     Task<int> ExecuteAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
     #endregion
 
-    #region QueryMultiple
-    #region 不支持
+    //#region QueryMultiple
+    //#region 不支持
+    /////// <summary>
+    /////// 多SQL语句一起执行，并返回多个结果集，根据SQL语句按顺序接收返回结果。
+    /////// </summary>
+    /////// <param name="rawSql">要执行的SQL</param>
+    /////// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
+    /////// <returns>返回多结果集Reader对象</returns>
+    ////IMultiQueryReader QueryMultiple(string rawSql, object parameters = null);
+    /////// <summary>
+    /////// 多SQL语句一起执行，并返回多个结果集，根据SQL语句顺序接收返回结果。
+    /////// </summary>
+    /////// <param name="rawSql">要执行的SQL</param>
+    /////// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
+    /////// <param name="cancellationToken">取消Token</param>
+    /////// <returns>返回多结果集Reader对象</returns>
+    ////Task<IMultiQueryReader> QueryMultipleAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
+    //#endregion
     ///// <summary>
-    ///// 多SQL语句一起执行，并返回多个结果集，根据SQL语句按顺序接收返回结果。
+    ///// 使用IMultipleQuery操作生成多个SQL语句一起执行，并返回多个结果集，根据IMultipleQuery操作顺序接收返回结果。
     ///// </summary>
-    ///// <param name="rawSql">要执行的SQL</param>
-    ///// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
+    ///// <param name="subQueries">多个SQL查询操作，不能为null</param>
     ///// <returns>返回多结果集Reader对象</returns>
-    //IMultiQueryReader QueryMultiple(string rawSql, object parameters = null);
+    //IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries);
     ///// <summary>
-    ///// 多SQL语句一起执行，并返回多个结果集，根据SQL语句顺序接收返回结果。
+    ///// 使用IMultipleQuery操作生成多个SQL语句一起执行，并返回多个结果集，根据IMultipleQuery操作顺序接收返回结果。
     ///// </summary>
-    ///// <param name="rawSql">要执行的SQL</param>
-    ///// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
+    ///// <param name="subQueries">多个SQL查询操作，不能为null</param>
     ///// <param name="cancellationToken">取消Token</param>
     ///// <returns>返回多结果集Reader对象</returns>
-    //Task<IMultiQueryReader> QueryMultipleAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
-    #endregion
-    /// <summary>
-    /// 使用IMultipleQuery操作生成多个SQL语句一起执行，并返回多个结果集，根据IMultipleQuery操作顺序接收返回结果。
-    /// </summary>
-    /// <param name="subQueries">多个SQL查询操作，不能为null</param>
-    /// <returns>返回多结果集Reader对象</returns>
-    IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries);
-    /// <summary>
-    /// 使用IMultipleQuery操作生成多个SQL语句一起执行，并返回多个结果集，根据IMultipleQuery操作顺序接收返回结果。
-    /// </summary>
-    /// <param name="subQueries">多个SQL查询操作，不能为null</param>
-    /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回多结果集Reader对象</returns>
-    Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default);
-    #endregion
+    //Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default);
+    //#endregion
 
-    #region MultipleExecute
-    void MultipleExecute(List<MultipleCommand> commands);
-    Task MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default);
-    #endregion
+    //#region MultipleExecute
+    //void MultipleExecute(List<MultipleCommand> commands);
+    //Task MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default);
+    //#endregion
 
     #region Others
     /// <summary>

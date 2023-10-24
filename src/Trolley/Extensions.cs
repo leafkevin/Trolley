@@ -21,32 +21,6 @@ public static class Extensions
     private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
 
-    public static IOrmProvider GetOrmProvider(this IOrmDbFactory dbFactory, string dbKey, int? tenantId = null)
-    {
-        var dbProvider = dbFactory.GetDatabaseProvider(dbKey);
-        var database = dbProvider.GetDatabase(tenantId);
-        if (dbFactory.TryGetOrmProvider(database.OrmProviderType, out var ormProvider))
-            return ormProvider;
-        return null;
-    }
-    public static IEntityMapProvider GetEntityMapProvider(this IOrmDbFactory dbFactory, string dbKey, int? tenantId = null)
-    {
-        var dbProvider = dbFactory.GetDatabaseProvider(dbKey);
-        var database = dbProvider.GetDatabase(tenantId);
-        if (dbFactory.TryGetEntityMapProvider(database.OrmProviderType, out var entityMapProvider))
-            return entityMapProvider;
-        return null;
-    }
-    public static TenantDatabaseBuilder Add<TOrmProvider>(this TheaDatabaseBuilder builder, string connectionString, bool isDefault, params int[] tenantIds) where TOrmProvider : IOrmProvider, new()
-    {
-        return builder.Add(new TheaDatabase
-        {
-            ConnectionString = connectionString,
-            IsDefault = isDefault,
-            OrmProviderType = typeof(TOrmProvider),
-            TenantIds = tenantIds
-        });
-    }
     public static OrmDbFactoryBuilder AddTypeHandler<TTypeHandler>(this OrmDbFactoryBuilder builder) where TTypeHandler : class, ITypeHandler, new()
        => builder.AddTypeHandler(new TTypeHandler());
     public static OrmDbFactoryBuilder Configure<TOrmProvider>(this OrmDbFactoryBuilder builder, IModelConfiguration configuration)
@@ -61,14 +35,21 @@ public static class Extensions
     }
     public static IOrmDbFactory Configure<TOrmProvider>(this IOrmDbFactory dbFactory, IModelConfiguration configuration) where TOrmProvider : class, IOrmProvider, new()
     {
-        dbFactory.Configure(typeof(TOrmProvider), configuration);
+        var ormProviderType = typeof(TOrmProvider);
+        if (!dbFactory.TryGetMapProvider(ormProviderType, out var mapProvider))
+        {
+            if (!dbFactory.TryGetOrmProvider(ormProviderType, out _))
+                dbFactory.AddOrmProvider(new TOrmProvider());
+            dbFactory.AddMapProvider(ormProviderType, new EntityMapProvider { OrmProviderType = ormProviderType });
+        }
+        configuration.OnModelCreating(new ModelBuilder(mapProvider));
         return dbFactory;
     }
     public static IOrmDbFactory Configure<TOrmProvider, TModelConfiguration>(this IOrmDbFactory dbFactory)
         where TOrmProvider : class, IOrmProvider, new()
         where TModelConfiguration : class, IModelConfiguration, new()
     {
-        dbFactory.Configure(typeof(TOrmProvider), new TModelConfiguration());
+        dbFactory.Configure<TOrmProvider>(new TModelConfiguration());
         return dbFactory;
     }
     public static string GetQuotedValue(this IOrmProvider ormProvider, object value, string nullValue = "NULL")

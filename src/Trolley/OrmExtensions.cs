@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading;
@@ -103,6 +104,119 @@ public static class OrmExtensions
         if (wherePredicate != null)
             query.Where(wherePredicate);
         return await query.ToDictionaryAsync(keySelector, valueSelector, cancellationToken);
+    }
+    #endregion
+
+    #region Create
+    /// <summary>
+    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，用法：
+    /// <code>
+    /// repository.Create&lt;User&gt;(new
+    /// {
+    ///     Name = "leafkevin",
+    ///     Age = 25,
+    ///     UpdatedAt = DateTime.Now,
+    ///     UpdatedBy = 1
+    /// });
+    /// repository.Create&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
+    /// SQL:
+    /// INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
+    /// INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="repository">仓储对象</param> 
+    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典，也可以是这些类型的IEnumerable类型，如：new { Value1 = 1, Value2 = "xxx" } 或 new Order{ ... }</param>
+    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
+    /// <returns>返回插入行数</returns>
+    public static int Create<TEntity>(this IRepository repository, object insertObjs, int bulkCount = 500)
+    {
+        bool isMulti = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
+        if (isMulti) return repository.Create<TEntity>().WithBulk(insertObjs as IEnumerable, bulkCount).Execute();
+        else return repository.Create<TEntity>().WithBy(insertObjs).Execute();
+    }
+    /// <summary>
+    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，用法：
+    /// <code>
+    /// await repository.CreateAsync&lt;User&gt;(new
+    /// {
+    ///     Name = "leafkevin",
+    ///     Age = 25,
+    ///     UpdatedAt = DateTime.Now,
+    ///     UpdatedBy = 1
+    /// });
+    /// await repository.CreateAsync&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
+    /// SQL:
+    /// INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
+    /// INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="repository">仓储对象</param> 
+    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典，也可以是这些类型的IEnumerable类型，如：new { Value1 = 1, Value2 = "xxx" } 或 new Order{ ... }</param>
+    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回插入行数</returns>
+    public static async Task<int> CreateAsync<TEntity>(this IRepository repository, object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
+    {
+        bool isMulti = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
+        if (isMulti) return await repository.Create<TEntity>().WithBulk(insertObjs as IEnumerable, bulkCount).ExecuteAsync(cancellationToken);
+        else return await repository.Create<TEntity>().WithBy(insertObjs).ExecuteAsync(cancellationToken);
+    }
+    /// <summary>
+    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，用法：
+    /// <code>
+    /// repository.CreateLong&lt;User&gt;(new
+    /// {
+    ///     Name = "leafkevin",
+    ///     Age = 25,
+    ///     UpdatedAt = DateTime.Now,
+    ///     UpdatedBy = 1
+    /// });
+    /// repository.CreateLong&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
+    /// SQL:
+    /// INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
+    /// INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="repository">仓储对象</param>
+    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典，也可以是这些类型的IEnumerable类型，如：new { Value1 = 1, Value2 = "xxx" } 或 new Order{ ... }</param>
+    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
+    /// <returns>返回插入行数</returns>
+    public static long CreateLong<TEntity>(this IRepository repository, object insertObjs, int bulkCount = 500)
+    {
+        bool isMulti = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
+        if (isMulti) return repository.Create<TEntity>().WithBulk(insertObjs as IEnumerable, bulkCount).ExecuteLong();
+        else return repository.Create<TEntity>().WithBy(insertObjs).ExecuteLong();
+    }
+    /// <summary>
+    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，用法：
+    /// <code>
+    /// await repository.CreateLongAsync&lt;User&gt;(new
+    /// {
+    ///     Name = "leafkevin",
+    ///     Age = 25,
+    ///     UpdatedAt = DateTime.Now,
+    ///     UpdatedBy = 1
+    /// });
+    /// await repository.CreateLongAsync&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
+    /// SQL:
+    /// INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
+    /// INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="repository">仓储对象</param>
+    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典，也可以是这些类型的IEnumerable类型，如：new { Value1 = 1, Value2 = "xxx" } 或 new Order{ ... }</param>
+    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回插入行数</returns>
+    public static async Task<long> CreateLongAsync<TEntity>(this IRepository repository, object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
+    {
+        bool isMulti = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
+        if (isMulti) return await repository.Create<TEntity>().WithBulk(insertObjs as IEnumerable, bulkCount).ExecuteLongAsync(cancellationToken);
+        else return await repository.Create<TEntity>().WithBy(insertObjs).ExecuteLongAsync(cancellationToken);
     }
     #endregion
 
