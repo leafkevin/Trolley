@@ -15,7 +15,7 @@ public interface IFromQuery
     /// <typeparam name="T">实体类型</typeparam>
     /// <param name="tableAsStart">表别名起始字母，默认从'a'开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> From<T>(char tableAsStart='a');
+    IQuery<T> From<T>(char tableAsStart = 'a');
     /// <summary>
     /// 创建子查询，生成SQL: FROM T
     /// </summary>

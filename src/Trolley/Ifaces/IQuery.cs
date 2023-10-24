@@ -812,6 +812,7 @@ public interface IQuery<T1, T2> : IQueryBase
     ///             .Select(cte1, cte2 =&gt; new { a.Id, a.Name, a.ParentId, Url = Sql.Null&lt;string&gt; })
     ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+	///				...
     ///             .LeftJoin(cte2, (a, b) =&gt; a.PageId == c.Id)
     ///             .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId, c.Url })), "MenuPageList") ...
     /// SQL:
@@ -899,7 +900,7 @@ public interface IQuery<T1, T2> : IQueryBase
     IQuery<T1, T2> InnerJoin(Expression<Func<T1, T2, bool>> joinOn);
     /// <summary>
     /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((<#=tableAlias#>) =&gt; ...)</code>
+    /// <code>.LeftJoin((a, b) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
@@ -1102,8 +1103,8 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, TFields>> fieldsExpr);
     /// <summary>
-    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
-    /// OrderByDescending((a, b) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -1309,6 +1310,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     ///             .Select(cte1, cte2, cte3 =&gt; new { a.Id, a.Name, a.ParentId, Url = Sql.Null&lt;string&gt; })
     ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+	///				...
     ///             .LeftJoin(cte3, (a, b, c) =&gt; a.PageId == c.Id)
     ///             .Select((a, b, c) =&gt; new { a.Id, a.Name, a.ParentId, c.Url })), "MenuPageList") ...
     /// SQL:
@@ -1329,10 +1331,10 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// f.From&lt;Page&gt;() ... .Select((x, y) =&gt; new { ... })
     /// </code>
     /// </param>
-    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
     /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    IQuery<T1, T2, T3, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<TOther>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
     #endregion
 
     #region WithTable
@@ -1396,9 +1398,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     IQuery<T1, T2, T3> InnerJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
     /// <summary>
     /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c) =&gt; ...)
-    /// </code>
+    /// <code>.LeftJoin((a, b, c) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
@@ -1601,8 +1601,8 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
-    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
-    /// OrderByDescending((a, b) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -1809,6 +1809,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     ///             .Select(cte1, cte2, cte3, cte4 =&gt; new { a.Id, a.Name, a.ParentId, Url = Sql.Null&lt;string&gt; })
     ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+	///				...
     ///             .LeftJoin(cte4, (a, b, c, d) =&gt; a.PageId == c.Id)
     ///             .Select((a, b, c, d) =&gt; new { a.Id, a.Name, a.ParentId, c.Url })), "MenuPageList") ...
     /// SQL:
@@ -1829,10 +1830,10 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// f.From&lt;Page&gt;() ... .Select((x, y) =&gt; new { ... })
     /// </code>
     /// </param>
-    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
     /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<T4>, IQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    IQuery<T1, T2, T3, T4, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<T4>, IQuery<TOther>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
     #endregion
 
     #region WithTable
@@ -1896,9 +1897,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     IQuery<T1, T2, T3, T4> InnerJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
     /// <summary>
     /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d) =&gt; ...)
-    /// </code>
+    /// <code>.LeftJoin((a, b, c, d) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
@@ -2101,8 +2100,8 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
-    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
-    /// OrderByDescending((a, b) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -2310,6 +2309,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     ///             .Select(cte1, cte2, cte3, cte4, cte5 =&gt; new { a.Id, a.Name, a.ParentId, Url = Sql.Null&lt;string&gt; })
     ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+	///				...
     ///             .LeftJoin(cte5, (a, b, c, d, e) =&gt; a.PageId == c.Id)
     ///             .Select((a, b, c, d, e) =&gt; new { a.Id, a.Name, a.ParentId, c.Url })), "MenuPageList") ...
     /// SQL:
@@ -2330,10 +2330,10 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// f.From&lt;Page&gt;() ... .Select((x, y) =&gt; new { ... })
     /// </code>
     /// </param>
-    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
     /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<T4>, IQuery<T5>, IQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    IQuery<T1, T2, T3, T4, T5, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<T4>, IQuery<T5>, IQuery<TOther>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
     #endregion
 
     #region WithTable
@@ -2397,9 +2397,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     IQuery<T1, T2, T3, T4, T5> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
     /// <summary>
     /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e) =&gt; ...)
-    /// </code>
+    /// <code>.LeftJoin((a, b, c, d, e) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
@@ -2602,8 +2600,8 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
-    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
-    /// OrderByDescending((a, b) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -2812,6 +2810,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     ///             .Select(cte1, cte2, cte3, cte4, cte5, cte6 =&gt; new { a.Id, a.Name, a.ParentId, Url = Sql.Null&lt;string&gt; })
     ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+	///				...
     ///             .LeftJoin(cte6, (a, b, c, d, e, f) =&gt; a.PageId == c.Id)
     ///             .Select((a, b, c, d, e, f) =&gt; new { a.Id, a.Name, a.ParentId, c.Url })), "MenuPageList") ...
     /// SQL:
@@ -2832,10 +2831,10 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// f.From&lt;Page&gt;() ... .Select((x, y) =&gt; new { ... })
     /// </code>
     /// </param>
-    /// <param name="cteTableName">CTE表名</param>
+    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
     /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<T4>, IQuery<T5>, IQuery<T6>, IQuery<TOther>> cteSubQuery, string cteTableName = "cte", char tableAsStart = 'a');
+    IQuery<T1, T2, T3, T4, T5, T6, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<T4>, IQuery<T5>, IQuery<T6>, IQuery<TOther>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
     #endregion
 
     #region WithTable
@@ -2899,9 +2898,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     IQuery<T1, T2, T3, T4, T5, T6> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
     /// <summary>
     /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f) =&gt; ...)
-    /// </code>
+    /// <code>.LeftJoin((a, b, c, d, e, f) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
@@ -3104,8 +3101,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
-    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
-    /// OrderByDescending((a, b) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -3364,9 +3361,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     IQuery<T1, T2, T3, T4, T5, T6, T7> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
     /// <summary>
     /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g) =&gt; ...)
-    /// </code>
+    /// <code>.LeftJoin((a, b, c, d, e, f, g) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
@@ -3569,8 +3564,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     /// <summary>
-    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
-    /// OrderByDescending((a, b) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -3830,9 +3825,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
     /// <summary>
     /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g, h) =&gt; ...)
-    /// </code>
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
@@ -4035,8 +4028,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     /// <summary>
-    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
-    /// OrderByDescending((a, b) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -4297,9 +4290,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
     /// <summary>
     /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)
-    /// </code>
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
@@ -4502,8 +4493,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     /// <summary>
-    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
-    /// OrderByDescending((a, b) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -4765,9 +4756,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
     /// <summary>
     /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
-    /// </code>
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
@@ -4970,8 +4959,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     /// <summary>
-    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
-    /// OrderByDescending((a, b) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -5234,9 +5223,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
     /// <summary>
     /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
-    /// </code>
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
@@ -5439,8 +5426,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     /// <summary>
-    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
-    /// OrderByDescending((a, b) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -5704,9 +5691,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
     /// <summary>
     /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
-    /// </code>
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
@@ -5909,8 +5894,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     /// <summary>
-    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
-    /// OrderByDescending((a, b) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -6175,9 +6160,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
     /// <summary>
     /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
-    /// </code>
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
@@ -6380,8 +6363,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     /// <summary>
-    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
-    /// OrderByDescending((a, b) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -6647,9 +6630,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
     /// <summary>
     /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
-    /// </code>
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
@@ -6852,8 +6833,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     /// <summary>
-    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
-    /// OrderByDescending((a, b) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -7103,9 +7084,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
     /// <summary>
     /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
-    /// </code>
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
@@ -7193,8 +7172,8 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     /// <summary>
-    /// 使用表达式fieldsExpr，生成DSC排序语句，fieldsExpr可以是一或多个字段，用法：
-    /// OrderByDescending((a, b) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
+    /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
+    /// OrderByDescending((a, b, ...) =&gt; new { a.Id, b.Id }) 或是 OrderByDescending((a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>

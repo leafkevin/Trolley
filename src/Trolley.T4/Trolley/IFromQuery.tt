@@ -51,7 +51,7 @@ public interface IFromQuery
 <#      }#>
     /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IFromQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a');
+    IQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a');
 <#  }#>
     #endregion
 

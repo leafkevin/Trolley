@@ -54,10 +54,10 @@ public class FromQuery : IFromQuery
         tables += $", T{i}";
         typeOfTables += $", typeof(T{i})";
 #>
-    public IFromQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a')
+    public IQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a')
     {
         this.visitor.From(tableAsStart, <#=typeOfTables#>);
-        return new FromQuery<<#=tables#>>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        return new Query<<#=tables#>>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
 <#  }#>
     #endregion

@@ -38,7 +38,15 @@ class GroupingQueryBase<TGrouping>
     {
         this.visitor.SelectGrouping();
         return new Query<TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }    
+    }
+    public IQuery<TTarget> Select<TTarget>(string fields)
+    {
+        if (string.IsNullOrEmpty(fields))
+            throw new ArgumentNullException(nameof(fields));
+
+        this.visitor.Select(fields, null, true);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
     #endregion
 }
 class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T, TGrouping>
