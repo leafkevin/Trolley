@@ -1020,9 +1020,8 @@ public class SqlVisitor : ISqlVisitor
                 currentExpr = callExpr.Object;
             }
         }
-        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, TableAsStart, ParameterPrefix);
-        //TODO:参数与command
-        //queryVisitor.Command = this;
+        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+        //TODO:参数与command 
         queryVisitor.IsNeedAlias = this.IsNeedAlias;
 
         while (callStack.TryPop(out var callExpr))

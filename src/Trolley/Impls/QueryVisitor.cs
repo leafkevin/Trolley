@@ -40,11 +40,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public List<object> CteQueries { get; set; }
     public Dictionary<object, TableSegment> CteTableSegments { get; set; }
 
-    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix)
     {
         this.Tables = new();
         this.TableAlias = new();
+        this.DbParameters = dbParameters;
     }
     public virtual string BuildSql(out List<ReaderField> readerFields, bool isContainsCteSql = true, bool isUnion = false)
     {

@@ -124,10 +124,6 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Create.cs</LastGenOutput>
     </Content>
-    <Content Include="Trolley\FromGroupingQuery.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>FromGroupingQuery.cs</LastGenOutput>
-    </Content>
     <Content Include="Trolley\FromQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>FromQuery.cs</LastGenOutput>
@@ -139,10 +135,6 @@
     <Content Include="Trolley\ICreate.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>ICreate.cs</LastGenOutput>
-    </Content>
-    <Content Include="Trolley\IFromGroupingQuery.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>IFromGroupingQuery.cs</LastGenOutput>
     </Content>
     <Content Include="Trolley\IFromQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>

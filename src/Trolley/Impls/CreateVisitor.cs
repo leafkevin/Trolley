@@ -236,9 +236,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual IQueryVisitor CreateQuery(params Type[] sourceTypes)
     {
-        var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix);
+        var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
         queryVisiter.From(this.TableAsStart, sourceTypes);
-        queryVisiter.DbParameters = this.DbParameters;
         return queryVisiter;
     }
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
