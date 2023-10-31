@@ -22,7 +22,7 @@ class QueryAnonymousObject : IQueryAnonymousObject
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        dbParameters = this.visitor.DbParameters;
+        dbParameters = this.visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         return this.visitor.BuildSql(out _);
     }
     #endregion
@@ -40,7 +40,6 @@ class QueryBase : IQueryBase
 
     #region Properties
     public IQueryVisitor Visitor => this.visitor;
-    public bool IsCteQuery { get; set; }
     #endregion
 
     #region Constructor
@@ -86,7 +85,7 @@ class QueryBase : IQueryBase
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        dbParameters = this.visitor.DbParameters;
+        dbParameters = this.visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         return this.visitor.BuildSql(out _);
     }
     #endregion
@@ -174,7 +173,8 @@ class Query<T> : QueryBase, IQuery<T>
         var sql = this.visitor.BuildSql(out var readerFields, false, true);
         this.visitor.Clear(true);
         var tableSegment = this.visitor.WithTable(typeof(T), sql, readerFields, true);
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         sql += " UNION" + Environment.NewLine + query.Visitor.BuildSql(out _, false, true);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -189,7 +189,7 @@ class Query<T> : QueryBase, IQuery<T>
 
         var sql = this.visitor.BuildSql(out var readerFields, false, true);
         this.visitor.Clear(true);
-        var tableSegment = this.visitor.WithTable(typeof(T), sql, readerFields, true);
+        var tableSegment = this.visitor.WithTable(typeof(T), sql, readerFields, true, subQuery);
         sql += " UNION ALL" + Environment.NewLine + subQuery.Visitor.BuildSql(out _, false, true);
         if (!this.visitor.Equals(subQuery.Visitor))
             subQuery.Visitor.CopyTo(this.visitor);
@@ -205,7 +205,8 @@ class Query<T> : QueryBase, IQuery<T>
         var sql = this.visitor.BuildSql(out var readerFields, false, true);
         this.visitor.Clear(true);
         var tableSegment = this.visitor.WithTable(typeof(T), sql, readerFields, true);
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         sql += " UNION ALL" + Environment.NewLine + query.Visitor.BuildSql(out _, false, true);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -221,7 +222,8 @@ class Query<T> : QueryBase, IQuery<T>
         var sql = this.visitor.BuildSql(out var readerFields, false, true);
         this.visitor.Clear(true);
         var tableSegment = this.visitor.WithTable(typeof(T), sql, readerFields, cteTableName, this);
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor), this);
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery, this);
         sql += " UNION" + Environment.NewLine + query.Visitor.BuildSql(out _, false, true);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -238,7 +240,8 @@ class Query<T> : QueryBase, IQuery<T>
         this.visitor.Clear(true);
         var tableSegment = this.visitor.WithTable(typeof(T), sql, readerFields, cteTableName, this);
         this.visitor.Clear(true);
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor), this);
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery, this);
         sql += " UNION ALL" + Environment.NewLine + query.Visitor.BuildSql(out _, false, true);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -255,7 +258,8 @@ class Query<T> : QueryBase, IQuery<T>
             throw new ArgumentNullException(nameof(cteSubQuery));
 
         this.visitor.Clear(true);
-        var query = cteSubQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor), this);
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = cteSubQuery.Invoke(fromQuery, this);
         var rawSql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -266,18 +270,6 @@ class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region WithTable
-    public IQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-    {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-
-        var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
-
-        this.visitor.WithTable(typeof(TOther), sql, readerFields, true, subQuery);
-        return new Query<T, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
     public IQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
@@ -370,7 +362,8 @@ class Query<T> : QueryBase, IQuery<T>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -386,7 +379,8 @@ class Query<T> : QueryBase, IQuery<T>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -402,7 +396,8 @@ class Query<T> : QueryBase, IQuery<T>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);

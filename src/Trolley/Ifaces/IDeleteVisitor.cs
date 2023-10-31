@@ -8,6 +8,8 @@ namespace Trolley;
 
 public interface IDeleteVisitor
 {
+    IDataParameterCollection DbParameters { get; set; }
+
     string BuildSql(out List<IDbDataParameter> dbParameters);
     void Initialize(Type entityType, bool isFirst = true);
     MultipleCommand CreateMultipleCommand();

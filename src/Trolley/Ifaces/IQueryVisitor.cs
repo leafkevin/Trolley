@@ -7,12 +7,11 @@ namespace Trolley;
 
 public interface IQueryVisitor
 {
-    //IDbCommand Command { get; set; }
     bool IsNeedAlias { get; set; }
     List<TableSegment> CteTables { get; set; }
     List<object> CteQueries { get; set; }
     Dictionary<object, TableSegment> CteTableSegments { get; set; }
-    List<IDbDataParameter> DbParameters { get; set; }
+    IDataParameterCollection DbParameters { get; set; }
 
     string BuildSql(out List<ReaderField> readerFields, bool isContainsCteSql = true, bool isUnion = false);
     bool HasIncludeTables();

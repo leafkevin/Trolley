@@ -194,7 +194,7 @@ public interface IUpdate<TEntity>
     /// <param name="fieldSelector">单个字段筛选表达式</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateSetting<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
@@ -210,7 +210,7 @@ public interface IUpdate<TEntity>
     /// <param name="fieldSelector">字段筛选表达式，只能筛选一个字段</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateSetting<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     #endregion
 
     #region WithBulk
@@ -514,7 +514,7 @@ public interface IUpdateSetting<TEntity> : IUpdateSet
     /// <param name="fieldSelector">单个字段筛选表达式</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateSetting<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
@@ -530,7 +530,7 @@ public interface IUpdateSetting<TEntity> : IUpdateSet
     /// <param name="fieldSelector">字段筛选表达式，只能筛选一个字段</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSetting<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateSetting<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     #endregion
 
     #region Where/And
@@ -758,7 +758,7 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet
     /// <param name="fieldSelector">单个字段筛选表达式</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateFrom<TEntity, T1> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
@@ -774,7 +774,7 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet
     /// <param name="fieldSelector">字段筛选表达式，只能筛选一个字段</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateFrom<TEntity, T1> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     #endregion
 
     #region Where/And
@@ -996,7 +996,7 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet
     /// <param name="fieldSelector">单个字段筛选表达式</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateFrom<TEntity, T1, T2> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
@@ -1012,7 +1012,7 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet
     /// <param name="fieldSelector">字段筛选表达式，只能筛选一个字段</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateFrom<TEntity, T1, T2> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     #endregion
 
     #region Where/And
@@ -1235,7 +1235,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet
     /// <param name="fieldSelector">单个字段筛选表达式</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateFrom<TEntity, T1, T2, T3> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
@@ -1251,7 +1251,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet
     /// <param name="fieldSelector">字段筛选表达式，只能筛选一个字段</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateFrom<TEntity, T1, T2, T3> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     #endregion
 
     #region Where/And
@@ -1475,7 +1475,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet
     /// <param name="fieldSelector">单个字段筛选表达式</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateFrom<TEntity, T1, T2, T3, T4> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
@@ -1491,7 +1491,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet
     /// <param name="fieldSelector">字段筛选表达式，只能筛选一个字段</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateFrom<TEntity, T1, T2, T3, T4> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     #endregion
 
     #region Where/And
@@ -1716,7 +1716,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet
     /// <param name="fieldSelector">单个字段筛选表达式</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
@@ -1732,7 +1732,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet
     /// <param name="fieldSelector">字段筛选表达式，只能筛选一个字段</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     #endregion
 
     #region Where/And
@@ -1982,7 +1982,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet
     /// <param name="fieldSelector">单个字段筛选表达式</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateJoin<TEntity, T1> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
@@ -1998,7 +1998,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet
     /// <param name="fieldSelector">字段筛选表达式，只能筛选一个字段</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateJoin<TEntity, T1> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     #endregion
 
     #region Where/And
@@ -2249,7 +2249,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet
     /// <param name="fieldSelector">单个字段筛选表达式</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateJoin<TEntity, T1, T2> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
@@ -2265,7 +2265,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet
     /// <param name="fieldSelector">字段筛选表达式，只能筛选一个字段</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateJoin<TEntity, T1, T2> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     #endregion
 
     #region Where/And
@@ -2517,7 +2517,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet
     /// <param name="fieldSelector">单个字段筛选表达式</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
@@ -2533,7 +2533,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet
     /// <param name="fieldSelector">字段筛选表达式，只能筛选一个字段</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     #endregion
 
     #region Where/And
@@ -2786,7 +2786,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet
     /// <param name="fieldSelector">单个字段筛选表达式</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
@@ -2802,7 +2802,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet
     /// <param name="fieldSelector">字段筛选表达式，只能筛选一个字段</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     #endregion
 
     #region Where/And
@@ -3039,7 +3039,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet
     /// <param name="fieldSelector">单个字段筛选表达式</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
@@ -3055,7 +3055,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet
     /// <param name="fieldSelector">字段筛选表达式，只能筛选一个字段</param>
     /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
     #endregion
 
     #region Where/And

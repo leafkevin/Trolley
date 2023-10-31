@@ -11,26 +11,98 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
+/// <summary>
+/// 导航属性查询
+/// </summary>
+/// <typeparam name="T">表T实体类型</typeparam>
+/// <typeparam name="TMember">表T导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T, TMember> : IMultiQuery<T>
 {
+    /// <summary>
+    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
+    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// <code>
+    /// repository.From&lt;Product&gt;()
+    ///   .Include(f =&gt; f.Brand) ...
+    /// repository.From&lt;Brand&gt;()
+    ///   .Include(f =&gt; f.Products) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
+    /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
+    /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
+    /// <summary>
+    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
+    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// <code>
+    /// repository.From&lt;User&gt;()
+    ///   .IncludeMany(f =&gt; f.Orders)
+    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
+    ///   ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TElment">导航属性泛型类型</typeparam>
+    /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
+    /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
+    /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
 }
 <#
-    var count = 15;
+    var count = 16;
     var tables = "T1";
-    for (int i = 2; i < count; i++)
+    var currentTable = "T1";
+    for (int i = 2; i <= count; i++)
     {
         tables += $", T{i}";
 #>
-public interface IMultiIncludableQuery<<#=tables#>, TMember> : IMultiQuery<<#=tables#>>
-{
-    IMultiIncludableQuery<<#=tables#>, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
-    IMultiIncludableQuery<<#=tables#>, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
-}
-<#  }
-    tables += $", T{count}";
+/// <summary>
+/// 导航属性查询
+/// </summary>
+/// <typeparam name="T1">表T1实体类型</typeparam>
+<#
+        for (int j = 2; j <= i; j++)
+        {
+            currentTable = $"T{j}";
 #>
+/// <typeparam name="<#=currentTable#>">表<#=currentTable#>实体类型</typeparam>
+<#      }#>
+/// <typeparam name="TMember">表<#=currentTable#>导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<<#=tables#>, TMember> : IMultiQuery<<#=tables#>>
 {
+<#
+        if(i < count)
+        {
+#>
+    /// <summary>
+    /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
+    /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
+    /// <code>
+    /// repository.From&lt;Product&gt;()
+    ///   .Include(f =&gt; f.Brand) ...
+    /// repository.From&lt;Brand&gt;()
+    ///   .Include(f =&gt; f.Products) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
+    /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
+    /// <returns>返回导航属性查询对象</returns>
+    IMultiIncludableQuery<<#=tables#>, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
+    /// <summary>
+    /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
+    /// 1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上。
+    /// <code>
+    /// repository.From&lt;User&gt;()
+    ///   .IncludeMany(f =&gt; f.Orders)
+    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
+    ///   ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TElment">导航属性泛型类型</typeparam>
+    /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
+    /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
+    /// <returns>返回导航属性查询对象</returns>
+    IMultiIncludableQuery<<#=tables#>, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+<#      }#>
 }
+<#  }#>

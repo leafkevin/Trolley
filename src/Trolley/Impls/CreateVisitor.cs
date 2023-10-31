@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -28,13 +29,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             this.TableAlias = new();
         }
         //clear
-        else
-        {
-            this.deferredSegments.Clear();
-            this.InsertFields.Clear();
-            this.IsUseIgnore = false;
-            base.Clear();
-        }
+        else this.Clear();
         this.Tables.Add(new TableSegment
         {
             EntityType = entityType,
@@ -43,13 +38,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public string BuildCommand(IDbCommand command)
     {
-        this.Command = command;
+        string sql = null;
+        this.DbParameters = command.Parameters;
         foreach (var deferredSegment in this.deferredSegments)
         {
             switch (deferredSegment.Type)
             {
                 case DeferredInsertType.WithBy:
-                    this.VisitWithBy(deferredSegment.Value);
+                    this.VisitWithBy(command, deferredSegment.Value);
                     break;
                 case DeferredInsertType.WithByField:
                     this.VisitWithByField((FieldObject)deferredSegment.Value);
@@ -63,23 +59,29 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     var bulkCommandInitializer = commandInitializer as Action<IDbCommand, StringBuilder, object, int, int>;
                     foreach (var insertObj in insertObjs)
                     {
-                        this.WithBulk(builder, bulkCommandInitializer, insertObj, index);
+                        this.WithBulk(command, builder, bulkCommandInitializer, insertObj, index);
                         index++;
                     }
                     this.WithBulkTail(builder);
-                    return builder.ToString();
+                    sql = builder.ToString();
+                    break;
                 case DeferredInsertType.IfNotExists:
-                    this.VisitIfNotExists(deferredSegment.Value);
+                    this.VisitIfNotExists(command, deferredSegment.Value);
                     break;
                 case DeferredInsertType.SetObject:
-                    //this.VisitSet(command, deferredSegment.Value, this.CommandIndex);
+                    this.VisitSet(command, deferredSegment.Value);
                     break;
                 case DeferredInsertType.SetExpression:
                     this.VisitSet(deferredSegment.Value as Expression);
                     break;
             }
         }
-        return this.BuildSql();
+        if (!this.IsBulk)
+        {
+            sql = this.BuildSql();
+            command.CommandText = sql;
+        }
+        return sql;
     }
     public virtual MultipleCommand CreateMultipleCommand()
     {
@@ -212,18 +214,18 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         builder.Append(headSql);
         return headSql;
     }
-    public virtual void WithBulk(StringBuilder builder, Action<IDbCommand, StringBuilder, object, int> commandInitializer, object insertObj, int index)
+    public virtual void WithBulk(IDbCommand command, StringBuilder builder, Action<IDbCommand, StringBuilder, object, int> commandInitializer, object insertObj, int index)
     {
         if (index > 0) builder.Append(',');
         builder.Append('(');
-        commandInitializer.Invoke(this.Command, builder, insertObj, index);
+        commandInitializer.Invoke(command, builder, insertObj, index);
         builder.Append(')');
     }
-    public virtual void WithBulk(StringBuilder builder, Action<IDbCommand, StringBuilder, object, int, int> commandInitializer, object insertObj, int index)
+    public virtual void WithBulk(IDbCommand command, StringBuilder builder, Action<IDbCommand, StringBuilder, object, int, int> commandInitializer, object insertObj, int index)
     {
         if (index > 0) builder.Append(',');
         builder.Append('(');
-        commandInitializer.Invoke(this.Command, builder, insertObj, index, this.CommandIndex);
+        commandInitializer.Invoke(command, builder, insertObj, index, this.CommandIndex);
         builder.Append(')');
     }
     public virtual void WithBulkTail(StringBuilder builder)
@@ -236,6 +238,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     {
         var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix);
         queryVisiter.From(this.TableAsStart, sourceTypes);
+        queryVisiter.DbParameters = this.DbParameters;
         return queryVisiter;
     }
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
@@ -283,7 +286,19 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             Values = valuesBuilder.ToString()
         });
     }
-    protected virtual void VisitWithBy(object insertObj)
+    public void Clear()
+    {
+        this.Tables?.Clear();
+        this.TableAlias?.Clear();
+        this.ReaderFields?.Clear();
+        this.WhereSql = null;
+        this.TableAsStart = 'a';
+        this.IsNeedAlias = false;
+        this.deferredSegments.Clear();
+        this.InsertFields.Clear();
+        this.IsUseIgnore = false;
+    }
+    protected virtual void VisitWithBy(IDbCommand command, object insertObj)
     {
         var entityType = this.Tables[0].EntityType;
         var commandInitializer = RepositoryHelper.BuildCreateWithBiesCommandInitializer(this, entityType, insertObj, this.IsMultiple);
@@ -291,13 +306,13 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var valuesBuilder = new StringBuilder();
         if (this.IsMultiple)
         {
-            var multiCommandInitializer = commandInitializer as Action<IDbCommand, object, StringBuilder, StringBuilder, int>;
-            multiCommandInitializer.Invoke(this.Command, insertObj, fieldsBuilder, valuesBuilder, this.CommandIndex);
+            var multiCommandInitializer = commandInitializer as Action<IDbCommand, string, object, StringBuilder, StringBuilder>;
+            multiCommandInitializer.Invoke(command, $"m{this.CommandIndex}", insertObj, fieldsBuilder, valuesBuilder);
         }
         else
         {
             var singleCommandInitializer = commandInitializer as Action<IDbCommand, object, StringBuilder, StringBuilder>;
-            singleCommandInitializer.Invoke(this.Command, insertObj, fieldsBuilder, valuesBuilder);
+            singleCommandInitializer.Invoke(command, insertObj, fieldsBuilder, valuesBuilder);
         }
         this.InsertFields.Add(new InsertField
         {
@@ -313,14 +328,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-        this.Command.Parameters.Add(this.OrmProvider.CreateParameter(memberMapper, parameterName, fieldObject.FieldValue));
+        this.DbParameters.Add(this.OrmProvider.CreateParameter(memberMapper, parameterName, fieldObject.FieldValue));
         this.InsertFields.Add(new InsertField
         {
             Fields = this.OrmProvider.GetFieldName(memberMapper.FieldName),
             Values = parameterName
         });
     }
-    protected virtual void VisitIfNotExists(object whereObj)
+    protected virtual void VisitIfNotExists(IDbCommand command, object whereObj)
     {
         this.IsUseIfNotExists = true;
         if (whereObj is Expression whereExpr)
@@ -338,12 +353,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             if (this.IsMultiple)
             {
                 var multiCommandInitializer = commandInitializer as Func<IDbCommand, object, int, string>;
-                this.WhereSql = multiCommandInitializer.Invoke(this.Command, whereObj, this.CommandIndex);
+                this.WhereSql = multiCommandInitializer.Invoke(command, whereObj, this.CommandIndex);
             }
             else
             {
                 var singleCommandInitializer = commandInitializer as Func<IDbCommand, object, string>;
-                this.WhereSql = singleCommandInitializer.Invoke(this.Command, whereObj);
+                this.WhereSql = singleCommandInitializer.Invoke(command, whereObj);
             }
         }
     }
@@ -393,7 +408,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 break;
         }
     }
-    protected virtual void VisitSet(object updateObj)
+    protected virtual void VisitSet(IDbCommand command, object updateObj)
     {
         this.IsUseOrUpdate = true;
         var entityType = this.Tables[0].Mapper.EntityType;
@@ -401,12 +416,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (this.IsMultiple)
         {
             var bulkCommandInitializer = commandInitializer as Action<IDbCommand, List<UpdateField>, object, int>;
-            bulkCommandInitializer.Invoke(this.Command, this.UpdateFields, updateObj, this.CommandIndex);
+            bulkCommandInitializer.Invoke(command, this.UpdateFields, updateObj, this.CommandIndex);
         }
         else
         {
             var bulkCommandInitializer = commandInitializer as Action<IDbCommand, List<UpdateField>, object>;
-            bulkCommandInitializer.Invoke(this.Command, this.UpdateFields, updateObj);
+            bulkCommandInitializer.Invoke(command, this.UpdateFields, updateObj);
         }
     }
     private void InitTableAlias(LambdaExpression lambdaExpr)

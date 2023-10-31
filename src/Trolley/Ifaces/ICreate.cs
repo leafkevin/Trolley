@@ -71,14 +71,14 @@ public interface ICreate<TEntity>
     /// <param name="suffixRawSql">额外的原始SQL, SqlServer会有With用法，如：<cdoe>SELECT * FROM sys_user WITH(NOLOCK)</cdoe>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IFromQuery<T> From<T>(string suffixRawSql = null);
+    IQuery<T> From<T>(string suffixRawSql = null);
     /// <summary>
     /// 使用2个表创建子查询对象，进行插入
     /// </summary>
     /// <typeparam name="T1">表T1实体类型</typeparam>
     /// <typeparam name="T2">表T2实体类型</typeparam>
     /// <returns>返回查询对象</returns>
-    IFromQuery<T1, T2> From<T1, T2>();
+    IQuery<T1, T2> From<T1, T2>();
     /// <summary>
     /// 使用3个表创建子查询对象，进行插入
     /// </summary>
@@ -86,7 +86,7 @@ public interface ICreate<TEntity>
     /// <typeparam name="T2">表T2实体类型</typeparam>
     /// <typeparam name="T3">表T3实体类型</typeparam>
     /// <returns>返回查询对象</returns>
-    IFromQuery<T1, T2, T3> From<T1, T2, T3>();
+    IQuery<T1, T2, T3> From<T1, T2, T3>();
     /// <summary>
     /// 使用4个表创建子查询对象，进行插入
     /// </summary>
@@ -95,7 +95,7 @@ public interface ICreate<TEntity>
     /// <typeparam name="T3">表T3实体类型</typeparam>
     /// <typeparam name="T4">表T4实体类型</typeparam>
     /// <returns>返回查询对象</returns>
-    IFromQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>();
+    IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>();
     /// <summary>
     /// 使用5个表创建子查询对象，进行插入
     /// </summary>
@@ -105,7 +105,7 @@ public interface ICreate<TEntity>
     /// <typeparam name="T4">表T4实体类型</typeparam>
     /// <typeparam name="T5">表T5实体类型</typeparam>
     /// <returns>返回查询对象</returns>
-    IFromQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
+    IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
     /// <summary>
     /// 使用6个表创建子查询对象，进行插入
     /// </summary>
@@ -116,7 +116,7 @@ public interface ICreate<TEntity>
     /// <typeparam name="T5">表T5实体类型</typeparam>
     /// <typeparam name="T6">表T6实体类型</typeparam>
     /// <returns>返回查询对象</returns>
-    IFromQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>();
+    IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>();
     /// <summary>
     /// 使用7个表创建子查询对象，进行插入
     /// </summary>
@@ -128,7 +128,7 @@ public interface ICreate<TEntity>
     /// <typeparam name="T6">表T6实体类型</typeparam>
     /// <typeparam name="T7">表T7实体类型</typeparam>
     /// <returns>返回查询对象</returns>
-    IFromQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>();
+    IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>();
     /// <summary>
     /// 使用8个表创建子查询对象，进行插入
     /// </summary>
@@ -141,7 +141,7 @@ public interface ICreate<TEntity>
     /// <typeparam name="T7">表T7实体类型</typeparam>
     /// <typeparam name="T8">表T8实体类型</typeparam>
     /// <returns>返回查询对象</returns>
-    IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>();
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>();
     /// <summary>
     /// 使用9个表创建子查询对象，进行插入
     /// </summary>
@@ -155,7 +155,7 @@ public interface ICreate<TEntity>
     /// <typeparam name="T8">表T8实体类型</typeparam>
     /// <typeparam name="T9">表T9实体类型</typeparam>
     /// <returns>返回查询对象</returns>
-    IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>();
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>();
     /// <summary>
     /// 使用10个表创建子查询对象，进行插入
     /// </summary>
@@ -170,7 +170,7 @@ public interface ICreate<TEntity>
     /// <typeparam name="T9">表T9实体类型</typeparam>
     /// <typeparam name="T10">表T10实体类型</typeparam>
     /// <returns>返回查询对象</returns>
-    IFromQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>();
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>();
     #endregion
 
     #region UseIgnore/IfNotExists
@@ -243,9 +243,9 @@ public interface ICreated<TEntity>
     Task<long> ExecuteLongAsync(CancellationToken cancellationToken = default);
     #endregion
 
-    #region Execute
-    MultipleCommand ToMultipleCommand();
-    #endregion
+    //#region Execute
+    //MultipleCommand ToMultipleCommand();
+    //#endregion
 
     #region ToSql
     /// <summary>
@@ -331,7 +331,7 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
 public interface ICreateOrUpdate
 {
     ICreateOrUpdate Alias(string aliasName);
-    TField Values<TField>(TField fieldSelector);  
+    TField Values<TField>(TField fieldSelector);
     TFields Set<TFields>(TFields updateObj);
     //TFields Set<TEntity, TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment);
     //TFields Set<TEntity, TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);

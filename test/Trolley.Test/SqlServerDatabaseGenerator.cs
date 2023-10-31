@@ -20,7 +20,7 @@ class SqlServerDatabaseGenerator
         if (tableAttribute != null)
             tableName = tableAttribute.TableName;
 
-        var memberInfos = entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+        var memberInfos = entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
             .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
         var builder = new StringBuilder();
         builder.AppendLine($"CREATE TABLE [{tableName}]");

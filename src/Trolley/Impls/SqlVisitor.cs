@@ -29,7 +29,7 @@ public class SqlVisitor : ISqlVisitor
     protected char TableAsStart { get; set; }
 
     public string DbKey { get; private set; }
-    public IDbCommand Command { get; set; }
+    public IDataParameterCollection DbParameters { get; set; }
     public IEntityMapProvider MapProvider { get; private set; }
     public IOrmProvider OrmProvider { get; private set; }
     public bool IsNeedAlias { get; set; }
@@ -44,10 +44,10 @@ public class SqlVisitor : ISqlVisitor
         this.TableAsStart = tableAsStart;
         this.ParameterPrefix = parameterPrefix;
     }
-    //public virtual int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
-    //{
-    //    return 0;
-    //}
+    public virtual int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
+    {
+        return 0;
+    }
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
         dbParameters = null;
@@ -1166,7 +1166,7 @@ public class SqlVisitor : ISqlVisitor
             //    if (this.DbParameters.Exists(f => f.ParameterName == parameterName))
             //        parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.Command.Parameters.Count.ToString();
             //}
-            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.Command.Parameters.Count.ToString();
+            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
             IDbDataParameter dbParameter = null;
@@ -1174,7 +1174,7 @@ public class SqlVisitor : ISqlVisitor
                 dbParameter = this.OrmProvider.CreateParameter(sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
             else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
 
-            this.Command.Parameters.Add(dbParameter);
+            this.DbParameters.Add(dbParameter);
             sqlSegment.Value = parameterName;
             sqlSegment.IsParameter = true;
             sqlSegment.IsVariable = false;
@@ -1210,14 +1210,14 @@ public class SqlVisitor : ISqlVisitor
             if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
                 sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
 
-            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.Command.Parameters.Count.ToString();
+            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
             IDbDataParameter dbParameter = null;
             if (sqlSegment.MemberMapper != null)
                 dbParameter = this.OrmProvider.CreateParameter(sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
             else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
 
-            this.Command.Parameters.Add(dbParameter);
+            this.DbParameters.Add(dbParameter);
             sqlSegment.Value = parameterName;
             sqlSegment.IsParameter = true;
             sqlSegment.IsVariable = false;
@@ -1246,14 +1246,14 @@ public class SqlVisitor : ISqlVisitor
             return "NULL";
         if (arraySegment.IsVariable || (this.IsParameterized || arraySegment.IsParameterized) && arraySegment.IsConstant)
         {
-            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.Command.Parameters.Count.ToString();
+            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
             IDbDataParameter dbParameter = null;
             if (arraySegment.MemberMapper != null)
                 dbParameter = this.OrmProvider.CreateParameter(arraySegment.MemberMapper, parameterName, elementValue);
             else dbParameter = this.OrmProvider.CreateParameter(parameterName, elementValue);
-            this.Command.Parameters.Add(dbParameter);
+            this.DbParameters.Add(dbParameter);
             return parameterName;
         }
         if (arraySegment.IsConstant && arraySegment.MemberMapper != null && arraySegment.TargetType != arraySegment.ExpectType)
@@ -1318,7 +1318,7 @@ public class SqlVisitor : ISqlVisitor
             targetFields = this.ConstructorFieldsTo(toTargetExpr as LambdaExpression);
 
         targetFields ??= new List<ReaderField>();
-        var targetMembers = targetType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+        var targetMembers = targetType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
             .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
 
         for (int i = targetFields.Count - 1; i >= 0; i--)

@@ -101,9 +101,9 @@ class Update<TEntity> : IUpdate<TEntity>
         if (condition) this.visitor.SetFrom(fieldsAssignment);
         return new UpdateSetting<TEntity>(this.connection, this.transaction, this.visitor);
     }
-    public IUpdateSetting<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateSetting<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public IUpdateSetting<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateSetting<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -257,7 +257,7 @@ class UpdateSet : IUpdateSet
             if (!hasWhere)
                 throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
 
-            command.CommandText = this.visitor.BuildCommand(command);
+            this.visitor.BuildCommand(command);
             this.connection.Open();
             result = command.ExecuteNonQuery();
         }
@@ -309,7 +309,7 @@ class UpdateSet : IUpdateSet
             if (!hasWhere)
                 throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
 
-            command.CommandText = this.visitor.BuildCommand(command);
+            this.visitor.BuildCommand(command);
             await this.connection.OpenAsync(cancellationToken);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
@@ -318,8 +318,8 @@ class UpdateSet : IUpdateSet
     }
     #endregion
 
-    #region Execute
-    //public MultipleCommand ToMultipleCommand() => this.visitor.CreateMultipleCommand();
+    #region ToMultipleCommand
+    public MultipleCommand ToMultipleCommand() => this.visitor.CreateMultipleCommand();
     #endregion
 
     #region ToSql
@@ -350,18 +350,15 @@ class UpdateSet : IUpdateSet
             }
             if (index > 0)
                 sql = sqlBuilder.ToString();
-            if (command.Parameters != null && command.Parameters.Count > 0)
-                dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         }
         else
         {
             if (!hasWhere)
                 throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
 
-            sql = this.visitor.BuildCommand(command);
-            if (command.Parameters != null && command.Parameters.Count > 0)
-                dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+            sql = this.visitor.BuildSql();
         }
+        dbParameters = this.visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         return sql;
     }
@@ -439,9 +436,9 @@ class UpdateSetting<TEntity> : UpdateSet, IUpdateSetting<TEntity>
         if (condition) this.visitor.SetFrom(fieldsAssignment);
         return this;
     }
-    public IUpdateSetting<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateSetting<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public IUpdateSetting<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateSetting<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -567,9 +564,9 @@ class UpdateFrom<TEntity, T1> : UpdateSet, IUpdateFrom<TEntity, T1>
             this.visitor.SetFrom(fieldsAssignment);
         return this;
     }
-    public IUpdateFrom<TEntity, T1> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateFrom<TEntity, T1> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public IUpdateFrom<TEntity, T1> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateFrom<TEntity, T1> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -688,9 +685,9 @@ class UpdateFrom<TEntity, T1, T2> : UpdateSet, IUpdateFrom<TEntity, T1, T2>
             this.visitor.SetFrom(fieldsAssignment);
         return this;
     }
-    public IUpdateFrom<TEntity, T1, T2> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateFrom<TEntity, T1, T2> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public IUpdateFrom<TEntity, T1, T2> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateFrom<TEntity, T1, T2> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -809,9 +806,9 @@ class UpdateFrom<TEntity, T1, T2, T3> : UpdateSet, IUpdateFrom<TEntity, T1, T2, 
             this.visitor.SetFrom(fieldsAssignment);
         return this;
     }
-    public IUpdateFrom<TEntity, T1, T2, T3> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateFrom<TEntity, T1, T2, T3> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public IUpdateFrom<TEntity, T1, T2, T3> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateFrom<TEntity, T1, T2, T3> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -930,9 +927,9 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : UpdateSet, IUpdateFrom<TEntity, T1, 
             this.visitor.SetFrom(fieldsAssignment);
         return this;
     }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateFrom<TEntity, T1, T2, T3, T4> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public IUpdateFrom<TEntity, T1, T2, T3, T4> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateFrom<TEntity, T1, T2, T3, T4> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -1051,9 +1048,9 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : UpdateSet, IUpdateFrom<TEntity, 
             this.visitor.SetFrom(fieldsAssignment);
         return this;
     }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -1191,9 +1188,9 @@ class UpdateJoin<TEntity, T1> : UpdateSet, IUpdateJoin<TEntity, T1>
             this.visitor.SetFrom(fieldsAssignment);
         return this;
     }
-    public IUpdateJoin<TEntity, T1> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateJoin<TEntity, T1> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public IUpdateJoin<TEntity, T1> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateJoin<TEntity, T1> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -1331,9 +1328,9 @@ class UpdateJoin<TEntity, T1, T2> : UpdateSet, IUpdateJoin<TEntity, T1, T2>
             this.visitor.SetFrom(fieldsAssignment);
         return this;
     }
-    public IUpdateJoin<TEntity, T1, T2> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateJoin<TEntity, T1, T2> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public IUpdateJoin<TEntity, T1, T2> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateJoin<TEntity, T1, T2> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -1471,9 +1468,9 @@ class UpdateJoin<TEntity, T1, T2, T3> : UpdateSet, IUpdateJoin<TEntity, T1, T2, 
             this.visitor.SetFrom(fieldsAssignment);
         return this;
     }
-    public IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -1611,9 +1608,9 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : UpdateSet, IUpdateJoin<TEntity, T1, 
             this.visitor.SetFrom(fieldsAssignment);
         return this;
     }
-    public IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -1732,9 +1729,9 @@ class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : UpdateSet, IUpdateJoin<TEntity, 
             this.visitor.SetFrom(fieldsAssignment);
         return this;
     }
-    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IFromQuery<TField>>> valueSelector)
+    public IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));

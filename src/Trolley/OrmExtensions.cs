@@ -272,6 +272,41 @@ public static class OrmExtensions
 
     #region Delete
     /// <summary>
+    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，用法：
+    /// <code>
+    /// 单个删除,下面两个方法等效
+    /// repository.Delete&lt;User&gt;(1);
+    /// repository.Delete&lt;User&gt;(new { Id = 1});
+    /// 批量删除,下面两个方法等效
+    /// repository.Delete&lt;User&gt;(new[] { 1, 2 });
+    /// repository.Delete&lt;User&gt;(new[] { new { Id = 1 }, new { Id = 2 } });
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">要删除的实体类型</typeparam>
+    /// <param name="repository">仓储对象</param>
+    /// <param name="keys">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
+    /// <returns>返回删除行数</returns>
+    public static int Delete<TEntity>(this IRepository repository, object keys)
+        => repository.Delete<TEntity>().Where(keys).Execute();
+    /// <summary>
+    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，用法：
+    /// <code>
+    /// 单个删除,下面两个方法等效
+    /// await repository.DeleteAsync&lt;User&gt;(1);
+    /// await repository.DeleteAsync&lt;User&gt;(new { Id = 1});
+    /// 批量删除,下面两个方法等效
+    /// await repository.DeleteAsync&lt;User&gt;(new[] { 1, 2 });
+    /// await repository.DeleteAsync&lt;User&gt;(new[] { new { Id = 1 }, new { Id = 2 } });
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">要删除的实体类型</typeparam>
+    /// <param name="repository">仓储对象</param>
+    /// <param name="keys">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回删除行数</returns>
+    public static async Task<int> DeleteAsync<TEntity>(this IRepository repository, object keys, CancellationToken cancellationToken = default)
+        => await repository.Delete<TEntity>().Where(keys).ExecuteAsync(cancellationToken);
+    /// <summary>
     /// 删除满足表达式wherePredicate条件的数据，不局限于主键条件，表达式wherePredicate不能为null
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>

@@ -61,7 +61,7 @@ public class EntityMap
         //导航属性，一定存在映射，有就直接返回了
         if (this.memberMaps.TryGetValue(memberName, out var mapper))
             return mapper;
-        var memberInfos = this.EntityType.GetMember(memberName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+        var memberInfos = this.EntityType.GetMember(memberName, BindingFlags.Public | BindingFlags.Instance);
         if (memberInfos == null || memberInfos.Length <= 0)
             throw new Exception($"不存在名为{memberName}的成员");
         this.AddMemberMap(memberName, mapper = new MemberMap(this, this.FieldPrefix, memberInfos[0]));
@@ -153,7 +153,7 @@ public class EntityMap
         }
         MemberInfo[] memberInfos = null;
         if (isValueTuple)
-            memberInfos = mapper.UnderlyingType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+            memberInfos = mapper.UnderlyingType.GetFields(BindingFlags.Public | BindingFlags.Instance);
         else
         {
             memberInfos = mapper.EntityType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
@@ -194,7 +194,7 @@ public class EntityMap
         }
         MemberInfo[] memberInfos = null;
         if (isValueTuple)
-            memberInfos = mapper.UnderlyingType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+            memberInfos = mapper.UnderlyingType.GetFields(BindingFlags.Public | BindingFlags.Instance);
         else
         {
             memberInfos = mapper.EntityType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
@@ -212,6 +212,6 @@ public class EntityMap
         }
         return mapper;
     }
-    public List<MemberInfo> GetMembers() => this.EntityType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+    public List<MemberInfo> GetMembers() => this.EntityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
         .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
 }

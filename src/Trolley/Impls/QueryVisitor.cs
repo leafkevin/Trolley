@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -38,7 +39,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public List<TableSegment> CteTables { get; set; }
     public List<object> CteQueries { get; set; }
     public Dictionary<object, TableSegment> CteTableSegments { get; set; }
-    public List<IDbDataParameter> DbParameters { get; set; }
 
     public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix)
@@ -1040,7 +1040,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (isClearReaderFields)
             this.ReaderFields?.Clear();
         this.WhereSql = null;
-        //this.IsFromQuery = false;
         this.TableAsStart = 'a';
         this.IsNeedAlias = false;
 
@@ -1054,8 +1053,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IncludeSegments?.Clear();
         this.LastIncludeSegment = null;
         this.GroupFields?.Clear();
-        //this.IsInsertTo = false;
-        //this.InsertType = null;
     }
     public void CopyTo(IQueryVisitor visitor)
     {
@@ -1064,7 +1061,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             if (visitor.DbParameters == null || visitor.DbParameters.Count == 0)
                 visitor.DbParameters = this.DbParameters;
-            else visitor.DbParameters.AddRange(this.DbParameters);
+            else
+            {
+                foreach (var dbParameter in this.DbParameters)
+                    visitor.DbParameters.Add(dbParameter);
+            }
         }
         if (this.CteTables == null || this.CteTables.Count == 0)
             return;

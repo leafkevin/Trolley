@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 
 namespace Trolley;
 
@@ -24,6 +25,15 @@ public class FromQuery : IFromQuery
         this.mapProvider = mapProvider;
         this.visitor = visitor;
         this.dbKey = connection?.DbKey;
+    }
+    public FromQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    {
+        this.dbKey = multiQuery.DbKey;
+        this.connection = multiQuery.Connection as TheaConnection;
+        this.transaction = multiQuery.Transaction;
+        this.ormProvider = multiQuery.OrmProvider;
+        this.mapProvider = multiQuery.MapProvider;
+        this.visitor = visitor;
     }
     #endregion
 
@@ -113,7 +123,7 @@ public class FromQuery : IFromQuery
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        dbParameters = this.visitor.DbParameters;
+        dbParameters = this.visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         return this.visitor.BuildSql(out _);
     }
     #endregion

@@ -15,7 +15,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     {
         if (isFirst) this.Tables = new();
         //clear
-        else base.Clear();
+        else this.Clear();
 
         this.Tables.Add(new TableSegment
         {
@@ -25,7 +25,6 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     }
     public string BuildCommand(IDbCommand command)
     {
-        this.Command = command;
         int index = 0;
         foreach (var deferredSegment in this.deferredSegments)
         {
@@ -33,6 +32,8 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             else this.VisitAnd(deferredSegment);
             index++;
         }
+        if (this.DbParameters.Count > 0)
+            this.DbParameters.ForEach(f => command.Parameters.Add(f));
         return this.BuildSql();
     }
     public virtual MultipleCommand CreateMultipleCommand()
@@ -195,6 +196,18 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             this.AddMemberElement(sqlSegment.Next(memberAssignment.Expression), memberMapper, builder);
         }
         return sqlSegment.ChangeValue(builder.ToString());
+    }
+    public void Clear()
+    {
+        this.Tables?.Clear();
+        this.TableAlias?.Clear();
+        this.ReaderFields?.Clear();
+        this.WhereSql = null;
+        this.LastWhereNodeType = OperationType.None;
+        this.IsFromQuery = false;
+        this.TableAsStart = 'a';
+        //this.CteTableName = null;
+        this.IsNeedAlias = false;
     }
     protected virtual void VisitWhere(Expression whereExpr)
     {

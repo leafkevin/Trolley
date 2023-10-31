@@ -79,12 +79,11 @@ public static class Extensions
     public static IDbDataParameter CreateParameter(this IOrmProvider ormProvider, MemberMap memberMapper, string parameterName, object fieldValue)
     {
         IDbDataParameter dbParameter = null;
+        //TODO:测试设置了TypeHandler，但没有设置NativeDbType场景，是否正确
+        var dbTypeValue = ormProvider.ToFieldValue(memberMapper, fieldValue);
         if (memberMapper.NativeDbType != null)
-        {
-            var dbTypeValue = ormProvider.ToFieldValue(memberMapper, fieldValue);
             dbParameter = ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbTypeValue);
-        }
-        else dbParameter = ormProvider.CreateParameter(parameterName, fieldValue);
+        else dbParameter = ormProvider.CreateParameter(parameterName, dbTypeValue);
         return dbParameter;
     }
     public static T Parse<T>(this ITypeHandler typeHandler, IOrmProvider ormProvider, object value)

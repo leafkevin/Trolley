@@ -35,7 +35,7 @@ class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember>
 <#
     var count = 16;
     var tables = "T1";
-    for (int i = 2; i < count; i++)
+    for (int i = 2; i <= count; i++)
     {
         tables += $", T{i}";
 #>
@@ -46,7 +46,7 @@ class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IIncludableQue
         : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 <#
-        if( i < count - 1)
+        if( i < count)
         {
 #>
 

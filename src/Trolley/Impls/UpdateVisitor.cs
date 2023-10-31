@@ -17,6 +17,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     protected List<UpdateField> UpdateFields { get; set; } = new();
     protected bool HasFixedSet { get; set; }
     protected string FixedSql { get; set; }
+    protected virtual bool IsBulk { get; set; } = false;
     protected List<IDbDataParameter> FixedDbParameters { get; set; } = new();
     public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix) { }
@@ -28,16 +29,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.TableAlias = new();
         }
         //clear
-        else
-        {
-            this.IsFrom = false;
-            this.IsJoin = false;
-            this.deferredSegments.Clear();
-            this.UpdateFields.Clear();
-            this.FixedSql = null;
-            this.FixedDbParameters.Clear();
-            base.Clear();
-        }
+        else this.Clear();
         this.Tables.Add(new TableSegment
         {
             EntityType = entityType,
@@ -46,8 +38,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public string BuildCommand(IDbCommand command)
     {
-        this.Command = command;
-        int index = 0;
+        string sql = null;
+        this.DbParameters = command.Parameters;
         foreach (var deferredSegment in this.deferredSegments)
         {
             switch (deferredSegment.Type)
@@ -59,7 +51,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     this.VisitSetField((FieldObject)deferredSegment.Value);
                     break;
                 case DeferredUpdateType.SetWith:
-                    this.VisitSetWith((FieldsParameters)deferredSegment.Value);
+                    this.VisitSetWith(command, (FieldsParameters)deferredSegment.Value);
                     break;
                 case DeferredUpdateType.SetFrom:
                     this.VisitSetFrom(deferredSegment.Value as Expression);
@@ -68,6 +60,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     this.VisitSetFromField((FieldFromQuery)deferredSegment.Value);
                     break;
                 case DeferredUpdateType.SetBulk:
+                    int index = 0;
+                    this.IsBulk = true;
                     var bulkBuilder = new StringBuilder();
                     this.SetBulkHead(bulkBuilder);
                     var updateObjs = deferredSegment.Value as IEnumerable;
@@ -76,19 +70,25 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         this.SetBulkMulti(bulkBuilder, updateObj, index);
                         index++;
                     }
-                    return bulkBuilder.ToString();
+                    sql = bulkBuilder.ToString();
+                    break;
                 case DeferredUpdateType.Where:
                     this.VisitWhere(deferredSegment.Value as Expression);
                     break;
                 case DeferredUpdateType.WhereWith:
-                    this.VisitWhereWith(deferredSegment.Value);
+                    this.VisitWhereWith(command, deferredSegment.Value);
                     break;
                 case DeferredUpdateType.And:
                     this.VisitAnd(deferredSegment.Value as Expression);
                     break;
             }
         }
-        return this.BuildSql();
+        if (!this.IsBulk)
+        {
+            sql = this.BuildSql();
+            command.CommandText = sql;
+        }
+        return sql;
     }
     public virtual MultipleCommand CreateMultipleCommand()
     {
@@ -273,7 +273,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public virtual IUpdateVisitor SetBulkFirst(IDbCommand command, Expression fieldsSelectorOrAssignment, object updateObjs)
     {
-        this.Command = command;
         var entityMapper = this.Tables[0].Mapper;
         var fixSetFields = new List<UpdateField>();
         var lambdaExpr = fieldsSelectorOrAssignment as LambdaExpression;
@@ -342,7 +341,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public virtual void SetBulkHead(StringBuilder builder)
     {
         if (this.FixedDbParameters != null && this.FixedDbParameters.Count > 0)
-            this.FixedDbParameters.ForEach(f => this.Command.Parameters.Add(f));
+            this.FixedDbParameters.ForEach(f => this.DbParameters.Add(f));
     }
     public virtual void SetBulk(StringBuilder builder, object updateObj, int index)
     {
@@ -360,7 +359,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 var fieldValue = this.EvaluateAndCache(updateObj, setField.MemberMapper.MemberName);
                 var parameterName = $"{setField.Value}{index}";
                 builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={parameterName}");
-                this.Command.Parameters.Add(this.OrmProvider.CreateParameter(setField.MemberMapper, parameterName, fieldValue));
+                this.DbParameters.Add(this.OrmProvider.CreateParameter(setField.MemberMapper, parameterName, fieldValue));
             }
             setIndex++;
         }
@@ -373,7 +372,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             var parameterName = $"{this.OrmProvider.ParameterPrefix}k{keyMember.MemberName}{index}";
             builder.Append($"{this.OrmProvider.GetFieldName(keyMember.FieldName)}={parameterName}");
             var fieldValue = this.EvaluateAndCache(updateObj, keyMember.MemberName);
-            this.Command.Parameters.Add(this.OrmProvider.CreateParameter(keyMember, parameterName, fieldValue));
+            this.DbParameters.Add(this.OrmProvider.CreateParameter(keyMember, parameterName, fieldValue));
         }
     }
     protected virtual void SetBulkMulti(StringBuilder builder, object updateObj, int index)
@@ -392,7 +391,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 var fieldValue = this.EvaluateAndCache(updateObj, setField.MemberMapper.MemberName);
                 var parameterName = $"{setField.Value}{index}_m{this.CommandIndex}";
                 builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={parameterName}");
-                this.Command.Parameters.Add(this.OrmProvider.CreateParameter(setField.MemberMapper, parameterName, fieldValue));
+                this.DbParameters.Add(this.OrmProvider.CreateParameter(setField.MemberMapper, parameterName, fieldValue));
             }
             setIndex++;
         }
@@ -405,7 +404,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             var parameterName = $"{this.OrmProvider.ParameterPrefix}k{keyMember.MemberName}{index}_m{this.CommandIndex}";
             builder.Append($"{this.OrmProvider.GetFieldName(keyMember.FieldName)}={parameterName}");
             var fieldValue = this.EvaluateAndCache(updateObj, keyMember.MemberName);
-            this.Command.Parameters.Add(this.OrmProvider.CreateParameter(keyMember, parameterName, fieldValue));
+            this.DbParameters.Add(this.OrmProvider.CreateParameter(keyMember, parameterName, fieldValue));
         }
     }
     public virtual void SetBulkTail(StringBuilder builder) { }
@@ -465,6 +464,25 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
         //把方法返回值当作常量处理
         return sqlSegment.Change(objValue, true, false, false);
+    }
+    public void Clear()
+    {
+        this.Tables?.Clear();
+        this.TableAlias?.Clear();
+        this.ReaderFields?.Clear();
+        this.WhereSql = null;
+        this.LastWhereNodeType = OperationType.None;
+        this.IsFromQuery = false;
+        this.TableAsStart = 'a';
+        //this.CteTableName = null;
+        this.IsNeedAlias = false;
+
+        this.IsFrom = false;
+        this.IsJoin = false;
+        this.deferredSegments.Clear();
+        this.UpdateFields.Clear();
+        this.FixedSql = null;
+        this.FixedDbParameters.Clear();
     }
     protected void InitTableAlias(LambdaExpression lambdaExpr)
     {
@@ -536,7 +554,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
         this.AddMemberElement(memberMapper, fieldObject.FieldValue, false);
     }
-    protected virtual void VisitSetWith(FieldsParameters fieldsParameters)
+    protected virtual void VisitSetWith(IDbCommand command, FieldsParameters fieldsParameters)
     {
         var entityMapper = this.Tables[0].Mapper;
         if (fieldsParameters.SelectorOrAssignment != null)
@@ -588,12 +606,12 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             if (this.IsMultiple)
             {
                 var multiCommandInitializer = commandInitializer as Action<IDbCommand, List<UpdateField>, object, int>;
-                multiCommandInitializer.Invoke(this.Command, this.UpdateFields, fieldsParameters.Parameters, this.CommandIndex);
+                multiCommandInitializer.Invoke(command, this.UpdateFields, fieldsParameters.Parameters, this.CommandIndex);
             }
             else
             {
                 var singleCommandInitializer = commandInitializer as Action<IDbCommand, List<UpdateField>, object>;
-                singleCommandInitializer.Invoke(this.Command, this.UpdateFields, fieldsParameters.Parameters);
+                singleCommandInitializer.Invoke(command, this.UpdateFields, fieldsParameters.Parameters);
             }
         }
     }
@@ -675,19 +693,19 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (isNeedAlias) this.IsNeedAlias = true;
         this.UpdateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = $"({sql})" });
     }
-    protected virtual void VisitWhereWith(object whereObj)
+    protected virtual void VisitWhereWith(IDbCommand command, object whereObj)
     {
         var entityMapper = this.Tables[0].Mapper;
         var commandInitializer = RepositoryHelper.BuildUpdateWithParameters(this, entityMapper.EntityType, whereObj, true, this.IsMultiple);
         if (this.IsMultiple)
         {
             var multiCommandInitializer = commandInitializer as Action<IDbCommand, List<UpdateField>, object, int>;
-            multiCommandInitializer.Invoke(this.Command, this.UpdateFields, whereObj, this.CommandIndex);
+            multiCommandInitializer.Invoke(command, this.UpdateFields, whereObj, this.CommandIndex);
         }
         else
         {
             var singleCommandInitializer = commandInitializer as Action<IDbCommand, List<UpdateField>, object>;
-            singleCommandInitializer.Invoke(this.Command, this.UpdateFields, whereObj);
+            singleCommandInitializer.Invoke(command, this.UpdateFields, whereObj);
         }
     }
     protected virtual void VisitWhere(Expression whereExpr)
@@ -733,7 +751,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var fieldValue = isEntity ? this.EvaluateAndCache(memberValue, memberMapper.MemberName) : memberValue;
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-        this.Command.Parameters.Add(this.OrmProvider.CreateParameter(memberMapper, parameterName, fieldValue));
+        this.DbParameters.Add(this.OrmProvider.CreateParameter(memberMapper, parameterName, fieldValue));
         this.UpdateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
     }
     protected void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)

@@ -160,6 +160,10 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IMultipleQuery.cs</LastGenOutput>
     </Content>
+    <Content Include="Trolley\IMultiQuery.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>IMultiQuery.cs</LastGenOutput>
+    </Content>
     <Content Include="Trolley\IncludableQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IncludableQuery.cs</LastGenOutput>

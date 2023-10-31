@@ -256,7 +256,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     TEntity QueryFirst<TEntity>(object whereObj);
     /// <summary>
-    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回TEntity类型的默认值，用法：
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，用法：
     /// <code>
     /// await repository.QueryFirstAsync&lt;User&gt;(new { Id = 1, IsEnabled = true })
     /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
@@ -276,7 +276,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
     List<TEntity> Query<TEntity>(string rawSql, object parameters = null);
     /// <summary>
-    /// 使用原始SQL语句rawSql和参数parameters查询表TEntity数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表
+    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
@@ -486,37 +486,6 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <typeparam name="TEntity">删除实体类型</typeparam>
     /// <returns>返回删除对象</returns>
     IDelete<TEntity> Delete<TEntity>();
-    /// <summary>
-    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，用法：
-    /// <code>
-    /// 单个删除,下面两个方法等效
-    /// repository.Delete&lt;User&gt;(1);
-    /// repository.Delete&lt;User&gt;(new { Id = 1});
-    /// 批量删除,下面两个方法等效
-    /// repository.Delete&lt;User&gt;(new[] { 1, 2 });
-    /// repository.Delete&lt;User&gt;(new[] { new { Id = 1 }, new { Id = 2 } });
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="keys">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
-    /// <returns>返回删除行数</returns>
-    int Delete<TEntity>(object keys);
-    /// <summary>
-    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，用法：
-    /// <code>
-    /// 单个删除,下面两个方法等效
-    /// await repository.DeleteAsync&lt;User&gt;(1);
-    /// await repository.DeleteAsync&lt;User&gt;(new { Id = 1});
-    /// 批量删除,下面两个方法等效
-    /// await repository.DeleteAsync&lt;User&gt;(new[] { 1, 2 });
-    /// await repository.DeleteAsync&lt;User&gt;(new[] { new { Id = 1 }, new { Id = 2 } });
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <param name="keys">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
-    /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回删除行数</returns>
-    Task<int> DeleteAsync<TEntity>(object keys, CancellationToken cancellationToken = default);
     #endregion
 
     #region Execute
@@ -537,43 +506,43 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     Task<int> ExecuteAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
     #endregion
 
-    //#region QueryMultiple
-    //#region 不支持
-    /////// <summary>
-    /////// 多SQL语句一起执行，并返回多个结果集，根据SQL语句按顺序接收返回结果。
-    /////// </summary>
-    /////// <param name="rawSql">要执行的SQL</param>
-    /////// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
-    /////// <returns>返回多结果集Reader对象</returns>
-    ////IMultiQueryReader QueryMultiple(string rawSql, object parameters = null);
-    /////// <summary>
-    /////// 多SQL语句一起执行，并返回多个结果集，根据SQL语句顺序接收返回结果。
-    /////// </summary>
-    /////// <param name="rawSql">要执行的SQL</param>
-    /////// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
-    /////// <param name="cancellationToken">取消Token</param>
-    /////// <returns>返回多结果集Reader对象</returns>
-    ////Task<IMultiQueryReader> QueryMultipleAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
-    //#endregion
+    #region QueryMultiple
+    #region 不支持
     ///// <summary>
-    ///// 使用IMultipleQuery操作生成多个SQL语句一起执行，并返回多个结果集，根据IMultipleQuery操作顺序接收返回结果。
+    ///// 多SQL语句一起执行，并返回多个结果集，根据SQL语句按顺序接收返回结果。
     ///// </summary>
-    ///// <param name="subQueries">多个SQL查询操作，不能为null</param>
+    ///// <param name="rawSql">要执行的SQL</param>
+    ///// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
     ///// <returns>返回多结果集Reader对象</returns>
-    //IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries);
+    //IMultiQueryReader QueryMultiple(string rawSql, object parameters = null);
     ///// <summary>
-    ///// 使用IMultipleQuery操作生成多个SQL语句一起执行，并返回多个结果集，根据IMultipleQuery操作顺序接收返回结果。
+    ///// 多SQL语句一起执行，并返回多个结果集，根据SQL语句顺序接收返回结果。
     ///// </summary>
-    ///// <param name="subQueries">多个SQL查询操作，不能为null</param>
+    ///// <param name="rawSql">要执行的SQL</param>
+    ///// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
     ///// <param name="cancellationToken">取消Token</param>
     ///// <returns>返回多结果集Reader对象</returns>
-    //Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default);
-    //#endregion
+    //Task<IMultiQueryReader> QueryMultipleAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
+    #endregion
+    /// <summary>
+    /// 使用IMultipleQuery操作生成多个SQL语句一起执行，并返回多个结果集，根据IMultipleQuery操作顺序接收返回结果。
+    /// </summary>
+    /// <param name="subQueries">多个SQL查询操作，不能为null</param>
+    /// <returns>返回多结果集Reader对象</returns>
+    IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries);
+    /// <summary>
+    /// 使用IMultipleQuery操作生成多个SQL语句一起执行，并返回多个结果集，根据IMultipleQuery操作顺序接收返回结果。
+    /// </summary>
+    /// <param name="subQueries">多个SQL查询操作，不能为null</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回多结果集Reader对象</returns>
+    Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default);
+    #endregion
 
-    //#region MultipleExecute
-    //void MultipleExecute(List<MultipleCommand> commands);
-    //Task MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default);
-    //#endregion
+    #region MultipleExecute
+    void MultipleExecute(List<MultipleCommand> commands);
+    Task MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default);
+    #endregion
 
     #region Others
     /// <summary>

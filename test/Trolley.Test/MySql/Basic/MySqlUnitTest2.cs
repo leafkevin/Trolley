@@ -778,7 +778,7 @@ public class MySqlUnitTest2 : UnitTestBase
                 t.From<OrderDetail>('b')
                  .GroupBy(a => a.OrderId)
                  .Having((x, a) => Sql.CountDistinct(a.ProductId) > 0)
-                 .Select("*")))
+                 .SelectAnonymous("*")))
             .GroupBy(f => new { f.Gender, f.CompanyId })
             .Select((t, a) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
             .ToSql(out _);
@@ -795,7 +795,7 @@ public class MySqlUnitTest2 : UnitTestBase
                  .Where((a, b, c) => a.BuyerId == x.Id && a.Id == b.OrderId && b.ProductId == c.Id && c.CompanyId == y.Id)
                  .GroupBy((a, b, c) => a.Id)
                  .Having((x, a, b, c) => Sql.CountDistinct(b.ProductId) > 0)
-                 .Select("*")))
+                 .SelectAnonymous("*")))
             .GroupBy((x, y) => new { x.Gender, x.CompanyId })
             .Select((t, a, b) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
             .ToSql(out _);
@@ -958,7 +958,7 @@ public class MySqlUnitTest2 : UnitTestBase
                     .Where((a, b) => a.BuyerId == t.Id && a.Id == b.OrderId)
                     .GroupBy((a, b) => a.Id)
                     .Having((x, a, b) => Sql.Count(b.Id) > 0)
-                    .Select("*")))
+                    .SelectAnonymous("*")))
             .GroupBy(f => new { f.Gender, f.CompanyId })
             .Select((x, y) => new { x.Grouping, UserTotal = x.CountDistinct(y.Id) })
             .ToList();

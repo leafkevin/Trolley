@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using System.Text;
@@ -20,7 +21,8 @@ public struct UpdateField
 }
 public interface IUpdateVisitor
 {
-    IDbCommand Command { get; set; }
+    IDataParameterCollection DbParameters { get; set; }
+
     string BuildCommand(IDbCommand command);
     MultipleCommand CreateMultipleCommand();
     int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);

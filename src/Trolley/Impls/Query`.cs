@@ -23,7 +23,10 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         this.visitor.Clear(true);
         var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
         var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.visitor.CteQueries[0], this.visitor.CteQueries[1]);
-        var rawSql = this.visitor.BuildSql(out var readerFields);
+        var rawSql = this.visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
         return new Query<T1, T2, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
@@ -35,29 +38,14 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = this.visitor.BuildSql(out var readerFields);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new Query<T1, T2, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    #endregion
-
-    #region Include
-    public IIncludableQuery<T1, T2, TMember> Include<TMember>(Expression<Func<T1, T2, TMember>> memberSelector)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    public IIncludableQuery<T1, T2, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -162,7 +150,8 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -178,7 +167,8 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -194,7 +184,8 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -202,6 +193,25 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new Query<T1, T2, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region Include
+    public IIncludableQuery<T1, T2, TMember> Include<TMember>(Expression<Func<T1, T2, TMember>> memberSelector)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector);
+        return new IncludableQuery<T1, T2, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IIncludableQuery<T1, T2, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector, true, filter);
+        return new IncludableQuery<T1, T2, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -244,7 +254,7 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     }
     #endregion
 
-    #region GroupBy/OrderBy
+    #region GroupBy
     public IGroupingQuery<T1, T2, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
@@ -253,14 +263,12 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T1, T2, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2> OrderBy<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+    #endregion
 
-        this.visitor.OrderBy("ASC", fieldsExpr);
-        return this;
-    }
+    #region OrderBy
+    public IQuery<T1, T2> OrderBy<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+
     public IQuery<T1, T2> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -271,13 +279,8 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         return this;
     }
     public IQuery<T1, T2> OrderByDescending<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+        => this.OrderByDescending(true, fieldsExpr);
 
-        this.visitor.OrderBy("DESC", fieldsExpr);
-        return this;
-    }
     public IQuery<T1, T2> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -308,7 +311,6 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     }
     #endregion
 
-    #region Aggregate
     #region Count
     public int Count<TField>(Expression<Func<T1, T2, TField>> fieldExpr)
     {
@@ -317,7 +319,6 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
 
         return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     }
-
     public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
@@ -369,6 +370,7 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     }
     #endregion
 
+    #region Aggregate
     public TField Sum<TField>(Expression<Func<T1, T2, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -443,7 +445,10 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         this.visitor.Clear(true);
         var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
         var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.visitor.CteQueries[0], this.visitor.CteQueries[1], this.visitor.CteQueries[2]);
-        var rawSql = this.visitor.BuildSql(out var readerFields);
+        var rawSql = this.visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
         return new Query<T1, T2, T3, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
@@ -455,29 +460,14 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = this.visitor.BuildSql(out var readerFields);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new Query<T1, T2, T3, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    #endregion
-
-    #region Include
-    public IIncludableQuery<T1, T2, T3, TMember> Include<TMember>(Expression<Func<T1, T2, T3, TMember>> memberSelector)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    public IIncludableQuery<T1, T2, T3, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -582,7 +572,8 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -598,7 +589,8 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -614,7 +606,8 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -622,6 +615,25 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new Query<T1, T2, T3, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region Include
+    public IIncludableQuery<T1, T2, T3, TMember> Include<TMember>(Expression<Func<T1, T2, T3, TMember>> memberSelector)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector);
+        return new IncludableQuery<T1, T2, T3, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IIncludableQuery<T1, T2, T3, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector, true, filter);
+        return new IncludableQuery<T1, T2, T3, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -664,7 +676,7 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     }
     #endregion
 
-    #region GroupBy/OrderBy
+    #region GroupBy
     public IGroupingQuery<T1, T2, T3, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
@@ -673,14 +685,12 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T1, T2, T3, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3> OrderBy<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+    #endregion
 
-        this.visitor.OrderBy("ASC", fieldsExpr);
-        return this;
-    }
+    #region OrderBy
+    public IQuery<T1, T2, T3> OrderBy<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+
     public IQuery<T1, T2, T3> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -691,13 +701,8 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         return this;
     }
     public IQuery<T1, T2, T3> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+        => this.OrderByDescending(true, fieldsExpr);
 
-        this.visitor.OrderBy("DESC", fieldsExpr);
-        return this;
-    }
     public IQuery<T1, T2, T3> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -728,7 +733,6 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     }
     #endregion
 
-    #region Aggregate
     #region Count
     public int Count<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr)
     {
@@ -737,7 +741,6 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
 
         return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     }
-
     public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
@@ -789,6 +792,7 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     }
     #endregion
 
+    #region Aggregate
     public TField Sum<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -863,7 +867,10 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         this.visitor.Clear(true);
         var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
         var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.visitor.CteQueries[0], this.visitor.CteQueries[1], this.visitor.CteQueries[2], this.visitor.CteQueries[3]);
-        var rawSql = this.visitor.BuildSql(out var readerFields);
+        var rawSql = this.visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
         return new Query<T1, T2, T3, T4, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
@@ -875,29 +882,14 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = this.visitor.BuildSql(out var readerFields);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new Query<T1, T2, T3, T4, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    #endregion
-
-    #region Include
-    public IIncludableQuery<T1, T2, T3, T4, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, TMember>> memberSelector)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    public IIncludableQuery<T1, T2, T3, T4, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1002,7 +994,8 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -1018,7 +1011,8 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -1034,7 +1028,8 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -1042,6 +1037,25 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new Query<T1, T2, T3, T4, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region Include
+    public IIncludableQuery<T1, T2, T3, T4, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, TMember>> memberSelector)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector);
+        return new IncludableQuery<T1, T2, T3, T4, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IIncludableQuery<T1, T2, T3, T4, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector, true, filter);
+        return new IncludableQuery<T1, T2, T3, T4, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1084,7 +1098,7 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     }
     #endregion
 
-    #region GroupBy/OrderBy
+    #region GroupBy
     public IGroupingQuery<T1, T2, T3, T4, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
@@ -1093,14 +1107,12 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T1, T2, T3, T4, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+    #endregion
 
-        this.visitor.OrderBy("ASC", fieldsExpr);
-        return this;
-    }
+    #region OrderBy
+    public IQuery<T1, T2, T3, T4> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+
     public IQuery<T1, T2, T3, T4> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1111,13 +1123,8 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         return this;
     }
     public IQuery<T1, T2, T3, T4> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+        => this.OrderByDescending(true, fieldsExpr);
 
-        this.visitor.OrderBy("DESC", fieldsExpr);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1148,7 +1155,6 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     }
     #endregion
 
-    #region Aggregate
     #region Count
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr)
     {
@@ -1157,7 +1163,6 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
 
         return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     }
-
     public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
@@ -1209,6 +1214,7 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     }
     #endregion
 
+    #region Aggregate
     public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -1283,7 +1289,10 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         this.visitor.Clear(true);
         var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
         var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.visitor.CteQueries[0], this.visitor.CteQueries[1], this.visitor.CteQueries[2], this.visitor.CteQueries[3], this.visitor.CteQueries[4]);
-        var rawSql = this.visitor.BuildSql(out var readerFields);
+        var rawSql = this.visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
         return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
@@ -1295,29 +1304,14 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = this.visitor.BuildSql(out var readerFields);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    #endregion
-
-    #region Include
-    public IIncludableQuery<T1, T2, T3, T4, T5, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, TMember>> memberSelector)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    public IIncludableQuery<T1, T2, T3, T4, T5, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1422,7 +1416,8 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -1438,7 +1433,8 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -1454,7 +1450,8 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -1462,6 +1459,25 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new Query<T1, T2, T3, T4, T5, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region Include
+    public IIncludableQuery<T1, T2, T3, T4, T5, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, TMember>> memberSelector)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector);
+        return new IncludableQuery<T1, T2, T3, T4, T5, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IIncludableQuery<T1, T2, T3, T4, T5, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector, true, filter);
+        return new IncludableQuery<T1, T2, T3, T4, T5, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1504,7 +1520,7 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     }
     #endregion
 
-    #region GroupBy/OrderBy
+    #region GroupBy
     public IGroupingQuery<T1, T2, T3, T4, T5, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
@@ -1513,14 +1529,12 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T1, T2, T3, T4, T5, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+    #endregion
 
-        this.visitor.OrderBy("ASC", fieldsExpr);
-        return this;
-    }
+    #region OrderBy
+    public IQuery<T1, T2, T3, T4, T5> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+
     public IQuery<T1, T2, T3, T4, T5> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1531,13 +1545,8 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+        => this.OrderByDescending(true, fieldsExpr);
 
-        this.visitor.OrderBy("DESC", fieldsExpr);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1568,7 +1577,6 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     }
     #endregion
 
-    #region Aggregate
     #region Count
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr)
     {
@@ -1577,7 +1585,6 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
 
         return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     }
-
     public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
@@ -1629,6 +1636,7 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     }
     #endregion
 
+    #region Aggregate
     public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -1703,7 +1711,10 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
         this.visitor.Clear(true);
         var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
         var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.visitor.CteQueries[0], this.visitor.CteQueries[1], this.visitor.CteQueries[2], this.visitor.CteQueries[3], this.visitor.CteQueries[4], this.visitor.CteQueries[5]);
-        var rawSql = this.visitor.BuildSql(out var readerFields);
+        var rawSql = this.visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
         return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
@@ -1715,29 +1726,14 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = this.visitor.BuildSql(out var readerFields);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    #endregion
-
-    #region Include
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, TMember>> memberSelector)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1842,7 +1838,8 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -1858,7 +1855,8 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -1874,7 +1872,8 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -1882,6 +1881,25 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region Include
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, TMember>> memberSelector)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector, true, filter);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -1924,7 +1942,7 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
     }
     #endregion
 
-    #region GroupBy/OrderBy
+    #region GroupBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
@@ -1933,14 +1951,12 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+    #endregion
 
-        this.visitor.OrderBy("ASC", fieldsExpr);
-        return this;
-    }
+    #region OrderBy
+    public IQuery<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+
     public IQuery<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1951,13 +1967,8 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+        => this.OrderByDescending(true, fieldsExpr);
 
-        this.visitor.OrderBy("DESC", fieldsExpr);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1988,7 +1999,6 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
     }
     #endregion
 
-    #region Aggregate
     #region Count
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr)
     {
@@ -1997,7 +2007,6 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
 
         return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     }
-
     public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
@@ -2049,6 +2058,7 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
     }
     #endregion
 
+    #region Aggregate
     public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -2120,29 +2130,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = this.visitor.BuildSql(out var readerFields);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    #endregion
-
-    #region Include
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TMember>> memberSelector)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -2247,7 +2242,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -2263,7 +2259,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -2279,7 +2276,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -2287,6 +2285,25 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region Include
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TMember>> memberSelector)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector, true, filter);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -2329,7 +2346,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
     }
     #endregion
 
-    #region GroupBy/OrderBy
+    #region GroupBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
@@ -2338,14 +2355,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+    #endregion
 
-        this.visitor.OrderBy("ASC", fieldsExpr);
-        return this;
-    }
+    #region OrderBy
+    public IQuery<T1, T2, T3, T4, T5, T6, T7> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+
     public IQuery<T1, T2, T3, T4, T5, T6, T7> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -2356,13 +2371,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+        => this.OrderByDescending(true, fieldsExpr);
 
-        this.visitor.OrderBy("DESC", fieldsExpr);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -2393,7 +2403,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
     }
     #endregion
 
-    #region Aggregate
     #region Count
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr)
     {
@@ -2402,7 +2411,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
 
         return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     }
-
     public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
@@ -2454,6 +2462,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
     }
     #endregion
 
+    #region Aggregate
     public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -2525,29 +2534,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = this.visitor.BuildSql(out var readerFields);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    #endregion
-
-    #region Include
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TMember>> memberSelector)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -2652,7 +2646,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -2668,7 +2663,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -2684,7 +2680,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -2692,6 +2689,25 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region Include
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TMember>> memberSelector)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector, true, filter);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -2734,7 +2750,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
     }
     #endregion
 
-    #region GroupBy/OrderBy
+    #region GroupBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
@@ -2743,14 +2759,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+    #endregion
 
-        this.visitor.OrderBy("ASC", fieldsExpr);
-        return this;
-    }
+    #region OrderBy
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -2761,13 +2775,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+        => this.OrderByDescending(true, fieldsExpr);
 
-        this.visitor.OrderBy("DESC", fieldsExpr);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -2798,7 +2807,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
     }
     #endregion
 
-    #region Aggregate
     #region Count
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr)
     {
@@ -2807,7 +2815,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
 
         return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     }
-
     public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
@@ -2859,6 +2866,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
     }
     #endregion
 
+    #region Aggregate
     public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -2930,29 +2938,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = this.visitor.BuildSql(out var readerFields);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    #endregion
-
-    #region Include
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>> memberSelector)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3057,7 +3050,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -3073,7 +3067,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -3089,7 +3084,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -3097,6 +3093,25 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region Include
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>> memberSelector)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector, true, filter);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3139,7 +3154,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
     }
     #endregion
 
-    #region GroupBy/OrderBy
+    #region GroupBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
@@ -3148,14 +3163,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+    #endregion
 
-        this.visitor.OrderBy("ASC", fieldsExpr);
-        return this;
-    }
+    #region OrderBy
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -3166,13 +3179,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+        => this.OrderByDescending(true, fieldsExpr);
 
-        this.visitor.OrderBy("DESC", fieldsExpr);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -3203,7 +3211,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
     }
     #endregion
 
-    #region Aggregate
     #region Count
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr)
     {
@@ -3212,7 +3219,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
 
         return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     }
-
     public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
@@ -3264,6 +3270,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
     }
     #endregion
 
+    #region Aggregate
     public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -3335,29 +3342,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = this.visitor.BuildSql(out var readerFields);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    #endregion
-
-    #region Include
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>> memberSelector)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3462,7 +3454,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -3478,7 +3471,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -3494,7 +3488,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -3502,6 +3497,25 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region Include
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>> memberSelector)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector, true, filter);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3544,7 +3558,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
     }
     #endregion
 
-    #region GroupBy/OrderBy
+    #region GroupBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
@@ -3553,14 +3567,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+    #endregion
 
-        this.visitor.OrderBy("ASC", fieldsExpr);
-        return this;
-    }
+    #region OrderBy
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -3571,13 +3583,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+        => this.OrderByDescending(true, fieldsExpr);
 
-        this.visitor.OrderBy("DESC", fieldsExpr);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -3608,7 +3615,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
     }
     #endregion
 
-    #region Aggregate
     #region Count
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr)
     {
@@ -3617,7 +3623,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
 
         return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     }
-
     public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
@@ -3669,6 +3674,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
     }
     #endregion
 
+    #region Aggregate
     public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -3740,29 +3746,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = this.visitor.BuildSql(out var readerFields);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    #endregion
-
-    #region Include
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>> memberSelector)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3867,7 +3858,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -3883,7 +3875,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -3899,7 +3892,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -3907,6 +3901,25 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region Include
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>> memberSelector)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector, true, filter);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -3949,7 +3962,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
     }
     #endregion
 
-    #region GroupBy/OrderBy
+    #region GroupBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
@@ -3958,14 +3971,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+    #endregion
 
-        this.visitor.OrderBy("ASC", fieldsExpr);
-        return this;
-    }
+    #region OrderBy
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -3976,13 +3987,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+        => this.OrderByDescending(true, fieldsExpr);
 
-        this.visitor.OrderBy("DESC", fieldsExpr);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -4013,7 +4019,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
     }
     #endregion
 
-    #region Aggregate
     #region Count
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr)
     {
@@ -4022,7 +4027,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
 
         return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     }
-
     public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
@@ -4074,6 +4078,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
     }
     #endregion
 
+    #region Aggregate
     public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -4145,29 +4150,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = this.visitor.BuildSql(out var readerFields);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    #endregion
-
-    #region Include
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>> memberSelector)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -4272,7 +4262,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -4288,7 +4279,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -4304,7 +4296,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -4312,6 +4305,25 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region Include
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>> memberSelector)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector, true, filter);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -4354,7 +4366,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
     }
     #endregion
 
-    #region GroupBy/OrderBy
+    #region GroupBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
@@ -4363,14 +4375,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+    #endregion
 
-        this.visitor.OrderBy("ASC", fieldsExpr);
-        return this;
-    }
+    #region OrderBy
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -4381,13 +4391,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+        => this.OrderByDescending(true, fieldsExpr);
 
-        this.visitor.OrderBy("DESC", fieldsExpr);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -4418,7 +4423,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
     }
     #endregion
 
-    #region Aggregate
     #region Count
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr)
     {
@@ -4427,7 +4431,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
 
         return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     }
-
     public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
@@ -4479,6 +4482,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
     }
     #endregion
 
+    #region Aggregate
     public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -4550,29 +4554,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = this.visitor.BuildSql(out var readerFields);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    #endregion
-
-    #region Include
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>> memberSelector)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -4677,7 +4666,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -4693,7 +4683,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -4709,7 +4700,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -4717,6 +4709,25 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region Include
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>> memberSelector)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector, true, filter);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -4759,7 +4770,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
     }
     #endregion
 
-    #region GroupBy/OrderBy
+    #region GroupBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
@@ -4768,14 +4779,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+    #endregion
 
-        this.visitor.OrderBy("ASC", fieldsExpr);
-        return this;
-    }
+    #region OrderBy
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -4786,13 +4795,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+        => this.OrderByDescending(true, fieldsExpr);
 
-        this.visitor.OrderBy("DESC", fieldsExpr);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -4823,7 +4827,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
     }
     #endregion
 
-    #region Aggregate
     #region Count
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr)
     {
@@ -4832,7 +4835,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
 
         return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     }
-
     public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
@@ -4884,6 +4886,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
     }
     #endregion
 
+    #region Aggregate
     public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -4955,29 +4958,14 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = this.visitor.BuildSql(out var readerFields);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
         this.visitor.WithTable(typeof(TOther), sql, readerFields);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    #endregion
-
-    #region Include
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>> memberSelector)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -5082,7 +5070,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -5098,7 +5087,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -5114,7 +5104,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var query = subQuery.Invoke(new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
         if (!this.visitor.Equals(query.Visitor))
             query.Visitor.CopyTo(this.visitor);
@@ -5122,6 +5113,25 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
         var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
         this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
         return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region Include
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>> memberSelector)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector, true, filter);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -5164,7 +5174,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
     }
     #endregion
 
-    #region GroupBy/OrderBy
+    #region GroupBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
@@ -5173,14 +5183,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+    #endregion
 
-        this.visitor.OrderBy("ASC", fieldsExpr);
-        return this;
-    }
+    #region OrderBy
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -5191,13 +5199,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+        => this.OrderByDescending(true, fieldsExpr);
 
-        this.visitor.OrderBy("DESC", fieldsExpr);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -5228,7 +5231,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
     }
     #endregion
 
-    #region Aggregate
     #region Count
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr)
     {
@@ -5237,7 +5239,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
 
         return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     }
-
     public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
@@ -5289,6 +5290,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
     }
     #endregion
 
+    #region Aggregate
     public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -5354,22 +5356,20 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
         : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
-    #region Include
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>> memberSelector)
+    #region WithTable
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
 
-        this.visitor.Include(memberSelector);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
-    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-    {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var query = subQuery.Invoke(fromQuery);
+        var sql = this.visitor.BuildSql(out var readerFields);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
 
-        this.visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        this.visitor.WithTable(typeof(TOther), sql, readerFields);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -5397,6 +5397,145 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
 
         this.visitor.Join("RIGHT JOIN", joinOn);
         return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.visitor);
+
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.visitor);
+
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.visitor);
+
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
+        var sql = query.Visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
+        var sql = query.Visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var query = subQuery.Invoke(fromQuery);
+        var sql = query.Visitor.BuildSql(out var readerFields, false);
+        if (!this.visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.visitor);
+
+        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region Include
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>> memberSelector)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector, true, filter);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -5439,7 +5578,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     }
     #endregion
 
-    #region GroupBy/OrderBy
+    #region GroupBy
     public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
@@ -5448,14 +5587,12 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
         this.visitor.GroupBy(groupingExpr);
         return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+    #endregion
 
-        this.visitor.OrderBy("ASC", fieldsExpr);
-        return this;
-    }
+    #region OrderBy
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -5466,13 +5603,8 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr)
-    {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
+        => this.OrderByDescending(true, fieldsExpr);
 
-        this.visitor.OrderBy("DESC", fieldsExpr);
-        return this;
-    }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -5503,7 +5635,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     }
     #endregion
 
-    #region Aggregate
     #region Count
     public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr)
     {
@@ -5512,7 +5643,6 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
 
         return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     }
-
     public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
@@ -5564,6 +5694,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     }
     #endregion
 
+    #region Aggregate
     public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr)
     {
         if (fieldExpr == null)
@@ -5614,6 +5745,265 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
         return this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
     }
     public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+    }
+    #endregion
+}
+class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>
+{
+    #region Constructor
+    public Query(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
+    #endregion
+
+    #region Join
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("INNER JOIN", joinOn);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("LEFT JOIN", joinOn);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.visitor.Join("RIGHT JOIN", joinOn);
+        return this;
+    }
+    #endregion
+
+    #region Include
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>> memberSelector)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    public IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    {
+        if (memberSelector == null)
+            throw new ArgumentNullException(nameof(memberSelector));
+
+        this.visitor.Include(memberSelector, true, filter);
+        return new IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region Where/And
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate)
+    {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.visitor.Where(predicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null)
+    {
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate)
+    {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.visitor.And(predicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null)
+    {
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region GroupBy
+    public IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>> groupingExpr)
+    {
+        if (groupingExpr == null)
+            throw new ArgumentNullException(nameof(groupingExpr));
+
+        this.visitor.GroupBy(groupingExpr);
+        return new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region OrderBy
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        if (condition)
+            this.visitor.OrderBy("ASC", fieldsExpr);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr)
+        => this.OrderByDescending(true, fieldsExpr);
+
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        if (condition)
+            this.visitor.OrderBy("DESC", fieldsExpr);
+        return this;
+    }
+    #endregion
+
+    #region Select 
+    public IQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TTarget>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        this.visitor.Select(null, fieldsExpr);
+        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+    }
+    #endregion
+
+    #region Count
+    public int Count<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    }
+    public async Task<int> CountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    }
+    public int CountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    }
+    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    }
+    public long LongCount<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    }
+    public async Task<long> LongCountAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    }
+    public long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    }
+    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    }
+    #endregion
+
+    #region Aggregate
+    public TField Sum<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    }
+    public async Task<TField> SumAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    }
+    public TField Avg<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    }
+    public async Task<TField> AvgAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    }
+    public TField Max<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    }
+    public async Task<TField> MaxAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    }
+    public TField Min<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    }
+    public async Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
