@@ -45,7 +45,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         this.Tables = new();
         this.TableAlias = new();
-        this.DbParameters = dbParameters;
+        this.DbParameters = dbParameters ?? new TheaDbParameterCollection();
     }
     public virtual string BuildSql(out List<ReaderField> readerFields, bool isContainsCteSql = true, bool isUnion = false)
     {

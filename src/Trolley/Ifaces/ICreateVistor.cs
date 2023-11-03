@@ -8,7 +8,10 @@ namespace Trolley;
 
 public interface ICreateVisitor
 {
+    string DbKey { get; }
     IDataParameterCollection DbParameters { get; set; }
+    IOrmProvider OrmProvider { get; }
+    IEntityMapProvider MapProvider { get; }
 
     string BuildCommand(IDbCommand command);
     MultipleCommand CreateMultipleCommand();

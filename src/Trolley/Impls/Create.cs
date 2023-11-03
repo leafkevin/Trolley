@@ -18,9 +18,9 @@ class Create<TEntity> : ICreate<TEntity>
     protected readonly IDbTransaction transaction;
     protected readonly IOrmProvider ormProvider;
     protected readonly IEntityMapProvider mapProvider;
-    protected readonly bool isParameterized;
     protected readonly ICreateVisitor visitor;
     protected readonly Type entityType;
+    protected readonly bool isParameterized;
     #endregion
 
     #region Constructor
@@ -57,76 +57,6 @@ class Create<TEntity> : ICreate<TEntity>
             throw new ArgumentNullException(nameof(insertObjs));
 
         return new Created<TEntity>(this.connection, this.ormProvider, this.mapProvider, this.visitor).WithBulk(insertObjs, bulkCount);
-    }
-    #endregion
-
-    #region From
-    public IQuery<T> From<T>(string suffixRawSql = null)
-    {
-        var queryVisitor = this.visitor.CreateQuery(typeof(T));
-        queryVisitor.From('a', typeof(T), suffixRawSql);
-        this.CreateCommand(queryVisitor);
-        return new Query<T>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor);
-    }
-    public IQuery<T1, T2> From<T1, T2>()
-    {
-        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2));
-        this.CreateCommand(queryVisitor);
-        return new Query<T1, T2>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor);
-    }
-    public IQuery<T1, T2, T3> From<T1, T2, T3>()
-    {
-        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3));
-        this.CreateCommand(queryVisitor);
-        return new Query<T1, T2, T3>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor);
-    }
-    public IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>()
-    {
-        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-        this.CreateCommand(queryVisitor);
-        return new Query<T1, T2, T3, T4>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor);
-    }
-    public IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
-    {
-        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
-        this.CreateCommand(queryVisitor);
-        return new Query<T1, T2, T3, T4, T5>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor);
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
-    {
-        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
-        this.CreateCommand(queryVisitor);
-        return new Query<T1, T2, T3, T4, T5, T6>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor);
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>()
-    {
-        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
-        this.CreateCommand(queryVisitor);
-        return new Query<T1, T2, T3, T4, T5, T6, T7>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor);
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>()
-    {
-        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
-        this.CreateCommand(queryVisitor);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor);
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>()
-    {
-        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
-        this.CreateCommand(queryVisitor);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor);
-    }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>()
-    {
-        var queryVisitor = this.visitor.CreateQuery(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
-        this.CreateCommand(queryVisitor);
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.connection, this.transaction, this.ormProvider, this.mapProvider, queryVisitor);
-    }
-    private void CreateCommand(IQueryVisitor queryVisitor)
-    {
-        queryVisitor.InsertTo(this.entityType);
-        //queryVisitor.Command = this.connection.CreateCommand();
-        //queryVisitor.Command.Transaction = this.ormProvider;
     }
     #endregion
 
@@ -212,10 +142,10 @@ class Created<TEntity> : ICreated<TEntity>
             this.bulkCount ??= 500;
             var sqlBuilder = new StringBuilder();
             var headSql = this.visitor.BuildBulkHeadSql(sqlBuilder, out var commandInitializer);
-            var myCommandInitializer = commandInitializer as Action<IDbCommand, StringBuilder, object, int>;
+            var typedCommandInitializer = commandInitializer as Action<IDbCommand, StringBuilder, object, int>;
             foreach (var entity in this.parameters)
             {
-                this.visitor.WithBulk(command, sqlBuilder, myCommandInitializer, entity, index);
+                this.visitor.WithBulk(command, sqlBuilder, typedCommandInitializer, entity, index);
                 if (index >= this.bulkCount)
                 {
                     this.visitor.WithBulkTail(sqlBuilder);
@@ -378,7 +308,7 @@ class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEntity>
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
 
-        //if (condition) this.visitor.WithByField(new FieldObject { FieldSelector = fieldSelector, FieldValue = fieldValue });
+        if (condition) this.visitor.WithByField(new FieldObject { FieldSelector = fieldSelector, FieldValue = fieldValue });
         return this;
     }
     #endregion

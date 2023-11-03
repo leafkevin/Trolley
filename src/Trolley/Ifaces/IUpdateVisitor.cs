@@ -21,12 +21,15 @@ public struct UpdateField
 }
 public interface IUpdateVisitor
 {
+    string DbKey { get; }
     IDataParameterCollection DbParameters { get; set; }
+    IOrmProvider OrmProvider { get; }
+    IEntityMapProvider MapProvider { get; }
 
-    string BuildCommand(IDbCommand command);
-    MultipleCommand CreateMultipleCommand();
-    int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
     void Initialize(Type entityType, bool isFirst = true);
+    MultipleCommand CreateMultipleCommand();
+    string BuildCommand(IDbCommand command);
+    int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
     string BuildSql();
     IUpdateVisitor From(params Type[] entityTypes);
     IUpdateVisitor Join(string joinType, Type entityType, Expression joinOn);

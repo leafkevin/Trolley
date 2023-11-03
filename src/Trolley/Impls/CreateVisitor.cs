@@ -16,6 +16,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     protected List<UpdateField> UpdateFields { get; set; } = new();
     protected bool IsUseIgnore { get; set; }
     protected bool IsUseIfNotExists { get; set; }
+    protected object IfNotExistsValue { get; set; }
     protected bool IsUseOrUpdate { get; set; }
     protected virtual bool IsBulk { get; set; } = false;
 
@@ -51,19 +52,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     this.VisitWithByField((FieldObject)deferredSegment.Value);
                     break;
                 case DeferredInsertType.WithBulk:
-                    int index = 0;
-                    this.IsBulk = true;
-                    var builder = new StringBuilder();
-                    var insertObjs = this.deferredSegments[0].Value as IEnumerable;
-                    this.BuildBulkHeadSql(builder, out var commandInitializer);
-                    var bulkCommandInitializer = commandInitializer as Action<IDbCommand, StringBuilder, object, int, int>;
-                    foreach (var insertObj in insertObjs)
-                    {
-                        this.WithBulk(command, builder, bulkCommandInitializer, insertObj, index);
-                        index++;
-                    }
-                    this.WithBulkTail(builder);
-                    sql = builder.ToString();
+                    sql = this.BuildBulkSql(command);
                     break;
                 case DeferredInsertType.IfNotExists:
                     this.VisitIfNotExists(command, deferredSegment.Value);
@@ -143,20 +132,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual ICreateVisitor IfNotExists(object whereObj)
     {
-        this.deferredSegments.Add(new InsertDeferredSegment
-        {
-            Type = DeferredInsertType.IfNotExists,
-            Value = whereObj
-        });
+        this.IsUseIfNotExists = true;
+        this.IfNotExistsValue = whereObj;
         return this;
     }
     public virtual ICreateVisitor IfNotExists(Expression keysPredicate)
     {
-        this.deferredSegments.Add(new InsertDeferredSegment
-        {
-            Type = DeferredInsertType.IfNotExists,
-            Value = keysPredicate
-        });
+        this.IsUseIfNotExists = true;
+        this.IfNotExistsValue = keysPredicate;
         return this;
     }
     public virtual ICreateVisitor Set(Expression fieldsAssignment)
@@ -221,11 +204,11 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         commandInitializer.Invoke(command, builder, insertObj, index);
         builder.Append(')');
     }
-    public virtual void WithBulk(IDbCommand command, StringBuilder builder, Action<IDbCommand, StringBuilder, object, int, int> commandInitializer, object insertObj, int index)
+    public virtual void WithBulk(IDbCommand command, StringBuilder builder, Action<IDbCommand, StringBuilder, string, object, int> commandInitializer, object insertObj, int index)
     {
         if (index > 0) builder.Append(',');
         builder.Append('(');
-        commandInitializer.Invoke(command, builder, insertObj, index, this.CommandIndex);
+        commandInitializer.Invoke(command, builder, $"m{this.CommandIndex}", insertObj, index);
         builder.Append(')');
     }
     public virtual void WithBulkTail(StringBuilder builder)
@@ -305,13 +288,13 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var valuesBuilder = new StringBuilder();
         if (this.IsMultiple)
         {
-            var multiCommandInitializer = commandInitializer as Action<IDbCommand, string, object, StringBuilder, StringBuilder>;
-            multiCommandInitializer.Invoke(command, $"m{this.CommandIndex}", insertObj, fieldsBuilder, valuesBuilder);
+            var multiCommandInitializer = commandInitializer as Action<IDbCommand, StringBuilder, StringBuilder, string, object>;
+            multiCommandInitializer.Invoke(command, fieldsBuilder, valuesBuilder, $"m{this.CommandIndex}", insertObj);
         }
         else
         {
-            var singleCommandInitializer = commandInitializer as Action<IDbCommand, object, StringBuilder, StringBuilder>;
-            singleCommandInitializer.Invoke(command, insertObj, fieldsBuilder, valuesBuilder);
+            var singleCommandInitializer = commandInitializer as Action<IDbCommand, StringBuilder, StringBuilder, object>;
+            singleCommandInitializer.Invoke(command, fieldsBuilder, valuesBuilder, insertObj);
         }
         this.InsertFields.Add(new InsertField
         {
@@ -467,6 +450,34 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         sqlSegment.ParameterName = memberMapper.MemberName;
         if (this.IsMultiple) sqlSegment.ParameterName += $"_m{this.CommandIndex}";
         this.UpdateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = this.GetQuotedValue(sqlSegment) });
+    }
+    private string BuildBulkSql(IDbCommand command)
+    {
+        int index = 0;
+        this.IsBulk = true;
+        var builder = new StringBuilder();
+        var insertObjs = this.deferredSegments[0].Value as IEnumerable;
+        this.BuildBulkHeadSql(builder, out var commandInitializer);
+        if (this.IsMultiple)
+        {
+            var bulkCommandInitializer = commandInitializer as Action<IDbCommand, StringBuilder, string, object, int>;
+            foreach (var insertObj in insertObjs)
+            {
+                this.WithBulk(command, builder, bulkCommandInitializer, insertObj, index);
+                index++;
+            }
+        }
+        else
+        {
+            var bulkCommandInitializer = commandInitializer as Action<IDbCommand, StringBuilder, object, int>;
+            foreach (var insertObj in insertObjs)
+            {
+                this.WithBulk(command, builder, bulkCommandInitializer, insertObj, index);
+                index++;
+            }
+        }
+        this.WithBulkTail(builder);
+        return builder.ToString();
     }
     enum DeferredInsertType
     {

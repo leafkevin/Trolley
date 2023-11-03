@@ -30,8 +30,8 @@ public class SqlVisitor : ISqlVisitor
 
     public string DbKey { get; private set; }
     public IDataParameterCollection DbParameters { get; set; }
-    public IEntityMapProvider MapProvider { get; private set; }
     public IOrmProvider OrmProvider { get; private set; }
+    public IEntityMapProvider MapProvider { get; private set; }  
     public bool IsNeedAlias { get; set; }
     public bool IsParameterized { get; set; }
 

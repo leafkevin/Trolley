@@ -97,8 +97,7 @@ class QueryBase : IQueryBase
         using var command = this.connection.CreateCommand();
         command.CommandText = this.visitor.BuildSql(out _);
         command.CommandType = CommandType.Text;
-        if (this.visitor.DbParameters != null && this.visitor.DbParameters.Count > 0)
-            this.visitor.DbParameters.ForEach(f => command.Parameters.Add(f));
+        this.visitor.DbParameters.CopyTo(command.Parameters);
 
         this.connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -116,8 +115,7 @@ class QueryBase : IQueryBase
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = this.visitor.BuildSql(out _);
         cmd.CommandType = CommandType.Text;
-        if (this.visitor.DbParameters != null && this.visitor.DbParameters.Count > 0)
-            this.visitor.DbParameters.ForEach(f => cmd.Parameters.Add(f));
+        this.visitor.DbParameters.CopyTo(cmd.Parameters);
 
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
@@ -695,8 +693,7 @@ class Query<T> : QueryBase, IQuery<T>
         using var command = this.connection.CreateCommand();
         command.CommandText = this.visitor.BuildSql(out var readerFields);
         command.CommandType = CommandType.Text;
-        if (this.visitor.DbParameters != null && this.visitor.DbParameters.Count > 0)
-            this.visitor.DbParameters.ForEach(f => command.Parameters.Add(f));
+        this.visitor.DbParameters.CopyTo(command.Parameters);
 
         T result = default;
         this.connection.Open();
@@ -730,8 +727,7 @@ class Query<T> : QueryBase, IQuery<T>
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = this.visitor.BuildSql(out var readerFields);
         cmd.CommandType = CommandType.Text;
-        if (this.visitor.DbParameters != null && this.visitor.DbParameters.Count > 0)
-            this.visitor.DbParameters.ForEach(f => cmd.Parameters.Add(f));
+        this.visitor.DbParameters.CopyTo(cmd.Parameters);
 
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
@@ -768,8 +764,7 @@ class Query<T> : QueryBase, IQuery<T>
         using var command = this.connection.CreateCommand();
         command.CommandText = this.visitor.BuildSql(out var readerFields);
         command.CommandType = CommandType.Text;
-        if (this.visitor.DbParameters != null && this.visitor.DbParameters.Count > 0)
-            this.visitor.DbParameters.ForEach(f => command.Parameters.Add(f));
+        this.visitor.DbParameters.CopyTo(command.Parameters);
 
         var result = new List<T>();
         this.connection.Open();
@@ -811,8 +806,7 @@ class Query<T> : QueryBase, IQuery<T>
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = this.visitor.BuildSql(out var readerFields);
         cmd.CommandType = CommandType.Text;
-        if (this.visitor.DbParameters != null && this.visitor.DbParameters.Count > 0)
-            this.visitor.DbParameters.ForEach(f => cmd.Parameters.Add(f));
+        this.visitor.DbParameters.CopyTo(cmd.Parameters);
 
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
@@ -858,8 +852,7 @@ class Query<T> : QueryBase, IQuery<T>
         using var command = this.connection.CreateCommand();
         command.CommandText = this.visitor.BuildSql(out var readerFields);
         command.CommandType = CommandType.Text;
-        if (this.visitor.DbParameters != null && this.visitor.DbParameters.Count > 0)
-            this.visitor.DbParameters.ForEach(f => command.Parameters.Add(f));
+        this.visitor.DbParameters.CopyTo(command.Parameters);
 
         var result = new PagedList<T> { Data = new List<T>() };
         this.connection.Open();
@@ -907,8 +900,7 @@ class Query<T> : QueryBase, IQuery<T>
         using var cmd = this.connection.CreateCommand();
         cmd.CommandText = this.visitor.BuildSql(out var readerFields);
         cmd.CommandType = CommandType.Text;
-        if (this.visitor.DbParameters != null && this.visitor.DbParameters.Count > 0)
-            this.visitor.DbParameters.ForEach(f => cmd.Parameters.Add(f));
+        this.visitor.DbParameters.CopyTo(cmd.Parameters);
 
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
@@ -977,7 +969,7 @@ class Query<T> : QueryBase, IQuery<T>
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.visitor.SelectDefault(defaultExpr);
-        dbParameters = this.visitor.DbParameters;
+        dbParameters = this.visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         return this.visitor.BuildSql(out _);
     }
     #endregion

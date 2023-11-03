@@ -303,6 +303,15 @@ public static class Extensions
         }
         return false;
     }
+    internal static void CopyTo(this IDataParameterCollection dbParameters, IDataParameterCollection other)
+    {
+        if (dbParameters == null || dbParameters.Count == 0)
+            return;
+        foreach (var dbParameter in dbParameters)
+        {
+            other.Add(dbParameter);
+        }
+    }
     private static Delegate CreateReaderDeserializer(IOrmProvider ormProvider, IEntityMapProvider mapProvider, IDataReader reader, Type entityType, bool isValueTuple)
     {
         var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");

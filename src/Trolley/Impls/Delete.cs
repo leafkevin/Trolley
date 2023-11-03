@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,6 +16,8 @@ class Delete<TEntity> : IDelete<TEntity>
     private readonly IDbTransaction transaction;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
+    protected readonly IDeleteVisitor visitor;
+    protected readonly Type entityType;
     private readonly bool isParameterized;
     #endregion
 
@@ -29,6 +29,9 @@ class Delete<TEntity> : IDelete<TEntity>
         this.ormProvider = ormProvider;
         this.mapProvider = mapProvider;
         this.isParameterized = isParameterized;
+        this.visitor = ormProvider.NewDeleteVisitor(connection.DbKey, mapProvider, isParameterized);
+        this.entityType = typeof(TEntity);
+        this.visitor.Initialize(entityType);
     }
     #endregion
 
@@ -38,9 +41,8 @@ class Delete<TEntity> : IDelete<TEntity>
         if (keys == null)
             throw new ArgumentNullException(nameof(keys));
 
-        var visitor = this.ormProvider.NewDeleteVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized);
-        visitor.Initialize(typeof(TEntity));
-        return new Deleted<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider);
+        this.visitor.WhereWith(keys);
+        return new Deleted<TEntity>(this.connection, this.transaction, this.visitor);
     }
     public IDeleting<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
@@ -49,76 +51,42 @@ class Delete<TEntity> : IDelete<TEntity>
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
 
-        var visitor = this.ormProvider.NewDeleteVisitor(this.connection.DbKey, this.mapProvider, this.isParameterized);
-        visitor.Initialize(typeof(TEntity));
-        if (condition) visitor.Where(ifPredicate);
-        else if (elsePredicate != null) visitor.Where(elsePredicate);
-        return new Deleting<TEntity>(this.connection, this.transaction, visitor);
+        if (condition) this.visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+        return new Deleting<TEntity>(this.connection, this.transaction, this.visitor);
     }
     #endregion
 }
 class Deleted<TEntity> : IDeleted<TEntity>
 {
     #region Fields
+    private readonly string dbKey;
     private readonly TheaConnection connection;
     private readonly IDbTransaction transaction;
     private readonly IOrmProvider ormProvider;
     private readonly IEntityMapProvider mapProvider;
-    private bool isBulk = false;
-    private object parameters = null;
+    private readonly IDeleteVisitor visitor;
     #endregion
 
     #region Constructor
-    public Deleted(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
+    public Deleted(TheaConnection connection, IDbTransaction transaction, IDeleteVisitor visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
-        this.ormProvider = ormProvider;
-        this.mapProvider = mapProvider;
-    }
-    #endregion
-
-    #region WhereKeys
-    public void Where(object keys)
-    {
-        string sql = null;
-        var entityType = typeof(TEntity);
-        this.isBulk = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not IDictionary<string, object>;
-        this.parameters = keys;
+        this.ormProvider = visitor.OrmProvider;
+        this.mapProvider = visitor.MapProvider;
+        this.dbKey = connection.DbKey;
+        this.visitor = visitor;
     }
     #endregion
 
     #region Execute
     public int Execute()
     {
-        string sql = null;
-        var entityType = typeof(TEntity);
-        bool isBulk = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not IDictionary<string, object>;
         using var command = this.connection.CreateCommand();
-        if (isBulk)
-        {
-            var commandInitializer = RepositoryHelper.BuildDeleteBatchCommandInitializer(this.connection,
-                 this.ormProvider, this.mapProvider, entityType, this.parameters, out var isNeedEndParenthesis);
-            int index = 0;
-            var sqlBuilder = new StringBuilder();
-            var entities = this.parameters as IEnumerable;
-            foreach (var entity in entities)
-            {
-                commandInitializer.Invoke(command, this.ormProvider, this.mapProvider, sqlBuilder, index, entity);
-                index++;
-            }
-            if (isNeedEndParenthesis) sqlBuilder.Append(')');
-            sql = sqlBuilder.ToString();
-        }
-        else
-        {
-            var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(
-               this.connection, this.ormProvider, this.mapProvider, entityType, parameters);
-            sql = commandInitializer.Invoke(command, this.ormProvider, this.parameters);
-        }
-        command.CommandText = sql;
         command.CommandType = CommandType.Text;
         command.Transaction = this.transaction;
+        command.CommandText = this.visitor.BuildCommand(command);
         this.connection.Open();
         var result = command.ExecuteNonQuery();
         command.Dispose();
@@ -126,86 +94,36 @@ class Deleted<TEntity> : IDeleted<TEntity>
     }
     public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        string sql = null;
-        var entityType = typeof(TEntity);
-        bool isBulk = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not IDictionary<string, object>;
         using var cmd = this.connection.CreateCommand();
-        if (isBulk)
-        {
-            var commandInitializer = RepositoryHelper.BuildDeleteBatchCommandInitializer(this.connection,
-                this.ormProvider, this.mapProvider, entityType, this.parameters, out var isNeedEndParenthesis);
-            int index = 0;
-            var sqlBuilder = new StringBuilder();
-            var entities = this.parameters as IEnumerable;
-            foreach (var entity in entities)
-            {
-                commandInitializer.Invoke(cmd, this.ormProvider, this.mapProvider, sqlBuilder, index, entity);
-                index++;
-            }
-            if (isNeedEndParenthesis) sqlBuilder.Append(')');
-            sql = sqlBuilder.ToString();
-        }
-        else
-        {
-            var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(
-               this.connection, this.ormProvider, this.mapProvider, entityType, parameters);
-            sql = commandInitializer.Invoke(cmd, this.ormProvider, this.parameters);
-        }
-
-        cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.transaction;
+        cmd.CommandText = this.visitor.BuildCommand(cmd);
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
         await this.connection.OpenAsync(cancellationToken);
         var result = await command.ExecuteNonQueryAsync(cancellationToken);
         command.Dispose();
         return result;
     }
+
     #endregion
 
     #region ToMultipleCommand
-    //public MultipleCommand ToMultipleCommand() => this.visitor.CreateMultipleCommand();
+    public MultipleCommand ToMultipleCommand() => this.visitor.CreateMultipleCommand();
     #endregion
 
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        dbParameters = null;
-        string sql = null;
-        var entityType = typeof(TEntity);
-        bool isBulk = this.parameters is IEnumerable && this.parameters is not string && this.parameters is not IDictionary<string, object>;
         using var command = this.connection.CreateCommand();
-        if (isBulk)
-        {
-            var commandInitializer = RepositoryHelper.BuildDeleteBatchCommandInitializer(this.connection,
-                 this.ormProvider, this.mapProvider, entityType, this.parameters, out var isNeedEndParenthesis);
-            int index = 0;
-            var sqlBuilder = new StringBuilder();
-            var entities = this.parameters as IEnumerable;
-            foreach (var entity in entities)
-            {
-                commandInitializer.Invoke(command, this.ormProvider, this.mapProvider, sqlBuilder, index, entity);
-                index++;
-            }
-            if (isNeedEndParenthesis) sqlBuilder.Append(')');
-            sql = sqlBuilder.ToString();
-        }
-        else
-        {
-            var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(
-               this.connection, this.ormProvider, this.mapProvider, entityType, parameters);
-            sql = commandInitializer.Invoke(command, this.ormProvider, this.parameters);
-        }
-        if (command.Parameters != null && command.Parameters.Count > 0)
-            dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+        var sql = this.visitor.BuildCommand(command);
+        dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         return sql;
     }
-    #endregion
+    #endregion   
 }
-class Deleting<TEntity> : IDeleting<TEntity>
+class Deleting<TEntity> : Deleted<TEntity>, IDeleting<TEntity>
 {
     #region Fields
     private readonly TheaConnection connection;
@@ -215,6 +133,7 @@ class Deleting<TEntity> : IDeleting<TEntity>
 
     #region Constructor
     public Deleting(TheaConnection connection, IDbTransaction transaction, IDeleteVisitor visitor)
+        : base(connection, transaction, visitor)
     {
         this.connection = connection;
         this.transaction = transaction;
@@ -234,45 +153,5 @@ class Deleting<TEntity> : IDeleting<TEntity>
         else if (elsePredicate != null) this.visitor.And(elsePredicate);
         return this;
     }
-    #endregion
-
-    #region Execute
-    public int Execute()
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var command = this.connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => command.Parameters.Add(f));
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var sql = this.visitor.BuildSql(out var dbParameters);
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-
-        if (dbParameters != null && dbParameters.Count > 0)
-            dbParameters.ForEach(f => cmd.Parameters.Add(f));
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        await command.DisposeAsync();
-        return result;
-    }
-    #endregion
-
-    #region ToSql
-    public string ToSql(out List<IDbDataParameter> dbParameters) => this.visitor.BuildSql(out dbParameters);
-    #endregion
+    #endregion 
 }
