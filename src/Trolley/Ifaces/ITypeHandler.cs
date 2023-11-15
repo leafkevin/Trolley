@@ -33,22 +33,12 @@ namespace Trolley;
 /// </summary>
 public interface ITypeHandler
 {
-    /// <summary>
-    /// 将值value如何设置到参数中，如：
-    /// <example>
-    /// 下面的代码是JsonTypeHandler中SetValue中的代码片段
-    /// <code>
-    /// if (value == null)
-    ///     parameter.Value = DBNull.Value;
-    /// else parameter.Value = JsonSerializer.Serialize(value);
-    /// </code>
-    /// parameter.Value将变成JSON数组字符串，如：[1,2,3,4...]
-    /// </example>
-    /// </summary>
-    /// <param name="ormProvider">当前Provider</param>
-    /// <param name="parameter">参数对象</param>
-    /// <param name="value">当前值</param>
-    void SetValue(IOrmProvider ormProvider, IDbDataParameter parameter, object value);
     object Parse(IOrmProvider ormProvider, Type TargetType, object value);
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="ormProvider"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
     object ToFieldValue(IOrmProvider ormProvider, object value);
 }

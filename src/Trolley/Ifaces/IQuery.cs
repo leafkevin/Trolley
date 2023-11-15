@@ -26,7 +26,7 @@ public interface IQueryAnonymousObject
 /// </summary>
 public interface IQueryBase
 {
-    #region QueryVisitor
+    #region Visitor
     /// <summary>
     /// Visitor对象
     /// </summary>

@@ -1,9 +1,45 @@
-﻿namespace Trolley.SqlServer;
+﻿using System.Text;
+
+namespace Trolley.SqlServer;
 
 class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
 {
     public SqlServerCreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix) { }
+
+    public override string BuildSql()
+    {
+        //var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
+        //var fieldsBuilder = new StringBuilder($"{this.BuildHeadSql()} {tableName} (");
+        //var valuesBuilder = new StringBuilder();
+        //if (this.IsUseIfNotExists) valuesBuilder.Append(" SELECT ");
+        //else valuesBuilder.Append(" VALUES(");
+        //for (int i = 0; i < this.InsertFields.Count; i++)
+        //{
+        //    var insertField = this.InsertFields[i];
+        //    if (i > 0)
+        //    {
+        //        fieldsBuilder.Append(',');
+        //        valuesBuilder.Append(',');
+        //    }
+        //    fieldsBuilder.Append(insertField.Fields);
+        //    valuesBuilder.Append(insertField.Values);
+        //}
+        //fieldsBuilder.Append(')');
+        //if (this.IsUseIfNotExists)
+        //{
+        //    if (!string.IsNullOrEmpty(this.WhereSql))
+        //        valuesBuilder.Append($" WHERE NOT EXISTS(SELECT * FROM {tableName} WHERE {this.WhereSql})");
+        //}
+        //else valuesBuilder.Append(')');
+
+        //var tailSql = this.BuildTailSql();
+        //if (!string.IsNullOrEmpty(tailSql))
+        //    valuesBuilder.Append(tailSql);
+        //fieldsBuilder.Append(valuesBuilder);
+        //return fieldsBuilder.ToString();
+        return null;
+    }
     public override string BuildTailSql()
     {
         //if (this.IsUseIgnore)

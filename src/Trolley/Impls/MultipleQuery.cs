@@ -162,7 +162,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
             throw new ArgumentNullException(nameof(parameters));
 
         var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.DbKey, this.OrmProvider, rawSql, parameters);
-        commandInitializer.Invoke(this.Command, this.OrmProvider, parameters);
+        commandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, parameters);
 
         var targetType = typeof(TEntity);
         Func<IDataReader, object> readerGetter;
@@ -179,8 +179,8 @@ public class MultipleQuery : IMultipleQuery, IDisposable
 
         var entityType = typeof(TEntity);
         var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, true);
-        var typedCommandInitializer = commandInitializer as Func<IDbCommand, IOrmProvider, IEntityMapProvider, string, object, string>;
-        var sql = typedCommandInitializer.Invoke(this.Command, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
+        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, IEntityMapProvider, string, object, string>;
+        var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
 
         Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         this.AddReader(sql, readerGetter);
@@ -207,7 +207,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
             throw new ArgumentNullException(nameof(parameters));
 
         var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.DbKey, this.OrmProvider, rawSql, parameters);
-        commandInitializer.Invoke(this.Command, this.OrmProvider, parameters);
+        commandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, parameters);
 
         var targetType = typeof(TEntity);
         Func<IDataReader, object> readerGetter;
@@ -224,8 +224,8 @@ public class MultipleQuery : IMultipleQuery, IDisposable
 
         var entityType = typeof(TEntity);
         var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, true);
-        var typedCommandInitializer = commandInitializer as Func<IDbCommand, IOrmProvider, IEntityMapProvider, string, object, string>;
-        var sql = typedCommandInitializer.Invoke(this.Command, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
+        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, IEntityMapProvider, string, object, string>;
+        var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
 
         Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         this.AddReader(sql, readerGetter);
@@ -241,8 +241,8 @@ public class MultipleQuery : IMultipleQuery, IDisposable
 
         var entityType = typeof(TEntity);
         var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, true);
-        var typedCommandInitializer = commandInitializer as Func<IDbCommand, IOrmProvider, IEntityMapProvider, string, object, string>;
-        var sql = typedCommandInitializer.Invoke(this.Command, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
+        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, IEntityMapProvider, string, object, string>;
+        var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
 
         Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         this.AddReader(sql, readerGetter);
@@ -258,8 +258,8 @@ public class MultipleQuery : IMultipleQuery, IDisposable
 
         var entityType = typeof(TEntity);
         var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, true);
-        var typedCommandInitializer = commandInitializer as Func<IDbCommand, IOrmProvider, IEntityMapProvider, string, object, string>;
-        var sql = typedCommandInitializer.Invoke(this.Command, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
+        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, IEntityMapProvider, string, object, string>;
+        var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
 
         Func<IDataReader, object> readerGetter = reader => reader.To<int>() > 0;
         this.AddReader(sql, readerGetter);

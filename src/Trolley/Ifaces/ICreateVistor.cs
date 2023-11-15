@@ -20,16 +20,13 @@ public interface ICreateVisitor
     string BuildSql();
     string BuildHeadSql();
     string BuildTailSql();
-    ICreateVisitor UseIgnore();
-    ICreateVisitor IfNotExists(object whereObj);
-    ICreateVisitor IfNotExists(Expression keysPredicate);
-    ICreateVisitor Set(Expression fieldsAssignment);
-    ICreateVisitor Set(object updateObj);
+    //ICreateVisitor IfNotExists(object whereObj);
+    //ICreateVisitor IfNotExists(Expression keysPredicate);  
     ICreateVisitor WithBy(object insertObj);
     ICreateVisitor WithByField(FieldObject fieldObject);
     ICreateVisitor WithBulk(object insertObjs);
     string BuildBulkHeadSql(StringBuilder builder, out object commandInitializer);
-    void WithBulk(IDbCommand command, StringBuilder builder, Action<IDbCommand, StringBuilder, object, int> commandInitializer, object insertObj, int index);
+    void WithBulk(IDbCommand command, StringBuilder builder, Action<IDataParameterCollection, StringBuilder, object, int> dbParametersInitializer, object insertObj, int index);
     void WithBulkTail(StringBuilder builder);
     IQueryVisitor CreateQuery(params Type[] sourceTypes);
 }

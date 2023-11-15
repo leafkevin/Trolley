@@ -30,12 +30,12 @@ class QueryAnonymousObject : IQueryAnonymousObject
 class QueryBase : IQueryBase
 {
     #region Fields
-    protected string dbKey;
-    protected TheaConnection connection;
-    protected IDbTransaction transaction;
-    protected IOrmProvider ormProvider;
-    protected IEntityMapProvider mapProvider;
-    protected IQueryVisitor visitor;
+    public string dbKey;
+    public TheaConnection connection;
+    public IDbTransaction transaction;
+    public IOrmProvider ormProvider;
+    public IEntityMapProvider mapProvider;
+    public IQueryVisitor visitor;
     #endregion
 
     #region Properties
@@ -139,7 +139,6 @@ class Query<T> : QueryBase, IQuery<T>
     private int? offset;
     private int pageIndex;
     private int pageSize;
-    protected Type insertType;
     #endregion
 
     #region Constructor

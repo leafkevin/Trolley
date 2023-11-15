@@ -14,6 +14,7 @@ public class SqlVisitor : ISqlVisitor
 {
     private static ConcurrentDictionary<int, Func<object, object>> memberGetterCache = new();
     private static string[] calcOps = new string[] { ">", ">=", "<", "<=", "+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>" };
+    private static Action<IDataParameterCollection, IOrmProvider, MemberMap, string, object> addDbParametersDelegate = null;
 
     protected string ParameterPrefix { get; set; } = "p";
     protected List<TableSegment> Tables { get; set; }
@@ -27,11 +28,12 @@ public class SqlVisitor : ISqlVisitor
     protected int CommandIndex { get; set; }
     protected OperationType LastWhereNodeType { get; set; } = OperationType.None;
     protected char TableAsStart { get; set; }
+    protected List<ReaderField> GroupFields { get; set; }
 
     public string DbKey { get; private set; }
     public IDataParameterCollection DbParameters { get; set; }
     public IOrmProvider OrmProvider { get; private set; }
-    public IEntityMapProvider MapProvider { get; private set; }  
+    public IEntityMapProvider MapProvider { get; private set; }
     public bool IsNeedAlias { get; set; }
     public bool IsParameterized { get; set; }
 
@@ -579,11 +581,12 @@ public class SqlVisitor : ISqlVisitor
     }
     public virtual object EvaluateAndCache(object valueOrEntity, string memberName)
     {
+        if (valueOrEntity is IDictionary<string, object> dict)
+            return dict[memberName];
+
         var type = valueOrEntity.GetType();
         if (type.IsEntityType(out var underlyingType))
         {
-            if (valueOrEntity is IDictionary<string, object> dict)
-                return dict[memberName];
             var cacheKey = HashCode.Combine(underlyingType, memberName);
             if (!memberGetterCache.TryGetValue(cacheKey, out var getter))
             {
@@ -1159,21 +1162,13 @@ public class SqlVisitor : ISqlVisitor
     {
         if (sqlSegment.IsVariable || (sqlSegment.IsParameterized || this.IsParameterized) && sqlSegment.IsConstant)
         {
-            //if (!string.IsNullOrEmpty(sqlSegment.ParameterName))
-            //{
-            //    parameterName = this.OrmProvider.ParameterPrefix + sqlSegment.ParameterName;
-            //    if (this.DbParameters.Exists(f => f.ParameterName == parameterName))
-            //        parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.Command.Parameters.Count.ToString();
-            //}
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
-            if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
+            if (this.IsMultiple) parameterName += $"m{this.CommandIndex}";
 
-            IDbDataParameter dbParameter = null;
             if (sqlSegment.MemberMapper != null)
-                dbParameter = this.OrmProvider.CreateParameter(sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
-            else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
+                this.AddDbParameter(sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
+            else this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value));
 
-            this.DbParameters.Add(dbParameter);
             sqlSegment.Value = parameterName;
             sqlSegment.IsParameter = true;
             sqlSegment.IsVariable = false;
@@ -1211,12 +1206,10 @@ public class SqlVisitor : ISqlVisitor
 
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-            IDbDataParameter dbParameter = null;
             if (sqlSegment.MemberMapper != null)
-                dbParameter = this.OrmProvider.CreateParameter(sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
-            else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
+                this.AddDbParameter(sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
+            else this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value));
 
-            this.DbParameters.Add(dbParameter);
             sqlSegment.Value = parameterName;
             sqlSegment.IsParameter = true;
             sqlSegment.IsVariable = false;
@@ -1246,18 +1239,21 @@ public class SqlVisitor : ISqlVisitor
         if (arraySegment.IsVariable || (this.IsParameterized || arraySegment.IsParameterized) && arraySegment.IsConstant)
         {
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
-            if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
+            if (this.IsMultiple) parameterName += $"m{this.CommandIndex}";
 
-            IDbDataParameter dbParameter = null;
             if (arraySegment.MemberMapper != null)
-                dbParameter = this.OrmProvider.CreateParameter(arraySegment.MemberMapper, parameterName, elementValue);
-            else dbParameter = this.OrmProvider.CreateParameter(parameterName, elementValue);
-            this.DbParameters.Add(dbParameter);
+                this.AddDbParameter(arraySegment.MemberMapper, parameterName, elementValue);
+            else this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, elementValue));
             return parameterName;
         }
         if (arraySegment.IsConstant && arraySegment.MemberMapper != null && arraySegment.TargetType != arraySegment.ExpectType)
             elementValue = this.OrmProvider.ToFieldValue(arraySegment.MemberMapper, elementValue);
         return this.OrmProvider.GetQuotedValue(elementValue);
+    }
+    public void AddDbParameter(MemberMap memberMapper, string parameterName, object fieldValue)
+    {
+        var AddDbParametersDelegate = RepositoryHelper.BuildAddDbParameters(this.DbKey, this.OrmProvider, memberMapper, fieldValue);
+        AddDbParametersDelegate.Invoke(this.DbParameters, this.OrmProvider, parameterName, fieldValue);
     }
     /// <summary>
     /// 用于Where条件中，IS NOT NULL,!= 两种情况判断
@@ -1440,6 +1436,180 @@ public class SqlVisitor : ISqlVisitor
         }
         return targetFields;
     }
+
+    public void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, List<ReaderField> readerFields)
+    {
+        string fieldName = null;
+        var sqlSegment = new SqlSegment { Expression = elementExpr, ReaderIndex = readerFields.Count };
+        switch (elementExpr.NodeType)
+        {
+            case ExpressionType.Parameter:
+                if (this.IsFromQuery)
+                    throw new NotSupportedException("FROM子查询中不支持参数Parameter表达式访问，只支持基础字段访问访问");
+                //Select语句中的参数访问，From子查询中的Select没有Include,最外层的Select语句有Include
+                //如下两种情况：
+                //repository.From<Order, OrderDetail>()
+                //    .Include((x, y) => x.Buyer)
+                //    .Where((a, b) => a.Id == b.OrderId)
+                //    .Select((a, b) => new { Order = a, a.BuyerId, DetailId = b.Id, b.Price, b.Quantity, b.Amount }))
+                //    .ToList();
+                //repository.From(f => f.From<Order, OrderDetail, User>()
+                //        .Where((a, b, c) => a.Id == b.OrderId && a.BuyerId == c.Id)
+                //        .GroupBy((a, b, c) => new { OrderId = a.Id, a.BuyerId, c.Age })
+                //        .Having((x, a, b, c) => c.Age > 20 && x.Sum(b.Amount) > 500)
+                //        .Select((x, a, b, c) => new { x.Grouping.OrderId, a.BuyerId, TotalAmount = x.Sum(b.Amount) }))
+                //    .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+                //    .InnerJoin<Order>((a, b, c) => a.OrderId == c.Id)
+                //    .Select((a, b, c) => new { xx = a, a.BuyerId, Buyer = b, Order = c, a.TotalAmount })
+                //    .ToSql(out _);
+                sqlSegment = this.VisitParameter(sqlSegment);
+                var tableReaderFields = sqlSegment.Value as List<ReaderField>;
+                tableReaderFields[0].FromMember = memberInfo;
+                tableReaderFields[0].TargetMember = memberInfo;
+                readerFields.AddRange(tableReaderFields);
+                break;
+            case ExpressionType.New:
+            case ExpressionType.MemberInit:
+                //为了简化SELECT操作，只支持一次New/MemberInit表达式操作
+                throw new NotSupportedException("不支持的表达式访问，SELECT语句只支持一次New/MemberInit表达式操作");
+            case ExpressionType.MemberAccess:
+                if (elementExpr.Type.IsEntityType(out _))
+                {
+                    //TODO:访问了1:N关联关系的成员访问，在第二次查询中处理，此处什么也不做
+                    //成员访问，一种情况是直接访问参数的成员，另一种情况是临时的匿名对象，
+                    //如：Grouping对象或是FromQuery返回的匿名对象中直接访问了参数User，
+                    //后续的查询中引用了这个匿名对象中这个参数User成员
+                    if (this.IsGroupingAggregateMember(elementExpr as MemberExpression))
+                    {
+                        foreach (var readerField in this.GroupFields)
+                        {
+                            readerField.TableSegment.IsUsed = true;
+                            //子查询中的字段别名要带有本地化包装
+                            if (readerField.TargetMember != null && readerField.FromMember.Name != readerField.TargetMember.Name)
+                                readerField.Body += " AS " + this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                        }
+                        readerFields.Add(new ReaderField
+                        {
+                            Index = readerFields.Count,
+                            FieldType = ReaderFieldType.AnonymousObject,
+                            FromMember = memberInfo,
+                            TargetMember = memberInfo,
+                            ReaderFields = this.GroupFields
+                        });
+                    }
+                    else
+                    {
+                        if (this.IsFromQuery)
+                            throw new NotSupportedException("FROM子查询中不支持实体类型成员MemberAccess表达式访问，只支持基础字段访问");
+
+                        sqlSegment = this.VisitMemberAccess(sqlSegment);
+                        //Include成员访问，可能有多层，如：order.Buyer.Compony
+                        if (sqlSegment.Value is List<ReaderField> includedReaderFields)
+                        {
+                            includedReaderFields[0].FromMember = memberInfo;
+                            //成员访问，还是实体类型属性，一定不是目标，应该是include
+                            //主表Parameter访问，该includedReaderFields才能被返回
+                            int index = readerFields.Count;
+                            includedReaderFields.ForEach(f =>
+                            {
+                                f.Index = index;
+                                index++;
+                            });
+                            readerFields.AddRange(includedReaderFields);
+                        }
+                        else if (sqlSegment.Value is ReaderField readerField)
+                        {
+                            //分组子查询后作为Select的临时表，访问x.Grouping对象或是Sql.FlattenTo返回的临时对象
+                            readerField.Index = readerFields.Count;
+                            readerField.FromMember = memberInfo;
+                            readerField.TargetMember = memberInfo;
+                            //成员访问，还是实体类型属性，一定不是目标，应该是include
+                            readerFields.Add(readerField);
+                        }
+                        else
+                        {
+                            //类似Json类型的实体类字段
+                            fieldName = this.GetQuotedValue(sqlSegment);
+                            readerFields.Add(new ReaderField
+                            {
+                                Index = readerFields.Count,
+                                FieldType = ReaderFieldType.Field,
+                                TableSegment = sqlSegment.TableSegment,
+                                FromMember = sqlSegment.FromMember,
+                                TargetMember = memberInfo,
+                                IsOnlyField = true,
+                                Body = fieldName
+                            });
+                        }
+                    }
+                }
+                else
+                {
+                    sqlSegment = this.VisitAndDeferred(sqlSegment);
+                    //使用GetQuotedValue方法把常量都变成对应的字符串格式
+                    //String和DateTime类型变成'...'数据,数字类型变成数字字符串
+                    //参数或是本地成员变量访问
+                    fieldName = this.GetQuotedValue(sqlSegment);
+                    if (sqlSegment.IsExpression)//TODO:if (sqlSegment.IsExpression && !this.IsInsertTo)
+                        fieldName = $"({fieldName})";
+                    //if ((sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall || sqlSegment.FromMember?.Name != memberInfo.Name) && !this.IsInsertTo)
+                    if ((sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall || sqlSegment.FromMember?.Name != memberInfo.Name))
+                        fieldName += " AS " + this.OrmProvider.GetFieldName(memberInfo.Name);
+
+                    readerFields.Add(new ReaderField
+                    {
+                        Index = readerFields.Count,
+                        FieldType = ReaderFieldType.Field,
+                        TableSegment = sqlSegment.TableSegment,
+                        FromMember = sqlSegment.FromMember,
+                        TargetMember = memberInfo,
+                        IsOnlyField = !(sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall),
+                        Body = fieldName
+                    });
+                }
+                break;
+            default:
+                //常量或方法或表达式访问
+                sqlSegment = this.VisitAndDeferred(sqlSegment);
+                //使用GetQuotedValue方法把常量都变成对应的字符串格式
+                //String和DateTime类型变成'...'数据,数字类型变成数字字符串
+                //DeferredFields场景
+                if (sqlSegment.Value is ReaderField methodCallField)
+                {
+                    //函数调用，参数引用多个字段
+                    //repository.From<Activity>()
+                    //.Where(f => f.Id == activityId)
+                    //.Select(f => Sql.FlattenTo<ActivityQueryResponse>(() => new
+                    //{
+                    //    ActivityTypeEnum = this.GetEmnuName(f.ActivityType),
+                    //}))
+                    //.First()               
+                    methodCallField.Index = readerFields.Count;
+                    methodCallField.FromMember = memberInfo;
+                    methodCallField.TargetMember = memberInfo;
+                    readerFields.Add(methodCallField);
+                    break;
+                }
+                else fieldName = this.GetQuotedValue(sqlSegment);
+                if (sqlSegment.IsExpression)//TODO:if (sqlSegment.IsExpression && !this.IsInsertTo)
+                    fieldName = $"({fieldName})";
+                //if ((sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall || sqlSegment.FromMember?.Name != memberInfo.Name) && !this.IsInsertTo)
+                if ((sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall || sqlSegment.FromMember?.Name != memberInfo.Name))
+                    fieldName += " AS " + this.OrmProvider.GetFieldName(memberInfo.Name);
+
+                readerFields.Add(new ReaderField
+                {
+                    Index = readerFields.Count,
+                    FieldType = ReaderFieldType.Field,
+                    TableSegment = sqlSegment.TableSegment,
+                    FromMember = memberInfo,
+                    TargetMember = memberInfo,
+                    Body = fieldName
+                });
+                break;
+        }
+    }
+
     /// <summary>
     /// 根据表、字段获取Field表达式,SELECT和WHERE语句都可以使用
     /// 有表且有别名，将生成a.Field，常量访问没有表则就是字段访问Field
@@ -1554,6 +1724,26 @@ public class SqlVisitor : ISqlVisitor
         //    return true;
         //}
         return false;
+    }
+    public LambdaExpression EnsureLambda(Expression expr)
+    {
+        if (expr.NodeType == ExpressionType.Lambda)
+            return expr as LambdaExpression;
+        var currentExpr = expr;
+        while (true)
+        {
+            if (currentExpr.NodeType == ExpressionType.Lambda)
+                break;
+
+            if (currentExpr is UnaryExpression unaryExpr)
+                currentExpr = unaryExpr.Operand;
+        }
+        return currentExpr as LambdaExpression;
+    }
+    public bool IsGroupingAggregateMember(MemberExpression memberExpr)
+    {
+        if (memberExpr == null) return false;
+        return typeof(IAggregateSelect).IsAssignableFrom(memberExpr.Member.DeclaringType) && memberExpr.Member.Name == "Grouping";
     }
     private List<ConditionExpression> VisitLogicBinaryExpr(Expression conditionExpr)
     {
@@ -1685,7 +1875,6 @@ public class SqlVisitor : ISqlVisitor
         }
         return completedExprs;
     }
-
     private bool FindReaderField(MemberInfo memberInfo, int index, out ReaderField readerField)
     {
         foreach (var tableSegment in this.Tables)
@@ -1771,21 +1960,6 @@ public class SqlVisitor : ISqlVisitor
                     this.AddIncludeTables(readerField, readerFields);
             }
         }
-    }
-    private LambdaExpression EnsureLambda(Expression expr)
-    {
-        if (expr.NodeType == ExpressionType.Lambda)
-            return expr as LambdaExpression;
-        var currentExpr = expr;
-        while (true)
-        {
-            if (currentExpr.NodeType == ExpressionType.Lambda)
-                break;
-
-            if (currentExpr is UnaryExpression unaryExpr)
-                currentExpr = unaryExpr.Operand;
-        }
-        return currentExpr as LambdaExpression;
     }
 
     class ConditionOperator

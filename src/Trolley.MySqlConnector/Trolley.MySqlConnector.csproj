@@ -4,7 +4,7 @@
 		<Version>1.0.2</Version>
 	</PropertyGroup>
 	<ItemGroup>
-	  <PackageReference Include="MySqlConnector" Version="2.2.5" />
+		<PackageReference Include="MySqlConnector" Version="2.2.5" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\Trolley\Trolley.csproj" />

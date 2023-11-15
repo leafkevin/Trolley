@@ -32,9 +32,14 @@ public class MemberBuilder<TMember>
         this.mapper.NativeDbType = nativeDbType;
         return this;
     }
-    public virtual MemberBuilder<TMember> AutoIncrement()
+    public virtual MemberBuilder<TMember> AutoIncrement(bool isAutoIncrement = true)
     {
-        this.mapper.IsAutoIncrement = true;
+        this.mapper.IsAutoIncrement = isAutoIncrement;
+        return this;
+    }
+    public virtual MemberBuilder<TMember> Required(bool isRequired = true)
+    {
+        this.mapper.IsRequired = isRequired;
         return this;
     }
     public virtual MemberBuilder<TMember> TypeHandler(ITypeHandler typeHandler)

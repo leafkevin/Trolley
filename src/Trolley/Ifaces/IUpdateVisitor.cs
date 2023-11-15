@@ -8,7 +8,13 @@ namespace Trolley;
 
 public enum UpdateFieldType
 {
+    /// <summary>
+    /// 设置字段
+    /// </summary>
     SetField,
+    /// <summary>
+    /// 设置NULL
+    /// </summary>
     SetValue,
     Where
 }

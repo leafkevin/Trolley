@@ -14,6 +14,10 @@ namespace Trolley;
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface ICreate<TEntity>
 {
+    #region Properties
+    ICreateVisitor Visitor { get; }
+    #endregion
+
     #region WithBy
     /// <summary>
     /// 使用插入对象部分字段插入，单个对象插入
@@ -58,27 +62,21 @@ public interface ICreate<TEntity>
     ICreated<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
     #endregion 
 
-    #region UseIgnore/IfNotExists
-    /// <summary>
-    /// 相同主键或唯一索引存在时不执行插入动作，仅限MySql、Mariadb、PostgreSql数据库使用。MySql、Mariadb数据库，使用INSERT IGNORE INTO语句实现。PostgreSql数据库，使用INSERT INTO ... ON CONFLICT DO NOTHING语句实现。
-    /// SqlServer数据库，请使用IfNotExists方法。
-    /// </summary>
-    /// <returns>返回插入对象</returns>
-    ICreate<TEntity> UseIgnore();
-    /// <summary>
-    /// 相同主键或唯一索引存在时不执行插入动作。使用INSERT INTO ... SELECT ... WHERE NOT EXISTS(...)语句实现。MySql、Mariadb、PostgreSql数据库可使用UseIgnore方法更方便。
-    /// </summary>
-    /// <typeparam name="TFields">主键或是唯一索引键字段类型</typeparam>
-    /// <param name="keys">主键或是唯一索引键字段值</param>
-    /// <returns>返回插入对象</returns>
-    ICreate<TEntity> IfNotExists<TFields>(TFields keys);
-    /// <summary>
-    /// 相同主键或唯一索引存在时不执行插入动作。使用INSERT INTO ... SELECT ... WHERE NOT EXISTS(...)语句实现。MySql、Mariadb、PostgreSql数据库可使用UseIgnore方法更方便。
-    /// </summary>
-    /// <param name="keysPredicate">主键或是唯一索引键值断言表达式</param>
-    /// <returns>返回插入对象</returns>
-    ICreate<TEntity> IfNotExists(Expression<Func<TEntity, bool>> keysPredicate);
-    #endregion
+    //#region IfNotExists   
+    ///// <summary>
+    ///// 相同主键或唯一索引存在时不执行插入动作。使用INSERT INTO ... SELECT ... WHERE NOT EXISTS(...)语句实现。MySql、Mariadb、PostgreSql数据库可使用UseIgnore方法更方便。
+    ///// </summary>
+    ///// <typeparam name="TFields">主键或是唯一索引键字段类型</typeparam>
+    ///// <param name="keys">主键或是唯一索引键字段值</param>
+    ///// <returns>返回插入对象</returns>
+    //ICreate<TEntity> IfNotExists<TFields>(TFields keys);
+    ///// <summary>
+    ///// 相同主键或唯一索引存在时不执行插入动作。使用INSERT INTO ... SELECT ... WHERE NOT EXISTS(...)语句实现。MySql、Mariadb、PostgreSql数据库可使用UseIgnore方法更方便。
+    ///// </summary>
+    ///// <param name="keysPredicate">主键或是唯一索引键值断言表达式</param>
+    ///// <returns>返回插入对象</returns>
+    //ICreate<TEntity> IfNotExists(Expression<Func<TEntity, bool>> keysPredicate);
+    //#endregion
 }
 /// <summary>
 /// 插入数据
@@ -86,23 +84,6 @@ public interface ICreate<TEntity>
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface ICreated<TEntity>
 {
-    #region OrUpdate
-    /// <summary>
-    /// 相同主键或唯一索引存在时执行更新动作，仅限SqlServer数据库使用。MySql、Mariadb数据库，使用INSERT INTO ... ON DUPLICATE KEY UPDATE语句实现。PostgreSql数据库，使用INSERT INTO ... ON CONFLICT DO NOTHING语句实现。
-    /// </summary>
-    /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
-    /// <param name="updateObj">更新对象</param>
-    /// <returns>返回插入对象</returns>
-    ICreated<TEntity> OrUpdate<TUpdateFields>(TUpdateFields updateObj);
-    /// <summary>
-    /// 相同主键或唯一索引存在时执行更新动作，仅限SqlServer数据库使用。MySql、Mariadb数据库，使用INSERT INTO ... ON DUPLICATE KEY UPDATE语句实现。PostgreSql数据库，使用INSERT INTO ... ON CONFLICT DO NOTHING语句实现。
-    /// </summary>
-    /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
-    /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
-    /// <returns>返回插入对象</returns>
-    ICreated<TEntity> OrUpdate<TUpdateFields>(Expression<Func<ICreateOrUpdate, TEntity, TUpdateFields>> fieldsAssignment);
-    #endregion
-
     #region Execute
     /// <summary>
     /// 执行插入操作，并返回插入行数
@@ -147,6 +128,10 @@ public interface ICreated<TEntity>
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface IContinuedCreate<TEntity> : ICreated<TEntity>
 {
+    #region Properties
+    ICreateVisitor Visitor { get; }
+    #endregion
+
     #region WithBy
     /// <summary>
     /// 使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，用法：
@@ -212,12 +197,4 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     #endregion
-}
-public interface ICreateOrUpdate
-{
-    ICreateOrUpdate Alias(string aliasName);
-    TField Values<TField>(TField fieldSelector);
-    TFields Set<TFields>(TFields updateObj);
-    //TFields Set<TEntity, TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment);
-    //TFields Set<TEntity, TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);
 }

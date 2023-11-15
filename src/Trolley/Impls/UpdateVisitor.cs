@@ -359,7 +359,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 var fieldValue = this.EvaluateAndCache(updateObj, setField.MemberMapper.MemberName);
                 var parameterName = $"{setField.Value}{index}";
                 builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={parameterName}");
-                this.DbParameters.Add(this.OrmProvider.CreateParameter(setField.MemberMapper, parameterName, fieldValue));
+                var addDbParametersDelegate = RepositoryHelper.BuildAddDbParameters(this.DbKey, this.OrmProvider, setField.MemberMapper, fieldValue);
+                addDbParametersDelegate.Invoke(this.DbParameters, this.OrmProvider, parameterName, fieldValue);
             }
             setIndex++;
         }
@@ -372,7 +373,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             var parameterName = $"{this.OrmProvider.ParameterPrefix}k{keyMember.MemberName}{index}";
             builder.Append($"{this.OrmProvider.GetFieldName(keyMember.FieldName)}={parameterName}");
             var fieldValue = this.EvaluateAndCache(updateObj, keyMember.MemberName);
-            this.DbParameters.Add(this.OrmProvider.CreateParameter(keyMember, parameterName, fieldValue));
+            var addDbParametersDelegate = RepositoryHelper.BuildAddDbParameters(this.DbKey, this.OrmProvider, keyMember, fieldValue);
+            addDbParametersDelegate.Invoke(this.DbParameters, this.OrmProvider, parameterName, fieldValue);
         }
     }
     protected virtual void SetBulkMulti(StringBuilder builder, object updateObj, int index)
@@ -391,7 +393,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 var fieldValue = this.EvaluateAndCache(updateObj, setField.MemberMapper.MemberName);
                 var parameterName = $"{setField.Value}{index}_m{this.CommandIndex}";
                 builder.Append($"{this.OrmProvider.GetFieldName(setField.MemberMapper.FieldName)}={parameterName}");
-                this.DbParameters.Add(this.OrmProvider.CreateParameter(setField.MemberMapper, parameterName, fieldValue));
+                var addDbParametersDelegate = RepositoryHelper.BuildAddDbParameters(this.DbKey, this.OrmProvider, setField.MemberMapper, fieldValue);
+                addDbParametersDelegate.Invoke(this.DbParameters, this.OrmProvider, parameterName, fieldValue);
             }
             setIndex++;
         }
@@ -404,7 +407,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             var parameterName = $"{this.OrmProvider.ParameterPrefix}k{keyMember.MemberName}{index}_m{this.CommandIndex}";
             builder.Append($"{this.OrmProvider.GetFieldName(keyMember.FieldName)}={parameterName}");
             var fieldValue = this.EvaluateAndCache(updateObj, keyMember.MemberName);
-            this.DbParameters.Add(this.OrmProvider.CreateParameter(keyMember, parameterName, fieldValue));
+            var addDbParametersDelegate = RepositoryHelper.BuildAddDbParameters(this.DbKey, this.OrmProvider, keyMember, fieldValue);
+            addDbParametersDelegate.Invoke(this.DbParameters, this.OrmProvider, parameterName, fieldValue);
         }
     }
     public virtual void SetBulkTail(StringBuilder builder) { }
@@ -751,7 +755,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var fieldValue = isEntity ? this.EvaluateAndCache(memberValue, memberMapper.MemberName) : memberValue;
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-        this.DbParameters.Add(this.OrmProvider.CreateParameter(memberMapper, parameterName, fieldValue));
+        this.AddDbParameter(memberMapper, parameterName, fieldValue);
         this.UpdateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
     }
     protected void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)
@@ -761,11 +765,17 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.UpdateFields.Add(new UpdateField { Type = UpdateFieldType.SetValue, MemberMapper = memberMapper, Value = "NULL" });
             return;
         }
-        sqlSegment.IsParameterized = true;
-        sqlSegment.MemberMapper = memberMapper;
-        sqlSegment.ParameterName = memberMapper.MemberName;
-        if (this.IsMultiple) sqlSegment.ParameterName += $"_m{this.CommandIndex}";
-        this.UpdateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = this.GetQuotedValue(sqlSegment) });
+        if (sqlSegment.IsConstant || sqlSegment.IsVariable)
+        {
+            //只有常量和变量才有可能是数组
+            if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
+                sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
+
+            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
+            if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
+            this.AddDbParameter(sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
+            this.UpdateFields.Add(new UpdateField { MemberMapper = memberMapper, Value = parameterName });
+        }
     }
     protected void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper, List<UpdateField> setFields, List<IDbDataParameter> dbParameters)
     {
@@ -774,7 +784,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             setFields.Add(new UpdateField { Type = UpdateFieldType.SetValue, MemberMapper = memberMapper, Value = "NULL" });
             return;
         }
-
+        //此种场景是表达式或函数调用，如：f => new {  Name = f.Name + "_1", Content = new { ... } }
         if (sqlSegment.IsConstant || sqlSegment.IsVariable)
         {
             //只有常量和变量才有可能是数组
@@ -785,7 +795,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
             IDbDataParameter dbParameter = null;
             if (memberMapper != null)
-                dbParameter = this.OrmProvider.CreateParameter(memberMapper, parameterName, sqlSegment.Value);
+            {
+                var addDbParametersDelegate = RepositoryHelper.BuildAddDbParameters(this.DbKey, this.OrmProvider, memberMapper, sqlSegment.Value);
+                addDbParametersDelegate.Invoke(this.DbParameters, this.OrmProvider, parameterName, sqlSegment.Value);
+            }
             else dbParameter = this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value);
 
             dbParameters.Add(dbParameter);

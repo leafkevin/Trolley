@@ -154,7 +154,7 @@ public class Repository : IRepository
         if (parameters != null)
         {
             var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.DbKey, this.OrmProvider, rawSql, parameters);
-            commandInitializer.Invoke(command, this.OrmProvider, parameters);
+            commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
         }
 
         TEntity result = default;
@@ -185,7 +185,7 @@ public class Repository : IRepository
         if (parameters != null)
         {
             var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.DbKey, this.OrmProvider, rawSql, parameters);
-            commandInitializer.Invoke(cmd, this.OrmProvider, parameters);
+            commandInitializer.Invoke(cmd.Parameters, this.OrmProvider, parameters);
         }
 
         if (cmd is not DbCommand command)
@@ -280,7 +280,7 @@ public class Repository : IRepository
         if (parameters != null)
         {
             var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.DbKey, this.OrmProvider, rawSql, parameters);
-            commandInitializer.Invoke(command, this.OrmProvider, parameters);
+            commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
         }
 
         var result = new List<TEntity>();
@@ -320,7 +320,7 @@ public class Repository : IRepository
         if (parameters != null)
         {
             var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.DbKey, this.OrmProvider, rawSql, parameters);
-            commandInitializer.Invoke(cmd, this.OrmProvider, parameters);
+            commandInitializer.Invoke(cmd.Parameters, this.OrmProvider, parameters);
         }
 
         if (cmd is not DbCommand command)
@@ -506,11 +506,11 @@ public class Repository : IRepository
             int index = 0;
             var sqlBuilder = new StringBuilder();
             var entities = updateObjs as IEnumerable;
-            var commandInitializer = RepositoryHelper.BuildUpdateBulkCommandInitializer(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjs);
+            var dbParametersInitializer = RepositoryHelper.BuildUpdateBulkSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjs);
             foreach (var updateObj in entities)
             {
                 if (index > 0) sqlBuilder.Append(';');
-                commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, sqlBuilder, updateObj, index);
+                dbParametersInitializer.Invoke(command.Parameters, this.OrmProvider, this.MapProvider, sqlBuilder, updateObj, index);
                 if (index >= bulkCount)
                 {
                     command.CommandText = sqlBuilder.ToString();
@@ -533,9 +533,8 @@ public class Repository : IRepository
         }
         else
         {
-            var commandInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjs, false);
-            var typedCommandInitializer = commandInitializer as Func<IDbCommand, IOrmProvider, IEntityMapProvider, object, string>;
-            command.CommandText = typedCommandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, updateObjs);
+            var dbParametersInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjs);
+            command.CommandText = dbParametersInitializer.Invoke(command.Parameters, this.OrmProvider, this.MapProvider, updateObjs);
             this.connection.Open();
             result = command.ExecuteNonQuery();
         }
@@ -561,12 +560,12 @@ public class Repository : IRepository
             int index = 0;
             var sqlBuilder = new StringBuilder();
             var entities = updateObjs as IEnumerable;
-            var commandInitializer = RepositoryHelper.BuildUpdateBulkCommandInitializer(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjs);
+            var dbParametersInitializer = RepositoryHelper.BuildUpdateBulkSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjs);
 
             foreach (var updateObj in entities)
             {
                 if (index > 0) sqlBuilder.Append(';');
-                commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, sqlBuilder, updateObj, index);
+                dbParametersInitializer.Invoke(command.Parameters, this.OrmProvider, this.MapProvider, sqlBuilder, updateObj, index);
                 if (index >= bulkCount)
                 {
                     command.CommandText = sqlBuilder.ToString();
@@ -589,9 +588,8 @@ public class Repository : IRepository
         }
         else
         {
-            var commandInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjs, false);
-            var typedCommandInitializer = commandInitializer as Func<IDbCommand, IOrmProvider, IEntityMapProvider, object, string>;
-            command.CommandText = typedCommandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, updateObjs);
+            var dbParametersInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjs);
+            command.CommandText = dbParametersInitializer.Invoke(command.Parameters, this.OrmProvider, this.MapProvider, updateObjs);
             await this.connection.OpenAsync(cancellationToken);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
@@ -730,11 +728,11 @@ public class Repository : IRepository
 
         var entityType = typeof(TEntity);
         var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, false);
-        var typedCommandInitializer = commandInitializer as Func<IDbCommand, IOrmProvider, IEntityMapProvider, object, string>;
+        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, IEntityMapProvider, object, string>;
         using var command = this.connection.CreateCommand();
         command.CommandType = CommandType.Text;
         command.Transaction = this.Transaction;
-        command.CommandText = typedCommandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, whereObj);
+        command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, this.MapProvider, whereObj);
 
         int result = 0;
         this.connection.Open();
@@ -753,11 +751,11 @@ public class Repository : IRepository
 
         var entityType = typeof(TEntity);
         var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, false);
-        var typedCommandInitializer = commandInitializer as Func<IDbCommand, IOrmProvider, IEntityMapProvider, object, string>;
+        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, IEntityMapProvider, object, string>;
         using var cmd = this.connection.CreateCommand();
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.Transaction;
-        cmd.CommandText = typedCommandInitializer.Invoke(cmd, this.OrmProvider, this.MapProvider, whereObj);
+        cmd.CommandText = typedCommandInitializer.Invoke(cmd.Parameters, this.OrmProvider, this.MapProvider, whereObj);
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
@@ -788,7 +786,7 @@ public class Repository : IRepository
         if (parameters != null)
         {
             var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.DbKey, this.OrmProvider, rawSql, parameters);
-            commandInitializer.Invoke(command, this.OrmProvider, parameters);
+            commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
         }
 
         this.connection.Open();
@@ -808,7 +806,7 @@ public class Repository : IRepository
         if (parameters != null)
         {
             var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.DbKey, this.OrmProvider, rawSql, parameters);
-            commandInitializer.Invoke(cmd, this.OrmProvider, parameters);
+            commandInitializer.Invoke(cmd.Parameters, this.OrmProvider, parameters);
         }
 
         if (cmd is not DbCommand command)
@@ -995,14 +993,32 @@ public class Repository : IRepository
     public void Commit()
     {
         this.Transaction?.Commit();
-        this.Transaction?.Dispose();
-        this.Transaction = null;
+        this.Dispose();
+    }
+    public async Task CommitAsync(CancellationToken cancellationToken = default)
+    {
+        if (this.Transaction != null)
+        {
+            if (this.Transaction is not DbTransaction dbTransaction)
+                throw new NotSupportedException("当前数据库驱动不支持异步操作");
+            await dbTransaction.CommitAsync(cancellationToken);
+        }
+        await this.DisposeAsync();
     }
     public void Rollback()
     {
         this.Transaction?.Rollback();
-        this.Transaction?.Dispose();
-        this.Transaction = null;
+        this.Dispose();
+    }
+    public async Task RollbackAsync(CancellationToken cancellationToken = default)
+    {
+        if (this.Transaction != null)
+        {
+            if (this.Transaction is not DbTransaction dbTransaction)
+                throw new NotSupportedException("当前数据库驱动不支持异步操作");
+            await dbTransaction.RollbackAsync(cancellationToken);
+        }
+        await this.DisposeAsync();
     }
     public void Dispose()
     {
@@ -1013,8 +1029,12 @@ public class Repository : IRepository
     }
     public async ValueTask DisposeAsync()
     {
-        if (this.Transaction is DbTransaction dbTransaction)
+        if (this.Transaction != null)
+        {
+            if (this.Transaction is not DbTransaction dbTransaction)
+                throw new NotSupportedException("当前数据库驱动不支持异步操作");
             await dbTransaction.DisposeAsync();
+        }
         await this.connection?.DisposeAsync();
         this.Transaction = null;
         GC.SuppressFinalize(this);

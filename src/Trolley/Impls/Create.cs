@@ -14,13 +14,17 @@ namespace Trolley;
 class Create<TEntity> : ICreate<TEntity>
 {
     #region Fields
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IOrmProvider ormProvider;
-    protected readonly IEntityMapProvider mapProvider;
-    protected readonly ICreateVisitor visitor;
-    protected readonly Type entityType;
-    protected readonly bool isParameterized;
+    private readonly TheaConnection connection;
+    private readonly IDbTransaction transaction;
+    private readonly IOrmProvider ormProvider;
+    private readonly IEntityMapProvider mapProvider;
+    private readonly ICreateVisitor visitor;
+    private readonly Type entityType;
+    private readonly bool isParameterized;
+    #endregion
+
+    #region Properties
+    public virtual ICreateVisitor Visitor => visitor;
     #endregion
 
     #region Constructor
@@ -46,7 +50,7 @@ class Create<TEntity> : ICreate<TEntity>
             throw new NotSupportedException("只能插入单个实体，批量插入请使用WithBulk方法");
 
         this.visitor.WithBy(insertObj);
-        return new ContinuedCreate<TEntity>(this.connection, this.ormProvider, this.mapProvider, this.visitor);
+        return new ContinuedCreate<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
     #endregion
 
@@ -56,32 +60,26 @@ class Create<TEntity> : ICreate<TEntity>
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
 
-        return new Created<TEntity>(this.connection, this.ormProvider, this.mapProvider, this.visitor).WithBulk(insertObjs, bulkCount);
+        return new Created<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor).WithBulk(insertObjs, bulkCount);
     }
     #endregion
 
-    #region UseIgnore/IfNotExists
-    public ICreate<TEntity> UseIgnore()
-    {
-        this.visitor.UseIgnore();
-        return this;
-    }
-    public ICreate<TEntity> IfNotExists<TFields>(TFields keys)
-    {
-        this.visitor.IfNotExists(keys);
-        return this;
-    }
-    public ICreate<TEntity> IfNotExists(Expression<Func<TEntity, bool>> keysPredicate)
-    {
-        this.visitor.IfNotExists(keysPredicate);
-        return this;
-    }
-    #endregion
+    //#region FromWith
+    //public ICreated<TEntity> FromWith<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery)
+    //{
+    //    if (cteSubQuery == null)
+    //        throw new ArgumentNullException(nameof(cteSubQuery));
+
+
+    //    return new Created<TEntity>(this.connection, this.ormProvider, this.mapProvider, this.visitor).WithBulk(insertObjs, bulkCount);
+    //}
+    //#endregion 
 }
 class Created<TEntity> : ICreated<TEntity>
 {
     #region Fields
     protected readonly TheaConnection connection;
+    protected readonly IDbTransaction transaction;
     protected readonly IOrmProvider ormProvider;
     protected readonly ICreateVisitor visitor;
     protected readonly IEntityMapProvider mapProvider;
@@ -91,9 +89,10 @@ class Created<TEntity> : ICreated<TEntity>
     #endregion
 
     #region Constructor
-    public Created(TheaConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ICreateVisitor visitor)
+    public Created(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ICreateVisitor visitor)
     {
         this.connection = connection;
+        this.transaction = transaction;
         this.ormProvider = ormProvider;
         this.mapProvider = mapProvider;
         this.visitor = visitor;
@@ -120,11 +119,6 @@ class Created<TEntity> : ICreated<TEntity>
         //this.visitor.Set(updateObj);
         return this;
     }
-    public ICreated<TEntity> OrUpdate<TUpdateFields>(Expression<Func<ICreateOrUpdate, TEntity, TUpdateFields>> fieldsAssignment)
-    {
-        this.visitor.Set(fieldsAssignment);
-        return this;
-    }
     #endregion
 
     #region Execute
@@ -136,16 +130,17 @@ class Created<TEntity> : ICreated<TEntity>
         long result = 0;
         using var command = this.connection.CreateCommand();
         command.CommandType = CommandType.Text;
+        command.Transaction = this.transaction;
         if (this.isBulk)
         {
             int index = 0;
             this.bulkCount ??= 500;
             var sqlBuilder = new StringBuilder();
-            var headSql = this.visitor.BuildBulkHeadSql(sqlBuilder, out var commandInitializer);
-            var typedCommandInitializer = commandInitializer as Action<IDbCommand, StringBuilder, object, int>;
+            var headSql = this.visitor.BuildBulkHeadSql(sqlBuilder, out var dbParametersInitializer);
+            var typedDbParametersInitializer = dbParametersInitializer as Action<IDataParameterCollection, StringBuilder, object, int>;
             foreach (var entity in this.parameters)
             {
-                this.visitor.WithBulk(command, sqlBuilder, typedCommandInitializer, entity, index);
+                this.visitor.WithBulk(command, sqlBuilder, typedDbParametersInitializer, entity, index);
                 if (index >= this.bulkCount)
                 {
                     this.visitor.WithBulkTail(sqlBuilder);
@@ -189,6 +184,7 @@ class Created<TEntity> : ICreated<TEntity>
         long result = 0;
         using var cmd = this.connection.CreateCommand();
         cmd.CommandType = CommandType.Text;
+        cmd.Transaction = this.transaction;
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
@@ -197,11 +193,11 @@ class Created<TEntity> : ICreated<TEntity>
             int index = 0;
             this.bulkCount ??= 500;
             var sqlBuilder = new StringBuilder();
-            var headSql = this.visitor.BuildBulkHeadSql(sqlBuilder, out var commandInitializer);
-            var myCommandInitializer = commandInitializer as Action<IDbCommand, StringBuilder, object, int>;
+            var headSql = this.visitor.BuildBulkHeadSql(sqlBuilder, out var dbParametersInitializer);
+            var typedDbParametersInitializer = dbParametersInitializer as Action<IDataParameterCollection, StringBuilder, object, int>;
             foreach (var entity in this.parameters)
             {
-                this.visitor.WithBulk(command, sqlBuilder, myCommandInitializer, entity, index);
+                this.visitor.WithBulk(command, sqlBuilder, typedDbParametersInitializer, entity, index);
                 if (index >= this.bulkCount)
                 {
                     this.visitor.WithBulkTail(sqlBuilder);
@@ -258,11 +254,11 @@ class Created<TEntity> : ICreated<TEntity>
         {
             int index = 0;
             var sqlBuilder = new StringBuilder();
-            var headSql = this.visitor.BuildBulkHeadSql(sqlBuilder, out var commandInitializer);
-            var myCommandInitializer = commandInitializer as Action<IDbCommand, StringBuilder, object, int>;
+            var headSql = this.visitor.BuildBulkHeadSql(sqlBuilder, out var dbParametersInitializer);
+            var typedDbParametersInitializer = dbParametersInitializer as Action<IDataParameterCollection, StringBuilder, object, int>;
             foreach (var entity in this.parameters)
             {
-                this.visitor.WithBulk(command, sqlBuilder, myCommandInitializer, entity, index);
+                this.visitor.WithBulk(command, sqlBuilder, typedDbParametersInitializer, entity, index);
                 if (index >= this.bulkCount)
                 {
                     this.visitor.WithBulkTail(sqlBuilder);
@@ -273,7 +269,7 @@ class Created<TEntity> : ICreated<TEntity>
             if (index > 0)
                 sql = sqlBuilder.ToString();
         }
-        else sql = this.visitor.BuildSql();
+        else sql = this.visitor.BuildCommand(command);
         dbParameters = this.visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         return sql;
@@ -282,9 +278,13 @@ class Created<TEntity> : ICreated<TEntity>
 }
 class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEntity>
 {
+    #region Properties
+    public virtual ICreateVisitor Visitor => visitor;
+    #endregion
+
     #region Constructor
-    public ContinuedCreate(TheaConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ICreateVisitor visitor)
-        : base(connection, ormProvider, mapProvider, visitor) { }
+    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ICreateVisitor visitor)
+        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
     #endregion
 
     #region WithBy

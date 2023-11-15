@@ -83,8 +83,8 @@ class MySqlProvider : DbHelper
                 Description = this.ToValue<string>(reader[6]),
                 DefaultValue = this.ToValue<string>(reader[7]),
                 IsPrimaryKey = this.ToValue<string>(reader[8]) == "PRI",
-                IsNullable = this.ToValue<string>(reader[9]).Contains("auto_increment"),
-                IsIdentity = this.ToValue<string>(reader[10]) == "YES"
+                IsIdentity = this.ToValue<string>(reader[9]).Contains("auto_increment"),
+                IsNullable = this.ToValue<string>(reader[10]) == "YES"
             });
         }
         reader.Close();

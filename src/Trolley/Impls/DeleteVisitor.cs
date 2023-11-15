@@ -250,31 +250,31 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         var headSql = $"DELETE FROM {this.OrmProvider.GetFieldName(entityMapper.TableName)} WHERE ";
         isMultiKeys = entityMapper.KeyMembers.Count > 1;
         if (!isMultiKeys) headSql += $"{this.OrmProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (";
-        commandInitializer = RepositoryHelper.BuildBulkWhereSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObj, this.IsMultiple);
+        commandInitializer = RepositoryHelper.BuildBulkWhereSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, this.IsMultiple);
         builder.Append(headSql);
         return headSql;
     }
-    protected virtual void WithBulk(IDbCommand command, StringBuilder builder, Action<IDbCommand, IOrmProvider, IEntityMapProvider, StringBuilder, object, int> commandInitializer, object whereObj, int bulkIndex)
+    protected virtual void WithBulk(IDbCommand command, StringBuilder builder, Action<IDataParameterCollection, IOrmProvider, IEntityMapProvider, StringBuilder, object, int> commandInitializer, object whereObj, int bulkIndex)
     {
         if (bulkIndex > 0) builder.Append(',');
-        commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, builder, whereObj, bulkIndex);
+        commandInitializer.Invoke(command.Parameters, this.OrmProvider, this.MapProvider, builder, whereObj, bulkIndex);
     }
-    protected virtual void WithBulk(IDbCommand command, StringBuilder builder, string nextSql, Action<IDbCommand, IOrmProvider, IEntityMapProvider, StringBuilder, object, int> commandInitializer, object whereObj, int bulkIndex)
+    protected virtual void WithBulk(IDbCommand command, StringBuilder builder, string nextSql, Action<IDataParameterCollection, IOrmProvider, IEntityMapProvider, StringBuilder, object, int> commandInitializer, object whereObj, int bulkIndex)
     {
         if (bulkIndex > 0) builder.Append(';');
         builder.Append(nextSql);
-        commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, builder, whereObj, bulkIndex);
+        commandInitializer.Invoke(command.Parameters, this.OrmProvider, this.MapProvider, builder, whereObj, bulkIndex);
     }
-    protected virtual void WithBulk(IDbCommand command, StringBuilder builder, Action<IDbCommand, IOrmProvider, IEntityMapProvider, StringBuilder, string, object, int> commandInitializer, object whereObj, int bulkIndex)
+    protected virtual void WithBulk(IDbCommand command, StringBuilder builder, Action<IDataParameterCollection, IOrmProvider, IEntityMapProvider, StringBuilder, object, string, int> commandInitializer, object whereObj, int bulkIndex)
     {
         if (bulkIndex > 0) builder.Append(',');
-        commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, builder, $"m{this.CommandIndex}", whereObj, bulkIndex);
+        commandInitializer.Invoke(command.Parameters, this.OrmProvider, this.MapProvider, builder, whereObj, $"_m{this.CommandIndex}", bulkIndex);
     }
-    protected virtual void WithBulk(IDbCommand command, StringBuilder builder, string nextSql, Action<IDbCommand, IOrmProvider, IEntityMapProvider, StringBuilder, string, object, int> commandInitializer, object whereObj, int bulkIndex)
+    protected virtual void WithBulk(IDbCommand command, StringBuilder builder, string nextSql, Action<IDataParameterCollection, IOrmProvider, IEntityMapProvider, StringBuilder, object, string, int> commandInitializer, object whereObj, int bulkIndex)
     {
         if (bulkIndex > 0) builder.Append(';');
         builder.Append(nextSql);
-        commandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, builder, $"m{this.CommandIndex}", whereObj, bulkIndex);
+        commandInitializer.Invoke(command.Parameters, this.OrmProvider, this.MapProvider, builder, whereObj, $"_m{this.CommandIndex}", bulkIndex);
     }
     protected virtual void WithBulkTail(StringBuilder builder) => builder.Append(')');
 
@@ -286,16 +286,16 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         {
             var builder = new StringBuilder();
             var entities = whereKeys as IEnumerable;
-            var headSql = this.BuildBulkHeadSql(builder, whereKeys, out var isMultiKeys, out var commandInitializer);
+            var headSql = this.BuildBulkHeadSql(builder, whereKeys, out var isMultiKeys, out var dbParametersInitializer);
             if (this.IsMultiple)
             {
                 int index = 0;
-                var typedCommandInitializer = commandInitializer as Action<IDbCommand, IOrmProvider, IEntityMapProvider, StringBuilder, string, object, int>;
+                var typedDbParametersInitializer = dbParametersInitializer as Action<IDataParameterCollection, IOrmProvider, IEntityMapProvider, StringBuilder, object, string, int>;
                 if (isMultiKeys)
                 {
                     foreach (var entity in entities)
                     {
-                        this.WithBulk(command, builder, headSql, typedCommandInitializer, entity, index);
+                        this.WithBulk(command, builder, headSql, typedDbParametersInitializer, entity, index);
                         index++;
                     }
                 }
@@ -303,7 +303,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 {
                     foreach (var entity in entities)
                     {
-                        this.WithBulk(command, builder, typedCommandInitializer, entity, index);
+                        this.WithBulk(command, builder, typedDbParametersInitializer, entity, index);
                         index++;
                     }
                     this.WithBulkTail(builder);
@@ -311,13 +311,13 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             }
             else
             {
-                var typedCommandInitializer = commandInitializer as Action<IDbCommand, IOrmProvider, IEntityMapProvider, StringBuilder, object, int>;
+                var typedDbParametersInitializer = dbParametersInitializer as Action<IDataParameterCollection, IOrmProvider, IEntityMapProvider, StringBuilder, object, int>;
                 if (isMultiKeys)
                 {
                     int index = 0;
                     foreach (var entity in entities)
                     {
-                        this.WithBulk(command, builder, headSql, typedCommandInitializer, entity, index);
+                        this.WithBulk(command, builder, headSql, typedDbParametersInitializer, entity, index);
                         index++;
                     }
                 }
@@ -326,7 +326,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                     int index = 0;
                     foreach (var entity in entities)
                     {
-                        this.WithBulk(command, builder, typedCommandInitializer, entity, index);
+                        this.WithBulk(command, builder, typedDbParametersInitializer, entity, index);
                         index++;
                     }
                     this.WithBulkTail(builder);
@@ -337,16 +337,16 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         else
         {
             var entityType = this.Tables[0].EntityType;
-            var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereKeys, this.IsMultiple);
+            var dbParametersInitializer = RepositoryHelper.BuildDeleteDbParametersInitializer(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereKeys, this.IsMultiple);
             if (this.IsMultiple)
             {
-                var typedCommandInitializer = commandInitializer as Func<IDbCommand, IOrmProvider, IEntityMapProvider, string, object, string>;
-                sql = typedCommandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, $"m{this.CommandIndex}", whereKeys);
+                var typedDbParametersInitializer = dbParametersInitializer as Func<IDataParameterCollection, IOrmProvider, IEntityMapProvider, object, string, string>;
+                sql = typedDbParametersInitializer.Invoke(command.Parameters, this.OrmProvider, this.MapProvider, whereKeys, $"_m{this.CommandIndex}");
             }
             else
             {
-                var typedCommandInitializer = commandInitializer as Func<IDbCommand, IOrmProvider, IEntityMapProvider, object, string>;
-                sql = typedCommandInitializer.Invoke(command, this.OrmProvider, this.MapProvider, whereKeys);
+                var typedDbParametersInitializer = dbParametersInitializer as Func<IDataParameterCollection, IOrmProvider, IEntityMapProvider, object, string>;
+                sql = typedDbParametersInitializer.Invoke(command.Parameters, this.OrmProvider, this.MapProvider, whereKeys);
             }
         }
         return sql;
