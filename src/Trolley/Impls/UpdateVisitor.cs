@@ -254,7 +254,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         });
         return this;
     }
-
     public virtual IUpdateVisitor IgnoreFields(string[] fieldNames)
     {
         this.IgnoreFieldNames ??= new();
