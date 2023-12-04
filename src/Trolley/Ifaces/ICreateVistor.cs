@@ -1,32 +1,31 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections;
 using System.Data;
 using System.Linq.Expressions;
 using System.Text;
 
 namespace Trolley;
 
-public interface ICreateVisitor
+public interface ICreateVisitor : IDisposable
 {
     string DbKey { get; }
     IDataParameterCollection DbParameters { get; set; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
+    bool IsBulk { get; set; }
 
-    string BuildCommand(IDbCommand command);
+    string BuildCommand(IDbCommand command, bool isReturnIdentity);
     MultipleCommand CreateMultipleCommand();
     int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
     void Initialize(Type entityType, bool isFirst = true);
     string BuildSql();
-    string BuildHeadSql();
-    string BuildTailSql();
-    //ICreateVisitor IfNotExists(object whereObj);
-    //ICreateVisitor IfNotExists(Expression keysPredicate);  
     ICreateVisitor WithBy(object insertObj);
-    ICreateVisitor WithByField(FieldObject fieldObject);
-    ICreateVisitor WithBulk(object insertObjs);
-    string BuildBulkHeadSql(StringBuilder builder, out object commandInitializer);
-    void WithBulk(IDbCommand command, StringBuilder builder, Action<IDataParameterCollection, StringBuilder, object, int> dbParametersInitializer, object insertObj, int index);
-    void WithBulkTail(StringBuilder builder);
-    IQueryVisitor CreateQuery(params Type[] sourceTypes);
+    ICreateVisitor WithByField(Expression fieldSelector, object fieldValue);
+    ICreateVisitor WithBulk(object insertObjs, int bulkCount);
+    (IEnumerable, int, Action<StringBuilder>, Action<StringBuilder, object, string>) BuildWithBulk(IDbCommand command);
+    ICreateVisitor WithFrom<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery, string cteTableName = null);
+    ICreateVisitor IgnoreFields(string[] fieldNames);
+    ICreateVisitor IgnoreFields(Expression fieldsSelector);
+    ICreateVisitor OnlyFields(string[] fieldNames);
+    ICreateVisitor OnlyFields(Expression fieldsSelector);
 }

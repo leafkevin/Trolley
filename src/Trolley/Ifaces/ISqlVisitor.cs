@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 
 namespace Trolley;
 
-public interface ISqlVisitor
+public interface ISqlVisitor : IDisposable
 {
     string DbKey { get; }
     IOrmProvider OrmProvider { get; }

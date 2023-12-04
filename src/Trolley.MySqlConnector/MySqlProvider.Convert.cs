@@ -37,21 +37,21 @@ partial class MySqlProvider
                         if (args0Segment.IsConstant || args0Segment.IsVariable)
                         {
                             var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
-                            if (!methodCallCache.TryGetValue(cacheKey, out var toValueDelegate))
+                            var toValueDelegate = methodCallCache.GetOrAdd(cacheKey, f =>
                             {
                                 var valueExpr = Expression.Parameter(typeof(object), "value");
                                 var callExpr = Expression.Call(methodInfo, valueExpr);
                                 var toValueExpr = Expression.Convert(callExpr, typeof(object));
-                                toValueDelegate = Expression.Lambda(toValueExpr, valueExpr).Compile();
-                                methodCallCache.TryAdd(cacheKey, toValueDelegate);
-                            }
+                                return Expression.Lambda(toValueExpr, valueExpr).Compile();
+                            });
                             var toValue = toValueDelegate as Func<object, object>;
-                            args0Segment.ExpectType = methodInfo.ReturnType;
-                            args0Segment.Value = toValue.Invoke(args0Segment.Value);
+                            //TODO:待测试
+                            //args0Segment.ExpectType = methodInfo.ReturnType;
+                            //args0Segment.Value = toValue.Invoke(args0Segment.Value);
                             return visitor.Change(args0Segment);
                         }
                         var args0Argument = visitor.GetQuotedValue(args0Segment);
-                        args0Segment.ExpectType = methodInfo.ReturnType;
+                        //args0Segment.ExpectType = methodInfo.ReturnType;
                         return visitor.Change(args0Segment, this.CastTo(methodCallExpr.Type, args0Argument), false, true);
                     });
                     result = true;

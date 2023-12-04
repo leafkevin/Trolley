@@ -25,18 +25,18 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     protected bool IsDistinct { get; set; }
     protected bool IsRecursive { get; set; }
     protected string CteTableSql { get; set; }
-    protected List<TableSegment> IncludeSegments { get; set; }
-    /// <summary>
-    /// 只有使用CTE时候有值，当前CTE子查询自身引用，因为不确定后面是否会引用自身，先把自身引用保存起来，方便后面引用
-    /// </summary>
-    protected TableSegment SelfTableSegment { get; set; }
-    protected TableSegment LastIncludeSegment { get; set; } 
+    protected List<TableSegment> IncludeSegments { get; set; }  
+    protected TableSegment LastIncludeSegment { get; set; }
     protected bool IsInsertTo { get; set; }
     protected Type InsertType { get; set; }
 
     public List<TableSegment> CteTables { get; set; }
     public List<object> CteQueries { get; set; }
     public Dictionary<object, TableSegment> CteTableSegments { get; set; }
+    /// <summary>
+    /// 只有使用CTE时候有值，当前CTE子查询自身引用，因为不确定后面是否会引用自身，先把自身引用保存起来，方便后面引用
+    /// </summary>
+    public TableSegment SelfTableSegment { get; set; }
 
     public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix)
@@ -993,6 +993,51 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsRecursive = true;
         return tableSegment;
     }
+    /// <summary>
+    /// 仅供INSERT,UPDAT,DELETE子句生成CTE子句
+    /// </summary>
+    /// <param name="cteTableName"></param>
+    /// <param name="rawSql"></param>
+    /// <param name="readerFields"></param>
+    /// <param name="queryObject"></param>
+    /// <param name="isClear"></param>
+    /// <returns></returns>
+    public virtual string BuildCteTableSql(string cteTableName, string rawSql, List<ReaderField> readerFields, object queryObject, bool isClear = false)
+    {
+        if (isClear) this.Clear(true);
+
+        string withTable = this.SelfTableSegment.RefTableName ?? cteTableName;
+        bool isFirst = this.CteTables.Count == 1;
+        var builder = new StringBuilder();
+        if (isFirst)
+        {
+            builder.Append("WITH ");
+            if (this.IsRecursive)
+                builder.Append("RECURSIVE ");
+        }
+        else
+        {
+            builder.Append(this.CteTableSql);
+            builder.AppendLine(",");
+        }
+        builder.Append($"{withTable}(");
+        int index = 0;
+        foreach (var readerField in readerFields)
+        {
+            var memberInfo = readerField.FromMember;
+            if (index > 0) builder.Append(',');
+            builder.Append(memberInfo.Name);
+            index++;
+        }
+        builder.AppendLine(") AS ");
+        builder.AppendLine("(");
+        builder.AppendLine(rawSql);
+        builder.Append(')');
+        var sql = builder.ToString();
+        this.UnionSql = null;
+        this.IsRecursive = false;
+        return sql;
+    }
     public virtual void BuildCteTable(string cteTableName, string rawSql, List<ReaderField> readerFields, object queryObject, bool isClear = false)
     {
         if (isClear) this.Clear(true);
@@ -1074,6 +1119,27 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         foreach (var queryTableSegment in this.CteTableSegments)
             visitor.CteTableSegments.TryAdd(queryTableSegment.Key, queryTableSegment.Value);
     }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+
+        this.UnionSql = null;
+        this.GroupBySql = null;
+        this.HavingSql = null;
+        this.OrderBySql = null;
+        this.CteTableSql = null;
+
+        this.IncludeSegments = null;
+        this.SelfTableSegment = null;
+        this.LastIncludeSegment = null;
+        this.InsertType = null;
+
+        this.CteTables = null;
+        this.CteQueries = null;
+        this.CteTableSegments = null;
+    }
+
     protected void InitFromQueryReaderFields(TableSegment tableSegment, List<ReaderField> readerFields)
     {
         if (readerFields == null || readerFields.Count == 0)
@@ -1506,7 +1572,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 var readBreakLabel = Expression.Label();
                 //if(!reader.Read())break;
                 var ifFalseExpr = Expression.IsFalse(Expression.Call(readerExpr, readMethodInfo));
-                var ifThenBreakExpr = Expression.IfThen(ifFalseExpr, Expression.Break(readBreakLabel));
+                var ifThen = Expression.IfThen(ifFalseExpr, Expression.Break(readBreakLabel));
                 var methodInfo = toMethodInfo.MakeGenericMethod(includeSegment.FromMember.NavigationType);
                 //reader.To<T>(reader, dbKey, ormProvider, false, readerFields);
                 var includeValueExpr = Expression.Call(methodInfo, readerExpr, dbKeyExpr, ormProviderExpr, mapProviderExpr);
@@ -1514,7 +1580,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 methodInfo = includeType.GetMethod("Add", new Type[] { includeSegment.FromMember.NavigationType });
                 var addValueExpr = Expression.Call(includeResultExpr, methodInfo, includeValueExpr);
                 //includeResult1.Add(entity);
-                blockBodies.Add(Expression.Loop(Expression.Block(ifThenBreakExpr, addValueExpr), readBreakLabel));
+                blockBodies.Add(Expression.Loop(Expression.Block(ifThen, addValueExpr), readBreakLabel));
                 //reader.NextResult()
                 if (index < includeSegments.Count - 1)
                 {
@@ -1551,7 +1617,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     blockBodies.Add(Expression.Assign(indexExpr, Expression.Constant(0, typeof(int))));
                     var listTargetType = typeof(List<>).MakeGenericType(targetType);
                     blockBodies.Add(Expression.Assign(countExpr, Expression.Property(targetExpr, "Count")));
-                    var ifThenBreakExpr = Expression.IfThen(Expression.Equal(indexExpr, countExpr), Expression.Break(readBreakLabel));
+                    var ifThen = Expression.IfThen(Expression.Equal(indexExpr, countExpr), Expression.Break(readBreakLabel));
 
                     var itemPropertyInfo = listTargetType.GetProperty("Item", targetType, new Type[] { typeof(int) });
                     var indexTargetExpr = Expression.MakeIndex(targetExpr, itemPropertyInfo, new[] { indexExpr });
@@ -1585,7 +1651,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     //      result[index].Order.Details=orderDetails;
                     //  index++;
                     //}
-                    blockBodies.Add(Expression.Loop(Expression.Block(ifThenBreakExpr, ifThenExpr, indexIncrementExpr), readBreakLabel));
+                    blockBodies.Add(Expression.Loop(Expression.Block(ifThen, ifThenExpr, indexIncrementExpr), readBreakLabel));
                 }
                 else
                 {

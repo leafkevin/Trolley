@@ -5,13 +5,16 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-public interface IQueryVisitor
+public interface IQueryVisitor : IDisposable
 {
     bool IsNeedAlias { get; set; }
+    bool IsMultiple { get; set; }
+    int CommandIndex { get; set; }
     List<TableSegment> CteTables { get; set; }
     List<object> CteQueries { get; set; }
     Dictionary<object, TableSegment> CteTableSegments { get; set; }
     IDataParameterCollection DbParameters { get; set; }
+    TableSegment SelfTableSegment { get; set; }
 
     string BuildSql(out List<ReaderField> readerFields, bool isContainsCteSql = true, bool isUnion = false);
     bool HasIncludeTables();
@@ -22,6 +25,7 @@ public interface IQueryVisitor
     TableSegment WithTable(Type entityType, string rawSql, List<ReaderField> readerFields, bool isUnion = false, object queryObject = null, bool isRecursive = false);
     TableSegment WithTable(Type entityType, string rawSql, List<ReaderField> readerFields, string cteTableName, object queryObject);
     void BuildCteTable(string cteTableName, string rawSql, List<ReaderField> readerFields, object cteQuery, bool isClear = false);
+    string BuildCteTableSql(string cteTableName, string rawSql, List<ReaderField> readerFields, object queryObject, bool isClear = false);
     void Union(TableSegment tableSegment, string rawSql);
     void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null);
     void ThenInclude(Expression memberSelector, bool isIncludeMany = false, Expression filter = null);

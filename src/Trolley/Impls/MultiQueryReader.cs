@@ -11,16 +11,19 @@ namespace Trolley;
 
 class MultiQueryReader : IMultiQueryReader
 {
-    private readonly IDbCommand command;
-    private readonly IDataReader reader;
-    private int readerIndex = 0;
+    private readonly bool isNeedClose;
+    private IDbCommand command;
+    private IDataReader reader;
     private List<ReaderAfter> readerAfters;
+
+    private int readerIndex = 0;
     private List<NextReaderAfter> nextAfters;
-    public MultiQueryReader(IDbCommand command, IDataReader reader, List<ReaderAfter> readerAfters = null)
+    public MultiQueryReader(IDbCommand command, IDataReader reader, List<ReaderAfter> readerAfters, bool isNeedClose)
     {
         this.command = command;
         this.reader = reader;
         this.readerAfters = readerAfters;
+        this.isNeedClose = isNeedClose;
     }
     public T ReadFirst<T>()
     {
@@ -36,7 +39,12 @@ class MultiQueryReader : IMultiQueryReader
     public List<T> Read<T>()
     {
         var result = new List<T>();
-        this.ReadList(result, false);
+        var readerAfter = this.readerAfters[this.readerIndex];
+        while (this.reader.Read())
+        {
+            result.Add((T)readerAfter.ReaderGetter.Invoke(this.reader));
+        }
+        this.NextReader(readerAfter, result);
         return result;
     }
     public IPagedList<T> ReadPageList<T>()
@@ -46,7 +54,16 @@ class MultiQueryReader : IMultiQueryReader
             totalCount = reader.To<int>();
         this.reader.NextResult();
         var dataList = new List<T>();
-        (var pageIndex, var pageSize) = this.ReadList(dataList, true);
+
+        var readerAfter = this.readerAfters[this.readerIndex];
+        while (this.reader.Read())
+        {
+            dataList.Add((T)readerAfter.ReaderGetter.Invoke(this.reader));
+        }
+        var pageIndex = readerAfter.PageIndex;
+        var pageSize = readerAfter.PageSize;
+        this.NextReader(readerAfter, dataList);
+
         return new PagedList<T>
         {
             Data = dataList,
@@ -171,8 +188,11 @@ class MultiQueryReader : IMultiQueryReader
         }
         var connection = this.command?.Connection;
         this.reader?.Dispose();
+        this.reader = null;
         this.command?.Dispose();
-        connection?.Dispose();
+        this.command = null;
+        if (this.isNeedClose && connection != null)
+            connection?.Dispose();
     }
     public async ValueTask DisposeAsync()
     {
@@ -193,10 +213,16 @@ class MultiQueryReader : IMultiQueryReader
         }
         var connection = dbCommand?.Connection;
         if (dbReader != null)
+        {
             await dbReader.DisposeAsync();
+            this.reader = null;
+        }
         if (dbCommand != null)
+        {
             await dbCommand.DisposeAsync();
-        if (connection != null)
+            this.command = null;
+        }
+        if (this.isNeedClose && connection != null)
             await connection.DisposeAsync();
     }
     private void NextReader(ReaderAfter readerAfter, object target)

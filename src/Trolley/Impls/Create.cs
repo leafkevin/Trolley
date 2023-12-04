@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
@@ -13,31 +12,18 @@ namespace Trolley;
 
 class Create<TEntity> : ICreate<TEntity>
 {
-    #region Fields
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IOrmProvider ormProvider;
-    private readonly IEntityMapProvider mapProvider;
-    private readonly ICreateVisitor visitor;
-    private readonly Type entityType;
-    private readonly bool isParameterized;
-    #endregion
-
     #region Properties
-    public virtual ICreateVisitor Visitor => visitor;
+    public DbContext DbContext { get; private set; }
+    public ICreateVisitor Visitor { get; private set; }
     #endregion
 
     #region Constructor
-    public Create(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false)
+    public Create(DbContext dbContext)
     {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.ormProvider = ormProvider;
-        this.mapProvider = mapProvider;
-        this.isParameterized = isParameterized;
-        this.entityType = typeof(TEntity);
-        this.visitor = ormProvider.NewCreateVisitor(connection.DbKey, mapProvider, isParameterized);
-        this.visitor.Initialize(entityType);
+        this.DbContext = dbContext;
+        this.Visitor = this.DbContext.OrmProvider.NewCreateVisitor(this.DbContext.DbKey, this.DbContext.MapProvider, this.DbContext.IsParameterized);
+        this.Visitor.Initialize(typeof(TEntity));
+        this.DbContext = dbContext;
     }
     #endregion
 
@@ -49,242 +35,255 @@ class Create<TEntity> : ICreate<TEntity>
         if (insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>)
             throw new NotSupportedException("只能插入单个实体，批量插入请使用WithBulk方法");
 
-        this.visitor.WithBy(insertObj);
-        return new ContinuedCreate<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        this.Visitor.WithBy(insertObj);
+        return new ContinuedCreate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 
     #region WithBulk
-    public ICreated<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500)
+    public IContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
 
-        return new Created<TEntity>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor).WithBulk(insertObjs, bulkCount);
+        if (insertObjs is string || insertObjs is IDictionary<string, object>)
+            throw new NotSupportedException("批量插入，单个对象类型只支持命名对象、匿名对象或是字典对象");
+
+        this.Visitor.WithBulk(insertObjs, bulkCount);
+        return new ContinuedCreate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
-
-    //#region FromWith
-    //public ICreated<TEntity> FromWith<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery)
-    //{
-    //    if (cteSubQuery == null)
-    //        throw new ArgumentNullException(nameof(cteSubQuery));
-
-
-    //    return new Created<TEntity>(this.connection, this.ormProvider, this.mapProvider, this.visitor).WithBulk(insertObjs, bulkCount);
-    //}
-    //#endregion 
 }
 class Created<TEntity> : ICreated<TEntity>
 {
-    #region Fields
-    protected readonly TheaConnection connection;
-    protected readonly IDbTransaction transaction;
-    protected readonly IOrmProvider ormProvider;
-    protected readonly ICreateVisitor visitor;
-    protected readonly IEntityMapProvider mapProvider;
-    private IEnumerable parameters = null;
-    private int? bulkCount;
-    private bool isBulk = false;
+    #region Properties
+    public DbContext DbContext { get; private set; }
+    public ICreateVisitor Visitor { get; private set; }
     #endregion
 
     #region Constructor
-    public Created(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ICreateVisitor visitor)
+    public Created(DbContext dbContext, ICreateVisitor visitor)
     {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.ormProvider = ormProvider;
-        this.mapProvider = mapProvider;
-        this.visitor = visitor;
-    }
-    #endregion   
-
-    #region WithBulk
-    public ICreated<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500)
-    {
-        if (insertObjs == null)
-            throw new ArgumentNullException(nameof(insertObjs));
-
-        this.visitor.WithBulk(insertObjs);
-        this.parameters = insertObjs;
-        this.bulkCount = bulkCount;
-        this.isBulk = true;
-        return this;
-    }
-    #endregion
-
-    #region OrUpdate  
-    public ICreated<TEntity> OrUpdate<TUpdateFields>(TUpdateFields updateObj)
-    {
-        //this.visitor.Set(updateObj);
-        return this;
+        this.DbContext = dbContext;
+        this.Visitor = visitor;
     }
     #endregion
 
     #region Execute
-    public int Execute() => (int)this.ExecuteLong();
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-        => (int)await this.ExecuteLongAsync(cancellationToken);
-    public long ExecuteLong()
+    public int Execute()
     {
-        long result = 0;
-        using var command = this.connection.CreateCommand();
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        if (this.isBulk)
+        int result = 0;
+        if (this.Visitor.IsBulk)
         {
-            int index = 0;
-            this.bulkCount ??= 500;
-            var sqlBuilder = new StringBuilder();
-            var headSql = this.visitor.BuildBulkHeadSql(sqlBuilder, out var dbParametersInitializer);
-            var typedDbParametersInitializer = dbParametersInitializer as Action<IDataParameterCollection, StringBuilder, object, int>;
-            foreach (var entity in this.parameters)
+            using var command = this.DbContext.CreateCommand();
+            bool isNeedClose = this.DbContext.IsNeedClose;
+            try
             {
-                this.visitor.WithBulk(command, sqlBuilder, typedDbParametersInitializer, entity, index);
-                if (index >= this.bulkCount)
+                int index = 0;
+                bool isFirst = true;
+                var sqlBuilder = new StringBuilder();
+                (var insertObjs, var bulkCount, var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
+                headSqlSetter.Invoke(sqlBuilder);
+
+                foreach (var insertObj in insertObjs)
                 {
-                    this.visitor.WithBulkTail(sqlBuilder);
-                    command.CommandText = sqlBuilder.ToString();
-                    this.connection.Open();
-                    result += command.ExecuteNonQuery();
-                    command.Parameters.Clear();
-                    sqlBuilder.Clear();
-                    index = 0;
-                    sqlBuilder.Append(headSql);
-                    continue;
+                    if (index > 0) sqlBuilder.Append(',');
+                    commandInitializer.Invoke(sqlBuilder, insertObj, index.ToString());
+                    if (index >= bulkCount)
+                    {
+                        command.CommandText = sqlBuilder.ToString();
+                        if (isFirst)
+                        {
+                            this.DbContext.Connection.Open();
+                            isFirst = false;
+                        }
+                        result += command.ExecuteNonQuery();
+                        command.Parameters.Clear();
+                        sqlBuilder.Clear();
+                        headSqlSetter.Invoke(sqlBuilder);
+                        index = 0;
+                        continue;
+                    }
+                    index++;
                 }
-                index++;
+                if (index > 0)
+                {
+                    command.CommandText = sqlBuilder.ToString();
+                    if (isFirst) this.DbContext.Connection.Open();
+                    result += command.ExecuteNonQuery();
+                }
+                sqlBuilder.Clear();
             }
-            if (index > 0)
+            catch
             {
-                command.CommandText = sqlBuilder.ToString();
-                this.connection.Open();
-                result += command.ExecuteNonQuery();
+                isNeedClose = true;
             }
-            sqlBuilder.Clear();
+            finally
+            {
+                command.Dispose();
+                if (isNeedClose) this.Dispose();
+            }
         }
         else
         {
-            var entityType = typeof(TEntity);
-            var entityMapper = this.mapProvider.GetEntityMap(entityType);
-            this.visitor.BuildCommand(command);
-            if (entityMapper.IsAutoIncrement)
-            {
-                using var reader = command.ExecuteReader();
-                if (reader.Read()) result = reader.To<long>();
-                reader.Dispose();
-            }
-            else result = command.ExecuteNonQuery();
+            result = this.DbContext.Execute(f => this.Visitor.BuildCommand(f, true));
+            this.Dispose();
         }
-        command.Dispose();
         return result;
     }
-    public async Task<long> ExecuteLongAsync(CancellationToken cancellationToken = default)
+    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        long result = 0;
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        if (this.isBulk)
+        int result = 0;
+        if (this.Visitor.IsBulk)
         {
-            int index = 0;
-            this.bulkCount ??= 500;
-            var sqlBuilder = new StringBuilder();
-            var headSql = this.visitor.BuildBulkHeadSql(sqlBuilder, out var dbParametersInitializer);
-            var typedDbParametersInitializer = dbParametersInitializer as Action<IDataParameterCollection, StringBuilder, object, int>;
-            foreach (var entity in this.parameters)
+            using var command = this.DbContext.CreateDbCommand();
+            bool isNeedClose = this.DbContext.IsNeedClose;
+            try
             {
-                this.visitor.WithBulk(command, sqlBuilder, typedDbParametersInitializer, entity, index);
-                if (index >= this.bulkCount)
+                int index = 0;
+                bool isFirst = true;
+                var sqlBuilder = new StringBuilder();
+                (var insertObjs, var bulkCount, var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
+                headSqlSetter.Invoke(sqlBuilder);
+                foreach (var insertObj in insertObjs)
                 {
-                    this.visitor.WithBulkTail(sqlBuilder);
-                    command.CommandText = sqlBuilder.ToString();
-                    await this.connection.OpenAsync(cancellationToken);
-                    result += await command.ExecuteNonQueryAsync(cancellationToken);
-                    command.Parameters.Clear();
-                    sqlBuilder.Clear();
-                    index = 0;
-                    sqlBuilder.Append(headSql);
-                    continue;
+                    if (index > 0) sqlBuilder.Append(',');
+                    commandInitializer.Invoke(sqlBuilder, insertObj, index.ToString());
+                    if (index >= bulkCount)
+                    {
+                        command.CommandText = sqlBuilder.ToString();
+                        if (isFirst)
+                        {
+                            await this.DbContext.Connection.OpenAsync(cancellationToken);
+                            isFirst = false;
+                        }
+                        result += await command.ExecuteNonQueryAsync(cancellationToken);
+                        command.Parameters.Clear();
+                        sqlBuilder.Clear();
+                        headSqlSetter.Invoke(sqlBuilder);
+                        index = 0;
+                        continue;
+                    }
+                    index++;
                 }
-                index++;
+                if (index > 0)
+                {
+                    command.CommandText = sqlBuilder.ToString();
+                    if (isFirst) await this.DbContext.Connection.OpenAsync(cancellationToken);
+                    result += await command.ExecuteNonQueryAsync(cancellationToken);
+                }
+                sqlBuilder.Clear();
             }
-            if (index > 0)
+            catch
             {
-                command.CommandText = sqlBuilder.ToString();
-                await this.connection.OpenAsync(cancellationToken);
-                result += await command.ExecuteNonQueryAsync(cancellationToken);
+                isNeedClose = true;
             }
-            sqlBuilder.Clear();
+            finally
+            {
+                command.Dispose();
+                if (isNeedClose) this.Dispose();
+            }
         }
         else
         {
-            var entityType = typeof(TEntity);
-            var entityMapper = this.mapProvider.GetEntityMap(entityType);
-            this.visitor.BuildCommand(command);
-            await this.connection.OpenAsync(cancellationToken);
-            if (entityMapper.IsAutoIncrement)
-            {
-                using var reader = await command.ExecuteReaderAsync(cancellationToken);
-                if (await reader.ReadAsync(cancellationToken))
-                    result = reader.To<long>();
-                await reader.DisposeAsync();
-            }
-            else result = await command.ExecuteNonQueryAsync(cancellationToken);
+            result = await this.DbContext.ExecuteAsync(f => this.Visitor.BuildCommand(f, true), cancellationToken);
+            this.Dispose();
         }
-        await command.DisposeAsync();
         return result;
     }
     #endregion
 
-    //#region ToMultipleCommand
-    //public MultipleCommand ToMultipleCommand() => this.visitor.CreateMultipleCommand();
-    //#endregion
+    #region ExecuteIdentity
+    public int ExecuteIdentity()
+    {
+        var result = this.DbContext.CreateIdentity<int>(f => this.Visitor.BuildCommand(f, true));
+        this.Dispose();
+        return result;
+    }
+    public async Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await this.DbContext.CreateIdentityAsync<int>(f => this.Visitor.BuildCommand(f, true), cancellationToken);
+        this.Dispose();
+        return result;
+    }
+    public long ExecuteIdentityLong()
+    {
+        var result = this.DbContext.CreateIdentity<long>(f => this.Visitor.BuildCommand(f, true));
+        this.Dispose();
+        return result;
+    }
+    public async Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await this.DbContext.CreateIdentityAsync<long>(f => this.Visitor.BuildCommand(f, true), cancellationToken);
+        this.Dispose();
+        return result;
+    }
+    #endregion
+
+    #region ToMultipleCommand
+    public MultipleCommand ToMultipleCommand()
+    {
+        var result = this.Visitor.CreateMultipleCommand();
+        this.Dispose();
+        return result;
+    }
+    #endregion
 
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
         dbParameters = null;
         string sql = null;
-        using var command = this.connection.CreateCommand();
-        if (this.isBulk)
+        using var command = this.DbContext.CreateCommand();
+        if (this.Visitor.IsBulk)
         {
             int index = 0;
             var sqlBuilder = new StringBuilder();
-            var headSql = this.visitor.BuildBulkHeadSql(sqlBuilder, out var dbParametersInitializer);
-            var typedDbParametersInitializer = dbParametersInitializer as Action<IDataParameterCollection, StringBuilder, object, int>;
-            foreach (var entity in this.parameters)
+            (var insertObjs, var bulkCount, var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
+            headSqlSetter.Invoke(sqlBuilder);
+
+            foreach (var insertObj in insertObjs)
             {
-                this.visitor.WithBulk(command, sqlBuilder, typedDbParametersInitializer, entity, index);
-                if (index >= this.bulkCount)
+                if (index > 0) sqlBuilder.Append(',');
+                commandInitializer.Invoke(sqlBuilder, insertObj, index.ToString());
+                if (index >= bulkCount)
                 {
-                    this.visitor.WithBulkTail(sqlBuilder);
+                    sql = sqlBuilder.ToString();
+                    index = 0;
                     break;
                 }
                 index++;
             }
+            if (index > 0) sql = sqlBuilder.ToString();
+            sqlBuilder.Clear();
             if (index > 0)
                 sql = sqlBuilder.ToString();
         }
-        else sql = this.visitor.BuildCommand(command);
-        dbParameters = this.visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+        else sql = this.Visitor.BuildCommand(command, false);
+        dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         return sql;
     }
     #endregion
+
+    public void Dispose()
+    {
+        this.DbContext.Dispose();
+        this.DbContext = null;
+        this.Visitor.Dispose();
+        this.Visitor = null;
+    }
+    public async ValueTask DisposeAsync()
+    {
+        await this.DbContext.DisposeAsync();
+        this.Visitor.Dispose();
+    }
 }
 class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEntity>
 {
-    #region Properties
-    public virtual ICreateVisitor Visitor => visitor;
-    #endregion
-
     #region Constructor
-    public ContinuedCreate(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ICreateVisitor visitor)
-        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
+    public ContinuedCreate(DbContext dbContext, ICreateVisitor visitor)
+        : base(dbContext, visitor) { }
     #endregion
 
     #region WithBy
@@ -294,8 +293,10 @@ class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEntity>
             throw new ArgumentNullException(nameof(insertObj));
         if (insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>)
             throw new NotSupportedException("只能插入单个实体，批量插入请使用WithBulkBy方法");
+        if (!typeof(TInsertObject).IsEntityType(out _))
+            throw new NotSupportedException("方法WithBy<TInsertObject>(TInsertObject insertObj)只支持类对象参数，不支持基础类型参数");
 
-        this.visitor.WithBy(insertObj);
+        this.Visitor.WithBy(insertObj);
         return this;
     }
     public IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
@@ -308,7 +309,49 @@ class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEntity>
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
 
-        if (condition) this.visitor.WithByField(new FieldObject { FieldSelector = fieldSelector, FieldValue = fieldValue });
+        if (condition) this.Visitor.WithByField(fieldSelector, fieldValue);
+        return this;
+    }
+    #endregion
+
+    #region IgnoreFields
+    public IContinuedCreate<TEntity> IgnoreFields(params string[] fieldNames)
+    {
+        if (fieldNames == null)
+            throw new ArgumentNullException(nameof(fieldNames));
+
+        this.Visitor.IgnoreFields(fieldNames);
+        return this;
+    }
+    public IContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
+    {
+        if (fieldsSelector == null)
+            throw new ArgumentNullException(nameof(fieldsSelector));
+        if (fieldsSelector.Body.NodeType != ExpressionType.New && fieldsSelector.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelector)},只支持New或MemberInit类型表达式");
+
+        this.Visitor.IgnoreFields(fieldsSelector);
+        return this;
+    }
+    #endregion
+
+    #region OnlyFields
+    public IContinuedCreate<TEntity> OnlyFields(params string[] fieldNames)
+    {
+        if (fieldNames == null)
+            throw new ArgumentNullException(nameof(fieldNames));
+
+        this.Visitor.OnlyFields(fieldNames);
+        return this;
+    }
+    public IContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
+    {
+        if (fieldsSelector == null)
+            throw new ArgumentNullException(nameof(fieldsSelector));
+        if (fieldsSelector.Body.NodeType != ExpressionType.New && fieldsSelector.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelector)},只支持New或MemberInit类型表达式");
+
+        this.Visitor.OnlyFields(fieldsSelector);
         return this;
     }
     #endregion

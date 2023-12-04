@@ -8,6 +8,8 @@ namespace Trolley;
 
 public sealed class TheaConnection : IDbConnection
 {
+    private int isDisposed = 0;
+
     public string DbKey { get; set; }
     public string ConnectionString { get; set; }
     public IDbConnection BaseConnection { get; set; }
@@ -15,17 +17,32 @@ public sealed class TheaConnection : IDbConnection
     public int CommandTimeout { get; set; } = 30;
     public string Database => this.BaseConnection.Database;
     public ConnectionState State => this.BaseConnection.State;
+    internal IOrmProvider OrmProvider { get; set; }
 
-    public IDbTransaction BeginTransaction() => this.BaseConnection.BeginTransaction();
-    public IDbTransaction BeginTransaction(IsolationLevel il) => this.BaseConnection.BeginTransaction(il);
+    public IDbTransaction BeginTransaction()
+    {
+        if (Interlocked.CompareExchange(ref this.isDisposed, 0, 1) == 1)
+            this.BaseConnection = this.OrmProvider.CreateConnection(this.ConnectionString);
+        return this.BaseConnection.BeginTransaction();
+    }
+    public IDbTransaction BeginTransaction(IsolationLevel il)
+    {
+        if (Interlocked.CompareExchange(ref this.isDisposed, 0, 1) == 1)
+            this.BaseConnection = this.OrmProvider.CreateConnection(this.ConnectionString);
+        return this.BaseConnection.BeginTransaction(il);
+    }
     public async ValueTask<IDbTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
+        if (Interlocked.CompareExchange(ref this.isDisposed, 0, 1) == 1)
+            this.BaseConnection = this.OrmProvider.CreateConnection(this.ConnectionString);
         if (this.BaseConnection is DbConnection connection)
             return await connection.BeginTransactionAsync(cancellationToken);
         else throw new Exception("当前数据库驱动不支持异步操作");
     }
     public async ValueTask<IDbTransaction> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default)
     {
+        if (Interlocked.CompareExchange(ref this.isDisposed, 0, 1) == 1)
+            this.BaseConnection = this.OrmProvider.CreateConnection(this.ConnectionString);
         if (this.BaseConnection is DbConnection connection)
             return await connection.BeginTransactionAsync(isolationLevel, cancellationToken);
         else throw new Exception("当前数据库驱动不支持异步操作");
@@ -40,6 +57,9 @@ public sealed class TheaConnection : IDbConnection
     }
     public void Open()
     {
+        if (Interlocked.CompareExchange(ref this.isDisposed, 0, 1) == 1)
+            this.BaseConnection = this.OrmProvider.CreateConnection(this.ConnectionString);
+
         if (this.BaseConnection.State == ConnectionState.Broken)
             this.BaseConnection.Close();
         if (this.BaseConnection.State == ConnectionState.Closed)
@@ -51,36 +71,37 @@ public sealed class TheaConnection : IDbConnection
     }
     public async Task OpenAsync(CancellationToken cancellationToken)
     {
-        if (this.BaseConnection is DbConnection connection)
-        {
-            if (this.BaseConnection.State == ConnectionState.Broken)
-                await connection.CloseAsync();
-            if (this.BaseConnection.State == ConnectionState.Closed)
-            {
-                //关闭后，连接串被重置，需要重新设置
-                connection.ConnectionString = this.ConnectionString;
-                await connection.OpenAsync(cancellationToken);
-            }
-        }
-        else throw new Exception("当前数据库驱动不支持异步操作");
-    }
-    public void Close()
-    {
-        if (this.BaseConnection.State != ConnectionState.Closed)
-            this.BaseConnection.Close();
-    }
-    public async Task CloseAsync()
-    {
-        if (this.BaseConnection is DbConnection connection && connection.State != ConnectionState.Closed)
+        if (Interlocked.CompareExchange(ref this.isDisposed, 0, 1) == 1)
+            this.BaseConnection = this.OrmProvider.CreateConnection(this.ConnectionString);
+
+        if (this.BaseConnection is not DbConnection connection)
+            throw new Exception("当前数据库驱动不支持异步操作");
+        if (connection.State == ConnectionState.Broken)
             await connection.CloseAsync();
-        else throw new Exception("当前数据库驱动不支持异步操作");
+        if (connection.State == ConnectionState.Closed)
+        {
+            //关闭后，连接串被重置，需要重新设置
+            connection.ConnectionString = this.ConnectionString;
+            await connection.OpenAsync(cancellationToken);
+        }
     }
-    public void Dispose() => this.BaseConnection.Dispose();
+    public void Close() => this.Dispose();
+    public async Task CloseAsync() => await this.DisposeAsync();
+    public void Dispose()
+    {
+        if (Interlocked.CompareExchange(ref this.isDisposed, 1, 0) != 0)
+            return;
+        this.BaseConnection.Dispose();
+        GC.SuppressFinalize(this);
+    }
     public async Task DisposeAsync()
     {
-        if (this.BaseConnection is DbConnection connection)
-            await connection.DisposeAsync();
-        else throw new Exception("当前数据库驱动不支持异步操作");
+        if (Interlocked.CompareExchange(ref this.isDisposed, 1, 0) != 0)
+            return;
+        if (this.BaseConnection is not DbConnection connection)
+            throw new Exception("当前数据库驱动不支持异步操作");
+        await connection.DisposeAsync();
+        GC.SuppressFinalize(this);
     }
     public override int GetHashCode() => HashCode.Combine(this.DbKey, this.ConnectionString);
 }

@@ -14,7 +14,6 @@ public class SqlVisitor : ISqlVisitor
 {
     private static ConcurrentDictionary<int, Func<object, object>> memberGetterCache = new();
     private static string[] calcOps = new string[] { ">", ">=", "<", "<=", "+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>" };
-    private static Action<IDataParameterCollection, IOrmProvider, MemberMap, string, object> addDbParametersDelegate = null;
 
     protected string ParameterPrefix { get; set; } = "p";
     protected List<TableSegment> Tables { get; set; }
@@ -24,8 +23,7 @@ public class SqlVisitor : ISqlVisitor
     protected bool IsWhere { get; set; }
     protected bool IsFromQuery { get; set; }
     protected string WhereSql { get; set; }
-    protected bool IsMultiple { get; set; }
-    protected int CommandIndex { get; set; }
+
     protected OperationType LastWhereNodeType { get; set; } = OperationType.None;
     protected char TableAsStart { get; set; }
     protected List<ReaderField> GroupFields { get; set; }
@@ -36,6 +34,9 @@ public class SqlVisitor : ISqlVisitor
     public IEntityMapProvider MapProvider { get; private set; }
     public bool IsNeedAlias { get; set; }
     public bool IsParameterized { get; set; }
+    public bool IsMultiple { get; set; }
+    public int CommandIndex { get; set; }
+
 
     public SqlVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
     {
@@ -579,28 +580,33 @@ public class SqlVisitor : ISqlVisitor
         var lambdaExpr = Expression.Lambda(expr);
         return lambdaExpr.Compile().DynamicInvoke();
     }
-    public virtual object EvaluateAndCache(object valueOrEntity, string memberName)
+    /// <summary>
+    /// 计算entity成员memberName的值
+    /// </summary>
+    /// <param name="entity"></param>
+    /// <param name="memberName"></param>
+    /// <returns></returns>
+    public virtual object EvaluateAndCache(object entity, string memberName)
     {
-        if (valueOrEntity is IDictionary<string, object> dict)
+        if (entity is IDictionary<string, object> dict)
             return dict[memberName];
 
-        var type = valueOrEntity.GetType();
-        if (type.IsEntityType(out var underlyingType))
+        var type = entity.GetType();
+        var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+        var cacheKey = HashCode.Combine(underlyingType, memberName);
+        var memberGetter = memberGetterCache.GetOrAdd(cacheKey, f =>
         {
-            var cacheKey = HashCode.Combine(underlyingType, memberName);
-            if (!memberGetterCache.TryGetValue(cacheKey, out var getter))
-            {
-                var objExpr = Expression.Parameter(typeof(object), "obj");
-                var typedObjExpr = Expression.Convert(objExpr, type);
-                Expression valueExpr = Expression.PropertyOrField(typedObjExpr, memberName);
-                if (valueExpr.Type != typeof(object))
-                    valueExpr = Expression.Convert(valueExpr, typeof(object));
-                getter = Expression.Lambda<Func<object, object>>(valueExpr, objExpr).Compile();
-                memberGetterCache.TryAdd(cacheKey, getter);
-            }
-            return getter.Invoke(valueOrEntity);
-        }
-        return valueOrEntity;
+            if (!underlyingType.GetMember(memberName, BindingFlags.Public | BindingFlags.Instance).Any())
+                throw new MissingMemberException(underlyingType.FullName, memberName);
+
+            var objExpr = Expression.Parameter(typeof(object), "obj");
+            var typedObjExpr = Expression.Convert(objExpr, type);
+            Expression valueExpr = Expression.PropertyOrField(typedObjExpr, memberName);
+            if (valueExpr.Type != typeof(object))
+                valueExpr = Expression.Convert(valueExpr, typeof(object));
+            return Expression.Lambda<Func<object, object>>(valueExpr, objExpr).Compile();
+        });
+        return memberGetter.Invoke(entity);
     }
     public virtual SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment)
     {
@@ -1163,10 +1169,10 @@ public class SqlVisitor : ISqlVisitor
         if (sqlSegment.IsVariable || (sqlSegment.IsParameterized || this.IsParameterized) && sqlSegment.IsConstant)
         {
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
-            if (this.IsMultiple) parameterName += $"m{this.CommandIndex}";
+            if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
             if (sqlSegment.MemberMapper != null)
-                this.AddDbParameter(sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
+                this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
             else this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value));
 
             sqlSegment.Value = parameterName;
@@ -1177,7 +1183,12 @@ public class SqlVisitor : ISqlVisitor
         }
         if (sqlSegment.IsConstant && sqlSegment.MemberMapper != null && sqlSegment.TargetType != sqlSegment.ExpectType)
         {
-            sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.MemberMapper, sqlSegment.Value);
+            //只有常量和变量才有可能是数组
+            //TODO:待测试
+            if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
+                sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
+
+            //sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.MemberMapper, sqlSegment.Value);
             sqlSegment.ExpectType = sqlSegment.TargetType;
         }
         return sqlSegment;
@@ -1207,7 +1218,7 @@ public class SqlVisitor : ISqlVisitor
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
             if (sqlSegment.MemberMapper != null)
-                this.AddDbParameter(sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
+                this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
             else this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value));
 
             sqlSegment.Value = parameterName;
@@ -1224,7 +1235,7 @@ public class SqlVisitor : ISqlVisitor
                 //只有常量和变量才有可能是数组
                 if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
                     sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
-                sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.MemberMapper, sqlSegment.Value);
+                //sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.MemberMapper, sqlSegment.Value);
                 return this.OrmProvider.GetQuotedValue(sqlSegment.Value);
             }
             return this.OrmProvider.GetQuotedValue(sqlSegment);
@@ -1239,21 +1250,20 @@ public class SqlVisitor : ISqlVisitor
         if (arraySegment.IsVariable || (this.IsParameterized || arraySegment.IsParameterized) && arraySegment.IsConstant)
         {
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
-            if (this.IsMultiple) parameterName += $"m{this.CommandIndex}";
+            if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
             if (arraySegment.MemberMapper != null)
-                this.AddDbParameter(arraySegment.MemberMapper, parameterName, elementValue);
+                this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, arraySegment.MemberMapper, parameterName, elementValue);
             else this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, elementValue));
             return parameterName;
         }
         if (arraySegment.IsConstant && arraySegment.MemberMapper != null && arraySegment.TargetType != arraySegment.ExpectType)
-            elementValue = this.OrmProvider.ToFieldValue(arraySegment.MemberMapper, elementValue);
+        {
+            //elementValue = this.OrmProvider.ToFieldValue(arraySegment.MemberMapper, elementValue);
+            //TODO:待测试
+            int dsfs = 0;
+        }
         return this.OrmProvider.GetQuotedValue(elementValue);
-    }
-    public void AddDbParameter(MemberMap memberMapper, string parameterName, object fieldValue)
-    {
-        var AddDbParametersDelegate = RepositoryHelper.BuildAddDbParameters(this.DbKey, this.OrmProvider, memberMapper, fieldValue);
-        AddDbParametersDelegate.Invoke(this.DbParameters, this.OrmProvider, parameterName, fieldValue);
     }
     /// <summary>
     /// 用于Where条件中，IS NOT NULL,!= 两种情况判断
@@ -1745,6 +1755,34 @@ public class SqlVisitor : ISqlVisitor
         if (memberExpr == null) return false;
         return typeof(IAggregateSelect).IsAssignableFrom(memberExpr.Member.DeclaringType) && memberExpr.Member.Name == "Grouping";
     }
+    public IQueryVisitor CreateQueryVisitor(bool isCteQuery = false)
+    {
+        var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+        queryVisiter.IsMultiple = this.IsMultiple;
+        queryVisiter.CommandIndex = this.CommandIndex;
+        if (isCteQuery)
+        {
+            queryVisiter.CteTables = new();
+            queryVisiter.CteQueries = new();
+            queryVisiter.CteTableSegments = new();
+        }
+        return queryVisiter;
+    }
+    public virtual void Dispose()
+    {
+        this.ParameterPrefix = null;
+        this.Tables = null;
+        this.TableAlias = null;
+        this.ReaderFields = null;
+        this.WhereSql = null;
+        this.GroupFields = null;
+
+        this.DbKey = null;
+        this.DbParameters = null;
+        this.OrmProvider = null;
+        this.MapProvider = null;
+    }
+
     private List<ConditionExpression> VisitLogicBinaryExpr(Expression conditionExpr)
     {
         Func<Expression, bool> isConditionExpr = f => f.NodeType == ExpressionType.AndAlso || f.NodeType == ExpressionType.OrElse;

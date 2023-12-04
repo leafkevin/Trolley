@@ -47,7 +47,6 @@ public class EntityMap
             this.AddMemberMap(memberInfo.Name, memberMap);
         }
         memberMap.IsAutoIncrement = true;
-        this.IsAutoIncrement = true;
     }
     public bool TryGetMemberMap(string memberName, out MemberMap mapper)
     {
@@ -128,11 +127,10 @@ public class EntityMap
                 if (!this.KeyMembers.Contains(memberMapper))
                     this.KeyMembers.Add(memberMapper);
                 if (memberMapper.IsAutoIncrement)
-                {
                     this.AutoIncrementField = fieldName;
-                    this.IsAutoIncrement = true;
-                }
             }
+            if (this.KeyMembers.Count == 1 && this.KeyMembers[0].IsAutoIncrement)
+                this.IsAutoIncrement = true;
         }
         this.isBuild = true;
     }

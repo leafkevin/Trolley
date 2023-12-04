@@ -15,7 +15,6 @@ public abstract class BaseOrmProvider : IOrmProvider
     protected static readonly ConcurrentDictionary<int, Delegate> methodCallCache = new();
 
     public virtual string ParameterPrefix => "@";
-    public virtual string SelectIdentitySql => ";SELECT @@IDENTITY";
     public abstract Type NativeDbTypeType { get; }
     public abstract IDbConnection CreateConnection(string connectionString);
     public abstract IDbDataParameter CreateParameter(string parameterName, object value);
@@ -43,6 +42,7 @@ public abstract class BaseOrmProvider : IOrmProvider
     public abstract object GetNativeDbType(Type type);
     public abstract Type MapDefaultType(object nativeDbType);
     public abstract string CastTo(Type type, object value);
+    public virtual string GetIdentitySql(Type entityType) => ";SELECT @@IDENTITY";
     public virtual string GetQuotedValue(Type expectType, object value)
     {
         if (value == null) return "NULL";
@@ -66,74 +66,74 @@ public abstract class BaseOrmProvider : IOrmProvider
         }
         return value.ToString();
     }
-    public virtual object ToFieldValue(MemberMap memberMapper, object fieldValue)
-    {
-        if (fieldValue == null || fieldValue is DBNull) return fieldValue;
-        if (memberMapper.TypeHandler != null)
-            return memberMapper.TypeHandler.ToFieldValue(this, fieldValue);
+    //public virtual object ToFieldValue(MemberMap memberMapper, object fieldValue)
+    //{
+    //    if (fieldValue == null || fieldValue is DBNull) return fieldValue;
+    //    if (memberMapper.TypeHandler != null)
+    //        return memberMapper.TypeHandler.ToFieldValue(this, fieldValue);
 
-        var result = fieldValue;
-        memberMapper.MemberType.IsNullableType(out var underlyingType);
+    //    var result = fieldValue;
+    //    memberMapper.MemberType.IsNullableType(out var underlyingType);
 
-        //模型类型与数据库默认映射类型一致，如：bool,数字，浮点数，String，DateTime，TimeSpan，DateOnly，TimeOnly，Guid等
-        //通常fieldValue和memberMapper的类型是一致的，不一致表达式无法书写出来
-        if (memberMapper.DbDefaultType == underlyingType)
-            return result;
+    //    //模型类型与数据库默认映射类型一致，如：bool,数字，浮点数，String，DateTime，TimeSpan，DateOnly，TimeOnly，Guid等
+    //    //通常fieldValue和memberMapper的类型是一致的，不一致表达式无法书写出来
+    //    if (memberMapper.DbDefaultType == underlyingType)
+    //        return result;
 
-        //模型类型与数据库默认映射类型不一致的情况，如：数字，浮点数，TimeSpan，DateOnly，TimeOnly，枚举，Guid
-        //Gender? gender = Gender.Male;
-        //(int)gender.Value;
-        if (underlyingType.IsEnum)
-        {
-            if (memberMapper.DbDefaultType == typeof(string))
-            {
-                if (result.GetType() != underlyingType)
-                    result = Enum.Parse(underlyingType, result.ToString());
-                result = result.ToString();
-            }
-            else result = Convert.ChangeType(result, memberMapper.DbDefaultType);
-        }
-        else if (underlyingType == typeof(Guid))
-        {
-            if (memberMapper.DbDefaultType == typeof(string))
-                result = result.ToString();
-            if (memberMapper.DbDefaultType == typeof(byte[]))
-                result = ((Guid)result).ToByteArray();
-        }
-        else if (underlyingType == typeof(DateTime))
-        {
-            if (memberMapper.DbDefaultType == typeof(long))
-                result = ((DateTime)result).Ticks;
-            if (memberMapper.DbDefaultType == typeof(string))
-                result = ((DateTime)result).ToString("yyyy-MM-dd HH:mm:ss.fffffff");
-        }
-        else if (underlyingType == typeof(DateOnly))
-        {
-            if (memberMapper.DbDefaultType == typeof(string))
-                result = ((DateOnly)result).ToString("yyyy-MM-dd");
-        }
-        else if (underlyingType == typeof(TimeSpan))
-        {
-            var timeSpan = (TimeSpan)result;
-            if (memberMapper.DbDefaultType == typeof(long))
-                result = timeSpan.Ticks;
-            if (memberMapper.DbDefaultType == typeof(string))
-            {
-                if (timeSpan.TotalDays > 1)
-                    result = timeSpan.ToString("d\\.hh\\:mm\\:ss\\.fffffff");
-                else result = ((DateOnly)result).ToString("hh\\:mm\\:ss\\.fffffff");
-            }
-        }
-        else if (underlyingType == typeof(TimeOnly))
-        {
-            if (memberMapper.DbDefaultType == typeof(long))
-                result = ((TimeSpan)result).Ticks;
-            if (memberMapper.DbDefaultType == typeof(string))
-                result = ((DateOnly)result).ToString("hh\\:mm\\:ss\\.fffffff");
-        }
-        else result = Convert.ChangeType(result, memberMapper.DbDefaultType);
-        return result;
-    }
+    //    //模型类型与数据库默认映射类型不一致的情况，如：数字，浮点数，TimeSpan，DateOnly，TimeOnly，枚举，Guid
+    //    //Gender? gender = Gender.Male;
+    //    //(int)gender.Value;
+    //    if (underlyingType.IsEnum)
+    //    {
+    //        if (memberMapper.DbDefaultType == typeof(string))
+    //        {
+    //            if (result.GetType() != underlyingType)
+    //                result = Enum.Parse(underlyingType, result.ToString());
+    //            result = result.ToString();
+    //        }
+    //        else result = Convert.ChangeType(result, memberMapper.DbDefaultType);
+    //    }
+    //    else if (underlyingType == typeof(Guid))
+    //    {
+    //        if (memberMapper.DbDefaultType == typeof(string))
+    //            result = result.ToString();
+    //        if (memberMapper.DbDefaultType == typeof(byte[]))
+    //            result = ((Guid)result).ToByteArray();
+    //    }
+    //    else if (underlyingType == typeof(DateTime))
+    //    {
+    //        if (memberMapper.DbDefaultType == typeof(long))
+    //            result = ((DateTime)result).Ticks;
+    //        if (memberMapper.DbDefaultType == typeof(string))
+    //            result = ((DateTime)result).ToString("yyyy-MM-dd HH:mm:ss.fffffff");
+    //    }
+    //    else if (underlyingType == typeof(DateOnly))
+    //    {
+    //        if (memberMapper.DbDefaultType == typeof(string))
+    //            result = ((DateOnly)result).ToString("yyyy-MM-dd");
+    //    }
+    //    else if (underlyingType == typeof(TimeSpan))
+    //    {
+    //        var timeSpan = (TimeSpan)result;
+    //        if (memberMapper.DbDefaultType == typeof(long))
+    //            result = timeSpan.Ticks;
+    //        if (memberMapper.DbDefaultType == typeof(string))
+    //        {
+    //            if (timeSpan.TotalDays > 1)
+    //                result = timeSpan.ToString("d\\.hh\\:mm\\:ss\\.fffffff");
+    //            else result = ((DateOnly)result).ToString("hh\\:mm\\:ss\\.fffffff");
+    //        }
+    //    }
+    //    else if (underlyingType == typeof(TimeOnly))
+    //    {
+    //        if (memberMapper.DbDefaultType == typeof(long))
+    //            result = ((TimeSpan)result).Ticks;
+    //        if (memberMapper.DbDefaultType == typeof(string))
+    //            result = ((DateOnly)result).ToString("hh\\:mm\\:ss\\.fffffff");
+    //    }
+    //    else result = Convert.ChangeType(result, memberMapper.DbDefaultType);
+    //    return result;
+    //}
     public virtual string GetBinaryOperator(ExpressionType nodeType) =>
         nodeType switch
         {

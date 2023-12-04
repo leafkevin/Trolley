@@ -11,15 +11,15 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
 {
     public bool IsUseIgnoreInto { get; set; }
     protected StringBuilder UpdateFields { get; set; }
-    protected bool IsUseUpdate { get; set; }
     protected bool IsUpdate { get; set; }
 
     public MySqlCreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix) { }
 
-    public override string BuildCommand(IDbCommand command)
+    public override string BuildCommand(IDbCommand command, bool isReturnIdentity)
     {
         string sql = null;
+        this.IsReturnIdentity = isReturnIdentity;
         this.DbParameters = command.Parameters;
         foreach (var deferredSegment in this.deferredSegments)
         {
@@ -29,7 +29,8 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
                     this.VisitWithBy(deferredSegment.Value);
                     break;
                 case "WithByField":
-                    this.VisitWithByField((FieldObject)deferredSegment.Value);
+                    (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegment.Value;
+                    this.VisitWithByField(fieldSelector, fieldValue);
                     break;
                 case "WithBulk":
                     sql = this.BuildBulkSql(command);
@@ -44,11 +45,8 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
                     break;
             }
         }
-        if (!this.IsBulk)
-        {
-            sql = this.BuildSql();
-            command.CommandText = sql;
-        }
+        if (!this.IsBulk) sql = this.BuildSql();
+        command.CommandText = sql;
         return sql;
     }
     public void OnDuplicateKeyUpdate(object updateObj)
@@ -67,22 +65,29 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
             Value = updateExpr
         });
     }
-    public override string BuildHeadSql()
+    public string BuildHeadSql()
     {
         if (this.IsUseIgnoreInto) return "INSERT IGNORE INTO";
         return "INSERT INTO";
     }
-    public override string BuildTailSql()
+    public void AddTailSql(StringBuilder builder)
     {
+        bool isUpdate = false;
         if (this.UpdateFields != null && this.UpdateFields.Length > 0)
         {
             var sql = this.UpdateFields.Insert(0, " ON DUPLICATE KEY UPDATE ").ToString();
+            builder.Append(this.UpdateFields.ToString());
+            isUpdate = true;
             this.UpdateFields.Clear();
-            return sql;
         }
-        if (this.Tables[0].Mapper.IsAutoIncrement && !this.IsBulk)
-            return ";SELECT LAST_INSERT_ID()";
-        return string.Empty;
+        if (this.IsReturnIdentity)
+        {
+            if (isUpdate) throw new NotSupportedException("当前SQL中有更新操作，无法返回Identity值");
+
+            if (!this.Tables[0].Mapper.IsAutoIncrement)
+                throw new Exception($"实体{this.Tables[0].Mapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
+            builder.Append(this.OrmProvider.GetIdentitySql(this.Tables[0].EntityType));
+        }
     }
     public virtual void VisitSetObject(object updateObj)
     {
@@ -272,7 +277,7 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
 
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-            this.AddDbParameter(memberMapper, parameterName, sqlSegment.Value);
+            this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, sqlSegment.Value);
             this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
         }
         //带有参数或字段的表达式或函数调用、或是只有参数或字段
@@ -286,8 +291,7 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-        var addDbParametersDelegate = RepositoryHelper.BuildAddDbParameters(this.DbKey, this.OrmProvider, memberMapper, fieldValue);
-        addDbParametersDelegate.Invoke(this.DbParameters, this.OrmProvider, parameterName, fieldValue);
+        this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, fieldValue);
         if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
         this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
     }

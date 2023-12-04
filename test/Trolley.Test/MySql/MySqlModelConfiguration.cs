@@ -11,7 +11,7 @@ class MySqlModelConfiguration : IModelConfiguration
         builder.Entity<User>(f =>
         {
             f.ToTable("sys_user").Key(t => t.Id).WithSharding(s => s.WithNameRule(n => $"{n}_{DateTime.Now.ToString("_yyyyMM")}"));
-            f.Member(t => t.Id).Field(nameof(User.Id)).NativeDbType(MySqlDbType.Int32);
+            f.Member(t => t.Id).Field(nameof(User.Id)).NativeDbType(MySqlDbType.Int32).Required();
             f.Member(t => t.Name).Field(nameof(User.Name)).NativeDbType(MySqlDbType.VarChar);
             f.Member(t => t.Gender).Field(nameof(User.Gender)).NativeDbType(MySqlDbType.Byte);
             f.Member(t => t.Age).Field(nameof(User.Age)).NativeDbType(MySqlDbType.Int32);

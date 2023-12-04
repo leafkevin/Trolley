@@ -129,7 +129,7 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
               this.connection, this.ormProvider, this.mapProvider, entityType, insertObj);
         this.builders.Add(new WithByBuilderCache
         {
-            CommandInitializer = commandInitializer,
+            DbParametersInitializer = commandInitializer,
             Parameters = insertObj
         });
         return this;
@@ -228,7 +228,7 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
                 insertBuilder.Append(',');
                 valuesBuilder.Append(',');
             }
-            builder.CommandInitializer.Invoke(command, this.ormProvider, this.mapProvider, builder.Parameters, insertBuilder, valuesBuilder);
+            builder.DbParametersInitializer.Invoke(command, this.ormProvider, this.mapProvider, builder.Parameters, insertBuilder, valuesBuilder);
             index++;
         }
         insertBuilder.Append(')');
@@ -241,7 +241,7 @@ class ContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     struct WithByBuilderCache
     {
         public object Parameters { get; set; }
-        public Action<IDbCommand, IOrmProvider, IEntityMapProvider, object, StringBuilder, StringBuilder> CommandInitializer { get; set; }
+        public Action<IDbCommand, IOrmProvider, IEntityMapProvider, object, StringBuilder, StringBuilder> DbParametersInitializer { get; set; }
     }
     #endregion
 }

@@ -6,45 +6,26 @@ using System.Text;
 
 namespace Trolley;
 
-public class MultipleQuery : IMultipleQuery, IDisposable
+class MultipleQuery : IMultipleQuery, IDisposable
 {
     #region Fields
-    protected bool isParameterized = false;
-    protected TheaConnection connection;
     protected StringBuilder sqlBuilder = new();
     #endregion
 
     #region Properties
-    public string DbKey { get; private set; }
-    public IDbConnection Connection => this.connection;
-    public IOrmProvider OrmProvider { get; private set; }
-    public IEntityMapProvider MapProvider { get; private set; }
-    public IDbTransaction Transaction { get; private set; }
+    public DbContext DbContext { get; private set; }
+    public string DbKey => this.DbContext.DbKey;
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
+    public IEntityMapProvider MapProvider => this.DbContext.MapProvider;
     public IDbCommand Command { get; private set; }
     public List<ReaderAfter> ReaderAfters { get; private set; }
     #endregion
 
     #region Constructor
-    public MultipleQuery(string dbKey, IDbConnection connection, IDbCommand command, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized)
+    public MultipleQuery(DbContext dbContext, IDbCommand command)
     {
-        this.DbKey = dbKey;
-        this.connection = new TheaConnection { DbKey = dbKey, BaseConnection = connection };
+        this.DbContext = dbContext;
         this.Command = command;
-        this.Transaction = this.Command.Transaction;
-        this.OrmProvider = ormProvider;
-        this.MapProvider = mapProvider;
-        this.isParameterized = isParameterized;
-        this.ReaderAfters = new();
-    }
-    public MultipleQuery(TheaConnection connection, IDbCommand command, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized)
-    {
-        this.DbKey = connection.DbKey;
-        this.connection = connection;
-        this.Command = command;
-        this.Transaction = this.Command.Transaction;
-        this.OrmProvider = ormProvider;
-        this.MapProvider = mapProvider;
-        this.isParameterized = isParameterized;
         this.ReaderAfters = new();
     }
     #endregion
@@ -116,7 +97,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
     public IMultiQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery, char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        var fromQuery = new FromQuery(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor);
+        var fromQuery = new FromQuery(this.DbContext, visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields);
         if (!visitor.Equals(query.Visitor))
@@ -130,7 +111,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
     public IMultiQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart, true);
-        var fromQuery = new FromQuery(this.connection, this.Transaction, this.OrmProvider, this.MapProvider, visitor);
+        var fromQuery = new FromQuery(this.DbContext, visitor);
         var query = cteSubQuery.Invoke(fromQuery);
         if (!visitor.Equals(query.Visitor))
             visitor = query.Visitor;
@@ -149,7 +130,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
         var targetType = typeof(TEntity);
         Func<IDataReader, object> readerGetter;
         if (targetType.IsEntityType(out _))
-            readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
+            readerGetter = reader => reader.To<TEntity>(this.DbContext);
         else readerGetter = reader => reader.To<TEntity>();
         this.AddReader(rawSql, readerGetter);
         return this;
@@ -167,7 +148,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
         var targetType = typeof(TEntity);
         Func<IDataReader, object> readerGetter;
         if (targetType.IsEntityType(out _))
-            readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
+            readerGetter = reader => reader.To<TEntity>(this.DbContext);
         else readerGetter = reader => reader.To<TEntity>();
         this.AddReader(rawSql, readerGetter);
         return this;
@@ -179,10 +160,10 @@ public class MultipleQuery : IMultipleQuery, IDisposable
 
         var entityType = typeof(TEntity);
         var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, true);
-        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, IEntityMapProvider, string, object, string>;
-        var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
+        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
+        var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, whereObj, $"_m{this.ReaderAfters.Count}");
 
-        Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
+        Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbContext);
         this.AddReader(sql, readerGetter);
         return this;
     }
@@ -194,7 +175,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
         var targetType = typeof(TEntity);
         Func<IDataReader, object> readerGetter;
         if (targetType.IsEntityType(out _))
-            readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
+            readerGetter = reader => reader.To<TEntity>(this.DbContext);
         else readerGetter = reader => reader.To<TEntity>();
         this.AddReader(rawSql, readerGetter);
         return this;
@@ -212,7 +193,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
         var targetType = typeof(TEntity);
         Func<IDataReader, object> readerGetter;
         if (targetType.IsEntityType(out _))
-            readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
+            readerGetter = reader => reader.To<TEntity>(this.DbContext);
         else readerGetter = reader => reader.To<TEntity>();
         this.AddReader(rawSql, readerGetter);
         return this;
@@ -224,10 +205,10 @@ public class MultipleQuery : IMultipleQuery, IDisposable
 
         var entityType = typeof(TEntity);
         var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, true);
-        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, IEntityMapProvider, string, object, string>;
-        var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
+        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
+        var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, whereObj, $"_m{this.ReaderAfters.Count}");
 
-        Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
+        Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbContext);
         this.AddReader(sql, readerGetter);
         return this;
     }
@@ -241,10 +222,10 @@ public class MultipleQuery : IMultipleQuery, IDisposable
 
         var entityType = typeof(TEntity);
         var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, true);
-        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, IEntityMapProvider, string, object, string>;
-        var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
+        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
+        var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, whereObj, $"_m{this.ReaderAfters.Count}");
 
-        Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
+        Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbContext);
         this.AddReader(sql, readerGetter);
         return this;
     }
@@ -258,8 +239,8 @@ public class MultipleQuery : IMultipleQuery, IDisposable
 
         var entityType = typeof(TEntity);
         var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, true);
-        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, IEntityMapProvider, string, object, string>;
-        var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, this.MapProvider, $"m{this.ReaderAfters.Count}", whereObj);
+        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
+        var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, whereObj, $"_m{this.ReaderAfters.Count}");
 
         Func<IDataReader, object> readerGetter = reader => reader.To<int>() > 0;
         this.AddReader(sql, readerGetter);
@@ -304,23 +285,15 @@ public class MultipleQuery : IMultipleQuery, IDisposable
     #region Dispose
     public void Dispose()
     {
-        this.sqlBuilder.Clear();
-        this.ReaderAfters?.Clear();
-        this.ReaderAfters = null;
         this.sqlBuilder = null;
-        this.OrmProvider = null;
-        this.MapProvider = null;
-        //command和connection在reader中进行释放，此处只是去掉引用
-        this.connection = null;
-        this.Command = null;
-        this.ReaderAfters.Clear();
         this.ReaderAfters = null;
+        this.Command = null;
     }
     #endregion
 
     private IQueryVisitor CreateQueryVisitor(char tableAsStart, bool isCteQuery = false)
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.DbContext.IsParameterized, tableAsStart);
         visitor.DbParameters = this.Command.Parameters;
         if (isCteQuery)
         {

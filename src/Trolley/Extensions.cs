@@ -20,6 +20,8 @@ public static class Extensions
     private static readonly ConcurrentDictionary<int, Delegate> valueTupleReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
+    private static readonly ConcurrentDictionary<int, Action<IDataParameterCollection, IOrmProvider, string, object>> addParametersCache = new();
+
 
     public static OrmDbFactoryBuilder AddTypeHandler<TTypeHandler>(this OrmDbFactoryBuilder builder) where TTypeHandler : class, ITypeHandler, new()
        => builder.AddTypeHandler(new TTypeHandler());
@@ -213,6 +215,10 @@ public static class Extensions
         var deserializer = (Func<IDataReader, int, TValue>)converter;
         return deserializer.Invoke(reader, columnIndex);
     }
+    public static TEntity To<TEntity>(this IDataReader reader, DbContext dbContext)
+        => reader.To<TEntity>(dbContext.DbKey, dbContext.OrmProvider, dbContext.MapProvider);
+    public static TEntity To<TEntity>(this IDataReader reader, DbContext dbContext, List<ReaderField> readerFields)
+        => reader.To<TEntity>(dbContext.DbKey, dbContext.OrmProvider, readerFields);
     /// <summary>
     /// 使用SQL+参数查询,返回的是单纯的实体
     /// </summary>
@@ -267,6 +273,32 @@ public static class Extensions
             queryReaderDeserializerCache.TryAdd(cacheKey, deserializer);
         }
         return ((Func<IDataReader, TEntity>)deserializer).Invoke(reader);
+    }
+    public static void AddDbParameter(this IOrmProvider ormProvider, string dbKey, IDataParameterCollection dbParameters, MemberMap memberMapper, string parameterName, object fieldValue)
+    {
+        var fieldVallueType = fieldValue.GetType();
+        var cacheKey = HashCode.Combine(dbKey, ormProvider, memberMapper.Parent.EntityType, memberMapper, fieldVallueType);
+        var AddParametersDelegate = addParametersCache.GetOrAdd(cacheKey, f =>
+        {
+            var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
+            var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
+            var parameterNameExpr = Expression.Parameter(typeof(string), "parameterName");
+            var fieldValueExpr = Expression.Parameter(typeof(object), "fieldValue");
+
+            var typedFieldValueExpr = Expression.Variable(fieldVallueType, "typedFieldValue");
+            var blockParameters = new List<ParameterExpression>();
+            var blockBodies = new List<Expression>();
+
+            RepositoryHelper.AddValueParameter(dbParametersExpr, ormProviderExpr, parameterNameExpr, fieldValueExpr, memberMapper, blockParameters, blockBodies);
+            if (blockParameters.Count > 0)
+            {
+                return Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, string, object>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, parameterNameExpr, fieldValueExpr).Compile();
+            }
+            return Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, string, object>>(
+                Expression.Block(blockBodies), dbParametersExpr, ormProviderExpr, parameterNameExpr, fieldValueExpr).Compile();
+        });
+        AddParametersDelegate.Invoke(dbParameters, ormProvider, parameterName, fieldValue);
     }
     /// <summary>
     /// 用在方法调用中，判断!=,NOT IN,NOT LIKE三种情况

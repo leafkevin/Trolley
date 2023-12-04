@@ -129,7 +129,12 @@ public class MySqlUnitTest3 : UnitTestBase
         var orderDetails = await repository.From<OrderDetail>().ToListAsync();
         var parameters = orderDetails.Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 1, Amount = f.Amount + 50 }).ToList();
         repository.BeginTransaction();
-        var result = repository.Update<OrderDetail>(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters);
+        repository.Update<OrderDetail>()
+            .SetBulk(null,parameters,500)
+            .OnlyFields(f=>new { f.Price,f.UpdatedAt})
+            .Execute();
+            
+       var result = repository.Update<OrderDetail>(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters);
         var updatedDetails = await repository.QueryAsync<OrderDetail>();
         repository.Commit();
         Assert.True(result == parameters.Count);
@@ -213,7 +218,7 @@ public class MySqlUnitTest3 : UnitTestBase
             })
             .ToListAsync();
         var sql = repository.Update<OrderDetail>()
-            .WithBulk(f => new
+            .SetBulk(f => new
             {
                 Price = 200,
                 f.Quantity,
@@ -233,7 +238,7 @@ public class MySqlUnitTest3 : UnitTestBase
             .Where(f => new int[] { 1, 2, 3 }.Contains(f.Id))
             .ToListAsync();
         var sql = repository.Update<Order>()
-            .WithBulk(f => new
+            .SetBulk(f => new
             {
                 BuyerId = DBNull.Value,
                 OrderNo = "ON_" + f.OrderNo,
@@ -400,7 +405,7 @@ public class MySqlUnitTest3 : UnitTestBase
     public void Update_Set_FromQuery_One()
     {
         Initialize();
-        using var repository = dbFactory.Create();
+        using var repository = dbFactory.Create();     
         var sql = repository.Update<Order>()
             .SetFrom((a, b) => new
             {
@@ -408,6 +413,10 @@ public class MySqlUnitTest3 : UnitTestBase
                     .Where(f => f.OrderId == b.Id)
                     .Select(t => Sql.Sum(t.Amount))
             })
+            .SetFrom(f => f.TotalAmount, (x, y) => 
+                x.From<OrderDetail>('a')
+                .Where(t => t.OrderId == y.Id)
+                .Select(f => Sql.Sum(f.Amount)))
             .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
@@ -757,7 +766,7 @@ public class MySqlUnitTest3 : UnitTestBase
 
         //批量表达式部分栏位更新
         var sql9 = repository.Update<Company>()
-            .WithBulk(f => new { f.Name, company.Nature }, new[] { new { Id = 1, Name = "google" }, new { Id = 2, Name = "facebook" } })
+            .SetBulk(f => new { f.Name, company.Nature }, new[] { new { Id = 1, Name = "google" }, new { Id = 2, Name = "facebook" } })
             .ToSql(out var parameters9);
         Assert.True(sql9 == "UPDATE `sys_company` SET `Nature`=@p0,`Name`=@Name0 WHERE `Id`=@kId0;UPDATE `sys_company` SET `Nature`=@p0,`Name`=@Name1 WHERE `Id`=@kId1");
         Assert.True(parameters9[0].ParameterName == "@p0");
@@ -766,7 +775,7 @@ public class MySqlUnitTest3 : UnitTestBase
 
         CompanyNature? nature = CompanyNature.Production;
         var sql10 = repository.Update<Company>()
-            .WithBulk(f => new { f.Nature, company.Name }, new[] { new { Id = 1, company.Nature }, new { Id = 2, Nature = nature } })
+            .SetBulk(f => new { f.Nature, company.Name }, new[] { new { Id = 1, company.Nature }, new { Id = 2, Nature = nature } })
             .ToSql(out var parameters10);
         Assert.True(sql10 == "UPDATE `sys_company` SET `Name`=@p0,`Nature`=@Nature0 WHERE `Id`=@kId0;UPDATE `sys_company` SET `Name`=@p0,`Nature`=@Nature1 WHERE `Id`=@kId1");
         Assert.True(parameters10[1].ParameterName == "@Nature0");

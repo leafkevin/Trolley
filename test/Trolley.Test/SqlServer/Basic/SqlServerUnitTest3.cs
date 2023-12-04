@@ -210,7 +210,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             })
             .ToListAsync();
         var sql = repository.Update<OrderDetail>()
-            .WithBulk(f => new
+            .SetBulk(f => new
             {
                 Price = 200,
                 f.Quantity,
@@ -230,7 +230,7 @@ public class SqlServerUnitTest3 : UnitTestBase
             .Where(f => new int[] { 1, 2, 3 }.Contains(f.Id))
             .ToListAsync();
         var sql = repository.Update<Order>()
-            .WithBulk(f => new
+            .SetBulk(f => new
             {
                 BuyerId = DBNull.Value,
                 OrderNo = "ON_" + f.OrderNo,
@@ -753,7 +753,7 @@ public class SqlServerUnitTest3 : UnitTestBase
 
         //批量表达式部分栏位更新
         var sql9 = repository.Update<Company>()
-            .WithBulk(f => new { f.Name, company.Nature }, new[] { new { Id = 1, Name = "google" }, new { Id = 2, Name = "facebook" } })
+            .SetBulk(f => new { f.Name, company.Nature }, new[] { new { Id = 1, Name = "google" }, new { Id = 2, Name = "facebook" } })
             .ToSql(out var parameters9);
         Assert.True(sql9 == "UPDATE [sys_company] SET [Nature]=@p0,[Name]=@Name0 WHERE [Id]=@kId0;UPDATE [sys_company] SET [Nature]=@p0,[Name]=@Name1 WHERE [Id]=@kId1");
         Assert.True(parameters9[0].ParameterName == "@p0");
@@ -762,7 +762,7 @@ public class SqlServerUnitTest3 : UnitTestBase
 
         CompanyNature? nature = CompanyNature.Production;
         var sql10 = repository.Update<Company>()
-            .WithBulk(f => new { f.Nature, company.Name }, new[] { new { Id = 1, company.Nature }, new { Id = 2, Nature = nature } })
+            .SetBulk(f => new { f.Nature, company.Name }, new[] { new { Id = 1, company.Nature }, new { Id = 2, Nature = nature } })
             .ToSql(out var parameters10);
         Assert.True(sql10 == "UPDATE [sys_company] SET [Name]=@p0,[Nature]=@Nature0 WHERE [Id]=@kId0;UPDATE [sys_company] SET [Name]=@p0,[Nature]=@Nature1 WHERE [Id]=@kId1");
         Assert.True(parameters10[1].ParameterName == "@Nature0");

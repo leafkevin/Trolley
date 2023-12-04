@@ -17,15 +17,15 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         if (cteSubQuery == null)
             throw new ArgumentNullException(nameof(cteSubQuery));
 
-        this.visitor.Clear(true);
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-        var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.visitor.CteQueries[0], this.visitor.CteQueries[1]);
-        var rawSql = this.visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        this.Visitor.Clear(true);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
+        var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.Visitor.CteQueries[0], this.Visitor.CteQueries[1]);
+        var rawSql = this.Visitor.BuildSql(out var readerFields, false);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
-        return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
+        return new MultiQuery<T1, T2, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -35,14 +35,14 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
-        var sql = this.visitor.BuildSql(out var readerFields);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        var sql = this.Visitor.BuildSql(out var readerFields);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.WithTable(typeof(TOther), sql, readerFields);
+        return new MultiQuery<T1, T2, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -52,7 +52,7 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2> LeftJoin(Expression<Func<T1, T2, bool>> joinOn)
@@ -60,7 +60,7 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2> RightJoin(Expression<Func<T1, T2, bool>> joinOn)
@@ -68,7 +68,7 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.Visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
@@ -76,24 +76,24 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
@@ -103,12 +103,12 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
@@ -118,12 +118,12 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
@@ -133,12 +133,12 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
@@ -147,15 +147,15 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
@@ -164,15 +164,15 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
@@ -181,15 +181,15 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -199,16 +199,16 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector);
-        return new MultiIncludableQuery<T1, T2, TMember>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector);
+        return new MultiIncludableQuery<T1, T2, TMember>(this.MultipleQuery, this.Visitor);
     }
     public IMultiIncludableQuery<T1, T2, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector, true, filter);
-        return new MultiIncludableQuery<T1, T2, TElment>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector, true, filter);
+        return new MultiIncludableQuery<T1, T2, TElment>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -218,7 +218,7 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Where(predicate);
+        this.Visitor.Where(predicate);
         return this;
     }
     public IMultiQuery<T1, T2> Where(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
@@ -227,8 +227,8 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
     public IMultiQuery<T1, T2> And(Expression<Func<T1, T2, bool>> predicate)
@@ -236,7 +236,7 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.And(predicate);
+        this.Visitor.And(predicate);
         return this;
     }
     public IMultiQuery<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
@@ -245,8 +245,8 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -257,8 +257,8 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
-        this.visitor.GroupBy(groupingExpr);
-        return new MultiGroupingQuery<T1, T2, TGrouping>(this.multiQuery, this.visitor);
+        this.Visitor.GroupBy(groupingExpr);
+        return new MultiGroupingQuery<T1, T2, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -272,7 +272,7 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IMultiQuery<T1, T2> OrderByDescending<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr)
@@ -284,7 +284,7 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -295,16 +295,16 @@ class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -383,15 +383,15 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         if (cteSubQuery == null)
             throw new ArgumentNullException(nameof(cteSubQuery));
 
-        this.visitor.Clear(true);
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-        var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.visitor.CteQueries[0], this.visitor.CteQueries[1], this.visitor.CteQueries[2]);
-        var rawSql = this.visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        this.Visitor.Clear(true);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
+        var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.Visitor.CteQueries[0], this.Visitor.CteQueries[1], this.Visitor.CteQueries[2]);
+        var rawSql = this.Visitor.BuildSql(out var readerFields, false);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
-        return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
+        return new MultiQuery<T1, T2, T3, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -401,14 +401,14 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
-        var sql = this.visitor.BuildSql(out var readerFields);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        var sql = this.Visitor.BuildSql(out var readerFields);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.WithTable(typeof(TOther), sql, readerFields);
+        return new MultiQuery<T1, T2, T3, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -418,7 +418,7 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3> LeftJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
@@ -426,7 +426,7 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3> RightJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
@@ -434,7 +434,7 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.Visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
@@ -442,24 +442,24 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
@@ -469,12 +469,12 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
@@ -484,12 +484,12 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
@@ -499,12 +499,12 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
@@ -513,15 +513,15 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
@@ -530,15 +530,15 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
@@ -547,15 +547,15 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -565,16 +565,16 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector);
-        return new MultiIncludableQuery<T1, T2, T3, TMember>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector);
+        return new MultiIncludableQuery<T1, T2, T3, TMember>(this.MultipleQuery, this.Visitor);
     }
     public IMultiIncludableQuery<T1, T2, T3, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector, true, filter);
-        return new MultiIncludableQuery<T1, T2, T3, TElment>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector, true, filter);
+        return new MultiIncludableQuery<T1, T2, T3, TElment>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -584,7 +584,7 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Where(predicate);
+        this.Visitor.Where(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3> Where(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
@@ -593,8 +593,8 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3> And(Expression<Func<T1, T2, T3, bool>> predicate)
@@ -602,7 +602,7 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.And(predicate);
+        this.Visitor.And(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
@@ -611,8 +611,8 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -623,8 +623,8 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
-        this.visitor.GroupBy(groupingExpr);
-        return new MultiGroupingQuery<T1, T2, T3, TGrouping>(this.multiQuery, this.visitor);
+        this.Visitor.GroupBy(groupingExpr);
+        return new MultiGroupingQuery<T1, T2, T3, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -638,7 +638,7 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IMultiQuery<T1, T2, T3> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
@@ -650,7 +650,7 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -661,16 +661,16 @@ class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -749,15 +749,15 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
         if (cteSubQuery == null)
             throw new ArgumentNullException(nameof(cteSubQuery));
 
-        this.visitor.Clear(true);
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-        var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.visitor.CteQueries[0], this.visitor.CteQueries[1], this.visitor.CteQueries[2], this.visitor.CteQueries[3]);
-        var rawSql = this.visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        this.Visitor.Clear(true);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
+        var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.Visitor.CteQueries[0], this.Visitor.CteQueries[1], this.Visitor.CteQueries[2], this.Visitor.CteQueries[3]);
+        var rawSql = this.Visitor.BuildSql(out var readerFields, false);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
-        return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
+        return new MultiQuery<T1, T2, T3, T4, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -767,14 +767,14 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
-        var sql = this.visitor.BuildSql(out var readerFields);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        var sql = this.Visitor.BuildSql(out var readerFields);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.WithTable(typeof(TOther), sql, readerFields);
+        return new MultiQuery<T1, T2, T3, T4, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -784,7 +784,7 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4> LeftJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
@@ -792,7 +792,7 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4> RightJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
@@ -800,7 +800,7 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.Visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
@@ -808,24 +808,24 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
@@ -835,12 +835,12 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
@@ -850,12 +850,12 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
@@ -865,12 +865,12 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
@@ -879,15 +879,15 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
@@ -896,15 +896,15 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
@@ -913,15 +913,15 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -931,16 +931,16 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector);
-        return new MultiIncludableQuery<T1, T2, T3, T4, TMember>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector);
+        return new MultiIncludableQuery<T1, T2, T3, T4, TMember>(this.MultipleQuery, this.Visitor);
     }
     public IMultiIncludableQuery<T1, T2, T3, T4, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector, true, filter);
-        return new MultiIncludableQuery<T1, T2, T3, T4, TElment>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector, true, filter);
+        return new MultiIncludableQuery<T1, T2, T3, T4, TElment>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -950,7 +950,7 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Where(predicate);
+        this.Visitor.Where(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4> Where(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
@@ -959,8 +959,8 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4> And(Expression<Func<T1, T2, T3, T4, bool>> predicate)
@@ -968,7 +968,7 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.And(predicate);
+        this.Visitor.And(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
@@ -977,8 +977,8 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -989,8 +989,8 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
-        this.visitor.GroupBy(groupingExpr);
-        return new MultiGroupingQuery<T1, T2, T3, T4, TGrouping>(this.multiQuery, this.visitor);
+        this.Visitor.GroupBy(groupingExpr);
+        return new MultiGroupingQuery<T1, T2, T3, T4, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1004,7 +1004,7 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
@@ -1016,7 +1016,7 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -1027,16 +1027,16 @@ class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1115,15 +1115,15 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
         if (cteSubQuery == null)
             throw new ArgumentNullException(nameof(cteSubQuery));
 
-        this.visitor.Clear(true);
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-        var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.visitor.CteQueries[0], this.visitor.CteQueries[1], this.visitor.CteQueries[2], this.visitor.CteQueries[3], this.visitor.CteQueries[4]);
-        var rawSql = this.visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        this.Visitor.Clear(true);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
+        var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.Visitor.CteQueries[0], this.Visitor.CteQueries[1], this.Visitor.CteQueries[2], this.Visitor.CteQueries[3], this.Visitor.CteQueries[4]);
+        var rawSql = this.Visitor.BuildSql(out var readerFields, false);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
-        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
+        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1133,14 +1133,14 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
-        var sql = this.visitor.BuildSql(out var readerFields);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        var sql = this.Visitor.BuildSql(out var readerFields);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.WithTable(typeof(TOther), sql, readerFields);
+        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1150,7 +1150,7 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
@@ -1158,7 +1158,7 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5> RightJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
@@ -1166,7 +1166,7 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.Visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
@@ -1174,24 +1174,24 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
@@ -1201,12 +1201,12 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
@@ -1216,12 +1216,12 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
@@ -1231,12 +1231,12 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
@@ -1245,15 +1245,15 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
@@ -1262,15 +1262,15 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
@@ -1279,15 +1279,15 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1297,16 +1297,16 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, TMember>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, TMember>(this.MultipleQuery, this.Visitor);
     }
     public IMultiIncludableQuery<T1, T2, T3, T4, T5, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector, true, filter);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, TElment>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector, true, filter);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, TElment>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1316,7 +1316,7 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Where(predicate);
+        this.Visitor.Where(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
@@ -1325,8 +1325,8 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5> And(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
@@ -1334,7 +1334,7 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.And(predicate);
+        this.Visitor.And(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
@@ -1343,8 +1343,8 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -1355,8 +1355,8 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
-        this.visitor.GroupBy(groupingExpr);
-        return new MultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping>(this.multiQuery, this.visitor);
+        this.Visitor.GroupBy(groupingExpr);
+        return new MultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1370,7 +1370,7 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
@@ -1382,7 +1382,7 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -1393,16 +1393,16 @@ class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1481,15 +1481,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
         if (cteSubQuery == null)
             throw new ArgumentNullException(nameof(cteSubQuery));
 
-        this.visitor.Clear(true);
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-        var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.visitor.CteQueries[0], this.visitor.CteQueries[1], this.visitor.CteQueries[2], this.visitor.CteQueries[3], this.visitor.CteQueries[4], this.visitor.CteQueries[5]);
-        var rawSql = this.visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        this.Visitor.Clear(true);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
+        var query = (IQuery<TOther>)cteSubQuery.DynamicInvoke(fromQuery, this.Visitor.CteQueries[0], this.Visitor.CteQueries[1], this.Visitor.CteQueries[2], this.Visitor.CteQueries[3], this.Visitor.CteQueries[4], this.Visitor.CteQueries[5]);
+        var rawSql = this.Visitor.BuildSql(out var readerFields, false);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1499,14 +1499,14 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
-        var sql = this.visitor.BuildSql(out var readerFields);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        var sql = this.Visitor.BuildSql(out var readerFields);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.WithTable(typeof(TOther), sql, readerFields);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1516,7 +1516,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
@@ -1524,7 +1524,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
@@ -1532,7 +1532,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.Visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
@@ -1540,24 +1540,24 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
@@ -1567,12 +1567,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
@@ -1582,12 +1582,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
@@ -1597,12 +1597,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
@@ -1611,15 +1611,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
@@ -1628,15 +1628,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
@@ -1645,15 +1645,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1663,16 +1663,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>(this.MultipleQuery, this.Visitor);
     }
     public IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector, true, filter);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, TElment>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector, true, filter);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, TElment>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1682,7 +1682,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Where(predicate);
+        this.Visitor.Where(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
@@ -1691,8 +1691,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6> And(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
@@ -1700,7 +1700,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.And(predicate);
+        this.Visitor.And(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
@@ -1709,8 +1709,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -1721,8 +1721,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
-        this.visitor.GroupBy(groupingExpr);
-        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>(this.multiQuery, this.visitor);
+        this.Visitor.GroupBy(groupingExpr);
+        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1736,7 +1736,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
@@ -1748,7 +1748,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -1759,16 +1759,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1847,14 +1847,14 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
-        var sql = this.visitor.BuildSql(out var readerFields);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        var sql = this.Visitor.BuildSql(out var readerFields);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.WithTable(typeof(TOther), sql, readerFields);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1864,7 +1864,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn)
@@ -1872,7 +1872,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn)
@@ -1880,7 +1880,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.Visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
@@ -1888,24 +1888,24 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
@@ -1915,12 +1915,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
@@ -1930,12 +1930,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
@@ -1945,12 +1945,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
@@ -1959,15 +1959,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
@@ -1976,15 +1976,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
@@ -1993,15 +1993,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2011,16 +2011,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>(this.MultipleQuery, this.Visitor);
     }
     public IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector, true, filter);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector, true, filter);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2030,7 +2030,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Where(predicate);
+        this.Visitor.Where(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null)
@@ -2039,8 +2039,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
@@ -2048,7 +2048,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.And(predicate);
+        this.Visitor.And(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null)
@@ -2057,8 +2057,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -2069,8 +2069,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
-        this.visitor.GroupBy(groupingExpr);
-        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>(this.multiQuery, this.visitor);
+        this.Visitor.GroupBy(groupingExpr);
+        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2084,7 +2084,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr)
@@ -2096,7 +2096,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -2107,16 +2107,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2195,14 +2195,14 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
-        var sql = this.visitor.BuildSql(out var readerFields);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        var sql = this.Visitor.BuildSql(out var readerFields);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.WithTable(typeof(TOther), sql, readerFields);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2212,7 +2212,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn)
@@ -2220,7 +2220,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn)
@@ -2228,7 +2228,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.Visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
@@ -2236,24 +2236,24 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
@@ -2263,12 +2263,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
@@ -2278,12 +2278,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
@@ -2293,12 +2293,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
@@ -2307,15 +2307,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
@@ -2324,15 +2324,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
@@ -2341,15 +2341,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2359,16 +2359,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>(this.MultipleQuery, this.Visitor);
     }
     public IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector, true, filter);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector, true, filter);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2378,7 +2378,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Where(predicate);
+        this.Visitor.Where(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null)
@@ -2387,8 +2387,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
@@ -2396,7 +2396,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.And(predicate);
+        this.Visitor.And(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null)
@@ -2405,8 +2405,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -2417,8 +2417,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
-        this.visitor.GroupBy(groupingExpr);
-        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>(this.multiQuery, this.visitor);
+        this.Visitor.GroupBy(groupingExpr);
+        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2432,7 +2432,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr)
@@ -2444,7 +2444,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -2455,16 +2455,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2543,14 +2543,14 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
-        var sql = this.visitor.BuildSql(out var readerFields);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        var sql = this.Visitor.BuildSql(out var readerFields);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.WithTable(typeof(TOther), sql, readerFields);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2560,7 +2560,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn)
@@ -2568,7 +2568,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn)
@@ -2576,7 +2576,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.Visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
@@ -2584,24 +2584,24 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
@@ -2611,12 +2611,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
@@ -2626,12 +2626,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
@@ -2641,12 +2641,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
@@ -2655,15 +2655,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
@@ -2672,15 +2672,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
@@ -2689,15 +2689,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2707,16 +2707,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>(this.MultipleQuery, this.Visitor);
     }
     public IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector, true, filter);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector, true, filter);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2726,7 +2726,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Where(predicate);
+        this.Visitor.Where(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null)
@@ -2735,8 +2735,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
@@ -2744,7 +2744,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.And(predicate);
+        this.Visitor.And(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null)
@@ -2753,8 +2753,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -2765,8 +2765,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
-        this.visitor.GroupBy(groupingExpr);
-        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>(this.multiQuery, this.visitor);
+        this.Visitor.GroupBy(groupingExpr);
+        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2780,7 +2780,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr)
@@ -2792,7 +2792,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -2803,16 +2803,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQue
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2891,14 +2891,14 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
-        var sql = this.visitor.BuildSql(out var readerFields);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        var sql = this.Visitor.BuildSql(out var readerFields);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.WithTable(typeof(TOther), sql, readerFields);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2908,7 +2908,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn)
@@ -2916,7 +2916,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn)
@@ -2924,7 +2924,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.Visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
@@ -2932,24 +2932,24 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
@@ -2959,12 +2959,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
@@ -2974,12 +2974,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
@@ -2989,12 +2989,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
@@ -3003,15 +3003,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
@@ -3020,15 +3020,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
@@ -3037,15 +3037,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3055,16 +3055,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>(this.MultipleQuery, this.Visitor);
     }
     public IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector, true, filter);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector, true, filter);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3074,7 +3074,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Where(predicate);
+        this.Visitor.Where(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null)
@@ -3083,8 +3083,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
@@ -3092,7 +3092,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.And(predicate);
+        this.Visitor.And(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null)
@@ -3101,8 +3101,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -3113,8 +3113,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
-        this.visitor.GroupBy(groupingExpr);
-        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>(this.multiQuery, this.visitor);
+        this.Visitor.GroupBy(groupingExpr);
+        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3128,7 +3128,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr)
@@ -3140,7 +3140,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -3151,16 +3151,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMul
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3239,14 +3239,14 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
-        var sql = this.visitor.BuildSql(out var readerFields);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        var sql = this.Visitor.BuildSql(out var readerFields);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.WithTable(typeof(TOther), sql, readerFields);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3256,7 +3256,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn)
@@ -3264,7 +3264,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn)
@@ -3272,7 +3272,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.Visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
@@ -3280,24 +3280,24 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
@@ -3307,12 +3307,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
@@ -3322,12 +3322,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
@@ -3337,12 +3337,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
@@ -3351,15 +3351,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
@@ -3368,15 +3368,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
@@ -3385,15 +3385,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3403,16 +3403,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>(this.MultipleQuery, this.Visitor);
     }
     public IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector, true, filter);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector, true, filter);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3422,7 +3422,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Where(predicate);
+        this.Visitor.Where(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null)
@@ -3431,8 +3431,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
@@ -3440,7 +3440,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.And(predicate);
+        this.Visitor.And(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null)
@@ -3449,8 +3449,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -3461,8 +3461,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
-        this.visitor.GroupBy(groupingExpr);
-        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>(this.multiQuery, this.visitor);
+        this.Visitor.GroupBy(groupingExpr);
+        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3476,7 +3476,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr)
@@ -3488,7 +3488,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -3499,16 +3499,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase,
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3587,14 +3587,14 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
-        var sql = this.visitor.BuildSql(out var readerFields);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        var sql = this.Visitor.BuildSql(out var readerFields);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.WithTable(typeof(TOther), sql, readerFields);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3604,7 +3604,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn)
@@ -3612,7 +3612,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn)
@@ -3620,7 +3620,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.Visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
@@ -3628,24 +3628,24 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
@@ -3655,12 +3655,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
@@ -3670,12 +3670,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
@@ -3685,12 +3685,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
@@ -3699,15 +3699,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
@@ -3716,15 +3716,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
@@ -3733,15 +3733,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3751,16 +3751,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>(this.MultipleQuery, this.Visitor);
     }
     public IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector, true, filter);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector, true, filter);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3770,7 +3770,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Where(predicate);
+        this.Visitor.Where(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null)
@@ -3779,8 +3779,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
@@ -3788,7 +3788,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.And(predicate);
+        this.Visitor.And(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null)
@@ -3797,8 +3797,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -3809,8 +3809,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
-        this.visitor.GroupBy(groupingExpr);
-        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>(this.multiQuery, this.visitor);
+        this.Visitor.GroupBy(groupingExpr);
+        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3824,7 +3824,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr)
@@ -3836,7 +3836,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -3847,16 +3847,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQuery
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3935,14 +3935,14 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
-        var sql = this.visitor.BuildSql(out var readerFields);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        var sql = this.Visitor.BuildSql(out var readerFields);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.WithTable(typeof(TOther), sql, readerFields);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3952,7 +3952,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn)
@@ -3960,7 +3960,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn)
@@ -3968,7 +3968,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.Visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
@@ -3976,24 +3976,24 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
@@ -4003,12 +4003,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
@@ -4018,12 +4018,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
@@ -4033,12 +4033,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
@@ -4047,15 +4047,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
@@ -4064,15 +4064,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
@@ -4081,15 +4081,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -4099,16 +4099,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>(this.MultipleQuery, this.Visitor);
     }
     public IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector, true, filter);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector, true, filter);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -4118,7 +4118,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Where(predicate);
+        this.Visitor.Where(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null)
@@ -4127,8 +4127,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
@@ -4136,7 +4136,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.And(predicate);
+        this.Visitor.And(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null)
@@ -4145,8 +4145,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -4157,8 +4157,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
-        this.visitor.GroupBy(groupingExpr);
-        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>(this.multiQuery, this.visitor);
+        this.Visitor.GroupBy(groupingExpr);
+        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -4172,7 +4172,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr)
@@ -4184,7 +4184,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -4195,16 +4195,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Multi
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -4283,14 +4283,14 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
-        var sql = this.visitor.BuildSql(out var readerFields);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        var sql = this.Visitor.BuildSql(out var readerFields);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.WithTable(typeof(TOther), sql, readerFields);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -4300,7 +4300,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn)
@@ -4308,7 +4308,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn)
@@ -4316,7 +4316,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.Visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
@@ -4324,24 +4324,24 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
@@ -4351,12 +4351,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
@@ -4366,12 +4366,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
@@ -4381,12 +4381,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
@@ -4395,15 +4395,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
@@ -4412,15 +4412,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
@@ -4429,15 +4429,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -4447,16 +4447,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(this.MultipleQuery, this.Visitor);
     }
     public IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector, true, filter);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector, true, filter);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -4466,7 +4466,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Where(predicate);
+        this.Visitor.Where(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null)
@@ -4475,8 +4475,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
@@ -4484,7 +4484,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.And(predicate);
+        this.Visitor.And(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null)
@@ -4493,8 +4493,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -4505,8 +4505,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
-        this.visitor.GroupBy(groupingExpr);
-        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>(this.multiQuery, this.visitor);
+        this.Visitor.GroupBy(groupingExpr);
+        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -4520,7 +4520,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr)
@@ -4532,7 +4532,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -4543,16 +4543,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : 
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -4631,14 +4631,14 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
-        var sql = this.visitor.BuildSql(out var readerFields);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        var sql = this.Visitor.BuildSql(out var readerFields);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        this.visitor.WithTable(typeof(TOther), sql, readerFields);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.WithTable(typeof(TOther), sql, readerFields);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -4648,7 +4648,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
@@ -4656,7 +4656,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
@@ -4664,7 +4664,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.Visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
@@ -4672,24 +4672,24 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.multiQuery, this.visitor);
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
@@ -4699,12 +4699,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
@@ -4714,12 +4714,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
@@ -4729,12 +4729,12 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
             throw new ArgumentNullException(nameof(joinOn));
 
         var sql = subQuery.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(subQuery.Visitor))
-            subQuery.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(subQuery.Visitor))
+            subQuery.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, subQuery);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
@@ -4743,15 +4743,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("INNER JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("INNER JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
@@ -4760,15 +4760,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("LEFT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("LEFT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
@@ -4777,15 +4777,15 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        var fromQuery = new FromQuery(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        var fromQuery = new FromQuery(this.DbContext, this.Visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields, false);
-        if (!this.visitor.Equals(query.Visitor))
-            query.Visitor.CopyTo(this.visitor);
+        if (!this.Visitor.Equals(query.Visitor))
+            query.Visitor.CopyTo(this.Visitor);
 
-        var tableSegment = this.visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
-        this.visitor.Join("RIGHT JOIN", tableSegment, joinOn);
-        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.multiQuery, this.visitor);
+        var tableSegment = this.Visitor.WithTable(typeof(TOther), sql, readerFields, false, query);
+        this.Visitor.Join("RIGHT JOIN", tableSegment, joinOn);
+        return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -4795,16 +4795,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>(this.MultipleQuery, this.Visitor);
     }
     public IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector, true, filter);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector, true, filter);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -4814,7 +4814,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Where(predicate);
+        this.Visitor.Where(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null)
@@ -4823,8 +4823,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate)
@@ -4832,7 +4832,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.And(predicate);
+        this.Visitor.And(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null)
@@ -4841,8 +4841,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -4853,8 +4853,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
-        this.visitor.GroupBy(groupingExpr);
-        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(this.multiQuery, this.visitor);
+        this.Visitor.GroupBy(groupingExpr);
+        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -4868,7 +4868,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr)
@@ -4880,7 +4880,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -4891,16 +4891,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -4979,7 +4979,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn)
@@ -4987,7 +4987,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn)
@@ -4995,7 +4995,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.Visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
     #endregion
@@ -5006,16 +5006,16 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>(this.MultipleQuery, this.Visitor);
     }
     public IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector, true, filter);
-        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment>(this.multiQuery, this.visitor);
+        this.Visitor.Include(memberSelector, true, filter);
+        return new MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -5025,7 +5025,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Where(predicate);
+        this.Visitor.Where(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null)
@@ -5034,8 +5034,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate)
@@ -5043,7 +5043,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.And(predicate);
+        this.Visitor.And(predicate);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null)
@@ -5052,8 +5052,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -5064,8 +5064,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
-        this.visitor.GroupBy(groupingExpr);
-        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(this.multiQuery, this.visitor);
+        this.Visitor.GroupBy(groupingExpr);
+        return new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -5079,7 +5079,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr)
@@ -5091,7 +5091,7 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -5102,8 +5102,8 @@ class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T1
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
-        return new MultiQuery<TTarget>(this.multiQuery, this.visitor);
+        this.Visitor.Select(null, fieldsExpr);
+        return new MultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 

@@ -160,6 +160,7 @@ public partial class SqlServerProvider : BaseOrmProvider
             return result;
         return typeof(object);
     }
+    public override string GetIdentitySql(Type entityType) => ";SELECT SCOPE_IDENTITY()";
     public override string CastTo(Type type, object value)
         => $"CAST({value} AS {castTos[type]})";
     public override string GetQuotedValue(Type expectType, object value)

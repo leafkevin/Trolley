@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Trolley;
 
-public interface IDeleteVisitor
+public interface IDeleteVisitor : IDisposable
 {
     string DbKey { get; }
     IDataParameterCollection DbParameters { get; set; }

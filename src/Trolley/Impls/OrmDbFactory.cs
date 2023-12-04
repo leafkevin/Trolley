@@ -89,15 +89,13 @@ public class OrmDbFactory : IOrmDbFactory
         var tenantDatabase = database.GetTenantDatabase(tenantId);
         if (!this.TryGetMapProvider(database.OrmProviderType, out var mapProvider))
             throw new Exception($"未注册Key为{database.OrmProviderType.FullName}的EntityMapProvider");
-
-        var baseConnection = ormProvider.CreateConnection(tenantDatabase.ConnectionString);
-        var connection = new TheaConnection()
+        var connection = new TheaConnection
         {
             DbKey = dbKey,
-            ConnectionString = tenantDatabase.ConnectionString,
-            BaseConnection = baseConnection
+            BaseConnection = ormProvider.CreateConnection(tenantDatabase.ConnectionString),
+            OrmProvider = ormProvider
         };
-        return new Repository(connection, ormProvider, mapProvider).With(this.options);
+        return new Repository(dbKey, connection, ormProvider, mapProvider).With(this.options);
     }
     public void With(OrmDbFactoryOptions options) => this.options = options;
     public void Build(Type ormProviderType)

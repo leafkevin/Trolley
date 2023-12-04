@@ -20,15 +20,11 @@ public struct CommandSegment
     public string Type { get; set; }
     public object Value { get; set; }
 }
-public struct FieldObject
+public struct FieldsSegment
 {
-    public Expression FieldSelector { get; set; }
-    public object FieldValue { get; set; }
-}
-public struct FieldsParameters
-{
-    public Expression SelectorOrAssignment { get; set; }
-    public object Parameters { get; set; }
+    public string Type { get; set; }
+    public string Fields { get; set; }
+    public string Values { get; set; }
 }
 public struct FieldFromQuery
 {
@@ -39,6 +35,6 @@ public struct BulkObject
 {
     public string HeadSql { get; set; }
     public Expression FieldsSelectorOrAssignment { get; set; }
-    public object DbParametersInitializer { get; set; }
+    public object CommandInitializer { get; set; }
     public object BulkObjects { get; set; }
 }

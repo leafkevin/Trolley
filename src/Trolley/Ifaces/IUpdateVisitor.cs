@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
@@ -25,12 +26,13 @@ public struct UpdateField
     public string Value { get; set; }
     public override int GetHashCode() => HashCode.Combine(this.Type, this.MemberMapper?.MemberName);
 }
-public interface IUpdateVisitor
+public interface IUpdateVisitor : IDisposable
 {
     string DbKey { get; }
     IDataParameterCollection DbParameters { get; set; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
+    bool IsBulk { get; set; }
 
     void Initialize(Type entityType, bool isFirst = true);
     MultipleCommand CreateMultipleCommand();
@@ -40,15 +42,17 @@ public interface IUpdateVisitor
     IUpdateVisitor From(params Type[] entityTypes);
     IUpdateVisitor Join(string joinType, Type entityType, Expression joinOn);
     IUpdateVisitor Set(Expression fieldsAssignment);
-    IUpdateVisitor Set(Expression fieldSelector, object fieldValue);
-    IUpdateVisitor SetWith(Expression fieldsSelectorOrAssignment, object updateObj);
+    IUpdateVisitor SetWith(object updateObj);
+    IUpdateVisitor SetField(Expression fieldSelector, object fieldValue);
     IUpdateVisitor SetFrom(Expression fieldsAssignment);
     IUpdateVisitor SetFrom(Expression fieldSelector, Expression valueSelector);
-    IUpdateVisitor SetBulkFirst(IDbCommand command, Expression fieldsSelectorOrAssignment, object updateObjs);
-    void SetBulkHead(StringBuilder builder);
-    void SetBulk(StringBuilder builder, object updateObj, int index);
-    void SetBulkTail(StringBuilder builder);
+    IUpdateVisitor IgnoreFields(params string[] fieldNames);
+    IUpdateVisitor IgnoreFields(Expression fieldsSelector);
+    IUpdateVisitor OnlyFields(params string[] fieldNames);
+    IUpdateVisitor OnlyFields(Expression fieldsSelector);
+    IUpdateVisitor SetBulk(IEnumerable updateObjs, int bulkCount);
+    (IEnumerable, int, Action<StringBuilder, object, string>) BuildSetBulk(IDbCommand command);
     IUpdateVisitor WhereWith(object whereObj);
-    IUpdateVisitor Where(Expression whereExpr);
+    IUpdateVisitor Where(Expression whereExpr, bool isWhereObj = false);
     IUpdateVisitor And(Expression whereExpr);
 }

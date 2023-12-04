@@ -10,7 +10,7 @@ public delegate SqlSegment MethodCallSqlFormatter(ISqlVisitor visitor, Expressio
 
 public interface IOrmProvider
 {
-    string ParameterPrefix { get; }
+    string ParameterPrefix { get; } 
     Type NativeDbTypeType { get; }
     IDbConnection CreateConnection(string connectionString);
     IDbDataParameter CreateParameter(string parameterName, object value);
@@ -25,9 +25,10 @@ public interface IOrmProvider
     string GetPagingTemplate(int? skip, int? limit, string orderBy = null);
     object GetNativeDbType(Type type);
     Type MapDefaultType(object nativeDbType);
+    string GetIdentitySql(Type entityType);
     string CastTo(Type type, object value);
     string GetQuotedValue(Type fieldType, object value);
-    object ToFieldValue(MemberMap memberMapper, object fieldValue);
+    //object ToFieldValue(MemberMap memberMapper, object fieldValue);
     string GetBinaryOperator(ExpressionType nodeType);
     bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
     bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);

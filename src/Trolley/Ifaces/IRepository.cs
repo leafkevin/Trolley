@@ -163,11 +163,10 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <summary>
     /// 从SQL子查询中查询数据，用法：
     /// <code>
-    /// repository
-    ///     .From(f =&gt; f.From&lt;Page, Menu&gt;('o')
-    ///         .Where((a, b) =&gt; a.Id == b.PageId)
-    ///         .Select((x, y) =&gt; new { y.Id, y.ParentId, x.Url }))
-    ///     ...
+    /// var subQuery = repository.From&lt;Page, Menu&gt;('o')
+    ///     .Where((a, b) =&gt; a.Id == b.PageId)
+    ///     .Select((x, y) =&gt; new { y.Id, y.ParentId, x.Url });
+    /// repository.From(subQuery) ...
     /// SQL:
     /// ... FROM (SELECT p.`Id`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) ...
     /// </code>
@@ -176,7 +175,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <param name="subQuery">子查询</param>
     /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery, char tableAsStart = 'a');
+    IQuery<T> From<T>(IQuery<T> subQuery, char tableAsStart = 'a');
     #endregion
 
     #region FromWith CTE
@@ -223,7 +222,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
     /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
+    //IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
     #endregion
 
     #region QueryFirst/Query
@@ -389,6 +388,79 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <typeparam name="TEntity">插入实体类型</typeparam>
     /// <returns>返回插入对象</returns>
     ICreate<TEntity> Create<TEntity>();
+    /// <summary>
+    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，用法：
+    /// <code>
+    /// repository.Create&lt;User&gt;(new
+    /// {
+    ///     Name = "leafkevin",
+    ///     Age = 25,
+    ///     UpdatedAt = DateTime.Now,
+    ///     UpdatedBy = 1
+    /// });
+    /// repository.Create&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
+    /// SQL:
+    /// INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
+    /// INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典，也可以是这些类型的IEnumerable类型，如：new { Value1 = 1, Value2 = "xxx" } 或 new Order{ ... }</param>
+    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
+    /// <returns>返回插入行数</returns>
+    int Create<TEntity>(object insertObjs, int bulkCount = 500);
+    /// <summary>
+    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，用法：
+    /// <code>
+    /// await repository.CreateAsync&lt;User&gt;(new
+    /// {
+    ///     Name = "leafkevin",
+    ///     Age = 25,
+    ///     UpdatedAt = DateTime.Now,
+    ///     UpdatedBy = 1
+    /// });
+    /// await repository.CreateAsync&lt;Product&gt;(new []{ new { ... }, new { ... }, new { ... });
+    /// SQL:
+    /// INSERT INTO `sys_user` (`Name`,`Age`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@UpdatedAt,@UpdatedBy)
+    /// INSERT INTO [sys_product] ([ProductNo],[Name],...) VALUES (@ProductNo0,@Name0,...),(@ProductNo1,@Name1,...),(@ProductNo2,@Name2,...)...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="insertObjs">插入对象，可以是匿名对象、实体对象、字典，也可以是这些类型的IEnumerable类型，如：new { Value1 = 1, Value2 = "xxx" } 或 new Order{ ... }</param>
+    /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回插入行数</returns>
+    Task<int> CreateAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default);
+    /// <summary>
+    ///  使用插入对象部分字段插入，并返回自增长ID，自动增长栏位，不需要传入
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="insertObj">插入对象，可以是匿名对象、实体对象、字典</param>
+    /// <returns>返回自增长ID</returns>
+    int CreateIdentity<TEntity>(object insertObj);
+    /// <summary>
+    ///  使用插入对象部分字段插入，并返回自增长ID，自动增长栏位，不需要传入
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="insertObj">插入对象，可以是匿名对象、实体对象、字典</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回自增长ID</returns>
+    Task<int> CreateIdentityAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default);
+    /// <summary>
+    ///  使用插入对象部分字段插入，并返回自增长ID，自动增长栏位，不需要传入
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="insertObj">插入对象，可以是匿名对象、实体对象、字典</param>
+    /// <returns>返回自增长ID</returns>
+    long CreateIdentityLong<TEntity>(object insertObj);
+    /// <summary>
+    ///  使用插入对象部分字段插入，并返回自增长ID，自动增长栏位，不需要传入
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="insertObj">插入对象，可以是匿名对象、实体对象、字典</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回自增长ID</returns>
+    Task<long> CreateIdentityLongAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default);
     #endregion
 
     #region Update
@@ -486,6 +558,37 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <typeparam name="TEntity">删除实体类型</typeparam>
     /// <returns>返回删除对象</returns>
     IDelete<TEntity> Delete<TEntity>();
+    /// <summary>
+    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，用法：
+    /// <code>
+    /// 单个删除,下面两个方法等效
+    /// repository.Delete&lt;User&gt;(1);
+    /// repository.Delete&lt;User&gt;(new { Id = 1});
+    /// 批量删除,下面两个方法等效
+    /// repository.Delete&lt;User&gt;(new[] { 1, 2 });
+    /// repository.Delete&lt;User&gt;(new[] { new { Id = 1 }, new { Id = 2 } });
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">要删除的实体类型</typeparam>
+    /// <param name="whereKeys">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
+    /// <returns>返回删除行数</returns>
+    int Delete<TEntity>(object whereKeys);
+    /// <summary>
+    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，用法：
+    /// <code>
+    /// 单个删除,下面两个方法等效
+    /// await repository.DeleteAsync&lt;User&gt;(1);
+    /// await repository.DeleteAsync&lt;User&gt;(new { Id = 1});
+    /// 批量删除,下面两个方法等效
+    /// await repository.DeleteAsync&lt;User&gt;(new[] { 1, 2 });
+    /// await repository.DeleteAsync&lt;User&gt;(new[] { new { Id = 1 }, new { Id = 2 } });
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">要删除的实体类型</typeparam>
+    /// <param name="whereKeys">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回删除行数</returns>
+    Task<int> DeleteAsync<TEntity>(object whereKeys, CancellationToken cancellationToken = default);
     #endregion
 
     #region Execute

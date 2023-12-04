@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
@@ -11,27 +10,17 @@ namespace Trolley;
 
 class Delete<TEntity> : IDelete<TEntity>
 {
-    #region Fields
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IOrmProvider ormProvider;
-    private readonly IEntityMapProvider mapProvider;
-    protected readonly IDeleteVisitor visitor;
-    protected readonly Type entityType;
-    private readonly bool isParameterized;
+    #region Properties
+    public DbContext DbContext { get; set; }
+    public IDeleteVisitor Visitor { get; set; }
     #endregion
 
     #region Constructor
-    public Delete(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false)
+    public Delete(DbContext dbContext)
     {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.ormProvider = ormProvider;
-        this.mapProvider = mapProvider;
-        this.isParameterized = isParameterized;
-        this.visitor = ormProvider.NewDeleteVisitor(connection.DbKey, mapProvider, isParameterized);
-        this.entityType = typeof(TEntity);
-        this.visitor.Initialize(entityType);
+        this.DbContext = dbContext;
+        this.Visitor = dbContext.OrmProvider.NewDeleteVisitor(dbContext.DbKey, dbContext.MapProvider, dbContext.IsParameterized);
+        this.Visitor.Initialize(typeof(TEntity));
     }
     #endregion
 
@@ -41,8 +30,8 @@ class Delete<TEntity> : IDelete<TEntity>
         if (keys == null)
             throw new ArgumentNullException(nameof(keys));
 
-        this.visitor.WhereWith(keys);
-        return new Deleted<TEntity>(this.connection, this.transaction, this.visitor);
+        this.Visitor.WhereWith(keys);
+        return new Deleted<TEntity>(this.DbContext, this.Visitor);
     }
     public IDeleting<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
@@ -51,72 +40,43 @@ class Delete<TEntity> : IDelete<TEntity>
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
 
-        if (condition) this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
-        return new Deleting<TEntity>(this.connection, this.transaction, this.visitor);
+        if (condition) this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
+        return new Deleting<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 }
 class Deleted<TEntity> : IDeleted<TEntity>
 {
-    #region Fields
-    private readonly string dbKey;
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IOrmProvider ormProvider;
-    private readonly IEntityMapProvider mapProvider;
-    private readonly IDeleteVisitor visitor;
+    #region Properties
+    public DbContext DbContext { get; set; }
+    public IDeleteVisitor Visitor { get; set; }
     #endregion
 
     #region Constructor
-    public Deleted(TheaConnection connection, IDbTransaction transaction, IDeleteVisitor visitor)
+    public Deleted(DbContext dbContext, IDeleteVisitor visitor)
     {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.ormProvider = visitor.OrmProvider;
-        this.mapProvider = visitor.MapProvider;
-        this.dbKey = connection.DbKey;
-        this.visitor = visitor;
+        this.DbContext = dbContext;
+        this.Visitor = visitor;
     }
     #endregion
 
     #region Execute
     public int Execute()
-    {
-        using var command = this.connection.CreateCommand();
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.transaction;
-        command.CommandText = this.visitor.BuildCommand(command);
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
-        return result;
-    }
+        => this.DbContext.Execute(f => this.Visitor.BuildCommand(f));
     public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.transaction;
-        cmd.CommandText = this.visitor.BuildCommand(cmd);
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        command.Dispose();
-        return result;
-    }
-
+        => await this.DbContext.ExecuteAsync(f => this.Visitor.BuildCommand(f), cancellationToken);
     #endregion
 
     #region ToMultipleCommand
-    public MultipleCommand ToMultipleCommand() => this.visitor.CreateMultipleCommand();
+    public MultipleCommand ToMultipleCommand() => this.Visitor.CreateMultipleCommand();
     #endregion
 
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        using var command = this.connection.CreateCommand();
-        var sql = this.visitor.BuildCommand(command);
+        using var command = this.DbContext.CreateCommand();
+        var sql = this.Visitor.BuildCommand(command);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         return sql;
@@ -125,20 +85,9 @@ class Deleted<TEntity> : IDeleted<TEntity>
 }
 class Deleting<TEntity> : Deleted<TEntity>, IDeleting<TEntity>
 {
-    #region Fields
-    private readonly TheaConnection connection;
-    private readonly IDbTransaction transaction;
-    private readonly IDeleteVisitor visitor;
-    #endregion
-
     #region Constructor
-    public Deleting(TheaConnection connection, IDbTransaction transaction, IDeleteVisitor visitor)
-        : base(connection, transaction, visitor)
-    {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.visitor = visitor;
-    }
+    public Deleting(DbContext dbContext, IDeleteVisitor visitor)
+        : base(dbContext, visitor) { }
     #endregion
 
     #region And
@@ -149,8 +98,8 @@ class Deleting<TEntity> : Deleted<TEntity>, IDeleting<TEntity>
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
 
-        if (condition) this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+        if (condition) this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion 

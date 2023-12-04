@@ -95,6 +95,7 @@
     </Content>
     <Content Include="MySql\Entity.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Entity.cs</LastGenOutput>
     </Content>
     <Content Include="MySql\ModelConfiguration.tt">
       <Generator>TextTemplatingFileGenerator</Generator>

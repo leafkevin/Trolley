@@ -15,12 +15,13 @@ namespace Trolley;
 public interface ICreate<TEntity>
 {
     #region Properties
+    DbContext DbContext { get; }
     ICreateVisitor Visitor { get; }
     #endregion
 
     #region WithBy
     /// <summary>
-    /// 使用插入对象部分字段插入，单个对象插入
+    /// 使用插入对象部分字段插入，单个对象插入，命名或匿名对象都可以
     /// <para>自动增长的栏位，不需要传入，用法：</para>
     /// <code>
     /// repository.Create&lt;User&gt;()
@@ -28,23 +29,14 @@ public interface ICreate<TEntity>
     ///     {
     ///         Name = "leafkevin",
     ///         Age = 25,
-    ///         CompanyId = 1,
-    ///         Gender = Gender.Male,
-    ///         IsEnabled = true,
-    ///         CreatedAt = DateTime.Now,
-    ///         CreatedBy = 1,
-    ///         UpdatedAt = DateTime.Now,
-    ///         UpdatedBy = 1
+    ///         ...
     ///     })
     ///     .Execute();
-    /// </code>
-    /// 生成的SQL:
-    /// <code>
-    /// INSERT INTO `sys_user` (`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)
+    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`, ...) VALUES(@Name,@Age, ...)
     /// </code>
     /// </summary>
     /// <typeparam name="TInsertObject">插入对象类型</typeparam>
-    /// <param name="insertObj">插入对象，包含想要插入的必需栏位值</param>
+    /// <param name="insertObj">插入对象，包含想要插入的必需栏位值，命名或匿名对象都可以</param>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj);
     #endregion
@@ -53,14 +45,25 @@ public interface ICreate<TEntity>
     /// <summary>
     /// 批量插入,采用多表值方式，生成的SQL:
     /// <code>
-    /// INSERT INTO [sys_product] ([ProductNo],[Name],[BrandId],[CategoryId],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) VALUES (@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)
+    /// INSERT INTO [sys_product] ([ProductNo],[Name], ...) VALUES (@ProductNo0,@Name0, ...),(@ProductNo1,@Name1, ...),(@ProductNo2,@Name2, ...)
     /// </code>
     /// </summary>
     /// <param name="insertObjs">插入的对象集合</param>
     /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
     /// <returns>返回插入对象</returns>
-    ICreated<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
-    #endregion 
+    IContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
+    #endregion
+
+    //#region FromWith   
+    ///// <summary>
+    ///// 使用CTE子句批量插入部分字段，部分数据库支持
+    ///// </summary>
+    ///// <typeparam name="TTarget"></typeparam>
+    ///// <param name="cteSubQuery"></param>
+    ///// <param name="cteTableName"></param>
+    ///// <returns></returns>
+    //ICreated<TEntity> WithFrom<TTarget>(IQuery<TTarget> cteSubQuery, string cteTableName = null);
+    //#endregion
 
     //#region IfNotExists   
     ///// <summary>
@@ -82,8 +85,13 @@ public interface ICreate<TEntity>
 /// 插入数据
 /// </summary>
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
-public interface ICreated<TEntity>
+public interface ICreated<TEntity> : IDisposable
 {
+    #region Properties
+    DbContext DbContext { get; }
+    ICreateVisitor Visitor { get; }
+    #endregion
+
     #region Execute
     /// <summary>
     /// 执行插入操作，并返回插入行数
@@ -96,22 +104,36 @@ public interface ICreated<TEntity>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    long ExecuteLong();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    Task<long> ExecuteLongAsync(CancellationToken cancellationToken = default);
     #endregion
 
-    //#region Execute
-    //MultipleCommand ToMultipleCommand();
-    //#endregion
+    #region ExecuteIdentity
+    /// <summary>
+    /// 执行插入操作，并返回自增长主键值
+    /// </summary>
+    /// <returns>返回自增长主键值</returns>
+    int ExecuteIdentity();
+    /// <summary>
+    /// 执行插入操作，并返回自增长主键值
+    /// </summary>
+    /// <param name="cancellationToken">取消token</param>
+    /// <returns>返回自增长主键值</returns>
+    Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 执行插入操作，并返回自增长主键值
+    /// </summary>
+    /// <returns>返回自增长主键值</returns>
+    long ExecuteIdentityLong();
+    /// <summary>
+    /// 执行插入操作，并返回自增长主键值
+    /// </summary>
+    /// <param name="cancellationToken">取消token</param>
+    /// <returns>返回自增长主键值</returns>
+    Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default);
+    #endregion
+
+    #region ToMultipleCommand
+    MultipleCommand ToMultipleCommand();
+    #endregion
 
     #region ToSql
     /// <summary>
@@ -128,26 +150,14 @@ public interface ICreated<TEntity>
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
 public interface IContinuedCreate<TEntity> : ICreated<TEntity>
 {
-    #region Properties
-    ICreateVisitor Visitor { get; }
-    #endregion
-
     #region WithBy
     /// <summary>
-    /// 使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，用法：
+    /// 使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，命名或匿名对象、字典都可以，用法：
     /// <code>
     /// repository.Create&lt;User&gt;()
-    ///     .WithBy(new
-    ///     {
-    ///         Name = "kevin",
-    ///         Age = 25
-    ///     })
-    ///     .WithBy(true, new
-    ///     {
-    ///         ...
-    ///     })
-    ///     .Execute();
-    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`, ... ) VALUES(@Name,@Age, ... )
+    ///     .WithBy(new { ... })
+    ///     .WithBy(new { Name = "kevin", Age = 25 }) ...
+    /// SQL: INSERT INTO `sys_user` ( ..., `Name`,`Age`, ... ) VALUES(..., @Name,@Age, ... )
     /// </code>
     /// </summary>
     /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
@@ -158,17 +168,10 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// 判断condition布尔值，如果为true，使用插入对象部分字段插入，单个对象插入，可多次调用，自动增长的栏位，不需要传入，用法：
     /// <code>
     /// repository.Create&lt;User&gt;()
-    ///     .WithBy(new
-    ///     {
-    ///         Name = "kevin",
-    ///         Age = 25
-    ///     })
-    ///     .WithBy(true, new
-    ///     {
-    ///         ...
-    ///     })
+    ///     .WithBy(new { Name = "kevin", Age = 25 })
+    ///     .WithBy(true, new { Gender = Gender.Male, ... })
     ///     .Execute();
-    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`, ... ) VALUES(@Name,@Age, ... )
+    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`,`Gender`, ... ) VALUES(@Name,@Age,@Gender, ... )
     /// </code>
     /// </summary>
     /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
@@ -180,11 +183,7 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// 判断condition布尔值，如果为true，使用fieldValue单个字段插入，用法：
     /// <code>
     /// repository.Create&lt;User&gt;()
-    ///     .WithBy(new
-    ///     {
-    ///         Name = "kevin",
-    ///         Age = 25
-    ///     })
+    ///     .WithBy(new { Name = "kevin", Age = 25 })
     ///     .WithBy(true, f =&gt; f.Gender, Gender.Female)
     ///     ...
     ///     .Execute();
@@ -196,5 +195,31 @@ public interface IContinuedCreate<TEntity> : ICreated<TEntity>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回插入对象</returns>
     IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    /// <summary>
+    /// 忽略字段，实体属性名称，如：IgnoreFields("Name") | IgnoreFields("Name", "CreatedAt")
+    /// </summary>
+    /// <param name="fieldNames">忽略的字段数组，不可为null</param>
+    /// <returns></returns>
+    IContinuedCreate<TEntity> IgnoreFields(params string[] fieldNames);
+    /// <summary>
+    /// 忽略字段，如：IgnoreFields(f =&gt; f.Name) | IgnoreFields(f =&gt; new {f.Name, f.CreatedAt})
+    /// </summary>
+    /// <typeparam name="TFields">一个或多个字段类型</typeparam>
+    /// <param name="fieldsSelector">忽略的字段选择表达式，不可为null</param>
+    /// <returns></returns>
+    IContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
+    /// <summary>
+    /// 只插入字段，实体属性名称，如：OnlyFields("Name") | OnlyFields("Name", "CreatedAt")
+    /// </summary>
+    /// <param name="fieldNames"></param>
+    /// <returns></returns>
+    IContinuedCreate<TEntity> OnlyFields(params string[] fieldNames);
+    /// <summary>
+    /// 只插入字段，如：OnlyFields(f =&gt; f.Name) | OnlyFields(f =&gt; new {f.Name, f.CreatedAt})
+    /// </summary>
+    /// <typeparam name="TFields">一个或多个字段类型</typeparam>
+    /// <param name="fieldsSelector">只插入的字段选择表达式，不可为null</param>
+    /// <returns></returns>
+    IContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
     #endregion
 }
