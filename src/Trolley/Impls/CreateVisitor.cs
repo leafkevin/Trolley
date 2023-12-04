@@ -81,15 +81,13 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             Body = this.deferredSegments
         };
     }
-    public override int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
+    public void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
     {
         this.IsMultiple = true;
         this.CommandIndex = commandIndex;
         this.deferredSegments = multiCommand.Body as List<CommandSegment>;
-        int result = 1;
         if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
         sqlBuilder.Append(this.BuildCommand(command, false));
-        return result;
     }
     public virtual string BuildSql()
     {

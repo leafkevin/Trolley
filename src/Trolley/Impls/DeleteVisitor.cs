@@ -64,14 +64,13 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             Body = this.deferredSegments
         };
     }
-    public override int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
+    public void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
     {
         this.IsMultiple = true;
         this.CommandIndex = commandIndex;
         this.deferredSegments = multiCommand.Body as List<DeleteDeferredSegment>;
         if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
         sqlBuilder.Append(this.BuildCommand(command));
-        return 1;
     }
     public virtual IDeleteVisitor WhereWith(object wherKeys)
     {

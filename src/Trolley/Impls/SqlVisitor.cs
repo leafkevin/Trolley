@@ -47,10 +47,6 @@ public class SqlVisitor : ISqlVisitor
         this.TableAsStart = tableAsStart;
         this.ParameterPrefix = parameterPrefix;
     }
-    public virtual int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
-    {
-        return 0;
-    }
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
         dbParameters = null;

@@ -63,18 +63,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     this.VisitSetFromField((FieldFromQuery)deferredSegment.Value);
                     break;
                 case "SetBulk":
-                    int index = 0;
                     this.IsBulk = true;
-                    var bulkBuilder = new StringBuilder();
-                    this.SetBulkHead(bulkBuilder);
-                    var updateObjs = deferredSegment.Value as IEnumerable;
-                    foreach (var updateObj in updateObjs)
-                    {
-                        this.SetBulkMulti(bulkBuilder, updateObj, index);
-                        index++;
-                    }
-                    sql = bulkBuilder.ToString();
-                    break;
+                    continue;
                 case "Where":
                     this.VisitWhere(deferredSegment.Value as Expression);
                     break;
@@ -86,7 +76,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     break;
             }
         }
-        if (!this.IsBulk) sql = this.BuildSql();
+        if (this.IsBulk) sql = this.BuildMutilBulkSql(command);
+        else sql = this.BuildSql();
         command.CommandText = sql;
         return sql;
     }
@@ -99,15 +90,13 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             Body = this.deferredSegments
         };
     }
-    public override int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
+    public void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
     {
         this.IsMultiple = true;
         this.CommandIndex = commandIndex;
         this.deferredSegments = multiCommand.Body as List<CommandSegment>;
-        int result = 1;
         if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
         sqlBuilder.Append(this.BuildCommand(command));
-        return result;
     }
     public virtual string BuildSql()
     {
@@ -385,6 +374,19 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 fixedDbParameters.ForEach(f => this.DbParameters.Add(f));
         };
         return (updateObjs, bulkCount, commandInitializer);
+    }
+    public virtual string BuildMutilBulkSql(IDbCommand command)
+    {
+        (var updateObjs, _, var commandInitializer) = this.BuildSetBulk(command);
+        int index = 0;
+        var builder = new StringBuilder();
+        foreach (var updateObj in updateObjs)
+        {
+            if (index > 0) builder.Append(';');
+            commandInitializer.Invoke(builder, updateObj, $"_m{this.CommandIndex}{index}");
+            index++;
+        }
+        return builder.ToString();
     }
     public virtual void SetBulkHead(StringBuilder builder)
     {

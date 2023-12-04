@@ -15,7 +15,7 @@ public interface IDeleteVisitor : IDisposable
     void Initialize(Type entityType, bool isFirst = true);
     MultipleCommand CreateMultipleCommand();
     string BuildCommand(IDbCommand command);
-    int BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
+    void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
     IDeleteVisitor WhereWith(object wherKeys);
     IDeleteVisitor Where(Expression whereExpr);
     IDeleteVisitor And(Expression whereExpr);

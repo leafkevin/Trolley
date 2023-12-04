@@ -14,6 +14,7 @@ public class Repository : IRepository
 {
     #region Fields 
     private DbContext dbContext;
+    private bool isParameterized => this.dbContext.IsParameterized;
     #endregion
 
     #region Properties
@@ -704,31 +705,13 @@ public class Repository : IRepository
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
-        using var command = this.connection.CreateCommand();
-        int result = 0;
-        IDataReader reader = null;
-        bool isNeedClose = this.Transaction == null;
-        try
+        var result = this.dbContext.QueryFirst<int>(f =>
         {
             var entityType = typeof(TEntity);
             var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-
-            command.CommandType = CommandType.Text;
-            command.Transaction = this.Transaction;
-            command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, whereObj);
-
-            this.connection.Open();
-            var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-            reader = command.ExecuteReader(behavior);
-            if (reader.Read()) result = reader.To<int>();
-        }
-        finally
-        {
-            reader?.Dispose();
-            command.Dispose();
-            if (isNeedClose) this.connection.Dispose();
-        }
+            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
+        });
         return result > 0;
     }
     public async Task<bool> ExistsAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
@@ -736,34 +719,13 @@ public class Repository : IRepository
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
-        using var cmd = this.connection.CreateCommand();
-        int result = 0;
-        DbDataReader reader = null;
-        bool isNeedClose = this.Transaction == null;
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-        try
+        var result = await this.dbContext.QueryFirstAsync<int>(f =>
         {
             var entityType = typeof(TEntity);
             var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-
-            cmd.CommandType = CommandType.Text;
-            cmd.Transaction = this.Transaction;
-            cmd.CommandText = typedCommandInitializer.Invoke(cmd.Parameters, this.OrmProvider, whereObj);
-
-            await this.connection.OpenAsync(cancellationToken);
-            var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-            reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-            if (reader.Read()) result = reader.To<int>();
-        }
-        finally
-        {
-            if (reader != null)
-                await reader.DisposeAsync();
-            await command.DisposeAsync();
-            if (isNeedClose) await this.connection.DisposeAsync();
-        }
+            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
+        }, cancellationToken);
         return result > 0;
     }
     public bool Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate)
@@ -875,103 +837,122 @@ public class Repository : IRepository
         if (commands == null || commands.Count == 0)
             throw new ArgumentNullException(nameof(commands));
 
-        int commandIndex = 0;
-        var sqlBuilder = new StringBuilder();
-        var visitors = new Dictionary<MultipleCommandType, object>();
-        using var command = this.connection.CreateCommand();
-        foreach (var multiCcommand in commands)
+        using var command = this.dbContext.CreateCommand();
+        bool isNeedClose = this.dbContext.IsNeedClose;
+        try
         {
-            bool isFirst = false;
-            if (!visitors.TryGetValue(multiCcommand.CommandType, out var visitor))
+            int commandIndex = 0;
+            var sqlBuilder = new StringBuilder();
+            var visitors = new Dictionary<MultipleCommandType, object>();
+            foreach (var multiCcommand in commands)
             {
-                visitor = multiCcommand.CommandType switch
+                bool isFirst = false;
+                if (!visitors.TryGetValue(multiCcommand.CommandType, out var visitor))
                 {
-                    MultipleCommandType.Insert => this.OrmProvider.NewCreateVisitor(this.DbKey, this.MapProvider, this.isParameterized),
-                    MultipleCommandType.Update => this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized),
-                    MultipleCommandType.Delete => this.OrmProvider.NewDeleteVisitor(this.DbKey, this.MapProvider, this.isParameterized),
-                    _ => this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized)
-                };
-                visitors.Add(multiCcommand.CommandType, visitor);
-                isFirst = true;
+                    visitor = multiCcommand.CommandType switch
+                    {
+                        MultipleCommandType.Insert => this.OrmProvider.NewCreateVisitor(this.DbKey, this.MapProvider, this.isParameterized),
+                        MultipleCommandType.Update => this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized),
+                        MultipleCommandType.Delete => this.OrmProvider.NewDeleteVisitor(this.DbKey, this.MapProvider, this.isParameterized),
+                        _ => this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized)
+                    };
+                    visitors.Add(multiCcommand.CommandType, visitor);
+                    isFirst = true;
+                }
+                switch (multiCcommand.CommandType)
+                {
+                    case MultipleCommandType.Insert:
+                        var insertVisitor = visitor as ICreateVisitor;
+                        insertVisitor.Initialize(multiCcommand.EntityType, isFirst);
+                        insertVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+                        break;
+                    case MultipleCommandType.Update:
+                        var updateVisitor = visitor as IUpdateVisitor;
+                        updateVisitor.Initialize(multiCcommand.EntityType, isFirst);
+                        updateVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+                        break;
+                    case MultipleCommandType.Delete:
+                        var deleteVisitor = visitor as IDeleteVisitor;
+                        deleteVisitor.Initialize(multiCcommand.EntityType, isFirst);
+                        deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+                        break;
+                }
+                commandIndex++;
             }
-            switch (multiCcommand.CommandType)
-            {
-                case MultipleCommandType.Insert:
-                    var insertVisitor = visitor as ICreateVisitor;
-                    insertVisitor.Initialize(multiCcommand.EntityType, isFirst);
-                    commandIndex += insertVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-                case MultipleCommandType.Update:
-                    var updateVisitor = visitor as IUpdateVisitor;
-                    updateVisitor.Initialize(multiCcommand.EntityType, isFirst);
-                    commandIndex += updateVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-                case MultipleCommandType.Delete:
-                    var deleteVisitor = visitor as IDeleteVisitor;
-                    deleteVisitor.Initialize(multiCcommand.EntityType, isFirst);
-                    commandIndex += deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-            }
+            command.CommandText = sqlBuilder.ToString();
+            this.dbContext.Connection.Open();
+            var result = command.ExecuteNonQuery();
         }
-        command.CommandText = sqlBuilder.ToString();
-        command.CommandType = CommandType.Text;
-        command.Transaction = this.Transaction;
-        this.connection.Open();
-        var result = command.ExecuteNonQuery();
-        command.Dispose();
+        catch
+        {
+            isNeedClose = true;
+        }
+        finally
+        {
+            command.Dispose();
+            if (isNeedClose) this.Dispose();
+        }
     }
     public async Task MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default)
     {
         if (commands == null || commands.Count == 0)
             throw new ArgumentNullException(nameof(commands));
 
-        int commandIndex = 0;
-        var sqlBuilder = new StringBuilder();
-        var visitors = new Dictionary<MultipleCommandType, object>();
-        using var cmd = this.connection.CreateCommand();
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.Transaction;
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        foreach (var multiCcommand in commands)
+        using var command = this.dbContext.CreateDbCommand();
+        bool isNeedClose = this.dbContext.IsNeedClose;
+        try
         {
-            bool isFirst = false;
-            if (!visitors.TryGetValue(multiCcommand.CommandType, out var visitor))
+            int commandIndex = 0;
+            var sqlBuilder = new StringBuilder();
+            var visitors = new Dictionary<MultipleCommandType, object>();
+            foreach (var multiCcommand in commands)
             {
-                visitor = multiCcommand.CommandType switch
+                bool isFirst = false;
+                if (!visitors.TryGetValue(multiCcommand.CommandType, out var visitor))
                 {
-                    MultipleCommandType.Insert => this.OrmProvider.NewCreateVisitor(this.DbKey, this.MapProvider, this.isParameterized),
-                    MultipleCommandType.Update => this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized),
-                    MultipleCommandType.Delete => this.OrmProvider.NewDeleteVisitor(this.DbKey, this.MapProvider, this.isParameterized),
-                    _ => this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized)
-                };
-                visitors.Add(multiCcommand.CommandType, visitor);
-                isFirst = true;
+                    visitor = multiCcommand.CommandType switch
+                    {
+                        MultipleCommandType.Insert => this.OrmProvider.NewCreateVisitor(this.DbKey, this.MapProvider, this.isParameterized),
+                        MultipleCommandType.Update => this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized),
+                        MultipleCommandType.Delete => this.OrmProvider.NewDeleteVisitor(this.DbKey, this.MapProvider, this.isParameterized),
+                        _ => this.OrmProvider.NewUpdateVisitor(this.DbKey, this.MapProvider, this.isParameterized)
+                    };
+                    visitors.Add(multiCcommand.CommandType, visitor);
+                    isFirst = true;
+                }
+                switch (multiCcommand.CommandType)
+                {
+                    case MultipleCommandType.Insert:
+                        var insertVisitor = visitor as ICreateVisitor;
+                        insertVisitor.Initialize(multiCcommand.EntityType, isFirst);
+                        insertVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+                        break;
+                    case MultipleCommandType.Update:
+                        var updateVisitor = visitor as IUpdateVisitor;
+                        updateVisitor.Initialize(multiCcommand.EntityType, isFirst);
+                        updateVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+                        break;
+                    case MultipleCommandType.Delete:
+                        var deleteVisitor = visitor as IDeleteVisitor;
+                        deleteVisitor.Initialize(multiCcommand.EntityType, isFirst);
+                        deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+                        break;
+                }
+                commandIndex++;
             }
-            switch (multiCcommand.CommandType)
-            {
-                case MultipleCommandType.Insert:
-                    var insertVisitor = visitor as ICreateVisitor;
-                    insertVisitor.Initialize(multiCcommand.EntityType, isFirst);
-                    commandIndex += insertVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-                case MultipleCommandType.Update:
-                    var updateVisitor = visitor as IUpdateVisitor;
-                    updateVisitor.Initialize(multiCcommand.EntityType, isFirst);
-                    commandIndex += updateVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-                case MultipleCommandType.Delete:
-                    var deleteVisitor = visitor as IDeleteVisitor;
-                    deleteVisitor.Initialize(multiCcommand.EntityType, isFirst);
-                    commandIndex += deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                    break;
-            }
+            command.CommandText = sqlBuilder.ToString();
+            await this.dbContext.Connection.OpenAsync(cancellationToken);
+            var result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
-        cmd.CommandText = sqlBuilder.ToString();
-        await this.connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(cancellationToken);
-        await command.DisposeAsync();
+        catch
+        {
+            isNeedClose = true;
+        }
+        finally
+        {
+            await command.DisposeAsync();
+            if (isNeedClose) await this.DisposeAsync();
+        }
     }
     #endregion
 
