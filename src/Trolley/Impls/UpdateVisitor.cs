@@ -717,7 +717,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             fieldsSegments.Add(new FieldsSegment { Type = "SQL", Fields = this.OrmProvider.GetFieldName(memberMapper.FieldName), Values = "NULL" });
             return;
         }
-        var fieldValue = isEntity ? this.EvaluateAndCache(memberValue, memberMapper.MemberName) : memberValue;
+        var fieldValue = isEntity ? this.EvaluateAndCache(memberValue, memberMapper.Member) : memberValue;
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
         this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, fieldValue);

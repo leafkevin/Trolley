@@ -712,7 +712,7 @@ public interface IUpdateFrom<TEntity, T1> : IUpdated<TEntity>
     #endregion
 }
 /// <summary>
-/// 使用表T1T2部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
+/// 使用表T1,T2部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
 /// Update ..From语句，在Where语句中一定要包含Update表与From表之间的关联条件
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
@@ -903,7 +903,7 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdated<TEntity>
     #endregion
 }
 /// <summary>
-/// 使用表T1T2T3部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
+/// 使用表T1,T2,T3部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
 /// Update ..From语句，在Where语句中一定要包含Update表与From表之间的关联条件
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
@@ -1095,7 +1095,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdated<TEntity>
     #endregion
 }
 /// <summary>
-/// 使用表T1T2T3T4部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
+/// 使用表T1,T2,T3,T4部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
 /// Update ..From语句，在Where语句中一定要包含Update表与From表之间的关联条件
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
@@ -1288,7 +1288,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     #endregion
 }
 /// <summary>
-/// 使用表T1T2T3T4T5部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
+/// 使用表T1,T2,T3,T4,T5部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
 /// Update ..From语句，在Where语句中一定要包含Update表与From表之间的关联条件
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
@@ -1705,7 +1705,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
     #endregion
 }
 /// <summary>
-/// 使用表T1T2部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+/// 使用表T1,T2部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表T1实体类型</typeparam>
@@ -1929,7 +1929,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
     #endregion
 }
 /// <summary>
-/// 使用表T1T2T3部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+/// 使用表T1,T2,T3部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表T1实体类型</typeparam>
@@ -2154,7 +2154,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
     #endregion
 }
 /// <summary>
-/// 使用表T1T2T3T4部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+/// 使用表T1,T2,T3,T4部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表T1实体类型</typeparam>
@@ -2380,7 +2380,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     #endregion
 }
 /// <summary>
-/// 使用表T1T2T3T4T5部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+/// 使用表T1,T2,T3,T4,T5部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表T1实体类型</typeparam>

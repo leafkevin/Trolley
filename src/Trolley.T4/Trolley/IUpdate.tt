@@ -244,7 +244,7 @@ public interface IUpdate<TEntity>
 /// 更新数据
 /// </summary>
 /// <typeparam name="TEntity">要更新的实体类型</typeparam>
-public interface IUpdateSet<TEntity>
+public interface IUpdated<TEntity>
 {
     #region Execute
     /// <summary>
@@ -277,7 +277,7 @@ public interface IUpdateSet<TEntity>
 /// 更新数据
 /// </summary>
 /// <typeparam name="TEntity">要更新的实体类型</typeparam>
-public interface IContinuedUpdate<TEntity> : IUpdateSet<TEntity>
+public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
 {
     #region Set
     /// <summary>
@@ -475,7 +475,7 @@ public interface IContinuedUpdate<TEntity> : IUpdateSet<TEntity>
     /// <typeparam name="TWhereObj">where条件对象类型</typeparam>
     /// <param name="whereObj">where条件对象，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSet<TEntity> Where<TWhereObj>(TWhereObj whereObj);
+    IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj);
     /// <summary>
     /// 使用whereExpr表达式生成where条件，配合Set<TUpdateObj>(TUpdateObj updateObj)、SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500)方法使用，用法：.Where(f =&gt; f.Id); .Where(f =&gt; new { f.OrderNo, f.ProductId });
     /// </summary>
@@ -524,7 +524,7 @@ public interface IContinuedUpdate<TEntity> : IUpdateSet<TEntity>
     {
         tables += $", T{i}";
         tableAlias += $", {(char)(97 + i)}";
-        if( i > 1 ) joinTables += $"T{i}";
+        if( i > 1 ) joinTables += $",T{i}";
 #>
 /// <summary>
 /// 使用表<#=joinTables#>部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
@@ -538,7 +538,7 @@ public interface IContinuedUpdate<TEntity> : IUpdateSet<TEntity>
 #>
 /// <typeparam name="<#=currentTable#>">更新值来源表<#=currentTable#>实体类型</typeparam>
 <#      }#>
-public interface IUpdateFrom<<#=tables#>> : IUpdateSet<TEntity>
+public interface IUpdateFrom<<#=tables#>> : IUpdated<TEntity>
 {
     #region Set
     /// <summary>
@@ -730,7 +730,7 @@ public interface IUpdateFrom<<#=tables#>> : IUpdateSet<TEntity>
     for (int i = 1; i < count; i++)
     {
         tables += $", T{i}";
-        if( i > 1 ) joinTables += $"T{i}";
+        if( i > 1 ) joinTables += $",T{i}";
 #>
 /// <summary>
 /// 使用表<#=joinTables#>部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
@@ -744,7 +744,7 @@ public interface IUpdateFrom<<#=tables#>> : IUpdateSet<TEntity>
 #>
 /// <typeparam name="<#=currentTable#>">更新值来源表<#=currentTable#>实体类型</typeparam>
 <#      }#>
-public interface IUpdateJoin<<#=tables#>> : IUpdateSet<TEntity>
+public interface IUpdateJoin<<#=tables#>> : IUpdated<TEntity>
 {
 <#
         if( i < count - 1)

@@ -558,7 +558,7 @@ public class SqlVisitor : ISqlVisitor
     }
     public virtual SqlSegment Evaluate(SqlSegment sqlSegment)
     {
-        var objValue = this.Evaluate(sqlSegment.Expression);
+        var objValue = sqlSegment.Expression.Evaluate();
         if (objValue == null)
             return SqlSegment.Null;
 
@@ -571,39 +571,15 @@ public class SqlVisitor : ISqlVisitor
             return default;
         return (T)objValue;
     }
-    public virtual object Evaluate(Expression expr)
-    {
-        var lambdaExpr = Expression.Lambda(expr);
-        return lambdaExpr.Compile().DynamicInvoke();
-    }
+    public virtual object Evaluate(Expression expr) => expr.Evaluate();
     /// <summary>
-    /// 计算entity成员memberName的值
+    /// 计算entity成员member的值
     /// </summary>
     /// <param name="entity"></param>
-    /// <param name="memberName"></param>
+    /// <param name="member"></param>
     /// <returns></returns>
-    public virtual object EvaluateAndCache(object entity, string memberName)
-    {
-        if (entity is IDictionary<string, object> dict)
-            return dict[memberName];
-
-        var type = entity.GetType();
-        var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
-        var cacheKey = HashCode.Combine(underlyingType, memberName);
-        var memberGetter = memberGetterCache.GetOrAdd(cacheKey, f =>
-        {
-            if (!underlyingType.GetMember(memberName, BindingFlags.Public | BindingFlags.Instance).Any())
-                throw new MissingMemberException(underlyingType.FullName, memberName);
-
-            var objExpr = Expression.Parameter(typeof(object), "obj");
-            var typedObjExpr = Expression.Convert(objExpr, type);
-            Expression valueExpr = Expression.PropertyOrField(typedObjExpr, memberName);
-            if (valueExpr.Type != typeof(object))
-                valueExpr = Expression.Convert(valueExpr, typeof(object));
-            return Expression.Lambda<Func<object, object>>(valueExpr, objExpr).Compile();
-        });
-        return memberGetter.Invoke(entity);
-    }
+    public virtual object EvaluateAndCache(object entity, MemberInfo member)
+        => FasterEvaluator.EvaluateAndCache(entity, member);
     public virtual SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment)
     {
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
