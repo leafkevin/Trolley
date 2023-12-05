@@ -222,7 +222,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
     /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    //IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
+    IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
     #endregion
 
     #region QueryFirst/Query

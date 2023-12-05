@@ -77,7 +77,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             }
         }
         if (this.IsBulk) sql = this.BuildMutilBulkSql(command);
-        else sql = this.BuildSql();
+        if (sql == null) sql = this.BuildSql();
         command.CommandText = sql;
         return sql;
     }

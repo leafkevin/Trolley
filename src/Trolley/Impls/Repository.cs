@@ -13,8 +13,8 @@ namespace Trolley;
 public class Repository : IRepository
 {
     #region Fields 
-    private DbContext dbContext;
-    private bool isParameterized => this.dbContext.IsParameterized;
+    protected DbContext dbContext;
+    protected bool isParameterized => this.dbContext.IsParameterized;
     #endregion
 
     #region Properties
@@ -128,6 +128,20 @@ public class Repository : IRepository
         var rawSql = cteSubQuery.Visitor.BuildSql(out var readerFields);
         visitor.BuildCteTable(cteTableName, rawSql, readerFields, cteSubQuery, true);
         return cteSubQuery;
+    }
+    public IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a')
+    {
+        var visitor = this.CreateQueryVisitor(tableAsStart, true);
+        var fromQuery = new FromQuery(this.dbContext, visitor);
+        var query = cteSubQuery.Invoke(fromQuery);
+        if (!visitor.Equals(query.Visitor))
+        {
+            visitor.Dispose();
+            visitor = query.Visitor;
+        }
+        var rawSql = visitor.BuildSql(out var readerFields, false);
+        visitor.BuildCteTable(cteTableName, rawSql, readerFields, query, true);
+        return query;
     }
     #endregion
 
@@ -253,8 +267,7 @@ public class Repository : IRepository
     #endregion
 
     #region Create
-    public ICreate<TEntity> Create<TEntity>()
-        => new Create<TEntity>(this.dbContext);
+    public virtual ICreate<TEntity> Create<TEntity>() => new Create<TEntity>(this.dbContext);
     public int Create<TEntity>(object insertObjs, int bulkCount = 500)
     {
         if (insertObjs == null)
@@ -458,7 +471,7 @@ public class Repository : IRepository
     #endregion
 
     #region Update
-    public IUpdate<TEntity> Update<TEntity>() => new Update<TEntity>(this.dbContext);
+    public virtual IUpdate<TEntity> Update<TEntity>() => new Update<TEntity>(this.dbContext);
     public int Update<TEntity>(object updateObjs, int bulkCount = 500)
     {
         if (updateObjs == null)
@@ -594,7 +607,7 @@ public class Repository : IRepository
     #endregion
 
     #region Delete
-    public IDelete<TEntity> Delete<TEntity>() => new Delete<TEntity>(this.dbContext);
+    public virtual IDelete<TEntity> Delete<TEntity>() => new Delete<TEntity>(this.dbContext);
     public int Delete<TEntity>(object whereKeys)
     {
         if (whereKeys == null)

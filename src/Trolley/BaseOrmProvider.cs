@@ -20,6 +20,41 @@ public abstract class BaseOrmProvider : IOrmProvider
     public abstract IDbDataParameter CreateParameter(string parameterName, object value);
     public abstract IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
 
+    public virtual IQuery<T> NewQuery<T>(DbContext dbContext, IQueryVisitor visitor) => new Query<T>(dbContext, visitor);
+    public virtual IQuery<T1, T2> NewQuery<T1, T2>(DbContext dbContext, IQueryVisitor visitor) => new Query<T1, T2>(dbContext, visitor);
+    public virtual IQuery<T1, T2, T3> NewQuery<T1, T2, T3>(DbContext dbContext, IQueryVisitor visitor) => new Query<T1, T2, T3>(dbContext, visitor);
+    public virtual IQuery<T1, T2, T3, T4> NewQuery<T1, T2, T3, T4>(DbContext dbContext, IQueryVisitor visitor) => new Query<T1, T2, T3, T4>(dbContext, visitor);
+    public virtual IQuery<T1, T2, T3, T4, T5> NewQuery<T1, T2, T3, T4, T5>(DbContext dbContext, IQueryVisitor visitor) => new Query<T1, T2, T3, T4, T5>(dbContext, visitor);
+    public virtual IQuery<T1, T2, T3, T4, T5, T6> NewQuery<T1, T2, T3, T4, T5, T6>(DbContext dbContext, IQueryVisitor visitor) => new Query<T1, T2, T3, T4, T5, T6>(dbContext, visitor);
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> NewQuery<T1, T2, T3, T4, T5, T6, T7>(DbContext dbContext, IQueryVisitor visitor) => new Query<T1, T2, T3, T4, T5, T6, T7>(dbContext, visitor);
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> NewQuery<T1, T2, T3, T4, T5, T6, T7, T8>(DbContext dbContext, IQueryVisitor visitor) => new Query<T1, T2, T3, T4, T5, T6, T7, T8>(dbContext, visitor);
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(DbContext dbContext, IQueryVisitor visitor) => new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9>(dbContext, visitor);
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(DbContext dbContext, IQueryVisitor visitor) => new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(dbContext, visitor);
+
+    public virtual ICreate<TEntity> NewCreate<TEntity>(DbContext dbContext) => new Create<TEntity>(dbContext);
+    public virtual ICreated<TEntity> NewCreated<TEntity>(DbContext dbContext, ICreateVisitor visitor) => new Created<TEntity>(dbContext, visitor);
+    public virtual IContinuedCreate<TEntity> NewContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor) => new ContinuedCreate<TEntity>(dbContext, visitor);
+
+    public virtual IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext) => new Update<TEntity>(dbContext);
+    public virtual IUpdated<TEntity> NewUpdated<TEntity>(DbContext dbContext, IUpdateVisitor visitor) => new Updated<TEntity>(dbContext, visitor);
+    public virtual IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor) => new ContinuedUpdate<TEntity>(dbContext, visitor);
+
+    public virtual IUpdateFrom<TEntity, T1> NewUpdateFrom<TEntity, T1>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateFrom<TEntity, T1>(dbContext, visitor);
+    public virtual IUpdateFrom<TEntity, T1, T2> NewUpdateFrom<TEntity, T1, T2>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateFrom<TEntity, T1, T2>(dbContext, visitor);
+    public virtual IUpdateFrom<TEntity, T1, T2, T3> NewUpdateFrom<TEntity, T1, T2, T3>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateFrom<TEntity, T1, T2, T3>(dbContext, visitor);
+    public virtual IUpdateFrom<TEntity, T1, T2, T3, T4> NewUpdateFrom<TEntity, T1, T2, T3, T4>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateFrom<TEntity, T1, T2, T3, T4>(dbContext, visitor);
+    public virtual IUpdateFrom<TEntity, T1, T2, T3, T4, T5> NewUpdateFrom<TEntity, T1, T2, T3, T4, T5>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateFrom<TEntity, T1, T2, T3, T4, T5>(dbContext, visitor);
+
+    public virtual IUpdateJoin<TEntity, T1> NewUpdateJoin<TEntity, T1>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1>(dbContext, visitor);
+    public virtual IUpdateJoin<TEntity, T1, T2> NewUpdateJoin<TEntity, T1, T2>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1, T2>(dbContext, visitor);
+    public virtual IUpdateJoin<TEntity, T1, T2, T3> NewUpdateJoin<TEntity, T1, T2, T3>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1, T2, T3>(dbContext, visitor);
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> NewUpdateJoin<TEntity, T1, T2, T3, T4>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1, T2, T3, T4>(dbContext, visitor);
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> NewUpdateJoin<TEntity, T1, T2, T3, T4, T5>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1, T2, T3, T4, T5>(dbContext, visitor);
+
+    public virtual IDelete<TEntity> NewDelete<TEntity>(DbContext dbContext) => new Delete<TEntity>(dbContext);
+    public virtual IDeleted<TEntity> NewDeleted<TEntity>(DbContext dbContext, IDeleteVisitor visitor) => new Deleted<TEntity>(dbContext, visitor);
+    public virtual IContinuedDelete<TEntity> NewContinuedDelete<TEntity>(DbContext dbContext, IDeleteVisitor visitor) => new ContinuedDelete<TEntity>(dbContext, visitor);
+
     public virtual IQueryVisitor NewQueryVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
         => new QueryVisitor(dbKey, this, mapProvider, isParameterized, tableAsStart, parameterPrefix, dbParameters);
     public virtual ICreateVisitor NewCreateVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")

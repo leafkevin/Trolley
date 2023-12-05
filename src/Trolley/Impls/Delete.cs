@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-class Delete<TEntity> : IDelete<TEntity>
+public class Delete<TEntity> : IDelete<TEntity>
 {
     #region Properties
     public DbContext DbContext { get; set; }
@@ -33,20 +33,20 @@ class Delete<TEntity> : IDelete<TEntity>
         this.Visitor.WhereWith(keys);
         return new Deleted<TEntity>(this.DbContext, this.Visitor);
     }
-    public IDeleting<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
+    public IContinuedDelete<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
-    public IDeleting<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    public IContinuedDelete<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition) this.Visitor.Where(ifPredicate);
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
-        return new Deleting<TEntity>(this.DbContext, this.Visitor);
+        return new ContinuedDelete<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 }
-class Deleted<TEntity> : IDeleted<TEntity>
+public class Deleted<TEntity> : IDeleted<TEntity>
 {
     #region Properties
     public DbContext DbContext { get; set; }
@@ -83,17 +83,17 @@ class Deleted<TEntity> : IDeleted<TEntity>
     }
     #endregion   
 }
-class Deleting<TEntity> : Deleted<TEntity>, IDeleting<TEntity>
+public class ContinuedDelete<TEntity> : Deleted<TEntity>, IContinuedDelete<TEntity>
 {
     #region Constructor
-    public Deleting(DbContext dbContext, IDeleteVisitor visitor)
+    public ContinuedDelete(DbContext dbContext, IDeleteVisitor visitor)
         : base(dbContext, visitor) { }
     #endregion
 
     #region And
-    public IDeleting<TEntity> And(Expression<Func<TEntity, bool>> predicate)
+    public IContinuedDelete<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
-    public IDeleting<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    public IContinuedDelete<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));

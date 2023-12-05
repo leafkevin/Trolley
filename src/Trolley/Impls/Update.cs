@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-class Update<TEntity> : IUpdate<TEntity>
+public class Update<TEntity> : IUpdate<TEntity>
 {
     #region Properties
     public DbContext DbContext { get; private set; }
@@ -153,8 +153,14 @@ class Update<TEntity> : IUpdate<TEntity>
         return new UpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
     }
     #endregion
+
+    //public IUpdateFrom<TEntity, TSource> FromWith<TSource>(Func<IFromQuery, IQuery<TSource>> subQuery)
+    //{
+    //    this.Visitor.From(typeof(TSource));
+    //    return new UpdateFrom<TEntity, TSource>(this.DbContext, this.Visitor);
+    //}
 }
-class UpdateSet<TEntity> : IUpdateSet<TEntity>, IDisposable
+public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
 {
     #region Fields
     protected bool hasWhere;
@@ -166,7 +172,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>, IDisposable
     #endregion
 
     #region Constructor
-    public UpdateSet(DbContext dbContext, IUpdateVisitor visitor)
+    public Updated(DbContext dbContext, IUpdateVisitor visitor)
     {
         this.DbContext = dbContext;
         this.Visitor = visitor;
@@ -349,7 +355,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>, IDisposable
     }
     #endregion
 }
-class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
+public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEntity>
 {
     #region Constructor
     public ContinuedUpdate(DbContext dbContext, IUpdateVisitor Visitor)
@@ -393,7 +399,7 @@ class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
         if (condition) this.Visitor.Set(fieldsAssignment);
         return this;
     }
-    #endregion 
+    #endregion
 
     #region SetFrom
     public IContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
@@ -467,7 +473,7 @@ class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
     #endregion
 
     #region Where/And
-    public IUpdateSet<TEntity> Where<TWhereObj>(TWhereObj whereObj)
+    public IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
@@ -512,7 +518,7 @@ class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
     }
     #endregion
 }
-class UpdateFrom<TEntity, T1> : UpdateSet<TEntity>, IUpdateFrom<TEntity, T1>
+public class UpdateFrom<TEntity, T1> : Updated<TEntity>, IUpdateFrom<TEntity, T1>
 {
     #region Constructor
     public UpdateFrom(DbContext dbContext, IUpdateVisitor visitor)
@@ -620,7 +626,7 @@ class UpdateFrom<TEntity, T1> : UpdateSet<TEntity>, IUpdateFrom<TEntity, T1>
     }
     #endregion
 }
-class UpdateFrom<TEntity, T1, T2> : UpdateSet<TEntity>, IUpdateFrom<TEntity, T1, T2>
+public class UpdateFrom<TEntity, T1, T2> : Updated<TEntity>, IUpdateFrom<TEntity, T1, T2>
 {
     #region Constructor
     public UpdateFrom(DbContext dbContext, IUpdateVisitor visitor)
@@ -728,7 +734,7 @@ class UpdateFrom<TEntity, T1, T2> : UpdateSet<TEntity>, IUpdateFrom<TEntity, T1,
     }
     #endregion
 }
-class UpdateFrom<TEntity, T1, T2, T3> : UpdateSet<TEntity>, IUpdateFrom<TEntity, T1, T2, T3>
+public class UpdateFrom<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateFrom<TEntity, T1, T2, T3>
 {
     #region Constructor
     public UpdateFrom(DbContext dbContext, IUpdateVisitor visitor)
@@ -836,7 +842,7 @@ class UpdateFrom<TEntity, T1, T2, T3> : UpdateSet<TEntity>, IUpdateFrom<TEntity,
     }
     #endregion
 }
-class UpdateFrom<TEntity, T1, T2, T3, T4> : UpdateSet<TEntity>, IUpdateFrom<TEntity, T1, T2, T3, T4>
+public class UpdateFrom<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateFrom<TEntity, T1, T2, T3, T4>
 {
     #region Constructor
     public UpdateFrom(DbContext dbContext, IUpdateVisitor visitor)
@@ -944,7 +950,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4> : UpdateSet<TEntity>, IUpdateFrom<TEnt
     }
     #endregion
 }
-class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : UpdateSet<TEntity>, IUpdateFrom<TEntity, T1, T2, T3, T4, T5>
+public class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdateFrom<TEntity, T1, T2, T3, T4, T5>
 {
     #region Constructor
     public UpdateFrom(DbContext dbContext, IUpdateVisitor visitor)
@@ -1052,7 +1058,7 @@ class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : UpdateSet<TEntity>, IUpdateFrom<
     }
     #endregion
 }
-class UpdateJoin<TEntity, T1> : UpdateSet<TEntity>, IUpdateJoin<TEntity, T1>
+public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1>
 {
     #region Constructor
     public UpdateJoin(DbContext dbContext, IUpdateVisitor Visitor)
@@ -1179,7 +1185,7 @@ class UpdateJoin<TEntity, T1> : UpdateSet<TEntity>, IUpdateJoin<TEntity, T1>
     }
     #endregion
 }
-class UpdateJoin<TEntity, T1, T2> : UpdateSet<TEntity>, IUpdateJoin<TEntity, T1, T2>
+public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity, T1, T2>
 {
     #region Constructor
     public UpdateJoin(DbContext dbContext, IUpdateVisitor Visitor)
@@ -1306,7 +1312,7 @@ class UpdateJoin<TEntity, T1, T2> : UpdateSet<TEntity>, IUpdateJoin<TEntity, T1,
     }
     #endregion
 }
-class UpdateJoin<TEntity, T1, T2, T3> : UpdateSet<TEntity>, IUpdateJoin<TEntity, T1, T2, T3>
+public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEntity, T1, T2, T3>
 {
     #region Constructor
     public UpdateJoin(DbContext dbContext, IUpdateVisitor Visitor)
@@ -1433,7 +1439,7 @@ class UpdateJoin<TEntity, T1, T2, T3> : UpdateSet<TEntity>, IUpdateJoin<TEntity,
     }
     #endregion
 }
-class UpdateJoin<TEntity, T1, T2, T3, T4> : UpdateSet<TEntity>, IUpdateJoin<TEntity, T1, T2, T3, T4>
+public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin<TEntity, T1, T2, T3, T4>
 {
     #region Constructor
     public UpdateJoin(DbContext dbContext, IUpdateVisitor Visitor)
@@ -1560,7 +1566,7 @@ class UpdateJoin<TEntity, T1, T2, T3, T4> : UpdateSet<TEntity>, IUpdateJoin<TEnt
     }
     #endregion
 }
-class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : UpdateSet<TEntity>, IUpdateJoin<TEntity, T1, T2, T3, T4, T5>
+public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdateJoin<TEntity, T1, T2, T3, T4, T5>
 {
     #region Constructor
     public UpdateJoin(DbContext dbContext, IUpdateVisitor Visitor)

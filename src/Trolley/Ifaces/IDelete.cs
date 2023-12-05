@@ -32,7 +32,7 @@ public interface IDelete<TEntity>
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回删除对象</returns>
-    IDeleting<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
+    IContinuedDelete<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
     /// 删除满足表达式ifPredicate或elsePredicate条件的数据，不局限于主键条件，表达式ifPredicate不能为null。
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
@@ -42,7 +42,7 @@ public interface IDelete<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回删除对象</returns>
-    IDeleting<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
+    IContinuedDelete<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
 }
 /// <summary>
 /// 删除数据
@@ -72,14 +72,14 @@ public interface IDeleted<TEntity>
 /// 删除数据
 /// </summary>
 /// <typeparam name="TEntity">要删除的实体类型</typeparam>
-public interface IDeleting<TEntity> : IDeleted<TEntity>
+public interface IContinuedDelete<TEntity> : IDeleted<TEntity>
 {
     /// <summary>
     /// 删除满足表达式predicate条件的数据，不局限于主键条件，predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回删除对象</returns>
-    IDeleting<TEntity> And(Expression<Func<TEntity, bool>> predicate);
+    IContinuedDelete<TEntity> And(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
     /// 删除满足表达式ifPredicate或elsePredicate条件的数据，不局限于主键条件，表达式ifPredicate不能为null。
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
@@ -89,5 +89,5 @@ public interface IDeleting<TEntity> : IDeleted<TEntity>
     /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回删除对象</returns>
-    IDeleting<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
+    IContinuedDelete<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
 }

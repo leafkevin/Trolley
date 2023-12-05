@@ -250,7 +250,7 @@ public interface IUpdate<TEntity>
 /// 更新数据
 /// </summary>
 /// <typeparam name="TEntity">要更新的实体类型</typeparam>
-public interface IUpdateSet<TEntity>
+public interface IUpdated<TEntity>
 {
     #region Execute
     /// <summary>
@@ -283,7 +283,7 @@ public interface IUpdateSet<TEntity>
 /// 更新数据
 /// </summary>
 /// <typeparam name="TEntity">要更新的实体类型</typeparam>
-public interface IContinuedUpdate<TEntity> : IUpdateSet<TEntity>
+public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
 {
     #region Set
     /// <summary>
@@ -481,7 +481,7 @@ public interface IContinuedUpdate<TEntity> : IUpdateSet<TEntity>
     /// <typeparam name="TWhereObj">where条件对象类型</typeparam>
     /// <param name="whereObj">where条件对象，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不能为null</param>
     /// <returns>返回更新对象</returns>
-    IUpdateSet<TEntity> Where<TWhereObj>(TWhereObj whereObj);
+    IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj);
     /// <summary>
     /// 使用whereExpr表达式生成where条件，配合Set<TUpdateObj>(TUpdateObj updateObj)、SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500)方法使用，用法：.Where(f =&gt; f.Id); .Where(f =&gt; new { f.OrderNo, f.ProductId });
     /// </summary>
@@ -527,7 +527,7 @@ public interface IContinuedUpdate<TEntity> : IUpdateSet<TEntity>
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表T1实体类型</typeparam>
-public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
+public interface IUpdateFrom<TEntity, T1> : IUpdated<TEntity>
 {
     #region Set
     /// <summary>
@@ -718,7 +718,7 @@ public interface IUpdateFrom<TEntity, T1> : IUpdateSet<TEntity>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表T1实体类型</typeparam>
 /// <typeparam name="T2">更新值来源表T2实体类型</typeparam>
-public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
+public interface IUpdateFrom<TEntity, T1, T2> : IUpdated<TEntity>
 {
     #region Set
     /// <summary>
@@ -910,7 +910,7 @@ public interface IUpdateFrom<TEntity, T1, T2> : IUpdateSet<TEntity>
 /// <typeparam name="T1">更新值来源表T1实体类型</typeparam>
 /// <typeparam name="T2">更新值来源表T2实体类型</typeparam>
 /// <typeparam name="T3">更新值来源表T3实体类型</typeparam>
-public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
+public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdated<TEntity>
 {
     #region Set
     /// <summary>
@@ -1103,7 +1103,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
 /// <typeparam name="T2">更新值来源表T2实体类型</typeparam>
 /// <typeparam name="T3">更新值来源表T3实体类型</typeparam>
 /// <typeparam name="T4">更新值来源表T4实体类型</typeparam>
-public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
+public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
 {
     #region Set
     /// <summary>
@@ -1297,7 +1297,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
 /// <typeparam name="T3">更新值来源表T3实体类型</typeparam>
 /// <typeparam name="T4">更新值来源表T4实体类型</typeparam>
 /// <typeparam name="T5">更新值来源表T5实体类型</typeparam>
-public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
+public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
 {
     #region Set
     /// <summary>
@@ -1486,7 +1486,7 @@ public interface IUpdateFrom<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表T1实体类型</typeparam>
-public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
+public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
 {
     #region Join
     /// <summary>
@@ -1710,7 +1710,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdateSet<TEntity>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
 /// <typeparam name="T1">更新值来源表T1实体类型</typeparam>
 /// <typeparam name="T2">更新值来源表T2实体类型</typeparam>
-public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
+public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
 {
     #region Join
     /// <summary>
@@ -1935,7 +1935,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdateSet<TEntity>
 /// <typeparam name="T1">更新值来源表T1实体类型</typeparam>
 /// <typeparam name="T2">更新值来源表T2实体类型</typeparam>
 /// <typeparam name="T3">更新值来源表T3实体类型</typeparam>
-public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
+public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
 {
     #region Join
     /// <summary>
@@ -2161,7 +2161,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdateSet<TEntity>
 /// <typeparam name="T2">更新值来源表T2实体类型</typeparam>
 /// <typeparam name="T3">更新值来源表T3实体类型</typeparam>
 /// <typeparam name="T4">更新值来源表T4实体类型</typeparam>
-public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
+public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
 {
     #region Join
     /// <summary>
@@ -2388,7 +2388,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdateSet<TEntity>
 /// <typeparam name="T3">更新值来源表T3实体类型</typeparam>
 /// <typeparam name="T4">更新值来源表T4实体类型</typeparam>
 /// <typeparam name="T5">更新值来源表T5实体类型</typeparam>
-public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdateSet<TEntity>
+public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
 {
     #region Set
     /// <summary>

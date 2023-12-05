@@ -571,7 +571,7 @@ public class RepositoryHelper
         return commandInitializer;
     }
 
-    public static Func<IDataParameterCollection, IOrmProvider, object, string> BuildCreateSqlParameters(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object insertObj, string[] onlyFieldNames, string[] ignoreFieldNames, bool isReturnIdentity)
+    public static Func<IDataParameterCollection, IOrmProvider, object, string> BuildCreateSqlParameters(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object insertObj, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool isReturnIdentity)
     {
         var insertObjType = insertObj.GetType();
         var cacheKey = HashCode.Combine(dbKey, ormProvider, mapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames, isReturnIdentity);
@@ -595,7 +595,7 @@ public class RepositoryHelper
             return commandInitializer;
         });
     }
-    public static (Action<StringBuilder>, Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, string>) BuildCreateMultiSqlParameters(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object insertObjs, string[] onlyFieldNames, string[] ignoreFieldNames, bool isBulk)
+    public static (Action<StringBuilder>, Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, string>) BuildCreateMultiSqlParameters(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object insertObjs, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool isBulk)
     {
         object insertObj = insertObjs;
         if (isBulk)
@@ -634,7 +634,7 @@ public class RepositoryHelper
         Action<StringBuilder> headSqlSetter = builder => headSqlParameterSetter.Invoke(builder, insertObj);
         return (headSqlSetter, commandInitializer);
     }
-    public static Action<StringBuilder, object> BuildCreateHeadSqlPart(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type insertObjType, string[] onlyFieldNames, string[] ignoreFieldNames)
+    public static Action<StringBuilder, object> BuildCreateHeadSqlPart(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type insertObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames)
     {
         Action<StringBuilder, object> commandInitializer = null;
         var entityMapper = mapProvider.GetEntityMap(entityType);
@@ -695,7 +695,7 @@ public class RepositoryHelper
         }
         return commandInitializer;
     }
-    public static object BuildCreateValuesPartSqlParametes(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type insertObjType, string[] onlyFieldNames, string[] ignoreFieldNames, bool hasSuffix)
+    public static object BuildCreateValuesPartSqlParametes(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type insertObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool hasSuffix)
     {
         var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
         var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");

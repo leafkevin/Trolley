@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-class QueryAnonymousObject : IQueryAnonymousObject
+public class QueryAnonymousObject : IQueryAnonymousObject
 {
     #region Fields
     private readonly IQueryVisitor visitor;
@@ -26,7 +26,7 @@ class QueryAnonymousObject : IQueryAnonymousObject
     }
     #endregion
 }
-class QueryBase : IQueryBase
+public class QueryBase : IQueryBase
 {
     #region Properties
     public DbContext DbContext { get; private set; }
@@ -98,7 +98,7 @@ class QueryBase : IQueryBase
     }
     #endregion
 }
-class Query<T> : QueryBase, IQuery<T>
+public class Query<T> : QueryBase, IQuery<T>
 {
     #region Fields
     private int? offset;

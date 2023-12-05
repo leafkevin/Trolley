@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-class Create<TEntity> : ICreate<TEntity>
+public class Create<TEntity> : ICreate<TEntity>
 {
     #region Properties
     public DbContext DbContext { get; private set; }
@@ -54,7 +54,7 @@ class Create<TEntity> : ICreate<TEntity>
     }
     #endregion
 }
-class Created<TEntity> : ICreated<TEntity>
+public class Created<TEntity> : ICreated<TEntity>
 {
     #region Properties
     public DbContext DbContext { get; private set; }
@@ -279,7 +279,7 @@ class Created<TEntity> : ICreated<TEntity>
         this.Visitor.Dispose();
     }
 }
-class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEntity>
+public class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEntity>
 {
     #region Constructor
     public ContinuedCreate(DbContext dbContext, ICreateVisitor visitor)

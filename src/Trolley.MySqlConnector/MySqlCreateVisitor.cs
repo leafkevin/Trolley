@@ -29,25 +29,69 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
                     this.VisitWithBy(deferredSegment.Value);
                     break;
                 case "WithByField":
-                    (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegment.Value;
-                    this.VisitWithByField(fieldSelector, fieldValue);
+                    this.VisitWithByField(deferredSegment.Value);
                     break;
                 case "WithBulk":
-                    sql = this.BuildBulkSql(command);
-                    break;
+                    this.IsBulk = true;
+                    continue;
                 case "SetObject":
-                    this.UpdateFields = new();
+                    this.UpdateFields ??= new();
                     this.VisitSetObject(deferredSegment.Value);
                     break;
                 case "SetExpression":
-                    this.UpdateFields = new();
+                    this.UpdateFields ??= new();
                     this.VisitSet(deferredSegment.Value as LambdaExpression);
+                    break;
+                case "FromWith":
+                    sql = this.VisitWithFrom(deferredSegment.Value);
                     break;
             }
         }
-        if (!this.IsBulk) sql = this.BuildSql();
+        if (this.IsBulk)
+            sql = this.BuildMultiBulkSql(command);
+        else sql = this.BuildSql();
         command.CommandText = sql;
         return sql;
+    }
+    public override string BuildSql()
+    {
+        var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
+        var fieldsBuilder = new StringBuilder($"{this.BuildHeadSql()} {tableName} (");
+        var valuesBuilder = new StringBuilder(" VALUES(");
+        for (int i = 0; i < this.InsertFields.Count; i++)
+        {
+            var insertField = this.InsertFields[i];
+            if (i > 0)
+            {
+                fieldsBuilder.Append(',');
+                valuesBuilder.Append(',');
+            }
+            fieldsBuilder.Append(insertField.Fields);
+            valuesBuilder.Append(insertField.Values);
+        }
+        fieldsBuilder.Append(')');
+        valuesBuilder.Append(')');
+
+        bool hasUpdateFields = false;
+        if (this.UpdateFields != null && this.UpdateFields.Length > 0)
+        {
+            var sql = this.UpdateFields.Insert(0, " ON DUPLICATE KEY UPDATE ").ToString();
+            valuesBuilder.Append(this.UpdateFields);
+            this.UpdateFields = null;
+            hasUpdateFields = true;
+        }
+
+        if (this.IsReturnIdentity)
+        {
+            if (!this.Tables[0].Mapper.IsAutoIncrement)
+                throw new NotSupportedException($"实体{this.Tables[0].Mapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
+            if (hasUpdateFields) throw new NotSupportedException("包含更新子句，不支持返回Identity");
+            valuesBuilder.Append(this.OrmProvider.GetIdentitySql(this.Tables[0].EntityType));
+        }
+
+        fieldsBuilder.Append(valuesBuilder);
+        valuesBuilder.Clear();
+        return fieldsBuilder.ToString();
     }
     public void OnDuplicateKeyUpdate(object updateObj)
     {
@@ -70,29 +114,11 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
         if (this.IsUseIgnoreInto) return "INSERT IGNORE INTO";
         return "INSERT INTO";
     }
-    public void AddTailSql(StringBuilder builder)
-    {
-        bool isUpdate = false;
-        if (this.UpdateFields != null && this.UpdateFields.Length > 0)
-        {
-            var sql = this.UpdateFields.Insert(0, " ON DUPLICATE KEY UPDATE ").ToString();
-            builder.Append(this.UpdateFields.ToString());
-            isUpdate = true;
-            this.UpdateFields.Clear();
-        }
-        if (this.IsReturnIdentity)
-        {
-            if (isUpdate) throw new NotSupportedException("当前SQL中有更新操作，无法返回Identity值");
-
-            if (!this.Tables[0].Mapper.IsAutoIncrement)
-                throw new Exception($"实体{this.Tables[0].Mapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
-            builder.Append(this.OrmProvider.GetIdentitySql(this.Tables[0].EntityType));
-        }
-    }
     public virtual void VisitSetObject(object updateObj)
     {
         var entityType = this.Tables[0].EntityType;
-        var setFieldsInitializer = RepositoryHelper.BuildUpdateWithParameters(this, entityType, updateObj, false, this.IsMultiple);
+        var updateObjType = updateObj.GetType();
+        var setFieldsInitializer = RepositoryHelper.BuildUpdateSetPartSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple);
         if (this.IsMultiple)
         {
             var typedSetFieldsInitializer = setFieldsInitializer as Action<IDataParameterCollection, StringBuilder, object, string>;
@@ -245,7 +271,58 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
         }
         return this.Evaluate(sqlSegment);
     }
-    protected virtual void InitTableAlias(LambdaExpression lambdaExpr)
+    public override string VisitWithFrom(object deferredSegmentValue)
+    {
+        this.IsFromWith = true;
+        (var cteSubQuery, var cteTableName) = ((Delegate, string))deferredSegmentValue;
+
+        var queryVisitor = this.CreateQueryVisitor(true);
+        var fromQuery = new FromQuery(this.DbKey, this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
+        var query = cteSubQuery.DynamicInvoke(fromQuery) as IQueryBase;
+        if (!queryVisitor.Equals(query.Visitor))
+        {
+            queryVisitor.Dispose();
+            queryVisitor = query.Visitor;
+        }
+        var rawSql = queryVisitor.BuildSql(out var readerFields, false);
+        rawSql = queryVisitor.BuildCteTableSql(cteTableName, rawSql, readerFields, query);
+        var entityMapper = this.Tables[0].Mapper;
+        var builder = new StringBuilder();
+        builder.AppendLine(rawSql);
+        string withTable = null;
+        if (queryVisitor.SelfTableSegment != null)
+            withTable = queryVisitor.SelfTableSegment.RefTableName;
+        else if (!string.IsNullOrEmpty(cteTableName))
+            withTable = cteTableName;
+        else withTable = "import_data";
+        queryVisitor.Dispose();
+
+        var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
+        var fieldsBuilder = new StringBuilder($"{this.BuildHeadSql()} {tableName} (");
+        var valuesBuilder = new StringBuilder(" SELECT ");
+
+        for (int i = 0; i < readerFields.Count; i++)
+        {
+            var readerField = readerFields[i];
+            if (!entityMapper.TryGetMemberMap(readerField.TargetMember.Name, out var memberMapper))
+                continue;
+            var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
+            if (i > 0)
+            {
+                fieldsBuilder.Append(',');
+                valuesBuilder.Append(',');
+            }
+            fieldsBuilder.Append(fieldName);
+            valuesBuilder.Append(fieldName);
+        }
+        fieldsBuilder.Append(')');
+        valuesBuilder.Append($") FROM {this.OrmProvider.GetTableName(withTable)}");
+        rawSql = fieldsBuilder.Append(valuesBuilder).ToString();
+        fieldsBuilder.Clear();
+        valuesBuilder.Clear();
+        return rawSql;
+    }
+    public virtual void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.TableAlias.Clear();
         lambdaExpr.Body.GetParameters(out var parameters);
@@ -258,7 +335,7 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
             this.TableAlias.TryAdd(parameterExpr.Name, this.Tables[0]);
         }
     }
-    protected void AddMemberElement(int index, SqlSegment sqlSegment, MemberMap memberMapper)
+    public void AddMemberElement(int index, SqlSegment sqlSegment, MemberMap memberMapper)
     {
         sqlSegment = this.VisitAndDeferred(sqlSegment);
         //只一个成员访问，没有设置语句，什么也不做，忽略
@@ -283,7 +360,7 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
         //带有参数或字段的表达式或函数调用、或是只有参数或字段
         else this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={sqlSegment.ToString()}");
     }
-    protected virtual void VisitWithSetField(Expression fieldSelector, object fieldValue)
+    public virtual void VisitWithSetField(Expression fieldSelector, object fieldValue)
     {
         var lambdaExpr = fieldSelector as LambdaExpression;
         var memberExpr = lambdaExpr.Body as MemberExpression;

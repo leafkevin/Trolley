@@ -17,8 +17,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
 
     protected List<CommandSegment> deferredSegments = new();
 
-    public string[] OnlyFieldNames { get; set; }
-    public string[] IgnoreFieldNames { get; set; }
+    public List<string> OnlyFieldNames { get; set; }
+    public List<string> IgnoreFieldNames { get; set; }
     public List<FieldsSegment> InsertFields { get; set; } = new();
     public bool IsBulk { get; set; }
     public virtual bool IsFromWith { get; set; }
@@ -54,20 +54,18 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     this.VisitWithBy(deferredSegment.Value);
                     break;
                 case "WithByField":
-                    (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegment.Value;
-                    this.VisitWithByField(fieldSelector, fieldValue);
-                    break;
-                case "WithBulk":
-                    //这里只处理多语句执行，分批次在最外层单独处理
-                    if (this.IsMultiple)
-                        sql = this.BuildMultiBulkSql(command);
+                    this.VisitWithByField(deferredSegment.Value);
                     break;
                 case "FromWith":
-                    (Delegate cteSubQuery, string cteTableName) = ((Delegate, string))deferredSegment.Value;
-                    sql = this.VisitFromWith(cteSubQuery, cteTableName);
+                    sql = this.VisitWithFrom(deferredSegment.Value);
                     break;
+                case "WithBulk":
+                    this.IsBulk = true;
+                    continue;
             }
         }
+        if (this.IsBulk)
+            sql = this.BuildMultiBulkSql(command);
         if (sql == null) sql = this.BuildSql();
         command.CommandText = sql;
         return sql;
@@ -157,7 +155,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual ICreateVisitor IgnoreFields(string[] fieldNames)
     {
-        this.IgnoreFieldNames = fieldNames;
+        this.IgnoreFieldNames ??= new();
+        this.IgnoreFieldNames.AddRange(fieldNames);
         return this;
     }
     public virtual ICreateVisitor IgnoreFields(Expression fieldsSelector)
@@ -167,7 +166,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual ICreateVisitor OnlyFields(string[] fieldNames)
     {
-        this.OnlyFieldNames = fieldNames;
+        this.OnlyFieldNames ??= new();
+        this.OnlyFieldNames.AddRange(fieldNames);
         return this;
     }
     public virtual ICreateVisitor OnlyFields(Expression fieldsSelector)
@@ -223,8 +223,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                         this.VisitWithBy(deferredSegment.Value);
                         break;
                     case "WithByField":
-                        (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegment.Value;
-                        this.VisitWithByField(fieldSelector, fieldValue);
+                        this.VisitWithByField(deferredSegment.Value);
                         break;
                     default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields操作");
                 }
@@ -273,7 +272,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             return (insertObjs, bulkCount, headSqlSetter, commandInitializer);
         }
     }
-
     public void Clear()
     {
         this.Tables?.Clear();
@@ -285,7 +283,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.deferredSegments.Clear();
         this.InsertFields.Clear();
     }
-
     public virtual void VisitWithBy(object insertObj)
     {
         var entityType = this.Tables[0].EntityType;
@@ -315,8 +312,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             Values = valuesBuilder.ToString()
         });
     }
-    public virtual void VisitWithByField(Expression fieldSelector, object fieldValue)
+    public virtual void VisitWithByField(object deferredSegmentValue)
     {
+        (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegmentValue;
         var lambdaExpr = fieldSelector as LambdaExpression;
         var memberExpr = lambdaExpr.Body as MemberExpression;
         var entityMapper = this.Tables[0].Mapper;
@@ -330,9 +328,11 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             Values = parameterName
         });
     }
-    public virtual string VisitFromWith(Delegate cteSubQuery, string cteTableName)
+    public virtual string VisitWithFrom(object deferredSegmentValue)
     {
         this.IsFromWith = true;
+        (var cteSubQuery, var cteTableName) = ((Delegate, string))deferredSegmentValue;
+
         var queryVisitor = this.CreateQueryVisitor(true);
         var fromQuery = new FromQuery(this.DbKey, this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
         var query = cteSubQuery.DynamicInvoke(fromQuery) as IQueryBase;
@@ -379,11 +379,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         valuesBuilder.Clear();
         return rawSql;
     }
-    public virtual string[] VisitFields(Expression fieldsSelector)
+    public virtual List<string> VisitFields(Expression fieldsSelector)
     {
         var lambdaExpr = fieldsSelector as LambdaExpression;
         var entityMapper = this.Tables[0].Mapper;
-        this.InitTableAlias(lambdaExpr);
+        this.TableAlias.Clear();
+        this.TableAlias.Add(lambdaExpr.Parameters[0].Name, this.Tables[0]);
         var fieldNames = new List<string>();
         switch (lambdaExpr.Body.NodeType)
         {
@@ -415,30 +416,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 break;
         }
         if (fieldNames.Count > 0)
-            return fieldNames.ToArray();
+            return fieldNames;
         return null;
-    }
-    public void InitTableAlias(LambdaExpression lambdaExpr)
-    {
-        this.TableAlias.Clear();
-        lambdaExpr.Body.GetParameterNames(out var parameters);
-        if (parameters == null || parameters.Count == 0)
-            return;
-        int index = 0;
-        foreach (var parameterExpr in lambdaExpr.Parameters)
-        {
-            if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
-                continue;
-            if (typeof(IFromQuery).IsAssignableFrom(parameterExpr.Type))
-                continue;
-            if (!parameters.Contains(parameterExpr.Name))
-            {
-                index++;
-                continue;
-            }
-            this.TableAlias.Add(parameterExpr.Name, this.Tables[index]);
-            index++;
-        }
     }
     public override void Dispose()
     {

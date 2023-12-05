@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-class Query<T1, T2> : QueryBase, IQuery<T1, T2>
+public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
 {
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
@@ -428,7 +428,7 @@ class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     }
     #endregion
 }
-class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
+public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
 {
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
@@ -850,7 +850,7 @@ class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     }
     #endregion
 }
-class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
+public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
 {
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
@@ -1272,7 +1272,7 @@ class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     }
     #endregion
 }
-class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
+public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
 {
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
@@ -1694,7 +1694,7 @@ class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     }
     #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
+public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
 {
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
@@ -2116,7 +2116,7 @@ class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
     }
     #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7>
+public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7>
 {
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
@@ -2520,7 +2520,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, 
     }
     #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
+public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
 {
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
@@ -2924,7 +2924,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, 
     }
     #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
+public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
 {
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
@@ -3328,7 +3328,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, 
     }
     #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
+public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
 {
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
@@ -3732,7 +3732,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2,
     }
     #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
+public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
 {
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
@@ -4136,7 +4136,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1
     }
     #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
+public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
 {
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
@@ -4540,7 +4540,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQue
     }
     #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
+public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
 {
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
@@ -4944,7 +4944,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase,
     }
     #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
+public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
 {
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
@@ -5348,7 +5348,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Query
     }
     #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
+public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
 {
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
@@ -5752,7 +5752,7 @@ class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : 
     }
     #endregion
 }
-class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>
+public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>
 {
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
