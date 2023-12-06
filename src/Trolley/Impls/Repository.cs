@@ -53,61 +53,61 @@ public class Repository : IRepository
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T), suffixRawSql);
-        return new Query<T>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T>(this.dbContext, visitor);
     }
     public IQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2));
-        return new Query<T1, T2>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2>(this.dbContext, visitor);
     }
     public IQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3));
-        return new Query<T1, T2, T3>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3>(this.dbContext, visitor);
     }
     public IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-        return new Query<T1, T2, T3, T4>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4>(this.dbContext, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
-        return new Query<T1, T2, T3, T4, T5>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5>(this.dbContext, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
-        return new Query<T1, T2, T3, T4, T5, T6>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6>(this.dbContext, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
-        return new Query<T1, T2, T3, T4, T5, T6, T7>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7>(this.dbContext, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this.dbContext, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.dbContext, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
-        return new Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.dbContext, visitor);
     }
     #endregion
 
@@ -267,7 +267,7 @@ public class Repository : IRepository
     #endregion
 
     #region Create
-    public virtual ICreate<TEntity> Create<TEntity>() => new Create<TEntity>(this.dbContext);
+    public virtual ICreate<TEntity> Create<TEntity>() => this.OrmProvider.NewCreate<TEntity>(this.dbContext);
     public int Create<TEntity>(object insertObjs, int bulkCount = 500)
     {
         if (insertObjs == null)
@@ -471,7 +471,7 @@ public class Repository : IRepository
     #endregion
 
     #region Update
-    public virtual IUpdate<TEntity> Update<TEntity>() => new Update<TEntity>(this.dbContext);
+    public virtual IUpdate<TEntity> Update<TEntity>() => this.OrmProvider.NewUpdate<TEntity>(this.dbContext);
     public int Update<TEntity>(object updateObjs, int bulkCount = 500)
     {
         if (updateObjs == null)
@@ -607,7 +607,7 @@ public class Repository : IRepository
     #endregion
 
     #region Delete
-    public virtual IDelete<TEntity> Delete<TEntity>() => new Delete<TEntity>(this.dbContext);
+    public virtual IDelete<TEntity> Delete<TEntity>() => this.OrmProvider.NewDelete<TEntity>(this.dbContext);
     public int Delete<TEntity>(object whereKeys)
     {
         if (whereKeys == null)

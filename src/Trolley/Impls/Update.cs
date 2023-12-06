@@ -112,53 +112,6 @@ public class Update<TEntity> : IUpdate<TEntity>
         return new ContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
-
-    #region From
-    public IUpdateFrom<TEntity, T> From<T>()
-    {
-        this.Visitor.From(typeof(T));
-        return new UpdateFrom<TEntity, T>(this.DbContext, this.Visitor);
-    }
-    public IUpdateFrom<TEntity, T1, T2> From<T1, T2>()
-    {
-        this.Visitor.From(typeof(T1), typeof(T2));
-        return new UpdateFrom<TEntity, T1, T2>(this.DbContext, this.Visitor);
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3> From<T1, T2, T3>()
-    {
-        this.Visitor.From(typeof(T1), typeof(T2), typeof(T3));
-        return new UpdateFrom<TEntity, T1, T2, T3>(this.DbContext, this.Visitor);
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>()
-    {
-        this.Visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-        return new UpdateFrom<TEntity, T1, T2, T3, T4>(this.DbContext, this.Visitor);
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
-    {
-        this.Visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
-        return new UpdateFrom<TEntity, T1, T2, T3, T4, T5>(this.DbContext, this.Visitor);
-    }
-    #endregion
-
-    #region Join
-    public IUpdateJoin<TEntity, T> InnerJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
-    {
-        this.Visitor.Join("INNER JOIN", typeof(T), joinOn);
-        return new UpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
-    }
-    public IUpdateJoin<TEntity, T> LeftJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
-    {
-        this.Visitor.Join("LEFT JOIN", typeof(T), joinOn);
-        return new UpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
-    }
-    #endregion
-
-    //public IUpdateFrom<TEntity, TSource> FromWith<TSource>(Func<IFromQuery, IQuery<TSource>> subQuery)
-    //{
-    //    this.Visitor.From(typeof(TSource));
-    //    return new UpdateFrom<TEntity, TSource>(this.DbContext, this.Visitor);
-    //}
 }
 public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
 {
