@@ -38,6 +38,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.Tables.Add(new TableSegment
         {
             EntityType = entityType,
+            AliasName = "a",
             Mapper = this.MapProvider.GetEntityMap(entityType)
         });
     }
@@ -103,8 +104,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var entityTableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
         var builder = new StringBuilder($"UPDATE {entityTableName} ");
         var aliasName = this.Tables[0].AliasName;
-        //sql server表别名就是表名，长度>1
-        if (this.IsNeedAlias && aliasName.Length == 1)
+        if (this.IsNeedAlias)
             builder.Append($"{aliasName} ");
 
         if (this.IsJoin && this.Tables.Count > 1)

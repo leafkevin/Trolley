@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq.Expressions;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -129,21 +127,21 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             this.Connection.Open();
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = command.ExecuteReader(behavior);
+            var entityType = typeof(TResult);
             if (reader.Read())
             {
-                var entityType = typeof(TResult);
                 if (entityType.IsEntityType(out _))
                     result = reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields);
                 else result = reader.To<TResult>();
             }
             reader.Dispose();
 
-            if (visitor.BuildIncludeSql(result, out var sql))
+            if (visitor.BuildIncludeSql(entityType, result, out var sql))
             {
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-                visitor.SetIncludeValues(result, reader);
+                visitor.SetIncludeValues(entityType, result, reader);
             }
         }
         catch
@@ -174,21 +172,21 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             await this.Connection.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+            var entityType = typeof(TResult);
             if (await reader.ReadAsync(cancellationToken))
             {
-                var entityType = typeof(TResult);
                 if (entityType.IsEntityType(out _))
                     result = reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields);
                 else result = reader.To<TResult>();
             }
             await reader.DisposeAsync();
 
-            if (visitor.BuildIncludeSql(result, out var sql))
+            if (visitor.BuildIncludeSql(entityType, result, out var sql))
             {
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-                visitor.SetIncludeValues(result, reader);
+                await visitor.SetIncludeValuesAsync(entityType, result, reader, cancellationToken);
             }
         }
         catch
@@ -323,12 +321,12 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             }
             reader.Dispose();
 
-            if (visitor.BuildIncludeSql(result, out var sql))
+            if (visitor.BuildIncludeSql(entityType, result, out var sql))
             {
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 reader = command.ExecuteReader(behavior);
-                visitor.SetIncludeValues(result, reader);
+                visitor.SetIncludeValues(entityType, result, reader);
             }
         }
         catch
@@ -377,12 +375,12 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             }
             await reader.DisposeAsync();
 
-            if (visitor.BuildIncludeSql(result, out var sql))
+            if (visitor.BuildIncludeSql(entityType, result, out var sql))
             {
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-                visitor.SetIncludeValues(result, reader);
+                await visitor.SetIncludeValuesAsync(entityType, result, reader, cancellationToken);
             }
         }
         catch
@@ -439,12 +437,12 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             }
             reader.Dispose();
 
-            if (visitor.BuildIncludeSql(result, out var sql))
+            if (visitor.BuildIncludeSql(entityType, result.Data, out var sql))
             {
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 reader = command.ExecuteReader(behavior);
-                visitor.SetIncludeValues(result, reader);
+                visitor.SetIncludeValues(entityType, result, reader);
             }
         }
         catch
@@ -497,12 +495,12 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             }
             await reader.DisposeAsync();
 
-            if (visitor.BuildIncludeSql(result.Data, out var sql))
+            if (visitor.BuildIncludeSql(entityType, result.Data, out var sql))
             {
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-                visitor.SetIncludeValues(result.Data, reader);
+                await visitor.SetIncludeValuesAsync(entityType, result.Data, reader, cancellationToken);
             }
         }
         catch

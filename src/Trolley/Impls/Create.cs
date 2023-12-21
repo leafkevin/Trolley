@@ -53,6 +53,19 @@ public class Create<TEntity> : ICreate<TEntity>
         return new ContinuedCreate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
+
+    #region WithFrom
+    public ICreated<TEntity> WithFrom<TTarget>(IQuery<TTarget> cteSubQuery, bool isUseCte = false)
+    {
+        this.Visitor.WithFrom(cteSubQuery, isUseCte);
+        return new Created<TEntity>(this.DbContext, this.Visitor);
+    }
+    public ICreated<TEntity> WithFrom<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery, bool isUseCte = false)
+    {
+        this.Visitor.WithFrom(cteSubQuery, isUseCte);
+        return new Created<TEntity>(this.DbContext, this.Visitor);
+    }
+    #endregion     
 }
 public class Created<TEntity> : ICreated<TEntity>
 {
@@ -288,6 +301,8 @@ public class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEnti
 
     #region WithBy
     public IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
+        => this.WithBy(true, insertObj);
+    public IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
     {
         if (insertObj == null)
             throw new ArgumentNullException(nameof(insertObj));
@@ -296,14 +311,11 @@ public class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEnti
         if (!typeof(TInsertObject).IsEntityType(out _))
             throw new NotSupportedException("方法WithBy<TInsertObject>(TInsertObject insertObj)只支持类对象参数，不支持基础类型参数");
 
-        this.Visitor.WithBy(insertObj);
+        if (condition) this.Visitor.WithBy(insertObj);
         return this;
     }
-    public IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
-    {
-        if (condition) this.WithBy(insertObj);
-        return this;
-    }
+    public IContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+        => this.WithBy(true, fieldSelector, fieldValue);
     public IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
         if (fieldSelector == null)

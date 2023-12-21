@@ -256,7 +256,7 @@ public class RepositoryHelper
         foreach (var memberInfo in memberInfos)
         {
             if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper)
-                || memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.IsAutoIncrement
+                || memberMapper.IsIgnore || memberMapper.IsNavigation
                 || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                 continue;
 

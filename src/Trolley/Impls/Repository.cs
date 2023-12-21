@@ -112,26 +112,41 @@ public class Repository : IRepository
     #endregion
 
     #region From SubQuery
-    public IQuery<T> From<T>(IQuery<T> subQuery, char tableAsStart = 'a')
+    public IQuery<T> From<T>(IQuery<T> subQuery)
     {
         var visitor = subQuery.Visitor;
         var sql = visitor.BuildSql(out var readerFields);
         visitor.WithTable(typeof(T), sql, readerFields);
         return subQuery;
     }
+
+    public IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery)
+    {
+        var visitor = this.CreateQueryVisitor('a');
+        var fromQuery = new FromQuery(this.dbContext, visitor);
+        var query = subQuery.Invoke(fromQuery);
+        var sql = query.Visitor.BuildSql(out var readerFields);
+        if (!visitor.Equals(query.Visitor))
+        {
+            visitor.Dispose();
+            visitor = query.Visitor;
+        }
+        visitor.WithTable(typeof(T), sql, readerFields);
+        return query;
+    }
     #endregion
 
     #region FromWith
-    public IQuery<T> FromWith<T>(IQuery<T> cteSubQuery, string cteTableName = null, char tableAsStart = 'a')
+    public IQuery<T> FromWith<T>(IQuery<T> cteSubQuery, string cteTableName = null)
     {
         var visitor = cteSubQuery.Visitor;
         var rawSql = cteSubQuery.Visitor.BuildSql(out var readerFields);
         visitor.BuildCteTable(cteTableName, rawSql, readerFields, cteSubQuery, true);
         return cteSubQuery;
     }
-    public IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a')
+    public IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery, string cteTableName = null)
     {
-        var visitor = this.CreateQueryVisitor(tableAsStart, true);
+        var visitor = this.CreateQueryVisitor('a', true);
         var fromQuery = new FromQuery(this.dbContext, visitor);
         var query = cteSubQuery.Invoke(fromQuery);
         if (!visitor.Equals(query.Visitor))

@@ -8,6 +8,7 @@ public class OrmDbFactory : IOrmDbFactory
 {
     private OrmDbFactoryOptions options;
     private TheaDatabase defaultDatabase;
+    private Dictionary<OrmProviderType, IOrmProvider> typedOrmProviders;
     private ConcurrentDictionary<Type, IOrmProvider> ormProviders;
     private ConcurrentDictionary<string, TheaDatabase> databases;
     private ConcurrentDictionary<Type, IEntityMapProvider> mapProviders;
@@ -44,7 +45,8 @@ public class OrmDbFactory : IOrmDbFactory
             throw new ArgumentNullException(nameof(ormProvider));
 
         var ormProviderType = ormProvider.GetType();
-        this.ormProviders.TryAdd(ormProviderType, ormProvider);
+        if (this.ormProviders.TryAdd(ormProviderType, ormProvider))
+            this.typedOrmProviders.TryAdd(ormProvider.OrmProviderType, ormProvider);
     }
     public virtual bool TryGetOrmProvider(Type ormProviderType, out IOrmProvider ormProvider)
     {
@@ -53,6 +55,8 @@ public class OrmDbFactory : IOrmDbFactory
 
         return this.ormProviders.TryGetValue(ormProviderType, out ormProvider);
     }
+    public virtual bool TryGetOrmProvider(OrmProviderType ormProviderType, out IOrmProvider ormProvider)
+        => this.typedOrmProviders.TryGetValue(ormProviderType, out ormProvider);
     public virtual void AddMapProvider(Type ormProviderType, IEntityMapProvider entityMapProvider)
     {
         if (ormProviderType == null)

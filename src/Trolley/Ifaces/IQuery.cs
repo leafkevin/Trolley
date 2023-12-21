@@ -211,14 +211,14 @@ public interface IQuery<T> : IQueryBase
     /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，也可以包含Inner/Left/Right Join子句引入前面定义的CTE表，表达式cteSubQuery第二参数是前一个CTE表,多个CTE子句需要连续定义，用法：
     /// <code>
     /// repository
-    ///     .FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url })), "PageList")
+    ///     .FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url })))
     ///     .NextWith((f, cte1) =&gt; f.From&lt;Menu&gt;()
     ///             .Where(x =&gt; x.Id == 1)
     ///             .Select(x =&gt; new { x.Id, x.Name, x.ParentId, Url = Sql.Null&lt;string&gt; })
     ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
     ///             .LeftJoin(cte1, (a, b, c) =&gt; a.PageId == c.Id)
-    ///             .Select((a, b, c) =&gt; new { a.Id, a.Name, a.ParentId, c.Url })), "MenuPageList") ...
+    ///             .Select((a, b, c) =&gt; new { a.Id, a.Name, a.ParentId, c.Url }))) ...
     /// SQL:
     /// WITH RECURSIVE PageList(Id,Url) AS 
     /// (
@@ -235,10 +235,8 @@ public interface IQuery<T> : IQueryBase
     /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
     /// <code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
     /// </param>
-    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
-    /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T>, IQuery<TOther>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
+    IQuery<T, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T>, IQuery<TOther>> cteSubQuery);
     #endregion
 
     #region WithTable
@@ -812,7 +810,7 @@ public interface IQuery<T1, T2> : IQueryBase
     ///             .Select(cte1, cte2 =&gt; new { a.Id, a.Name, a.ParentId, Url = Sql.Null&lt;string&gt; })
     ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-	///				...
+    ///				...
     ///             .LeftJoin(cte2, (a, b) =&gt; a.PageId == c.Id)
     ///             .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId, c.Url })), "MenuPageList") ...
     /// SQL:
@@ -833,10 +831,8 @@ public interface IQuery<T1, T2> : IQueryBase
     /// f.From&lt;Page&gt;() ... .Select((x, y) =&gt; new { ... })
     /// </code>
     /// </param>
-    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
-    /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<TOther>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
+    IQuery<T1, T2, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<TOther>> cteSubQuery);
     #endregion
 
     #region WithTable

@@ -12,21 +12,21 @@ static class FasterEvaluator
     private static ConcurrentDictionary<int, Func<object, object>> memberGetterCache = new();
     private static ConcurrentDictionary<int, Action<object, object>> memberSetterCache = new();
 
-    public static object Evaluate(this Expression expression)
+    public static object Evaluate(this Expression expression, object target = null)
     {
         return expression switch
         {
             BinaryExpression binaryExpression => binaryExpression.Evaluate(),
             ConstantExpression constantExpression => constantExpression.Evaluate(),
             UnaryExpression unaryExpression => unaryExpression.Evaluate(),
-            MethodCallExpression methodCallExpression => methodCallExpression.Evaluate(),
+            MethodCallExpression methodCallExpression => methodCallExpression.Evaluate(target),
             MemberExpression memberExpression => memberExpression.Evaluate(),
             NewArrayExpression newArrayExpression => newArrayExpression.Evaluate(),
             ListInitExpression listInitExpression => listInitExpression.Evaluate(),
             NewExpression newExpression => newExpression.Evaluate(),
             MemberInitExpression memberInitExpression => memberInitExpression.Evaluate(),
             ConditionalExpression conditionalExpression => conditionalExpression.Evaluate(),
-            ParameterExpression parameterExpression => parameterExpression.Evaluate(),
+            ParameterExpression parameterExpression => parameterExpression.Evaluate(target),
             DefaultExpression defaultExpression => defaultExpression.Evaluate(),
             _ => Expression.Lambda(expression).Compile().DynamicInvoke()
         };
@@ -34,8 +34,8 @@ static class FasterEvaluator
     public static object Evaluate(this BinaryExpression expression) => expression.Right.Evaluate();
     public static object Evaluate(this ConstantExpression expression) => expression.Value;
     public static object Evaluate(this UnaryExpression expression) => expression.Operand.Evaluate();
-    public static object Evaluate(this MethodCallExpression expression) =>
-        expression.Method.Invoke(expression.Object?.Evaluate(), expression.Arguments.Select(argExpression => argExpression.Evaluate()).ToArray());
+    public static object Evaluate(this MethodCallExpression expression, object target)
+        => expression.Method.Invoke(target ?? expression.Object?.Evaluate(), expression.Arguments.Select(argExpression => argExpression.Evaluate()).ToArray());
     public static object Evaluate(this MemberExpression expression) => expression.Member.Evaluate(expression.Expression?.Evaluate());
     public static object Evaluate(this NewArrayExpression expression)
     {
@@ -78,11 +78,12 @@ static class FasterEvaluator
         var falseValue = expression.IfFalse.Evaluate();
         return test ? trueValue : falseValue;
     }
-    public static object Evaluate(this ParameterExpression expression)
+    public static object Evaluate(this ParameterExpression expression, object target)
     {
         if (expression.Type.GetConstructors().Any(e => e.GetParameters().Length == 0))
             return Activator.CreateInstance(expression.Type);
-        throw new InvalidExpressionException($"The default constructor for expression '{expression}' is not found.");
+        return target;
+        //throw new InvalidExpressionException($"The default constructor for expression '{expression}' is not found.");
     }
     public static object Evaluate(this DefaultExpression expression) => expression.Type.IsValueType ? Activator.CreateInstance(expression.Type) : null;
     public static object Evaluate(this MemberInfo member, object obj, object[] parameters = null)

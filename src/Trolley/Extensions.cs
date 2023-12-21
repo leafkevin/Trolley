@@ -253,6 +253,30 @@ public static class Extensions
         }
         return ((Func<IDataReader, TEntity>)deserializer).Invoke(reader);
     }
+    public static object ReadTo(this IDataReader reader, string dbKey, Type entityType, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
+    {
+        var ormProviderType = ormProvider.GetType();
+        var isValueTuple = entityType.FullName.StartsWith("System.ValueTuple`");
+
+        int cacheKey = 0;
+        ConcurrentDictionary<int, Delegate> deserializerCache = null;
+        if (isValueTuple)
+        {
+            cacheKey = GetValueTupleReaderKey(entityType, dbKey, ormProviderType, reader);
+            deserializerCache = valueTupleReaderDeserializerCache;
+        }
+        else
+        {
+            cacheKey = GetTypeReaderKey(entityType, dbKey, ormProviderType, reader);
+            deserializerCache = typeReaderDeserializerCache;
+        }
+        if (!deserializerCache.TryGetValue(cacheKey, out var deserializer))
+        {
+            deserializer = CreateReaderDeserializer(ormProvider, mapProvider, reader, entityType, isValueTuple);
+            deserializerCache.TryAdd(cacheKey, deserializer);
+        }
+        return deserializer.DynamicInvoke(reader);
+    }
     /// <summary>
     /// 使用非SQL查询，返回的是可能包含Include对象，包含层次的实体对象
     /// </summary>
@@ -381,7 +405,7 @@ public static class Extensions
         var root = NewBuildInfo(entityType);
         var current = root;
         var parent = root;
-        var readerBuilders = new Dictionary<int, EntityBuildInfo>();
+        var readerBuilders = new Dictionary<ReaderField, EntityBuildInfo>();
         var deferredBuilds = new Stack<EntityBuildInfo>();
 
         while (readerIndex < readerFields.Count)
@@ -391,16 +415,19 @@ public static class Extensions
             if (readerField.FieldType == ReaderFieldType.Field)
             {
                 var fieldType = reader.GetFieldType(index);
-                if (readerField.IsOnlyField && readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.Entity)
-                {
-                    if (readerField.MemberMapper == null)
-                    {
-                        var entityMapper = readerField.TableSegment.Mapper;
-                        if (entityMapper.TryGetMemberMap(readerField.FromMember.Name, out var memberMapper))
-                            typeHandler = memberMapper.TypeHandler;
-                    }
-                    else typeHandler = readerField.MemberMapper.TypeHandler;
-                }
+                //变成子查询时，如果字段是Json实体类字段，必须带着MemberMapper，里面有TypeHandler
+                //if (readerField.IsOnlyField && readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.Entity)
+                //{                
+                //    if (readerField.MemberMapper == null)
+                //    {
+                //        var entityMapper = readerField.TableSegment.Mapper;
+                //        if (entityMapper.TryGetMemberMap(readerField.FromMember.Name, out var memberMapper))
+                //            typeHandler = memberMapper.TypeHandler;
+                //    }
+                //    else typeHandler = readerField.MemberMapper.TypeHandler;
+                //}
+                //TODO: 测试
+                typeHandler = readerField.MemberMapper.TypeHandler;
                 var readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
                     readerField.TargetMember.GetMemberType(), fieldType, typeHandler, blockParameters, blockBodies);
                 if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
@@ -411,7 +438,6 @@ public static class Extensions
             {
                 MemberInfo fieldMember = null;
                 Expression readerValueExpr = null;
-                EntityMap entityMapper = null;
                 MemberMap memberMapper = null;
                 ReaderField childReaderField = null;
                 var childIndex = 0;
@@ -422,7 +448,7 @@ public static class Extensions
                     if (readerField.FromMember.GetMemberType().IsEntityType(out _))
                     {
                         current = NewBuildInfo(readerField.TargetMember.GetMemberType(), readerField.TargetMember, parent);
-                        readerBuilders.Add(readerField.Index, current);
+                        readerBuilders.Add(readerField, current);
                     }
 
                     while (index < endIndex)
@@ -432,30 +458,35 @@ public static class Extensions
                         if (readerField.ReaderFields != null)
                         {
                             childReaderField = readerField.ReaderFields[childIndex];
-                            if (childReaderField.MemberMapper == null)
-                            {
-                                entityMapper = childReaderField.TableSegment.Mapper;
-                                if (entityMapper.TryGetMemberMap(childReaderField.FromMember.Name, out memberMapper))
-                                    typeHandler = memberMapper.TypeHandler;
-                            }
-                            else typeHandler = childReaderField.MemberMapper.TypeHandler;
-
+                            //TODO:测试
+                            //if (childReaderField.MemberMapper == null)
+                            //{
+                            //    entityMapper = childReaderField.TableSegment.Mapper;
+                            //    if (entityMapper.TryGetMemberMap(childReaderField.FromMember.Name, out memberMapper))
+                            //        typeHandler = memberMapper.TypeHandler;
+                            //}
+                            //else typeHandler = childReaderField.MemberMapper.TypeHandler;
+                            //本地函数调用
+                            memberMapper = childReaderField.MemberMapper;
                             readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                                memberMapper.MemberType, fieldType, typeHandler, blockParameters, blockBodies);
-                            var parameters = readerField.DeferCallMethod.GetParameters();
-                            var argsIndex = readerField.ReaderFields[childIndex].Index;
-                            if (memberMapper.MemberType != parameters[argsIndex].ParameterType)
-                                readerValueExpr = Expression.Convert(readerValueExpr, parameters[argsIndex].ParameterType);
-                            readerField.DeferCallArgs.Insert(argsIndex, readerValueExpr);
+                                memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
+                            var parameters = readerField.DeferredMethod.GetParameters();
+                            if (parameters.Length > 0)
+                            {
+                                var argsIndex = readerField.ReaderFields[childIndex].Index;
+                                if (memberMapper.MemberType != parameters[argsIndex].ParameterType)
+                                    readerValueExpr = Expression.Convert(readerValueExpr, parameters[argsIndex].ParameterType);
+                                readerField.DeferredArguments.Insert(argsIndex, readerValueExpr);
+                            }
                         }
                         childIndex++;
                         index++;
                     }
 
                     Expression callExpr = null;
-                    if (readerField.DeferCallTarget != null)
-                        callExpr = Expression.Call(readerField.DeferCallTarget, readerField.DeferCallMethod, readerField.DeferCallArgs);
-                    else callExpr = Expression.Call(readerField.DeferCallMethod, readerField.DeferCallArgs);
+                    if (readerField.DeferredTarget != null)
+                        callExpr = Expression.Call(readerField.DeferredTarget, readerField.DeferredMethod, readerField.DeferredArguments);
+                    else callExpr = Expression.Call(readerField.DeferredMethod, readerField.DeferredArguments);
                     if (current.IsDefault)
                         current.Bindings.Add(Expression.Bind(readerField.TargetMember, callExpr));
                     else current.Arguments.Add(callExpr);
@@ -465,35 +496,50 @@ public static class Extensions
                     if (!readerField.IsTargetType)
                     {
                         if (readerIndex == 0) parent = root;
-                        else if (readerField.ParentIndex.HasValue)
-                            parent = readerBuilders[readerField.ParentIndex.Value];
+                        else if (readerField.Parent != null)
+                            parent = readerBuilders[readerField.Parent];
                         else parent = root;
-                        current = NewBuildInfo(readerField.TargetMember.GetMemberType(), readerField.TargetMember, parent);
+                        //Include导航属性引用，并且是1:1关系，1:N关系的，在SetIncludeValues中单独处理了
+                        if (readerField.IsRef)
+                        {
+                            var refReaderField = readerField.ReaderFields[0];
+                            if (readerBuilders.TryGetValue(refReaderField, out var buildInfo))
+                                current = buildInfo.Clone(root);
+                        }
+                        else current = NewBuildInfo(readerField.TargetMember.GetMemberType(), readerField.TargetMember, parent);
                     }
                     while (index < endIndex)
                     {
                         var fieldType = reader.GetFieldType(index);
-                        switch (readerField.FieldType)
-                        {
-                            case ReaderFieldType.AnonymousObject:
-                                fieldMember = readerField.ReaderFields[childIndex].FromMember;
-                                readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                                    fieldMember.GetMemberType(), fieldType, null, blockParameters, blockBodies);
-                                break;
-                            case ReaderFieldType.Entity:
-                                childReaderField = readerField.ReaderFields[childIndex];
-                                fieldMember = childReaderField.FromMember;
-                                if (childReaderField.MemberMapper == null)
-                                {
-                                    entityMapper = childReaderField.TableSegment.Mapper;
-                                    if (entityMapper.TryGetMemberMap(childReaderField.FromMember.Name, out memberMapper))
-                                        typeHandler = memberMapper.TypeHandler;
-                                }
-                                else typeHandler = childReaderField.MemberMapper.TypeHandler;
-                                readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                                    memberMapper.MemberType, fieldType, typeHandler, blockParameters, blockBodies);
-                                break;
-                        }
+                        //TODO:
+                        childReaderField = readerField.ReaderFields[childIndex];
+                        fieldMember = childReaderField.TargetMember;
+                        typeHandler = childReaderField.MemberMapper.TypeHandler;
+                        readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
+                            childReaderField.MemberMapper.MemberType, fieldType, typeHandler, blockParameters, blockBodies);
+
+                        //switch (readerField.FieldType)
+                        //{
+                        //    case ReaderFieldType.AnonymousObject:
+                        //        fieldMember = readerField.ReaderFields[childIndex].FromMember;
+                        //        readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
+                        //            fieldMember.GetMemberType(), fieldType, null, blockParameters, blockBodies);
+                        //        break;
+                        //    case ReaderFieldType.Entity:
+                        //        childReaderField = readerField.ReaderFields[childIndex];
+                        //        fieldMember = childReaderField.FromMember;
+                        //        //if (childReaderField.MemberMapper == null)
+                        //        //{
+                        //        //    entityMapper = childReaderField.TableSegment.Mapper;
+                        //        //    if (entityMapper.TryGetMemberMap(childReaderField.FromMember.Name, out memberMapper))
+                        //        //        typeHandler = memberMapper.TypeHandler;
+                        //        //}
+                        //        //else typeHandler = childReaderField.MemberMapper.TypeHandler;
+                        //        typeHandler = childReaderField.MemberMapper.TypeHandler;
+                        //        readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
+                        //            memberMapper.MemberType, fieldType, typeHandler, blockParameters, blockBodies);
+                        //        break;
+                        //}
                         if (current.IsDefault) current.Bindings.Add(Expression.Bind(fieldMember, readerValueExpr));
                         else current.Arguments.Add(readerValueExpr);
 
@@ -505,7 +551,7 @@ public static class Extensions
                     if (readerField.HasNextInclude)
                     {
                         deferredBuilds.Push(current);
-                        readerBuilders.Add(readerField.Index, current);
+                        readerBuilders.Add(readerField, current);
                     }
                     else
                     {
@@ -795,5 +841,17 @@ public static class Extensions
         public List<Expression> Arguments { get; set; }
         public MemberInfo FromMember { get; set; }
         public EntityBuildInfo Parent { get; set; }
+        public EntityBuildInfo Clone(EntityBuildInfo parent)
+        {
+            return new EntityBuildInfo
+            {
+                IsDefault = this.IsDefault,
+                Constructor = this.Constructor,
+                Bindings = this.Bindings,
+                Arguments = this.Arguments,
+                FromMember = this.FromMember,
+                Parent = parent
+            };
+        }
     }
 }

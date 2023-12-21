@@ -25,7 +25,7 @@ class GroupingQueryBase<TGrouping> : IGroupingQueryBase<TGrouping>
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.Visitor.Select(fields, null, true);
+        this.Visitor.Select(fields, null);
         return new QueryAnonymousObject(this.Visitor);
     }
     public IQuery<TGrouping> Select()
@@ -38,7 +38,7 @@ class GroupingQueryBase<TGrouping> : IGroupingQueryBase<TGrouping>
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.Visitor.Select(fields, null, true);
+        this.Visitor.Select(fields, null);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion

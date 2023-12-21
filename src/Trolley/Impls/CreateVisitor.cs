@@ -23,6 +23,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public bool IsBulk { get; set; }
     public virtual bool IsFromWith { get; set; }
     public virtual bool IsReturnIdentity { get; set; }
+    public bool IsUseCte { get; set; }
 
     public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix) { }
@@ -59,6 +60,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 case "FromWith":
                     sql = this.VisitWithFrom(deferredSegment.Value);
                     break;
+                case "FromWithFunc":
+                    sql = this.VisitWithFromFunc(deferredSegment.Value);
+                    break;
                 case "WithBulk":
                     this.IsBulk = true;
                     continue;
@@ -89,9 +93,16 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual string BuildSql()
     {
+        if (this.IsFromWith)
+        {
+
+        }
         var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
         var fieldsBuilder = new StringBuilder($"INSERT INTO {tableName} (");
-        var valuesBuilder = new StringBuilder(" VALUES(");
+
+        var valuesBuilder = new StringBuilder();
+        if (this.IsFromWith) valuesBuilder.Append(" SELECT ");
+        else valuesBuilder.Append(" VALUES(");
         for (int i = 0; i < this.InsertFields.Count; i++)
         {
             var insertField = this.InsertFields[i];
@@ -104,6 +115,13 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             valuesBuilder.Append(insertField.Values);
         }
         fieldsBuilder.Append(')');
+        if (this.IsFromWith)
+        {
+            valuesBuilder.Append($" FROM {fromTables}");
+            if (!string.IsNullOrEmpty(this.whereSql))
+                valuesBuilder.Append(" WHERE " + this.whereSql);
+        }
+        else valuesBuilder.Append(')');
         valuesBuilder.Append(')');
 
         if (this.IsReturnIdentity)
@@ -116,25 +134,23 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         valuesBuilder.Clear();
         return fieldsBuilder.ToString();
     }
-    public virtual ICreateVisitor WithBy(object insertObj)
+    public virtual void WithBy(object insertObj)
     {
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "WithBy",
             Value = insertObj
         });
-        return this;
     }
-    public virtual ICreateVisitor WithByField(Expression fieldSelector, object fieldValue)
+    public virtual void WithByField(Expression fieldSelector, object fieldValue)
     {
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "WithByField",
             Value = (fieldSelector, fieldValue)
         });
-        return this;
     }
-    public virtual ICreateVisitor WithBulk(object insertObjs, int bulkCount)
+    public virtual void WithBulk(object insertObjs, int bulkCount)
     {
         this.IsBulk = true;
         this.deferredSegments.Add(new CommandSegment
@@ -142,39 +158,41 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             Type = "WithBulk",
             Value = (insertObjs as IEnumerable, bulkCount)
         });
-        return this;
     }
-    public virtual ICreateVisitor WithFrom<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery, string cteTableName = null)
+    public virtual void WithFrom<TTarget>(IQuery<TTarget> cteSubQuery, bool isUseCte = false)
     {
+        this.IsFromWith = true;
+        this.IsUseCte = isUseCte;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "FromWith",
-            Value = (cteSubQuery, cteTableName)
+            Value = cteSubQuery
         });
-        return this;
     }
-    public virtual ICreateVisitor IgnoreFields(string[] fieldNames)
+    public virtual void WithFrom<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery, bool isUseCte = false)
+    {
+        this.IsFromWith = true;
+        this.IsUseCte = isUseCte;
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "FromWithFunc",
+            Value = cteSubQuery
+        });
+    }
+    public virtual void IgnoreFields(string[] fieldNames)
     {
         this.IgnoreFieldNames ??= new();
         this.IgnoreFieldNames.AddRange(fieldNames);
-        return this;
     }
-    public virtual ICreateVisitor IgnoreFields(Expression fieldsSelector)
-    {
-        this.IgnoreFieldNames = this.VisitFields(fieldsSelector);
-        return this;
-    }
-    public virtual ICreateVisitor OnlyFields(string[] fieldNames)
+    public virtual void IgnoreFields(Expression fieldsSelector)
+        => this.IgnoreFieldNames = this.VisitFields(fieldsSelector);
+    public virtual void OnlyFields(string[] fieldNames)
     {
         this.OnlyFieldNames ??= new();
         this.OnlyFieldNames.AddRange(fieldNames);
-        return this;
     }
-    public virtual ICreateVisitor OnlyFields(Expression fieldsSelector)
-    {
-        this.OnlyFieldNames = this.VisitFields(fieldsSelector);
-        return this;
-    }
+    public virtual void OnlyFields(Expression fieldsSelector)
+        => this.OnlyFieldNames = this.VisitFields(fieldsSelector);
     public virtual string BuildMultiBulkSql(IDbCommand command)
     {
         if (!this.IsMultiple) return null;
@@ -330,54 +348,21 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual string VisitWithFrom(object deferredSegmentValue)
     {
-        this.IsFromWith = true;
-        (var cteSubQuery, var cteTableName) = ((Delegate, string))deferredSegmentValue;
-
+        var queryObj = deferredSegmentValue as IQueryBase;
+        return this.VisitCteQueryVisitor(queryObj.Visitor, queryObj);
+    }
+    public virtual string VisitWithFromFunc(object deferredSegmentValue)
+    {
+        var cteSubQuery = deferredSegmentValue as Delegate;
         var queryVisitor = this.CreateQueryVisitor(true);
         var fromQuery = new FromQuery(this.DbKey, this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
-        var query = cteSubQuery.DynamicInvoke(fromQuery) as IQueryBase;
-        if (!queryVisitor.Equals(query.Visitor))
+        var queryObj = cteSubQuery.DynamicInvoke(fromQuery) as IQueryBase;
+        if (!queryVisitor.Equals(queryObj.Visitor))
         {
             queryVisitor.Dispose();
-            queryVisitor = query.Visitor;
+            queryVisitor = queryObj.Visitor;
         }
-        var rawSql = queryVisitor.BuildSql(out var readerFields, false);
-        rawSql = queryVisitor.BuildCteTableSql(cteTableName, rawSql, readerFields, query);
-        var entityMapper = this.Tables[0].Mapper;
-        var builder = new StringBuilder();
-        builder.AppendLine(rawSql);
-        string withTable = null;
-        if (queryVisitor.SelfTableSegment != null)
-            withTable = queryVisitor.SelfTableSegment.RefTableName;
-        else if (!string.IsNullOrEmpty(cteTableName))
-            withTable = cteTableName;
-        else withTable = "import_data";
-        queryVisitor.Dispose();
-
-        var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
-        var fieldsBuilder = new StringBuilder($"INSERT INTO {tableName} (");
-        var valuesBuilder = new StringBuilder(" SELECT ");
-
-        for (int i = 0; i < readerFields.Count; i++)
-        {
-            var readerField = readerFields[i];
-            if (!entityMapper.TryGetMemberMap(readerField.TargetMember.Name, out var memberMapper))
-                continue;
-            var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
-            if (i > 0)
-            {
-                fieldsBuilder.Append(',');
-                valuesBuilder.Append(',');
-            }
-            fieldsBuilder.Append(fieldName);
-            valuesBuilder.Append(fieldName);
-        }
-        fieldsBuilder.Append(')');
-        valuesBuilder.Append($") FROM {this.OrmProvider.GetTableName(withTable)}");
-        rawSql = fieldsBuilder.Append(valuesBuilder).ToString();
-        fieldsBuilder.Clear();
-        valuesBuilder.Clear();
-        return rawSql;
+        return this.VisitCteQueryVisitor(queryVisitor, queryObj);
     }
     public virtual List<string> VisitFields(Expression fieldsSelector)
     {
@@ -418,6 +403,45 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (fieldNames.Count > 0)
             return fieldNames;
         return null;
+    }
+    public virtual string VisitCteQueryVisitor(IQueryVisitor queryVisitor, object queryObj)
+    {
+        var cteTableName = "import_data";
+        var rawSql = queryVisitor.BuildSql(out var readerFields, false);
+        rawSql = queryVisitor.BuildCteTableSql(cteTableName, rawSql, readerFields, queryObj);
+        var entityMapper = this.Tables[0].Mapper;
+        var builder = new StringBuilder();
+        builder.AppendLine(rawSql);
+        string withTable = null;
+        if (queryVisitor.SelfTableSegment != null)
+            withTable = queryVisitor.SelfTableSegment.RefTableName;
+        else withTable = cteTableName;
+        queryVisitor.Dispose();
+
+        var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
+        var fieldsBuilder = new StringBuilder($"INSERT INTO {tableName} (");
+        var valuesBuilder = new StringBuilder(" SELECT ");
+
+        for (int i = 0; i < readerFields.Count; i++)
+        {
+            var readerField = readerFields[i];
+            if (!entityMapper.TryGetMemberMap(readerField.TargetMember.Name, out var memberMapper))
+                continue;
+            var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
+            if (i > 0)
+            {
+                fieldsBuilder.Append(',');
+                valuesBuilder.Append(',');
+            }
+            fieldsBuilder.Append(fieldName);
+            valuesBuilder.Append(fieldName);
+        }
+        fieldsBuilder.Append(')');
+        valuesBuilder.Append($") FROM {this.OrmProvider.GetTableName(withTable)}");
+        rawSql = fieldsBuilder.Append(valuesBuilder).ToString();
+        fieldsBuilder.Clear();
+        valuesBuilder.Clear();
+        return rawSql;
     }
     public override void Dispose()
     {

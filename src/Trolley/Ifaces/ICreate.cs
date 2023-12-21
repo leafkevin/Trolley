@@ -54,16 +54,26 @@ public interface ICreate<TEntity>
     IContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
     #endregion
 
-    //#region FromWith   
+    //#region WithFrom
     ///// <summary>
-    ///// 使用CTE子句批量插入部分字段，部分数据库支持
+    ///// 使用子查询批量插入数据，如果isUseCte为true，则包装成CTE子句，false则原始子查询
     ///// </summary>
-    ///// <typeparam name="TTarget"></typeparam>
-    ///// <param name="cteSubQuery"></param>
-    ///// <param name="cteTableName"></param>
-    ///// <returns></returns>
-    //ICreated<TEntity> WithFrom<TTarget>(IQuery<TTarget> cteSubQuery, string cteTableName = null);
+    ///// <typeparam name="TTarget">CTE子查询返回的实体类型</typeparam>
+    ///// <param name="cteSubQuery">CTE子查询</param>
+    ///// <param name="isUseCte">是否使用CTE子句，使用前要确认当前数据库是否支持CTE，默认为false</param>
+    ///// <returns>返回插入对象</returns>
+    //IExecutedCommand<TEntity> WithFrom<TTarget>(IQuery<TTarget> cteSubQuery, bool isUseCte = false);
+    ///// <summary>
+    ///// 使用子查询批量插入数据，如果isUseCte为true，则包装成CTE子句，false则原始子查询
+    ///// </summary>
+    ///// <typeparam name="TTarget">CTE子查询返回的实体类型</typeparam>
+    ///// <param name="cteSubQuery">CTE子查询</param>
+    ///// <param name="isUseCte">是否使用CTE子句，使用前要确认当前数据库是否支持CTE，默认为false</param>
+    ///// <returns>返回插入对象</returns>
+    //IExecutedCommand<TEntity> WithFrom<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery, bool isUseCte = false);
     //#endregion
+
+    //IFromCommand<TTarget> From<TTarget>();
 
     //#region IfNotExists   
     ///// <summary>

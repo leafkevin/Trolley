@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Reflection;
 
 namespace Trolley;
 
@@ -15,7 +17,11 @@ public enum TableType : byte
     /// <summary>
     /// 子查询表，临时表
     /// </summary>
-    FromQuery = 2,
+    FromQuery,
+    /// <summary>
+    /// Include子表，此时IsMaster=false
+    /// </summary>
+    Include,
     /// <summary>
     /// CTE表自身引用，此时IsMaster=false
     /// </summary>
@@ -69,7 +75,7 @@ public class TableSegment
     /// </summary>
     public bool IsMaster { get; set; }
     /// <summary>
-    /// 表的访问路径，主表时，是别名，Include表时，是主表的成员访问，如:a.Buyer, 只有一个层级
+    /// 表的访问路径，主表时，是别名，Include表时，是从根主表到本成员完整访问路径，为了便于查找，如:a.Seller.Company.Products
     /// </summary>
     public string Path { get; set; }
     /// <summary>
@@ -85,13 +91,9 @@ public class TableSegment
     /// </summary>
     public List<ReaderField> ReaderFields { get; set; }
     /// <summary>
-    /// 是否需要别名，子查询表需要别名
+    /// Include 1:N关系表时，从最外层Select参数访问到Include成员的父亲路径所有成员访问列表，方便最后赋值
     /// </summary>
-    public bool IsNeedAlais { get; set; }
-    /// <summary>
-    /// 表是否被使用
-    /// </summary>
-    public bool IsUsed { get; set; }
+    public List<MemberInfo> ParentMemberVisits { get; set; }
 
     /// <summary>
     /// 生成一个自身引用的副本，主要用在cte表的自身引用

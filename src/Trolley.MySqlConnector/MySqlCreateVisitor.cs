@@ -43,7 +43,7 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
                     this.VisitSet(deferredSegment.Value as LambdaExpression);
                     break;
                 case "FromWith":
-                    sql = this.VisitWithFrom(deferredSegment.Value);
+                    sql = this.VisitWithFromFunc(deferredSegment.Value);
                     break;
             }
         }
@@ -271,30 +271,22 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
         }
         return this.Evaluate(sqlSegment);
     }
-    public override string VisitWithFrom(object deferredSegmentValue)
+    public override string VisitCteQueryVisitor(IQueryVisitor queryVisitor, object queryObj)
     {
-        this.IsFromWith = true;
-        (var cteSubQuery, var cteTableName) = ((Delegate, string))deferredSegmentValue;
-
-        var queryVisitor = this.CreateQueryVisitor(true);
-        var fromQuery = new FromQuery(this.DbKey, this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
-        var query = cteSubQuery.DynamicInvoke(fromQuery) as IQueryBase;
-        if (!queryVisitor.Equals(query.Visitor))
-        {
-            queryVisitor.Dispose();
-            queryVisitor = query.Visitor;
-        }
+        var cteTableName = "import_data";
         var rawSql = queryVisitor.BuildSql(out var readerFields, false);
-        rawSql = queryVisitor.BuildCteTableSql(cteTableName, rawSql, readerFields, query);
         var entityMapper = this.Tables[0].Mapper;
         var builder = new StringBuilder();
+
+        if (this.IsUseCte) rawSql = queryVisitor.BuildCteTableSql(cteTableName, rawSql, readerFields, queryObj);      
         builder.AppendLine(rawSql);
         string withTable = null;
-        if (queryVisitor.SelfTableSegment != null)
-            withTable = queryVisitor.SelfTableSegment.RefTableName;
-        else if (!string.IsNullOrEmpty(cteTableName))
-            withTable = cteTableName;
-        else withTable = "import_data";
+        if(this.IsUseCte)
+        {
+            if (queryVisitor.SelfTableSegment != null)
+                withTable = queryVisitor.SelfTableSegment.RefTableName;
+            else withTable = cteTableName;
+        }       
         queryVisitor.Dispose();
 
         var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);

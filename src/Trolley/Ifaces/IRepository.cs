@@ -173,9 +173,24 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// </summary>
     /// <typeparam name="T">表T实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> From<T>(IQuery<T> subQuery, char tableAsStart = 'a');
+    IQuery<T> From<T>(IQuery<T> subQuery);
+    /// <summary>
+    /// 从SQL子查询中查询数据，用法：
+    /// <code>
+    /// repository
+    ///     .From(f =&gt; f.From&lt;Page, Menu&gt;('o')
+    ///         .Where((a, b) =&gt; a.Id == b.PageId)
+    ///         .Select((x, y) =&gt; new { y.Id, y.ParentId, x.Url }))
+    ///     ...
+    /// SQL:
+    /// ... FROM (SELECT p.`Id`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="T">表T实体类型</typeparam>
+    /// <param name="subQuery">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery);
     #endregion
 
     #region FromWith CTE
@@ -196,9 +211,8 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
     /// <param name="cteSubQuery">CTE 查询子句</param>
     /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> FromWith<T>(IQuery<T> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
+    IQuery<T> FromWith<T>(IQuery<T> cteSubQuery, string cteTableName = null);
     /// <summary>
     /// 使用CTE子句创建查询对象，包含UnionRecursive或UnionAllRecursive子句可以自我引用递归查询，用法：
     /// <code>
@@ -220,9 +234,8 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
     /// <param name="cteSubQuery">CTE 查询子句</param>
     /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
+    IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery, string cteTableName = null);
     #endregion
 
     #region QueryFirst/Query

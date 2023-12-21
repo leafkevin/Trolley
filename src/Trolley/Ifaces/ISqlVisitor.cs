@@ -45,7 +45,6 @@ public interface ISqlVisitor : IDisposable
     string VisitConditionExpr(Expression conditionExpr);
     List<Expression> ConvertFormatToConcatList(Expression[] argsExprs);
     List<Expression> SplitConcatList(Expression[] argsExprs);
-    List<ReaderField> AddTableRecursiveReaderFields(int readerIndex, TableSegment fromSegment);
-    string VisitFromQuery(LambdaExpression lambdaExpr, out bool isNeedAlias);
+    string VisitFromQuery(LambdaExpression lambdaExpr);
     bool ChangeSameType(SqlSegment leftSegment, SqlSegment rightSegment);
 }

@@ -19,8 +19,7 @@ public class SqlSegment
     /// </summary>
     public OperationType OperationType { get; set; } = OperationType.None;
     public Stack<DeferredExpr> DeferredExprs { get; set; }
-    public int Deep { get; set; }
-    public int ReaderIndex { get; set; }
+    public ReaderField Parent { get; set; }
     /// <summary>
     /// 是否有字段
     /// </summary>
@@ -58,6 +57,10 @@ public class SqlSegment
     /// 是否是字段类型
     /// </summary>
     public bool IsFieldType { get; set; }
+    /// <summary>
+    /// Select子句时，最外层的返回实体类型
+    /// </summary>
+    public Type ReturnType { get; set; }
     /// <summary>
     /// 当强制转换时，此字段值为转换后的类型，当枚举类型时，此字段值为枚举类型，其他场景就是当前表达式的类型
     /// </summary>

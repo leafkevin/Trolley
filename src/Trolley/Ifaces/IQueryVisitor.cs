@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Trolley;
 
 public interface IQueryVisitor : IDisposable
 {
-    bool IsNeedAlias { get; set; }
     bool IsMultiple { get; set; }
     int CommandIndex { get; set; }
     List<TableSegment> CteTables { get; set; }
@@ -16,41 +19,53 @@ public interface IQueryVisitor : IDisposable
     IDataParameterCollection DbParameters { get; set; }
     TableSegment SelfTableSegment { get; set; }
 
-    string BuildSql(out List<ReaderField> readerFields, bool isContainsCteSql = true, bool isUnion = false);
-    bool HasIncludeTables();
-    bool BuildIncludeSql(object parameter, out string sql);
-    void SetIncludeValues(object parameter, IDataReader reader);
-    void From(char tableAsStart, params Type[] entityTypes);
-    void From(char tableAsStart, Type entityType, string suffixRawSql);
-    TableSegment WithTable(Type entityType, string rawSql, List<ReaderField> readerFields, bool isUnion = false, object queryObject = null, bool isRecursive = false);
-    TableSegment WithTable(Type entityType, string rawSql, List<ReaderField> readerFields, string cteTableName, object queryObject);
-    void BuildCteTable(string cteTableName, string rawSql, List<ReaderField> readerFields, object cteQuery, bool isClear = false);
-    string BuildCteTableSql(string cteTableName, string rawSql, List<ReaderField> readerFields, object queryObject, bool isClear = false);
-    void Union(TableSegment tableSegment, string rawSql);
+    string BuildSql(out List<ReaderField> readerFields, bool hasCteSql = true, bool isUnion = false);
+
+    void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes);
+    void From(Type targetType, IQueryBase subQueryObj);
+    void From(Type targetType, DbContext dbContext, Delegate subQueryGetter);
+
+    void FromWithFirst(Type targetType, Func<IQueryBase> cteQueryObjGetter);
+    void FromWithFirst(Type targetType, DbContext dbContext, Delegate cteSubQueryGetter);
+    void NextWith(Type targetType, DbContext dbContext, Delegate cteSubQueryGetter);
+
+    void Union(string union, Type targetType, IQueryBase subQuery);
+    void Union(string union, Type targetType, DbContext dbContext, Delegate subQueryGetter);
+    void UnionRecursive(string union, Type targetType, DbContext dbContext, IQueryBase subQueryObj, Delegate selfSubQueryGetter);
+    TableSegment UseTable(Type targetType, string rawSql, List<ReaderField> readerFields, object queryObj, bool isUnion);
+
+    public void Join(string joinType, Expression joinOn);
+    void Join(string joinType, Type newEntityType, Expression joinOn);
+    void Join(string joinType, Type newEntityType, IQueryBase subQuery, Expression joinOn);
+    void Join(string joinType, Type newEntityType, DbContext dbContext, Delegate subQueryGetter, Expression joinOn);
+
     void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null);
     void ThenInclude(Expression memberSelector, bool isIncludeMany = false, Expression filter = null);
-    void Join(string joinType, Expression joinOn);
-    void Join(string joinType, TableSegment joinTableSegment, Expression joinOn);
-    void Join(string joinType, Type newEntityType, Expression joinOn);
-    void JoinCteTable(string joinType, string cteTableName, Expression joinOn);
-    void Select(string sqlFormat, Expression selectExpr = null, bool isFromQuery = false);
-    void SelectGrouping(bool isFromQuery = false);
-    void SelectDefault(Expression defaultExpr);
+    bool HasIncludeTables();
+    bool BuildIncludeSql<TTarget>(Type targetType, TTarget target, out string sql);
+    bool BuildIncludeSql<TTarget>(Type targetType, List<TTarget> targets, out string sql);
+    void SetIncludeValues<TTarget>(Type targetType, TTarget target, IDataReader reader);
+    Task SetIncludeValuesAsync<TTarget>(Type targetType, TTarget target, DbDataReader reader, CancellationToken cancellationToken);
+    void SetIncludeValues<TTarget>(Type targetType, List<TTarget> targets, IDataReader reader);
+    Task SetIncludeValueAsync<TTarget>(Type targetType, List<TTarget> targets, DbDataReader reader, CancellationToken cancellationToken);
+
+    void Where(Expression whereExpr, bool isClearTableAlias = true);
+    void And(Expression whereExpr);
     void GroupBy(Expression expr);
-    void OrderBy(string orderBy);
     void OrderBy(string orderType, Expression expr);
     void Having(Expression havingExpr);
+    void SelectDefault(Expression defaultExpr);
+    void Select(string sqlFormat, Expression selectExpr = null);
+
+    void Distinct();
     void Page(int pageIndex, int pageSize);
     void Skip(int skip);
     void Take(int limit);
-    void Where(Expression whereExpr, bool isClearTableAlias = true);
-    void And(Expression whereExpr);
-    void Distinct();
-    void InsertTo(Type entityType);
-    TableSegment InitTableAlias(LambdaExpression lambdaExpr);
+
+    void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, List<ReaderField> readerFields);
     TableSegment AddTable(TableSegment tableSegment);
     TableSegment AddTable(Type entityType, string joinType = "", TableType tableType = TableType.Entity, string body = null, List<ReaderField> readerFields = null);
-    void AddAliasTable(string aliasName, TableSegment tableSegment);
+    TableSegment InitTableAlias(LambdaExpression lambdaExpr);
     void Clear(bool isClearTables = false, bool isClearReaderFields = false);
     void CopyTo(IQueryVisitor visitor);
 }

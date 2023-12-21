@@ -13,6 +13,7 @@ public partial class MySqlProvider : BaseOrmProvider
     private static Dictionary<Type, object> defaultDbTypes = new();
     private static Dictionary<Type, string> castTos = new();
 
+    public override OrmProviderType OrmProviderType => OrmProviderType.MySql;
     public override Type NativeDbTypeType => typeof(MySqlDbType);
     static MySqlProvider()
     {

@@ -13,6 +13,11 @@ namespace Trolley;
 /// <typeparam name="TEntity">要更新的实体类型</typeparam>
 public interface IUpdate<TEntity>
 {
+    #region Properties
+    DbContext DbContext { get; }
+    IUpdateVisitor Visitor { get; }
+    #endregion
+
     #region Set
     /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，用法：
@@ -192,6 +197,11 @@ public interface IUpdate<TEntity>
 /// <typeparam name="TEntity">要更新的实体类型</typeparam>
 public interface IUpdated<TEntity>
 {
+    #region Properties
+    DbContext DbContext { get; }
+    IUpdateVisitor Visitor { get; }
+    #endregion
+
     #region Execute
     /// <summary>
     /// 执行更新操作，并返回更新行数

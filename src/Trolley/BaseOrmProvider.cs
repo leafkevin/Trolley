@@ -14,6 +14,7 @@ public abstract class BaseOrmProvider : IOrmProvider
     protected static readonly ConcurrentDictionary<int, MethodCallSqlFormatter> methodCallSqlFormatterCache = new();
     protected static readonly ConcurrentDictionary<int, Delegate> methodCallCache = new();
 
+    public virtual OrmProviderType OrmProviderType => OrmProviderType.Normal;
     public virtual string ParameterPrefix => "@";
     public abstract Type NativeDbTypeType { get; }
     public abstract IDbConnection CreateConnection(string connectionString);
@@ -97,7 +98,7 @@ public abstract class BaseOrmProvider : IOrmProvider
         if (expectType == typeof(bool) && value is bool bValue)
             return bValue ? "1" : "0";
         if (expectType == typeof(string) && value is string strValue)
-            return $"'{strValue.Replace("\\", "\\\\").Replace("'", @"\'")}'";
+            return $"'{strValue.Replace("'", @"\'")}'";
         if (expectType == typeof(DateTime) && value is DateTime dateTime)
             return $"'{dateTime:yyyy-MM-dd HH:mm:ss.fffffff}'";
         if (expectType == typeof(TimeSpan) && value is TimeSpan timeSpan)

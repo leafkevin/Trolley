@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Trolley;
 
 /// <summary>
-/// 使用表T1部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
+/// 使用表T1部分字段数据，更新当前表TEntity数据，仅限Sql Server/PostgreSql数据库使用
 /// Update ..From语句，在Where语句中一定要包含Update表与From表之间的关联条件
 /// </summary>
 /// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>

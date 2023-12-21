@@ -19,13 +19,14 @@ public interface ICreateVisitor : IDisposable
     void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
     void Initialize(Type entityType, bool isFirst = true);
     string BuildSql();
-    ICreateVisitor WithBy(object insertObj);
-    ICreateVisitor WithByField(Expression fieldSelector, object fieldValue);
-    ICreateVisitor WithBulk(object insertObjs, int bulkCount);
+    void WithBy(object insertObj);
+    void WithByField(Expression fieldSelector, object fieldValue);
+    void WithBulk(object insertObjs, int bulkCount);
     (IEnumerable, int, Action<StringBuilder>, Action<StringBuilder, object, string>) BuildWithBulk(IDbCommand command);
-    ICreateVisitor WithFrom<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery, string cteTableName = null);
-    ICreateVisitor IgnoreFields(string[] fieldNames);
-    ICreateVisitor IgnoreFields(Expression fieldsSelector);
-    ICreateVisitor OnlyFields(string[] fieldNames);
-    ICreateVisitor OnlyFields(Expression fieldsSelector);
+    void WithFrom<TTarget>(IQuery<TTarget> cteSubQuery, bool isUseCte = false);
+    void WithFrom<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery, bool isUseCte = false);
+    void IgnoreFields(string[] fieldNames);
+    void IgnoreFields(Expression fieldsSelector);
+    void OnlyFields(string[] fieldNames);
+    void OnlyFields(Expression fieldsSelector);
 }

@@ -1,5 +1,25 @@
-﻿namespace Trolley.SqlServer;
+﻿using System.Linq.Expressions;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
 
+namespace Trolley.SqlServer;
+/// <summary>
+/// UPDATE sales.commissions
+/// SET sales.commissions.commission =  c.base_amount* COALESCE(t.percentage,0.1)
+/// FROM sales.commissions c
+/// LEFT JOIN sales.targets t ON c.target_id = t.target_id;
+/// 
+/// USE AdventureWorks2022;
+/// GO
+/// UPDATE p
+/// SET ListPrice = ListPrice * 2
+/// FROM Production.Product AS p
+///  INNER JOIN Purchasing.ProductVendor AS pv
+///      ON p.ProductID = pv.ProductID AND p.ProductModelID is not null  
+/// WHERE ...
+/// </summary>
+/// <typeparam name="TEntity"></typeparam>
 public class SqlServerUpdate<TEntity> : Update<TEntity>, ISqlServerUpdate<TEntity>
 {
     #region Constructor
@@ -7,31 +27,19 @@ public class SqlServerUpdate<TEntity> : Update<TEntity>, ISqlServerUpdate<TEntit
         : base(dbContext) { }
     #endregion
 
-    #region From
-    public IUpdateFrom<TEntity, T> From<T>()
+    #region InnerJoin
+    public IUpdateJoin<TEntity, T> InnerJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
     {
-        this.Visitor.From(typeof(T));
-        return new UpdateFrom<TEntity, T>(this.DbContext, this.Visitor);
+        this.Visitor.Join("INNER JOIN", typeof(T), joinOn);
+        return new UpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
     }
-    public IUpdateFrom<TEntity, T1, T2> From<T1, T2>()
+    #endregion
+
+    #region LeftJoin
+    public IUpdateJoin<TEntity, T> LeftJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
     {
-        this.Visitor.From(typeof(T1), typeof(T2));
-        return new UpdateFrom<TEntity, T1, T2>(this.DbContext, this.Visitor);
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3> From<T1, T2, T3>()
-    {
-        this.Visitor.From(typeof(T1), typeof(T2), typeof(T3));
-        return new UpdateFrom<TEntity, T1, T2, T3>(this.DbContext, this.Visitor);
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4> From<T1, T2, T3, T4>()
-    {
-        this.Visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-        return new UpdateFrom<TEntity, T1, T2, T3, T4>(this.DbContext, this.Visitor);
-    }
-    public IUpdateFrom<TEntity, T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
-    {
-        this.Visitor.From(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
-        return new UpdateFrom<TEntity, T1, T2, T3, T4, T5>(this.DbContext, this.Visitor);
+        this.Visitor.Join("LEFT JOIN", typeof(T), joinOn);
+        return new UpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
     }
     #endregion
 }
