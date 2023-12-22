@@ -6,29 +6,23 @@
 <#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
 <#@ output extension=".cs" #>
 using System;
-using System.Data;
 using System.Linq.Expressions;
 
 namespace Trolley;
 
-class GroupingQueryBase<TGrouping> : IGroupingQueryBase<TGrouping>
+public class GroupingQueryBase<TGrouping> : IGroupingQueryBase<TGrouping>
 {
-    #region Fields
-    protected TheaConnection connection;
-    protected IDbTransaction transaction;
-    protected IOrmProvider ormProvider;
-    protected IEntityMapProvider mapProvider;
-    protected IQueryVisitor visitor;
+    #region Properties   
+    public DbContext DbContext { get; private set; }
+    public IQueryVisitor Visitor { get; private set; }
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
-    public GroupingQueryBase(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
+    public GroupingQueryBase(DbContext dbContext, IQueryVisitor visitor)
     {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.ormProvider = ormProvider;
-        this.mapProvider = mapProvider;
-        this.visitor = visitor;
+        this.DbContext = dbContext;
+        this.Visitor = visitor;
     }
     #endregion
 
@@ -44,7 +38,7 @@ class GroupingQueryBase<TGrouping> : IGroupingQueryBase<TGrouping>
     public IQuery<TGrouping> Select()
     {
         this.visitor.SelectGrouping();
-        return new Query<TGrouping>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        return new this.OrmProvider.NewQuery<TGrouping>(this.DbContext, this.Visitor);
     }
     public IQuery<TTarget> Select<TTarget>(string fields = "*")
     {
@@ -52,15 +46,15 @@ class GroupingQueryBase<TGrouping> : IGroupingQueryBase<TGrouping>
             throw new ArgumentNullException(nameof(fields));
 
         this.visitor.Select(fields, null, true);
-        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        return new this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
 }
 class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T, TGrouping>
 {
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
-        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
+    public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
+        : base(dbContext, visitor) { }
     #endregion
 
     #region Having
@@ -109,7 +103,7 @@ class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        return new this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
 }
@@ -123,8 +117,8 @@ class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery
 class GroupingQuery<<#=tables#>, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<<#=tables#>, TGrouping>
 {
     #region Constructor
-    public GroupingQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor)
-        : base(connection, transaction, ormProvider, mapProvider, visitor) { }
+    public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
+        : base(dbContext, visitor) { }
     #endregion
 <#
         if( i < count)
@@ -183,7 +177,7 @@ class GroupingQuery<<#=tables#>, TGrouping> : GroupingQueryBase<TGrouping>, IGro
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new Query<TTarget>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        return new this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
 <#      }#>

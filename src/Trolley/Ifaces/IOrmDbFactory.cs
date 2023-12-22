@@ -17,5 +17,5 @@ public interface IOrmDbFactory
     bool TryGetTypeHandler(Type handlerType, out ITypeHandler typeHandler);
     TheaDatabase GetDatabase(string dbKey = null);
     //IRepository Create(string dbKey = null, string tenantId = null);
-    TRepository Create<TRepository>(string dbKey = null, string tenantId = null) where TRepository : IRepository;
+    TRepository Create<TRepository>(string dbKey = null, string tenantId = null) where TRepository : IRepository, new();
 }

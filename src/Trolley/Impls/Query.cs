@@ -59,11 +59,11 @@ public class QueryBase : IQueryBase
         this.Visitor.Select(fields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public IQuery<TTarget> SelectTo<TTarget>(Expression<Func<TTarget>> specialMemberInitializer = null)
-    {
-        this.Visitor.Select(fields);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
-    }
+    //public IQuery<TTarget> SelectTo<TTarget>(Expression<Func<TTarget>> specialMemberInitializer = null)
+    //{
+    //    this.Visitor.Select(fields);
+    //    return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    //}
     #endregion
 
     #region Count
@@ -139,7 +139,6 @@ public class Query<T> : QueryBase, IQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-
         this.Visitor.Union(" UNION ALL", typeof(T), subQuery);
         return this;
     }
@@ -170,7 +169,7 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region CTE NextWith
-    public IQuery<T, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T>, IQuery<TOther>> cteSubQuery)
+    public IQuery<T, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T>, IQuery<TOther>> cteSubQuery, string cteTableName = null)
     {
         if (cteSubQuery == null)
             throw new ArgumentNullException(nameof(cteSubQuery));
@@ -336,15 +335,18 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
-    #region GroupBy/OrderBy
+    #region GroupBy
     public IGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return new GroupingQuery<T, TGrouping>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewGroupQuery<T, TGrouping>(this.DbContext, this.Visitor);
     }
+    #endregion
+
+    #region OrderBy
     public IQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
     public IQuery<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)

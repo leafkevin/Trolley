@@ -54,7 +54,8 @@ public interface IQueryVisitor : IDisposable
     void GroupBy(Expression expr);
     void OrderBy(string orderType, Expression expr);
     void Having(Expression havingExpr);
-    void SelectDefault(Expression defaultExpr);
+    void SelectGrouping();
+    void SelectDefault(Expression defaultExpr);    
     void Select(string sqlFormat, Expression selectExpr = null);
 
     void Distinct();

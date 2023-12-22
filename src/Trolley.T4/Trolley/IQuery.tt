@@ -243,9 +243,8 @@ public interface IQuery<T> : IQueryBase
     /// <code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
     /// </param>
     /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
-    /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T>, IQuery<TOther>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
+    IQuery<T, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T>, IQuery<TOther>> cteSubQuery, string cteTableName = null);
     #endregion
 
     #region WithTable
@@ -869,9 +868,8 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// </code>
     /// </param>
     /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
-    /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<<#=tables#>, TOther> NextWith<TOther>(Func<IFromQuery, <#=cteQueryTables#>, IQuery<TOther>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
+    IQuery<<#=tables#>, TOther> NextWith<TOther>(Func<IFromQuery, <#=cteQueryTables#>, IQuery<TOther>> cteSubQuery, string cteTableName = null);
     #endregion
 
 <#      }

@@ -7,13 +7,10 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public interface IFromCommandBase
+public interface IFromCommand
 {
     #region Visitor
     DbContext DbContext { get; }
-    /// <summary>
-    /// Visitor对象
-    /// </summary>
     IQueryVisitor Visitor { get; }
     #endregion
 
@@ -26,9 +23,39 @@ public interface IFromCommandBase
     /// <returns>返回插入对象</returns>
     IFromCommand<TTarget> Select<TTarget>(string fields = "*");
     #endregion
+
+    #region Execute
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <returns>返回插入行数</returns>
+    int Execute();
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <param name="cancellationToken">取消token</param>
+    /// <returns>返回插入行数</returns>
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    #endregion 
+
+    #region ToSql
+    /// <summary>
+    /// 返回当前查询的SQL和参数列表
+    /// </summary>
+    /// <param name="dbParameters">参数列表</param>
+    /// <returns>当前查询的SQL</returns>
+    string ToSql(out List<IDbDataParameter> dbParameters);
+    #endregion
 }
-public interface IFromCommand<T> : IFromCommandBase
+public interface IFromCommand<T> : IFromCommand
 {
+    #region Union/UnionAll
+    IFromCommand<T> Union(IQuery<T> subQuery);
+    IFromCommand<T> Union(Func<IFromQuery, IQuery<T>> subQuery);
+    IFromCommand<T> UnionAll(IQuery<T> subQuery);
+    IFromCommand<T> UnionAll(Func<IFromQuery, IQuery<T>> subQuery);
+    #endregion
+
     #region Join
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
@@ -199,7 +226,7 @@ public interface IFromCommand<T> : IFromCommandBase
     /// <typeparam name="TGrouping">分组后的实体对象类型，可以是单个字段类型或是匿名类型</typeparam>
     /// <param name="groupingExpr">分组表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr);
+    IGroupingCommand<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr);
     #endregion
 
     #region OrderBy
@@ -270,39 +297,8 @@ public interface IFromCommand<T> : IFromCommandBase
     #region Take
     IFromCommand<T> Take(int limit);
     #endregion
-
-    #region AsCte
-    IFromCommand<T> AsCte();
-    #endregion
-
-    #region Execute
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion
-
-    #region ToMultipleCommand
-    MultipleCommand ToMultipleCommand();
-    #endregion
-
-    #region ToSql
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
-    #endregion
 }
-public interface IFromCommand<T1, T2> : IFromCommandBase
+public interface IFromCommand<T1, T2> : IFromCommand
 {
     #region Join
     /// <summary>
@@ -500,7 +496,7 @@ public interface IFromCommand<T1, T2> : IFromCommandBase
     /// <typeparam name="TGrouping">分组后的实体对象类型，可以是单个字段类型或是匿名类型</typeparam>
     /// <param name="groupingExpr">分组表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IGroupingQuery<T1, T2, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, TGrouping>> groupingExpr);
+    IGroupingCommand<T1, T2, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, TGrouping>> groupingExpr);
     #endregion
 
     #region OrderBy
@@ -568,7 +564,7 @@ public interface IFromCommand<T1, T2> : IFromCommandBase
     IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, TTarget>> fieldsExpr);
     #endregion
 }
-public interface IFromCommand<T1, T2, T3> : IFromCommandBase
+public interface IFromCommand<T1, T2, T3> : IFromCommand
 {
     #region Join
     /// <summary>
@@ -766,7 +762,7 @@ public interface IFromCommand<T1, T2, T3> : IFromCommandBase
     /// <typeparam name="TGrouping">分组后的实体对象类型，可以是单个字段类型或是匿名类型</typeparam>
     /// <param name="groupingExpr">分组表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IGroupingQuery<T1, T2, T3, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, TGrouping>> groupingExpr);
+    IGroupingCommand<T1, T2, T3, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, TGrouping>> groupingExpr);
     #endregion
 
     #region OrderBy
@@ -834,7 +830,7 @@ public interface IFromCommand<T1, T2, T3> : IFromCommandBase
     IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, TTarget>> fieldsExpr);
     #endregion
 }
-public interface IFromCommand<T1, T2, T3, T4> : IFromCommandBase
+public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
 {
     #region Join
     /// <summary>
@@ -1032,7 +1028,7 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommandBase
     /// <typeparam name="TGrouping">分组后的实体对象类型，可以是单个字段类型或是匿名类型</typeparam>
     /// <param name="groupingExpr">分组表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IGroupingQuery<T1, T2, T3, T4, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, TGrouping>> groupingExpr);
+    IGroupingCommand<T1, T2, T3, T4, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, TGrouping>> groupingExpr);
     #endregion
 
     #region OrderBy
@@ -1100,7 +1096,7 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommandBase
     IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, TTarget>> fieldsExpr);
     #endregion
 }
-public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommandBase
+public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
 {
     #region Join
     /// <summary>
@@ -1298,7 +1294,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommandBase
     /// <typeparam name="TGrouping">分组后的实体对象类型，可以是单个字段类型或是匿名类型</typeparam>
     /// <param name="groupingExpr">分组表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IGroupingQuery<T1, T2, T3, T4, T5, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, TGrouping>> groupingExpr);
+    IGroupingCommand<T1, T2, T3, T4, T5, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, TGrouping>> groupingExpr);
     #endregion
 
     #region OrderBy
@@ -1366,7 +1362,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommandBase
     IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
     #endregion
 }
-public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommandBase
+public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
 {
     #region Join
     /// <summary>
@@ -1449,7 +1445,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommandBase
     /// <typeparam name="TGrouping">分组后的实体对象类型，可以是单个字段类型或是匿名类型</typeparam>
     /// <param name="groupingExpr">分组表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, TGrouping>> groupingExpr);
+    IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> GroupBy<TGrouping>(Expression<Func<T1, T2, T3, T4, T5, T6, TGrouping>> groupingExpr);
     #endregion
 
     #region OrderBy

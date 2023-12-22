@@ -43,7 +43,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     /// </summary>
     public TableSegment SelfTableSegment { get; set; }
 
-    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
     {
         this.DbKey = dbKey;
         this.OrmProvider = ormProvider;
@@ -51,6 +51,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsParameterized = isParameterized;
         this.TableAsStart = tableAsStart;
         this.ParameterPrefix = parameterPrefix;
+        this.DbParameters = dbParameters ?? new TheaDbParameterCollection();
     }
     public virtual string BuildSql(out List<ReaderField> readerFields, bool hasCteSql = true, bool isUnion = false)
     {
@@ -927,6 +928,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsWhere = false;
     }
 
+    public virtual void SelectGrouping() => this.ReaderFields = this.GroupFields;
     public virtual void SelectDefault(Expression defaultExpr)
     {
         if (this.ReaderFields == null || this.ReaderFields.Count == 0)

@@ -11,6 +11,6 @@ public class MySqlRepository : Repository, IMySqlRepository
         : base(connection, ormProvider, mapProvider) { }
     #endregion
 
-    public new IMySqlCreate<TEntity> Create<TEntity>() => new MySqlCreate<TEntity>(this.dbContext);
-    public new IMySqlUpdate<TEntity> Update<TEntity>() => new MySqlUpdate<TEntity>(this.dbContext);
+    public new IMySqlCreate<TEntity> Create<TEntity>() => new MySqlCreate<TEntity>(this.DbContext);
+    public new IMySqlUpdate<TEntity> Update<TEntity>() => new MySqlUpdate<TEntity>(this.DbContext);
 }

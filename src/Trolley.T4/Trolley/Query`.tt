@@ -7,7 +7,6 @@
 <#@ output extension=".cs" #>
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,7 +22,7 @@ namespace Trolley;
         tables += $", T{i}";
         cteQueryTables += $", IQuery<T{i}>";
 #>
-class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
+public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
 {
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
@@ -35,7 +34,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         {
 #>
     #region CTE NextWith
-    public IQuery<<#=tables#>, TOther> NextWith<TOther>(Func<IFromQuery, <#=cteQueryTables#>, IQuery<TOther>> cteSubQuery)
+    public IQuery<<#=tables#>, TOther> NextWith<TOther>(Func<IFromQuery, <#=cteQueryTables#>, IQuery<TOther>> cteSubQuery, string cteTableName = null)
     {
         if (cteSubQuery == null)
             throw new ArgumentNullException(nameof(cteSubQuery));
@@ -67,7 +66,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("INNER JOIN", joinOn);
+        this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
     public IQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
@@ -75,7 +74,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("LEFT JOIN", joinOn);
+        this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
     public IQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
@@ -83,7 +82,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.visitor.Join("RIGHT JOIN", joinOn);
+        this.Visitor.Join("RIGHT JOIN", joinOn);
         return this;
     }
 <#
@@ -183,7 +182,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector);
+        this.Visitor.Include(memberSelector);
         return this.OrmProvider.NewIncludableQuery<<#=tables#>, TMember>(this.DbContext, this.Visitor);
     }
     public IIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
@@ -191,7 +190,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.visitor.Include(memberSelector, true, filter);
+        this.Visitor.Include(memberSelector, true, filter);
         return this.OrmProvider.NewIncludableQuery<<#=tables#>, TElment>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -202,7 +201,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Where(predicate);
+        this.Visitor.Where(predicate);
         return this;
     }
     public IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
@@ -211,8 +210,8 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.visitor.Where(elsePredicate);
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
     public IQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
@@ -220,7 +219,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.And(predicate);
+        this.Visitor.And(predicate);
         return this;
     }
     public IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
@@ -229,8 +228,8 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
             throw new ArgumentNullException(nameof(ifPredicate));
 
         if (condition)
-            this.visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.visitor.And(elsePredicate);
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
     #endregion
@@ -241,7 +240,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
 
-        this.visitor.GroupBy(groupingExpr);
+        this.Visitor.GroupBy(groupingExpr);
         return this.OrmProvider.NewGroupQuery<<#=tables#>, TGrouping>(this.DbContext, this.Visitor);
     }
 	#endregion
@@ -256,7 +255,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
@@ -268,7 +267,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -279,7 +278,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
 <#
@@ -291,7 +290,7 @@ class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
 <#      }#>

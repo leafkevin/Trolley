@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Net.Http.Headers;
 
 namespace Trolley;
 
@@ -85,7 +86,23 @@ public class OrmDbFactory : IOrmDbFactory
             throw new Exception($"dbKey:{dbKey}未配置任何数据库连接串");
         return database;
     }
-    public virtual IRepository Create(string dbKey = null, string tenantId = null)
+    //public virtual IRepository Create(string dbKey = null, string tenantId = null)
+    //{
+    //    var database = this.GetDatabase(dbKey);
+    //    if (!this.TryGetOrmProvider(database.OrmProviderType, out var ormProvider))
+    //        throw new Exception($"未注册类型为{database.OrmProviderType.FullName}的OrmProvider");
+    //    var tenantDatabase = database.GetTenantDatabase(tenantId);
+    //    if (!this.TryGetMapProvider(database.OrmProviderType, out var mapProvider))
+    //        throw new Exception($"未注册Key为{database.OrmProviderType.FullName}的EntityMapProvider");
+    //    var connection = new TheaConnection
+    //    {
+    //        DbKey = dbKey,
+    //        BaseConnection = ormProvider.CreateConnection(tenantDatabase.ConnectionString),
+    //        OrmProvider = ormProvider
+    //    };
+    //    return new Repository(dbKey, connection, ormProvider, mapProvider).With(this.options);
+    //}
+    public virtual TRepository Create<TRepository>(string dbKey = null, string tenantId = null) where TRepository : IRepository, new()
     {
         var database = this.GetDatabase(dbKey);
         if (!this.TryGetOrmProvider(database.OrmProviderType, out var ormProvider))
@@ -99,7 +116,18 @@ public class OrmDbFactory : IOrmDbFactory
             BaseConnection = ormProvider.CreateConnection(tenantDatabase.ConnectionString),
             OrmProvider = ormProvider
         };
-        return new Repository(dbKey, connection, ormProvider, mapProvider).With(this.options);
+        var repository = new TRepository()
+        {
+            DbContext = new DbContext
+            {
+                DbKey = dbKey,
+                Connection = connection,
+                OrmProvider = ormProvider,
+                MapProvider = mapProvider
+            }
+        };
+        //TODO:.With(this.options)
+        return repository;
     }
     public void With(OrmDbFactoryOptions options) => this.options = options;
     public void Build(Type ormProviderType)

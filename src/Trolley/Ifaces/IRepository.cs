@@ -13,6 +13,7 @@ namespace Trolley;
 public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
 {
     #region Properties
+    DbContext DbContext { get; set; }
     /// <summary>
     /// 数据库链接串Key
     /// </summary>

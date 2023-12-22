@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-class GroupingQueryBase<TGrouping> : IGroupingQueryBase<TGrouping>
+public class GroupingQueryBase<TGrouping> : IGroupingQueryBase<TGrouping>
 {
     #region Properties   
     public DbContext DbContext { get; private set; }
@@ -43,7 +43,7 @@ class GroupingQueryBase<TGrouping> : IGroupingQueryBase<TGrouping>
     }
     #endregion
 }
-class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T, TGrouping>
+public class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -100,7 +100,7 @@ class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery
     }
     #endregion
 }
-class GroupingQuery<T1, T2, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, TGrouping>
+public class GroupingQuery<T1, T2, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -163,7 +163,7 @@ class GroupingQuery<T1, T2, TGrouping> : GroupingQueryBase<TGrouping>, IGrouping
     }
     #endregion
 }
-class GroupingQuery<T1, T2, T3, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, TGrouping>
+public class GroupingQuery<T1, T2, T3, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -226,7 +226,7 @@ class GroupingQuery<T1, T2, T3, TGrouping> : GroupingQueryBase<TGrouping>, IGrou
     }
     #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, TGrouping>
+public class GroupingQuery<T1, T2, T3, T4, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -289,7 +289,7 @@ class GroupingQuery<T1, T2, T3, T4, TGrouping> : GroupingQueryBase<TGrouping>, I
     }
     #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, TGrouping>
+public class GroupingQuery<T1, T2, T3, T4, T5, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -352,7 +352,7 @@ class GroupingQuery<T1, T2, T3, T4, T5, TGrouping> : GroupingQueryBase<TGrouping
     }
     #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>
+public class GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -415,7 +415,7 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : GroupingQueryBase<TGrou
     }
     #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
+public class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -478,7 +478,7 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : GroupingQueryBase<T
     }
     #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>
+public class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -541,7 +541,7 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : GroupingQueryBa
     }
     #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>
+public class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -604,7 +604,7 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : GroupingQue
     }
     #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>
+public class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -667,7 +667,7 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : Groupi
     }
     #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>
+public class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -730,7 +730,7 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : G
     }
     #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>
+public class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -793,7 +793,7 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping
     }
     #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>
+public class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -856,7 +856,7 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGro
     }
     #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>
+public class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -919,7 +919,7 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14,
     }
     #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>
+public class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -982,7 +982,7 @@ class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14,
     }
     #endregion
 }
-class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>
+public class GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)

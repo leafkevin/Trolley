@@ -13,39 +13,21 @@ namespace Trolley;
 public class Repository : IRepository
 {
     #region Fields 
-    protected DbContext dbContext;
-    protected bool isParameterized => this.dbContext.IsParameterized;
+    protected bool isParameterized => this.DbContext.IsParameterized;
     #endregion
 
     #region Properties
-    public string DbKey => this.dbContext.DbKey;
-    public IDbConnection Connection => this.dbContext.Connection;
-    public IOrmProvider OrmProvider => this.dbContext.OrmProvider;
-    public IEntityMapProvider MapProvider => this.dbContext.MapProvider;
-    public IDbTransaction Transaction => this.dbContext.Transaction;
+    public DbContext DbContext { get; set; }
+    public string DbKey => this.DbContext.DbKey;
+    public IDbConnection Connection => this.DbContext.Connection;
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
+    public IEntityMapProvider MapProvider => this.DbContext.MapProvider;
+    public IDbTransaction Transaction => this.DbContext.Transaction;
     #endregion
 
     #region Constructor
-    public Repository(string dbKey, IDbConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
-    {
-        this.dbContext = new DbContext
-        {
-            DbKey = dbKey,
-            Connection = new TheaConnection { DbKey = dbKey, BaseConnection = connection },
-            OrmProvider = ormProvider,
-            MapProvider = mapProvider
-        };
-    }
-    public Repository(TheaConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
-    {
-        this.dbContext = new DbContext
-        {
-            DbKey = connection.DbKey,
-            Connection = connection,
-            OrmProvider = ormProvider,
-            MapProvider = mapProvider
-        };
-    }
+    public Repository() { }
+    public Repository(DbContext dbContext) => this.DbContext = dbContext;
     #endregion
 
     #region From
@@ -53,61 +35,61 @@ public class Repository : IRepository
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T), suffixRawSql);
-        return this.OrmProvider.NewQuery<T>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T>(this.DbContext, visitor);
     }
     public IQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2));
-        return this.OrmProvider.NewQuery<T1, T2>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2>(this.DbContext, visitor);
     }
     public IQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3));
-        return this.OrmProvider.NewQuery<T1, T2, T3>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3>(this.DbContext, visitor);
     }
     public IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-        return this.OrmProvider.NewQuery<T1, T2, T3, T4>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4>(this.DbContext, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
-        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5>(this.DbContext, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
-        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6>(this.DbContext, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
-        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7>(this.DbContext, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
-        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this.DbContext, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
-        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.DbContext, visitor);
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
-        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.dbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.DbContext, visitor);
     }
     #endregion
 
@@ -123,7 +105,7 @@ public class Repository : IRepository
     public IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery)
     {
         var visitor = this.CreateQueryVisitor('a');
-        var fromQuery = new FromQuery(this.dbContext, visitor);
+        var fromQuery = new FromQuery(this.DbContext, visitor);
         var query = subQuery.Invoke(fromQuery);
         var sql = query.Visitor.BuildSql(out var readerFields);
         if (!visitor.Equals(query.Visitor))
@@ -147,7 +129,7 @@ public class Repository : IRepository
     public IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery, string cteTableName = null)
     {
         var visitor = this.CreateQueryVisitor('a', true);
-        var fromQuery = new FromQuery(this.dbContext, visitor);
+        var fromQuery = new FromQuery(this.DbContext, visitor);
         var query = cteSubQuery.Invoke(fromQuery);
         if (!visitor.Equals(query.Visitor))
         {
@@ -166,7 +148,7 @@ public class Repository : IRepository
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        return this.dbContext.QueryFirst<TEntity>(f =>
+        return this.DbContext.QueryFirst<TEntity>(f =>
         {
             f.CommandText = rawSql;
             if (parameters != null)
@@ -181,7 +163,7 @@ public class Repository : IRepository
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        return await this.dbContext.QueryFirstAsync<TEntity>(f =>
+        return await this.DbContext.QueryFirstAsync<TEntity>(f =>
         {
             f.CommandText = rawSql;
             if (parameters != null)
@@ -196,7 +178,7 @@ public class Repository : IRepository
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
-        return this.dbContext.QueryFirst<TEntity>(f =>
+        return this.DbContext.QueryFirst<TEntity>(f =>
         {
             var entityType = typeof(TEntity);
             var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, false);
@@ -209,7 +191,7 @@ public class Repository : IRepository
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
-        return await this.dbContext.QueryFirstAsync<TEntity>(f =>
+        return await this.DbContext.QueryFirstAsync<TEntity>(f =>
         {
             var entityType = typeof(TEntity);
             var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, false);
@@ -222,7 +204,7 @@ public class Repository : IRepository
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        return this.dbContext.Query<TEntity>(f =>
+        return this.DbContext.Query<TEntity>(f =>
         {
             f.CommandText = rawSql;
             if (parameters != null)
@@ -237,7 +219,7 @@ public class Repository : IRepository
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        return await this.dbContext.QueryAsync<TEntity>(f =>
+        return await this.DbContext.QueryAsync<TEntity>(f =>
         {
             f.CommandText = rawSql;
             if (parameters != null)
@@ -252,7 +234,7 @@ public class Repository : IRepository
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
-        return this.dbContext.Query<TEntity>(f =>
+        return this.DbContext.Query<TEntity>(f =>
         {
             var entityType = typeof(TEntity);
             var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, false);
@@ -265,7 +247,7 @@ public class Repository : IRepository
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
-        return await this.dbContext.QueryAsync<TEntity>(f =>
+        return await this.DbContext.QueryAsync<TEntity>(f =>
         {
             var entityType = typeof(TEntity);
             var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, false);
@@ -276,21 +258,21 @@ public class Repository : IRepository
     #endregion
 
     #region Get
-    public TEntity Get<TEntity>(object whereObj) => this.dbContext.Get<TEntity>(whereObj);
+    public TEntity Get<TEntity>(object whereObj) => this.DbContext.Get<TEntity>(whereObj);
     public async Task<TEntity> GetAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
-        => await this.dbContext.GetAsync<TEntity>(whereObj, cancellationToken);
+        => await this.DbContext.GetAsync<TEntity>(whereObj, cancellationToken);
     #endregion
 
     #region Create
-    public virtual ICreate<TEntity> Create<TEntity>() => this.OrmProvider.NewCreate<TEntity>(this.dbContext);
+    public virtual ICreate<TEntity> Create<TEntity>() => this.OrmProvider.NewCreate<TEntity>(this.DbContext);
     public int Create<TEntity>(object insertObjs, int bulkCount = 500)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
 
-        using var command = this.dbContext.CreateCommand();
+        using var command = this.DbContext.CreateCommand();
         int result = 0;
-        bool isNeedClose = this.dbContext.IsNeedClose;
+        bool isNeedClose = this.DbContext.IsNeedClose;
         try
         {
             var entityType = typeof(TEntity);
@@ -313,7 +295,7 @@ public class Repository : IRepository
                         command.CommandText = sqlBuilder.ToString();
                         if (isFirst)
                         {
-                            this.dbContext.Connection.Open();
+                            this.DbContext.Connection.Open();
                             isFirst = false;
                         }
                         result += command.ExecuteNonQuery();
@@ -328,7 +310,7 @@ public class Repository : IRepository
                 if (index > 0)
                 {
                     command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) this.dbContext.Connection.Open();
+                    if (isFirst) this.DbContext.Connection.Open();
                     result = command.ExecuteNonQuery();
                 }
                 sqlBuilder.Clear();
@@ -358,9 +340,9 @@ public class Repository : IRepository
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
 
-        using var command = this.dbContext.CreateDbCommand();
+        using var command = this.DbContext.CreateDbCommand();
         int result = 0;
-        bool isNeedClose = this.dbContext.IsNeedClose;
+        bool isNeedClose = this.DbContext.IsNeedClose;
         try
         {
             var entityType = typeof(TEntity);
@@ -383,7 +365,7 @@ public class Repository : IRepository
                         command.CommandText = sqlBuilder.ToString();
                         if (isFirst)
                         {
-                            await this.dbContext.Connection.OpenAsync(cancellationToken);
+                            await this.DbContext.Connection.OpenAsync(cancellationToken);
                             isFirst = false;
                         }
                         result += await command.ExecuteNonQueryAsync(cancellationToken);
@@ -398,7 +380,7 @@ public class Repository : IRepository
                 if (index > 0)
                 {
                     command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) await this.dbContext.Connection.OpenAsync(cancellationToken);
+                    if (isFirst) await this.DbContext.Connection.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(cancellationToken);
                 }
                 sqlBuilder.Clear();
@@ -408,7 +390,7 @@ public class Repository : IRepository
                 var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjs, null, null, false);
                 var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
                 typedCommandInitializer.Invoke(command.Parameters, OrmProvider, insertObjs);
-                await this.dbContext.Connection.OpenAsync(cancellationToken);
+                await this.DbContext.Connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
             }
         }
@@ -430,7 +412,7 @@ public class Repository : IRepository
         bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
         if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
 
-        return this.dbContext.CreateIdentity<int>(f =>
+        return this.DbContext.CreateIdentity<int>(f =>
         {
             var entityType = typeof(TEntity);
             var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObj, null, null, true);
@@ -445,7 +427,7 @@ public class Repository : IRepository
         bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
         if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
 
-        return await this.dbContext.CreateIdentityAsync<int>(f =>
+        return await this.DbContext.CreateIdentityAsync<int>(f =>
         {
             var entityType = typeof(TEntity);
             var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObj, null, null, true);
@@ -460,7 +442,7 @@ public class Repository : IRepository
         bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
         if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
 
-        return this.dbContext.CreateIdentity<int>(f =>
+        return this.DbContext.CreateIdentity<int>(f =>
         {
             var entityType = typeof(TEntity);
             var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObj, null, null, true);
@@ -475,7 +457,7 @@ public class Repository : IRepository
         bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
         if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
 
-        return await this.dbContext.CreateIdentityAsync<long>(f =>
+        return await this.DbContext.CreateIdentityAsync<long>(f =>
         {
             var entityType = typeof(TEntity);
             var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObj, null, null, true);
@@ -486,13 +468,13 @@ public class Repository : IRepository
     #endregion
 
     #region Update
-    public virtual IUpdate<TEntity> Update<TEntity>() => this.OrmProvider.NewUpdate<TEntity>(this.dbContext);
+    public virtual IUpdate<TEntity> Update<TEntity>() => this.OrmProvider.NewUpdate<TEntity>(this.DbContext);
     public int Update<TEntity>(object updateObjs, int bulkCount = 500)
     {
         if (updateObjs == null)
             throw new ArgumentNullException(nameof(updateObjs));
 
-        using var command = this.dbContext.CreateCommand();
+        using var command = this.DbContext.CreateCommand();
         int result = 0;
         bool isNeedClose = this.Transaction == null;
         try
@@ -515,7 +497,7 @@ public class Repository : IRepository
                         command.CommandText = sqlBuilder.ToString();
                         if (isFirst)
                         {
-                            this.dbContext.Connection.Open();
+                            this.DbContext.Connection.Open();
                             isFirst = false;
                         }
                         result += command.ExecuteNonQuery();
@@ -529,7 +511,7 @@ public class Repository : IRepository
                 if (index > 0)
                 {
                     command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) this.dbContext.Connection.Open();
+                    if (isFirst) this.DbContext.Connection.Open();
                     result += command.ExecuteNonQuery();
                 }
                 sqlBuilder.Clear();
@@ -538,7 +520,7 @@ public class Repository : IRepository
             {
                 var commandInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjs, null, null);
                 command.CommandText = commandInitializer.Invoke(command.Parameters, this.OrmProvider, updateObjs);
-                this.dbContext.Connection.Open();
+                this.DbContext.Connection.Open();
                 result = command.ExecuteNonQuery();
             }
         }
@@ -558,9 +540,9 @@ public class Repository : IRepository
         if (updateObjs == null)
             throw new ArgumentNullException(nameof(updateObjs));
 
-        using var command = this.dbContext.CreateDbCommand();
+        using var command = this.DbContext.CreateDbCommand();
         int result = 0;
-        bool isNeedClose = this.dbContext.IsNeedClose;
+        bool isNeedClose = this.DbContext.IsNeedClose;
         try
         {
             var entityType = typeof(TEntity);
@@ -581,7 +563,7 @@ public class Repository : IRepository
                         command.CommandText = sqlBuilder.ToString();
                         if (isFirst)
                         {
-                            await this.dbContext.Connection.OpenAsync(cancellationToken);
+                            await this.DbContext.Connection.OpenAsync(cancellationToken);
                             isFirst = false;
                         }
                         result += await command.ExecuteNonQueryAsync(cancellationToken);
@@ -595,7 +577,7 @@ public class Repository : IRepository
                 if (index > 0)
                 {
                     command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) await this.dbContext.Connection.OpenAsync(cancellationToken);
+                    if (isFirst) await this.DbContext.Connection.OpenAsync(cancellationToken);
                     result += await command.ExecuteNonQueryAsync(cancellationToken);
                 }
                 sqlBuilder.Clear();
@@ -604,7 +586,7 @@ public class Repository : IRepository
             {
                 var commandInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjs, null, null);
                 command.CommandText = commandInitializer.Invoke(command.Parameters, this.OrmProvider, updateObjs);
-                await this.dbContext.Connection.OpenAsync(cancellationToken);
+                await this.DbContext.Connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
             }
         }
@@ -622,15 +604,15 @@ public class Repository : IRepository
     #endregion
 
     #region Delete
-    public virtual IDelete<TEntity> Delete<TEntity>() => this.OrmProvider.NewDelete<TEntity>(this.dbContext);
+    public virtual IDelete<TEntity> Delete<TEntity>() => this.OrmProvider.NewDelete<TEntity>(this.DbContext);
     public int Delete<TEntity>(object whereKeys)
     {
         if (whereKeys == null)
             throw new ArgumentNullException(nameof(whereKeys));
 
-        using var command = this.dbContext.CreateCommand();
+        using var command = this.DbContext.CreateCommand();
         int result = 0;
-        bool isNeedClose = this.dbContext.IsNeedClose;
+        bool isNeedClose = this.DbContext.IsNeedClose;
         try
         {
             var entityType = typeof(TEntity);
@@ -664,7 +646,7 @@ public class Repository : IRepository
                 var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
                 command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, whereKeys);
             }
-            this.dbContext.Connection.Open();
+            this.DbContext.Connection.Open();
             result = command.ExecuteNonQuery();
         }
         finally
@@ -679,9 +661,9 @@ public class Repository : IRepository
         if (whereKeys == null)
             throw new ArgumentNullException(nameof(whereKeys));
 
-        using var command = this.dbContext.CreateDbCommand();
+        using var command = this.DbContext.CreateDbCommand();
         int result = 0;
-        bool isNeedClose = this.dbContext.IsNeedClose;
+        bool isNeedClose = this.DbContext.IsNeedClose;
         try
         {
             var entityType = typeof(TEntity);
@@ -715,7 +697,7 @@ public class Repository : IRepository
                 var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
                 command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, whereKeys);
             }
-            await this.dbContext.Connection.OpenAsync(cancellationToken);
+            await this.DbContext.Connection.OpenAsync(cancellationToken);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         finally
@@ -733,7 +715,7 @@ public class Repository : IRepository
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
-        var result = this.dbContext.QueryFirst<int>(f =>
+        var result = this.DbContext.QueryFirst<int>(f =>
         {
             var entityType = typeof(TEntity);
             var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, false);
@@ -747,7 +729,7 @@ public class Repository : IRepository
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
-        var result = await this.dbContext.QueryFirstAsync<int>(f =>
+        var result = await this.DbContext.QueryFirstAsync<int>(f =>
         {
             var entityType = typeof(TEntity);
             var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, false);
@@ -768,7 +750,7 @@ public class Repository : IRepository
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        return this.dbContext.Execute(f =>
+        return this.DbContext.Execute(f =>
         {
             f.CommandText = rawSql;
             if (parameters != null)
@@ -783,7 +765,7 @@ public class Repository : IRepository
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        return await this.dbContext.ExecuteAsync(f =>
+        return await this.DbContext.ExecuteAsync(f =>
         {
             f.CommandText = rawSql;
             if (parameters != null)
@@ -801,16 +783,16 @@ public class Repository : IRepository
         if (subQueries == null)
             throw new ArgumentNullException(nameof(subQueries));
 
-        using var command = this.dbContext.CreateCommand();
+        using var command = this.DbContext.CreateCommand();
         IMultiQueryReader result = null;
         IDataReader reader = null;
-        bool isNeedClose = this.dbContext.IsNeedClose;
+        bool isNeedClose = this.DbContext.IsNeedClose;
         try
         {
-            using var multiQuery = new MultipleQuery(this.dbContext, command);
+            using var multiQuery = new MultipleQuery(this.DbContext, command);
             subQueries.Invoke(multiQuery);
             command.CommandText = multiQuery.BuildSql(out var readerAfters);
-            this.dbContext.Connection.Open();
+            this.DbContext.Connection.Open();
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             result = new MultiQueryReader(command, reader, readerAfters, isNeedClose);
         }
@@ -831,16 +813,16 @@ public class Repository : IRepository
         if (subQueries == null)
             throw new ArgumentNullException(nameof(subQueries));
 
-        using var command = this.dbContext.CreateDbCommand();
+        using var command = this.DbContext.CreateDbCommand();
         IMultiQueryReader result = null;
         DbDataReader reader = null;
-        bool isNeedClose = this.dbContext.IsNeedClose;
+        bool isNeedClose = this.DbContext.IsNeedClose;
         try
         {
-            using var multiQuery = new MultipleQuery(this.dbContext, command);
+            using var multiQuery = new MultipleQuery(this.DbContext, command);
             subQueries.Invoke(multiQuery);
             command.CommandText = multiQuery.BuildSql(out var readerAfters);
-            await this.dbContext.Connection.OpenAsync(cancellationToken);
+            await this.DbContext.Connection.OpenAsync(cancellationToken);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             result = new MultiQueryReader(command, reader, readerAfters, isNeedClose);
         }
@@ -865,8 +847,8 @@ public class Repository : IRepository
         if (commands == null || commands.Count == 0)
             throw new ArgumentNullException(nameof(commands));
 
-        using var command = this.dbContext.CreateCommand();
-        bool isNeedClose = this.dbContext.IsNeedClose;
+        using var command = this.DbContext.CreateCommand();
+        bool isNeedClose = this.DbContext.IsNeedClose;
         try
         {
             int commandIndex = 0;
@@ -908,7 +890,7 @@ public class Repository : IRepository
                 commandIndex++;
             }
             command.CommandText = sqlBuilder.ToString();
-            this.dbContext.Connection.Open();
+            this.DbContext.Connection.Open();
             var result = command.ExecuteNonQuery();
         }
         catch
@@ -926,8 +908,8 @@ public class Repository : IRepository
         if (commands == null || commands.Count == 0)
             throw new ArgumentNullException(nameof(commands));
 
-        using var command = this.dbContext.CreateDbCommand();
-        bool isNeedClose = this.dbContext.IsNeedClose;
+        using var command = this.DbContext.CreateDbCommand();
+        bool isNeedClose = this.DbContext.IsNeedClose;
         try
         {
             int commandIndex = 0;
@@ -969,7 +951,7 @@ public class Repository : IRepository
                 commandIndex++;
             }
             command.CommandText = sqlBuilder.ToString();
-            await this.dbContext.Connection.OpenAsync(cancellationToken);
+            await this.DbContext.Connection.OpenAsync(cancellationToken);
             var result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch
@@ -989,30 +971,30 @@ public class Repository : IRepository
     public async Task CloseAsync() => await this.DisposeAsync();
     public IRepository Timeout(int timeout)
     {
-        this.dbContext.Connection.CommandTimeout = timeout;
+        this.DbContext.Connection.CommandTimeout = timeout;
         return this;
     }
     public IRepository WithParameterized(bool isParameterized = true)
     {
-        this.dbContext.IsParameterized = isParameterized;
+        this.DbContext.IsParameterized = isParameterized;
         return this;
     }
     public IRepository With(OrmDbFactoryOptions options)
     {
         if (options == null) return this;
-        this.dbContext.IsParameterized = options.IsParameterized;
-        this.dbContext.Connection.CommandTimeout = options.Timeout;
+        this.DbContext.IsParameterized = options.IsParameterized;
+        this.DbContext.Connection.CommandTimeout = options.Timeout;
         return this;
     }
     public void BeginTransaction()
     {
-        this.dbContext.Connection.Open();
-        this.dbContext.Transaction = this.dbContext.Connection.BeginTransaction();
+        this.DbContext.Connection.Open();
+        this.DbContext.Transaction = this.DbContext.Connection.BeginTransaction();
     }
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
-        await this.dbContext.Connection.OpenAsync(cancellationToken);
-        this.dbContext.Transaction = await this.dbContext.Connection.BeginTransactionAsync(cancellationToken);
+        await this.DbContext.Connection.OpenAsync(cancellationToken);
+        this.DbContext.Transaction = await this.DbContext.Connection.BeginTransactionAsync(cancellationToken);
     }
     public void Commit()
     {
@@ -1046,12 +1028,12 @@ public class Repository : IRepository
     }
     public void Dispose()
     {
-        this.dbContext.Dispose();
+        this.DbContext.Dispose();
         GC.SuppressFinalize(this);
     }
     public async ValueTask DisposeAsync()
     {
-        await this.dbContext.DisposeAsync();
+        await this.DbContext.DisposeAsync();
         GC.SuppressFinalize(this);
     }
     ~Repository() => this.Dispose();
