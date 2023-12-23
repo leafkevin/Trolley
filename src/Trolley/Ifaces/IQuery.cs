@@ -274,10 +274,9 @@ public interface IQuery<T> : IQueryBase
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级  
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// repository.From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// repository.From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// repository.From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
@@ -290,8 +289,7 @@ public interface IQuery<T> : IQueryBase
     /// <code>
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    ///   .ThenInclude(f =&gt; f.Product) //可继续加载订单中的产品信息
     /// </code>
     /// </summary>
     /// <typeparam name="TElment">导航属性泛型类型</typeparam>

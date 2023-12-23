@@ -198,45 +198,42 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <summary>
     /// 使用CTE子句创建查询对象，不能自我引用不能递归查询，用法：
     /// <code>
-    /// var subQuery = repository.From&lt;Menu&gt;()
-    ///     .Select(x =&gt; new { x.Id, x.Name, x.ParentId, x.PageId });
-    /// repository.FromWith(subQuery, "MenuList") ...
+    /// var subQuery = repository.From&lt;Menu&gt;() ...
+    ///     .Select(x =&gt; new { ... });
+    /// repository.FromWith(subQuery) ...
     /// SQL:
     /// WITH MenuList(Id,Name,ParentId,PageId) AS 
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId`,`PageId` FROM `sys_menu`
+    ///     SELECT ... FROM `sys_menu`a
     /// )
     /// ...
     /// </code>
     /// </summary>
     /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
     /// <param name="cteSubQuery">CTE 查询子句</param>
-    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> FromWith<T>(IQuery<T> cteSubQuery, string cteTableName = null);
+    IQuery<T> FromWith<T>(IQuery<T> cteSubQuery);
     /// <summary>
     /// 使用CTE子句创建查询对象，包含UnionRecursive或UnionAllRecursive子句可以自我引用递归查询，用法：
     /// <code>
     /// repository
-    ///     .FromWith(f =&gt; f.From&lt;Menu&gt;()
-    ///             .Where(x =&gt; x.Id == 1)
-    ///             .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
+    ///     .FromWith(f =&gt; f.From&lt;Menu&gt;() ...
+    ///             .Select(x =&gt; new { ... })
     ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///             .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId })), "MenuList") ...
+    ///             .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE MenuList(Id,Name,ParentId) AS
+    /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id`
+    ///     SELECT ... FROM `sys_menu` WHERE a.`Id`=1 UNION ALL
+    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id`
     /// ) ...
     /// </code>
     /// </summary>
     /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
     /// <param name="cteSubQuery">CTE 查询子句</param>
-    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery, string cteTableName = null);
+    IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery);
     #endregion
 
     #region QueryFirst/Query
@@ -330,7 +327,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// repository.Get&lt;User&gt;(new { Id = 1 }) //或是
     /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ... };
     /// repository.Get&lt;User&gt;(userInfo) //三种写法是等效的
-    /// SQL: SELECT ... FROM `sys_user` WHERE `Id`=@Id
+    /// SQL: SELECT ... FROM `sys_user` a WHERE a.`Id`=@Id
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
@@ -344,7 +341,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// await repository.GetAsync&lt;User&gt;(new { Id = 1 }) //或是
     /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ...};
     /// await repository.GetAsync&lt;User&gt;(userInfo) //三种写法是等效的
-    /// SQL: SELECT ... FROM `sys_user` WHERE `Id`=@Id
+    /// SQL: SELECT ... FROM `sys_user` a WHERE a.`Id`=@Id
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>

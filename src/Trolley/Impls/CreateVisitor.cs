@@ -100,10 +100,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual string BuildSql()
     {
-        if (this.IsFromWith)
-        {
-
-        }
         var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
         var fieldsBuilder = new StringBuilder($"INSERT INTO {tableName} (");
 
@@ -122,13 +118,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             valuesBuilder.Append(insertField.Values);
         }
         fieldsBuilder.Append(')');
-        if (this.IsFromWith)
-        {
-            valuesBuilder.Append($" FROM {fromTables}");
-            if (!string.IsNullOrEmpty(this.whereSql))
-                valuesBuilder.Append(" WHERE " + this.whereSql);
-        }
-        else valuesBuilder.Append(')');
         valuesBuilder.Append(')');
 
         if (this.IsReturnIdentity)

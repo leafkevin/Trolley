@@ -168,9 +168,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     ///         .Select((a, b, c) =&gt; new { ... }))) ...
     /// SQL:
     /// WITH RECURSIVE MyCte1(Id,Url) AS 
-    /// (
-    ///     ...
-    /// ),
+    /// ... ,
     /// MyCte2(Id,Name,ParentId,Url) AS
     /// (
     ///     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
@@ -182,7 +180,6 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
     /// <code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
     /// </param>
-    /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T, TOther> NextWith<TOther>(Func<IFromQuery, IMultiQuery<T>, IQuery<TOther>> cteSubQuery);
     #endregion
@@ -208,10 +205,9 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级  
     /// <code>
-    /// f.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// f.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// f.From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// f.From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// f.From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
@@ -224,7 +220,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <code>
     /// f.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
+    ///   .ThenInclude(f =&gt; f.Product) //可继续加载订单中的产品信息
     ///   ...
     /// </code>
     /// </summary>

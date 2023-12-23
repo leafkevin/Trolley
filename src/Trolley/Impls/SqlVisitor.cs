@@ -30,6 +30,7 @@ public class SqlVisitor : ISqlVisitor
     protected OperationType LastWhereNodeType { get; set; } = OperationType.None;
     protected char TableAsStart { get; set; }
     protected List<ReaderField> GroupFields { get; set; }
+    protected bool IsNeedAlias { get; set; }
 
     public string DbKey { get; set; }
     public IDataParameterCollection DbParameters { get; set; }
@@ -39,15 +40,6 @@ public class SqlVisitor : ISqlVisitor
     public bool IsMultiple { get; set; }
     public int CommandIndex { get; set; }
 
-    //public SqlVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-    //{
-    //    this.DbKey = dbKey;
-    //    this.OrmProvider = ormProvider;
-    //    this.MapProvider = mapProvider;
-    //    this.IsParameterized = isParameterized;
-    //    this.TableAsStart = tableAsStart;
-    //    this.ParameterPrefix = parameterPrefix;
-    //}
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
         dbParameters = null;

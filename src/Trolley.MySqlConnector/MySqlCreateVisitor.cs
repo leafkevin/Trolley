@@ -228,15 +228,15 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
                 }
                 return sqlSegment;
             }
-            else if (this.IsSelect)
-            {
-                var readerFields = new List<ReaderField>();
-                for (int i = 0; i < newExpr.Arguments.Count; i++)
-                {
-                    this.AddSelectElement(newExpr.Arguments[i], newExpr.Members[i], readerFields);
-                }
-                return sqlSegment.ChangeValue(readerFields);
-            }
+            //else if (this.IsSelect)
+            //{
+            //    var readerFields = new List<ReaderField>();
+            //    for (int i = 0; i < newExpr.Arguments.Count; i++)
+            //    {
+            //        this.AddSelectElement(newExpr.Arguments[i], newExpr.Members[i], readerFields);
+            //    }
+            //    return sqlSegment.ChangeValue(readerFields);
+            //}
         }
         return this.Evaluate(sqlSegment);
     }
@@ -257,23 +257,23 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
                 this.AddMemberElement(i, new SqlSegment { Expression = memberAssignment.Expression, MemberMapper = memberMapper }, memberMapper);
             }
         }
-        else if (this.IsSelect)
-        {
-            var readerFields = new List<ReaderField>();
-            for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
-            {
-                if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)
-                    throw new Exception("暂时不支持除MemberBindingType.Assignment类型外的成员绑定表达式");
-                var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                this.AddSelectElement(memberAssignment.Expression, memberAssignment.Member, readerFields);
-            }
-            return sqlSegment.ChangeValue(readerFields);
-        }
+        //else if (this.IsSelect)
+        //{
+        //    var readerFields = new List<ReaderField>();
+        //    for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
+        //    {
+        //        if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)
+        //            throw new Exception("暂时不支持除MemberBindingType.Assignment类型外的成员绑定表达式");
+        //        var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
+        //        this.AddSelectElement(memberAssignment.Expression, memberAssignment.Member, readerFields);
+        //    }
+        //    return sqlSegment.ChangeValue(readerFields);
+        //}
         return this.Evaluate(sqlSegment);
     }
     public override string VisitCteQueryVisitor(IQueryVisitor queryVisitor, object queryObj)
     {
-        var cteTableName = "import_data";
+        var cteTableName = "MyImportData";
         var rawSql = queryVisitor.BuildSql(out var readerFields, false);
         var entityMapper = this.Tables[0].Mapper;
         var builder = new StringBuilder();

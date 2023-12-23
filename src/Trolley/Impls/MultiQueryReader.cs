@@ -227,13 +227,15 @@ class MultiQueryReader : IMultiQueryReader
     }
     private void NextReader(ReaderAfter readerAfter, object target)
     {
-        if (readerAfter.QueryVisitor != null && readerAfter.QueryVisitor.BuildIncludeSql(target, out var sql))
+        var visitor = readerAfter.QueryVisitor;
+        if (visitor != null && visitor.BuildIncludeSql(readerAfter.TargetType, target, out var sql))
         {
             this.nextAfters ??= new();
             this.nextAfters.Add(new NextReaderAfter
             {
+                TargetType = readerAfter.TargetType,
                 Sql = sql,
-                Visitor = readerAfter.QueryVisitor,
+                Visitor = visitor,
                 Target = target
             });
         }
@@ -253,7 +255,7 @@ class MultiQueryReader : IMultiQueryReader
             using var includeReader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             foreach (var nextAfter in this.nextAfters)
             {
-                nextAfter.Visitor.SetIncludeValues(nextAfter.Target, includeReader);
+                nextAfter.Visitor.SetIncludeValues(nextAfter.TargetType, nextAfter.Target, includeReader);
             }
             if (!includeReader.NextResult())
                 this.Dispose();
@@ -262,13 +264,15 @@ class MultiQueryReader : IMultiQueryReader
     }
     private async Task NextReaderAsync(ReaderAfter readerAfter, object target, CancellationToken cancellationToken)
     {
-        if (readerAfter.QueryVisitor != null && readerAfter.QueryVisitor.BuildIncludeSql(target, out var sql))
+        var visitor = readerAfter.QueryVisitor;
+        if (visitor != null && visitor.BuildIncludeSql(readerAfter.TargetType, target, out var sql))
         {
             this.nextAfters ??= new();
             this.nextAfters.Add(new NextReaderAfter
             {
+                TargetType = readerAfter.TargetType,
                 Sql = sql,
-                Visitor = readerAfter.QueryVisitor,
+                Visitor = visitor,
                 Target = target
             });
         }
@@ -294,7 +298,7 @@ class MultiQueryReader : IMultiQueryReader
             using var includeReader = await dbCommand.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             foreach (var nextAfter in this.nextAfters)
             {
-                nextAfter.Visitor.SetIncludeValues(nextAfter.Target, includeReader);
+                nextAfter.Visitor.SetIncludeValues(nextAfter.TargetType, nextAfter.Target, includeReader);
             }
             if (!await includeReader.NextResultAsync(cancellationToken))
                 await this.DisposeAsync();
@@ -303,6 +307,7 @@ class MultiQueryReader : IMultiQueryReader
     }
     struct NextReaderAfter
     {
+        public Type TargetType { get; set; }
         public string Sql { get; set; }
         public IQueryVisitor Visitor { get; set; }
         public object Target { get; set; }

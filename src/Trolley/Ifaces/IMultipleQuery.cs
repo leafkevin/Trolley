@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data;
 using System.Linq.Expressions;
 
 namespace Trolley;
@@ -136,12 +134,10 @@ public interface IMultipleQuery
     /// 从SQL子查询中查询数据，用法：
     /// <code>
     /// repository
-    ///     .From(f =&gt; f.From&lt;Page, Menu&gt;('o')
-    ///         .Where((a, b) =&gt; a.Id == b.PageId)
-    ///         .Select((x, y) =&gt; new { y.Id, y.ParentId, x.Url }))
-    ///     ...
+    ///     .From(f =&gt; f.From&lt;Page, Menu&gt;('o') ...
+    ///         .Select((x, y) =&gt; new { ... }))
     /// SQL:
-    /// ... FROM (SELECT p.`Id`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) ...
+    /// ... FROM (SELECT ... FROM `sys_page` o,`sys_menu` p WHERE ...) ...
     /// </code>
     /// </summary>
     /// <typeparam name="T">表T实体类型</typeparam>
@@ -156,46 +152,40 @@ public interface IMultipleQuery
     /// 使用CTE子句创建查询对象，不能自我引用不能递归查询，用法：
     /// <code>
     /// var subQuery = f.From&lt;Menu&gt;()
-    ///     .Select(x =&gt; new { x.Id, x.Name, x.ParentId, x.PageId });
-    /// f.FromWith(subQuery, "MenuList") ...
+    ///     .Select(x =&gt; new { ... });
+    /// f.FromWith(subQuery) ...
     /// SQL:
-    /// WITH MenuList(Id,Name,ParentId,PageId) AS 
+    /// WITH MyCte1(Id,Name,ParentId,PageId) AS 
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId`,`PageId` FROM `sys_menu`
+    ///     SELECT ... FROM `sys_menu`
     /// )
     /// ...
     /// </code>
     /// </summary>
     /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
     /// <param name="cteSubQuery">CTE 查询子句</param>
-    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    ///IMultiQuery<T> FromWith<T>(IMultiQuery<T> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
+    IMultiQuery<T> FromWith<T>(IQuery<T> cteSubQuery);
     /// <summary>
     /// 使用CTE子句创建查询对象，包含UnionRecursive或UnionAllRecursive子句可以自我引用递归查询，用法：
     /// <code>
-    /// f.FromWith((f, cte) =&gt; f.From&lt;Menu&gt;()
-    ///         .Where(x =&gt; x.Id == 1)
-    ///         .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
-    ///     .UnionAllRecursive((x, y) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoinRecursive(y, cte, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId })), "MenuList")
-    /// ...
+    /// f.FromWith(f =&gt; f.From&lt;Menu&gt;() ...
+    ///         .Select(x =&gt; new { ... })
+    ///     .UnionRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+    ///         .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE MenuList(Id,Name,ParentId) AS
+    /// WITH RECURSIVE MyCte1(Id,Name,ParentId,PageId) AS 
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id`
+    /// SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION
+    /// SELECT ... FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id` ...
     /// ) ...
     /// </code>
     /// </summary>
     /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
     /// <param name="cteSubQuery">CTE 查询子句</param>
-    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
+    IMultiQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery);
     #endregion
 
     #region QueryFirst/Query

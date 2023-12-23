@@ -77,19 +77,19 @@ public interface IOrmProvider
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> NewGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> NewGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
 
-    IFromCommand<T> NewFromCommand<T>(DbContext dbContext, IQueryVisitor visitor);
-    IFromCommand<T1, T2> NewFromCommand<T1, T2>(DbContext dbContext, IQueryVisitor visitor);
-    IFromCommand<T1, T2, T3> NewFromCommand<T1, T2, T3>(DbContext dbContext, IQueryVisitor visitor);
-    IFromCommand<T1, T2, T3, T4> NewFromCommand<T1, T2, T3, T4>(DbContext dbContext, IQueryVisitor visitor);
-    IFromCommand<T1, T2, T3, T4, T5> NewFromCommand<T1, T2, T3, T4, T5>(DbContext dbContext, IQueryVisitor visitor);
-    IFromCommand<T1, T2, T3, T4, T5, T6> NewFromCommand<T1, T2, T3, T4, T5, T6>(DbContext dbContext, IQueryVisitor visitor);
+    IFromCommand<T> NewFromCommand<T>(Type entityType, DbContext dbContext, IQueryVisitor visitor);
+    IFromCommand<T1, T2> NewFromCommand<T1, T2>(Type entityType, DbContext dbContext, IQueryVisitor visitor);
+    IFromCommand<T1, T2, T3> NewFromCommand<T1, T2, T3>(Type entityType, DbContext dbContext, IQueryVisitor visitor);
+    IFromCommand<T1, T2, T3, T4> NewFromCommand<T1, T2, T3, T4>(Type entityType, DbContext dbContext, IQueryVisitor visitor);
+    IFromCommand<T1, T2, T3, T4, T5> NewFromCommand<T1, T2, T3, T4, T5>(Type entityType, DbContext dbContext, IQueryVisitor visitor);
+    IFromCommand<T1, T2, T3, T4, T5, T6> NewFromCommand<T1, T2, T3, T4, T5, T6>(Type entityType, DbContext dbContext, IQueryVisitor visitor);
 
-    IGroupingCommand<T, TGrouping> NewGroupCommand<T, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
-    IGroupingCommand<T1, T2, TGrouping> NewGroupCommand<T1, T2, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
-    IGroupingCommand<T1, T2, T3, TGrouping> NewGroupCommand<T1, T2, T3, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
-    IGroupingCommand<T1, T2, T3, T4, TGrouping> NewGroupCommand<T1, T2, T3, T4, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
-    IGroupingCommand<T1, T2, T3, T4, T5, TGrouping> NewGroupCommand<T1, T2, T3, T4, T5, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
-    IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> NewGroupCommand<T1, T2, T3, T4, T5, T6, TGrouping>(DbContext dbContext, IQueryVisitor visitor);
+    IGroupingCommand<T, TGrouping> NewGroupCommand<T, TGrouping>(Type entityType, DbContext dbContext, IQueryVisitor visitor);
+    IGroupingCommand<T1, T2, TGrouping> NewGroupCommand<T1, T2, TGrouping>(Type entityType, DbContext dbContext, IQueryVisitor visitor);
+    IGroupingCommand<T1, T2, T3, TGrouping> NewGroupCommand<T1, T2, T3, TGrouping>(Type entityType, DbContext dbContext, IQueryVisitor visitor);
+    IGroupingCommand<T1, T2, T3, T4, TGrouping> NewGroupCommand<T1, T2, T3, T4, TGrouping>(Type entityType, DbContext dbContext, IQueryVisitor visitor);
+    IGroupingCommand<T1, T2, T3, T4, T5, TGrouping> NewGroupCommand<T1, T2, T3, T4, T5, TGrouping>(Type entityType, DbContext dbContext, IQueryVisitor visitor);
+    IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> NewGroupCommand<T1, T2, T3, T4, T5, T6, TGrouping>(Type entityType, DbContext dbContext, IQueryVisitor visitor);
 
     IMultiQuery<T> NewMultiQuery<T>(MultipleQuery multiQuery, IQueryVisitor visitor);
     IMultiQuery<T1, T2> NewMultiQuery<T1, T2>(MultipleQuery multiQuery, IQueryVisitor visitor);

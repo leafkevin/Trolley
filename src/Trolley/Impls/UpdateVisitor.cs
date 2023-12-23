@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Trolley;
@@ -234,6 +233,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public virtual IUpdateVisitor SetFrom(Expression fieldsAssignment)
     {
+        this.IsNeedAlias = true;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "SetFrom",
@@ -243,6 +243,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public virtual IUpdateVisitor SetFrom(Expression fieldSelector, Expression valueSelector)
     {
+        this.IsNeedAlias = true;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "SetFromField",
@@ -479,7 +480,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.LastWhereNodeType = OperationType.None;
         this.IsFromQuery = false;
         this.TableAsStart = 'a';
-        //this.CteTableName = null;
         this.IsNeedAlias = false;
 
         this.IsFrom = false;
@@ -565,8 +565,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
-                        var sql = this.VisitFromQuery(newLambdaExpr, out var isNeedAlias);
-                        if (isNeedAlias) this.IsNeedAlias = true;
+                        var sql = this.VisitFromQuery(newLambdaExpr);
                         this.UpdateFields.Add(new FieldsSegment { Fields = this.OrmProvider.GetFieldName(memberMapper.FieldName), Values = $"({sql})" });
                     }
                     else
@@ -592,8 +591,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
-                        var sql = this.VisitFromQuery(newLambdaExpr, out var isNeedAlias);
-                        if (isNeedAlias) this.IsNeedAlias = true;
+                        var sql = this.VisitFromQuery(newLambdaExpr);
                         this.UpdateFields.Add(new FieldsSegment { Fields = this.OrmProvider.GetFieldName(memberMapper.FieldName), Values = $"({sql})" });
                     }
                     else
@@ -618,7 +616,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
 
         this.InitTableAlias(valueSelector as LambdaExpression);
-        var sql = this.VisitFromQuery(valueSelector as LambdaExpression, out var isNeedAlias);
+        var sql = this.VisitFromQuery(valueSelector as LambdaExpression);
         this.UpdateFields.Add(new FieldsSegment { Fields = this.OrmProvider.GetFieldName(memberMapper.FieldName), Values = $"({sql})" });
     }
     protected virtual void VisitWhereWith(object whereObj)

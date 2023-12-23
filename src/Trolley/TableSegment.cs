@@ -120,9 +120,7 @@ public class TableSegment
             Path = this.Path,
             Filter = this.Filter,
             OnExpr = joinOnExpr,
-            ReaderFields = this.ReaderFields,
-            IsNeedAlais = this.IsNeedAlais,
-            IsUsed = false
+            ReaderFields = this.ReaderFields
         };
     }
 

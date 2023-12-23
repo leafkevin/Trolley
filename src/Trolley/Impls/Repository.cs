@@ -97,37 +97,28 @@ public class Repository : IRepository
     public IQuery<T> From<T>(IQuery<T> subQuery)
     {
         var visitor = subQuery.Visitor;
-        visitor.From(typeof(T), subQuery);
+        visitor.From(typeof(T), true, subQuery);
         return subQuery;
     }
 
     public IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery)
     {
         var visitor = this.CreateQueryVisitor('a');
-        var fromQuery = new FromQuery(this.DbContext, visitor);
-        var query = subQuery.Invoke(fromQuery);
-        var sql = query.Visitor.BuildSql(out var readerFields);
-        if (!visitor.Equals(query.Visitor))
-        {
-            visitor.Dispose();
-            visitor = query.Visitor;
-        }
-        visitor.WithTable(typeof(T), sql, readerFields);
-        return query;
+        return visitor.From(typeof(T), true, this.DbContext, subQuery) as IQuery<T>;
     }
     #endregion
 
     #region FromWith
-    public IQuery<T> FromWith<T>(IQuery<T> cteSubQuery, string cteTableName = null)
+    public IQuery<T> FromWith<T>(IQuery<T> cteSubQuery)
     {
         var visitor = cteSubQuery.Visitor;
-        visitor.FromWith(typeof(T), () => cteSubQuery);
+        visitor.FromWith(typeof(T), true, cteSubQuery);
         return cteSubQuery;
     }
-    public IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery, string cteTableName = null)
+    public IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery)
     {
         var visitor = this.CreateQueryVisitor('a', true);
-        return visitor.FromWith(typeof(T), this.DbContext, cteSubQuery) as IQuery<T>;
+        return visitor.FromWith(typeof(T), true, this.DbContext, cteSubQuery) as IQuery<T>;
     }
     #endregion
 

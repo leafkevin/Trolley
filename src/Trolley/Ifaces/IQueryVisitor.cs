@@ -20,10 +20,10 @@ public interface IQueryVisitor : IDisposable
     TableSegment SelfTableSegment { get; set; }
 
     string BuildSql(out List<ReaderField> readerFields, bool hasCteSql = true, bool isUnion = false);
-
+    string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters);
     void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes);
-    void From(Type targetType, bool isFirst, IVisitableQuery subQueryObj);
-    void From(Type targetType, bool isFirst, DbContext dbContext, Delegate subQueryGetter);
+    IVisitableQuery From(Type targetType, bool isFirst, IVisitableQuery subQueryObj);
+    IVisitableQuery From(Type targetType, bool isFirst, DbContext dbContext, Delegate subQueryGetter);
     IVisitableQuery FromWith(Type targetType, bool isFirst, IVisitableQuery cteQueryObjGetter);
     IVisitableQuery FromWith(Type targetType, bool isFirst, DbContext dbContext, Delegate cteSubQueryGetter);
 

@@ -6,14 +6,16 @@ namespace Trolley;
 public class GroupingCommandBase<TGrouping> : IGroupingCommandBase<TGrouping>
 {
     #region Properties   
+    public Type EntityType { get; private set; }
     public DbContext DbContext { get; private set; }
     public IQueryVisitor Visitor { get; private set; }
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
-    public GroupingCommandBase(DbContext dbContext, IQueryVisitor visitor)
+    public GroupingCommandBase(Type entityType, DbContext dbContext, IQueryVisitor visitor)
     {
+        this.EntityType = entityType;
         this.DbContext = dbContext;
         this.Visitor = visitor;
     }
@@ -23,7 +25,7 @@ public class GroupingCommandBase<TGrouping> : IGroupingCommandBase<TGrouping>
     public IFromCommand<TGrouping> Select()
     {
         this.Visitor.SelectGrouping();
-        return this.OrmProvider.NewFromCommand<TGrouping>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TGrouping>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<TTarget> Select<TTarget>(string fields = "*")
     {
@@ -31,15 +33,15 @@ public class GroupingCommandBase<TGrouping> : IGroupingCommandBase<TGrouping>
             throw new ArgumentNullException(nameof(fields));
 
         this.Visitor.Select(fields, null);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 }
 public class GroupingCommand<T, TGrouping> : GroupingCommandBase<TGrouping>, IGroupingCommand<T, TGrouping>
 {
     #region Constructor
-    public GroupingCommand(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public GroupingCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
+        : base(entityType, dbContext, visitor) { }
     #endregion
 
     #region Having
@@ -88,15 +90,15 @@ public class GroupingCommand<T, TGrouping> : GroupingCommandBase<TGrouping>, IGr
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 }
 public class GroupingCommand<T1, T2, TGrouping> : GroupingCommandBase<TGrouping>, IGroupingCommand<T1, T2, TGrouping>
 {
     #region Constructor
-    public GroupingCommand(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public GroupingCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
+        : base(entityType, dbContext, visitor) { }
     #endregion
 
     #region Having
@@ -151,15 +153,15 @@ public class GroupingCommand<T1, T2, TGrouping> : GroupingCommandBase<TGrouping>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 }
 public class GroupingCommand<T1, T2, T3, TGrouping> : GroupingCommandBase<TGrouping>, IGroupingCommand<T1, T2, T3, TGrouping>
 {
     #region Constructor
-    public GroupingCommand(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public GroupingCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
+        : base(entityType, dbContext, visitor) { }
     #endregion
 
     #region Having
@@ -214,15 +216,15 @@ public class GroupingCommand<T1, T2, T3, TGrouping> : GroupingCommandBase<TGroup
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 }
 public class GroupingCommand<T1, T2, T3, T4, TGrouping> : GroupingCommandBase<TGrouping>, IGroupingCommand<T1, T2, T3, T4, TGrouping>
 {
     #region Constructor
-    public GroupingCommand(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public GroupingCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
+        : base(entityType, dbContext, visitor) { }
     #endregion
 
     #region Having
@@ -277,15 +279,15 @@ public class GroupingCommand<T1, T2, T3, T4, TGrouping> : GroupingCommandBase<TG
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 }
 public class GroupingCommand<T1, T2, T3, T4, T5, TGrouping> : GroupingCommandBase<TGrouping>, IGroupingCommand<T1, T2, T3, T4, T5, TGrouping>
 {
     #region Constructor
-    public GroupingCommand(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public GroupingCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
+        : base(entityType, dbContext, visitor) { }
     #endregion
 
     #region Having
@@ -340,15 +342,15 @@ public class GroupingCommand<T1, T2, T3, T4, T5, TGrouping> : GroupingCommandBas
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 }
 public class GroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : GroupingCommandBase<TGrouping>, IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping>
 {
     #region Constructor
-    public GroupingCommand(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public GroupingCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
+        : base(entityType, dbContext, visitor) { }
     #endregion
 
     #region Having
@@ -403,7 +405,7 @@ public class GroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : GroupingComman
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 }

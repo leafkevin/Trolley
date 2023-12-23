@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public interface IFromCommand
+public interface IFromCommand : IDisposable
 {
     #region Visitor
     DbContext DbContext { get; }

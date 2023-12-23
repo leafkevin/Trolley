@@ -460,7 +460,7 @@ public class MySqlUnitTest2 : UnitTestBase
         using var repository = dbFactory.Create();
         var result = repository.From<Order>()
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-            .IncludeMany((x, y) => x.Details)
+            .IncludeMany((x, y) => x.Details).ThenInclude(f => f.Product)
             .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new int[] { 1, 2, 3 }))
             .Select((x, y) => new { Order = x, Buyer = y })
             .ToList();

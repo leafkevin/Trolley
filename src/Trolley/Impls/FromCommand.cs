@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,11 +15,13 @@ public class FromCommand : IFromCommand
     public DbContext DbContext { get; set; }
     public IQueryVisitor Visitor { get; set; }
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
+    public IEntityMapProvider MapProvider => this.DbContext.MapProvider;
     #endregion
 
     #region Constructor
-    public FromCommand(DbContext dbContext, IQueryVisitor visitor)
+    public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
     {
+        this.EntityType = entityType;
         this.DbContext = dbContext;
         this.Visitor = visitor;
     }
@@ -31,48 +34,61 @@ public class FromCommand : IFromCommand
             throw new ArgumentNullException(nameof(fields));
 
         this.Visitor.Select(fields);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 
     #region Execute
     public int Execute()
     {
-        throw new NotImplementedException();
+        var sql = this.Visitor.BuildCommandSql(this.EntityType, out var dbParameters);
+        var result = this.DbContext.Execute(f =>
+        {
+            f.CommandText = sql;
+            dbParameters.CopyTo(f.Parameters);
+        });
+        this.Dispose();
+        return result;
     }
-    public Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
+    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var sql = this.Visitor.BuildCommandSql(this.EntityType, out var dbParameters);
+        var result = await this.DbContext.ExecuteAsync(f =>
+        {
+            f.CommandText = sql;
+            dbParameters.CopyTo(f.Parameters);
+        }, cancellationToken);
+        this.Dispose();
+        return result;
     }
     #endregion
 
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        throw new NotImplementedException();
+        var sql = this.Visitor.BuildCommandSql(this.EntityType, out var dbDataParameters);
+        dbParameters = dbDataParameters.Cast<IDbDataParameter>().ToList();
+        this.Dispose();
+        return sql;
     }
     #endregion
 
     #region Dispose
     public void Dispose()
     {
-        this.DbContext.Dispose();
+        this.EntityType = null;
+        //DbContext自己会处理释放，此处什么也不做
         this.DbContext = null;
         this.Visitor.Dispose();
         this.Visitor = null;
-    }
-    public async ValueTask DisposeAsync()
-    {
-        await this.DbContext.DisposeAsync();
-        this.Visitor.Dispose();
     }
     #endregion
 }
 public class FromCommand<T> : FromCommand, IFromCommand<T>
 {
     #region Constructor
-    public FromCommand(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
+        : base(entityType, dbContext, visitor) { }
     #endregion
 
     #region Union/UnionAll
@@ -117,7 +133,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<T, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
@@ -125,7 +141,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<T, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
@@ -133,7 +149,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<T, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
@@ -143,7 +159,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", typeof(TOther), subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
@@ -153,7 +169,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(TOther), subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
@@ -163,7 +179,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
@@ -173,7 +189,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
@@ -183,7 +199,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
@@ -193,7 +209,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -243,7 +259,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewGroupCommand<T, TGrouping>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewGroupCommand<T, TGrouping>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -279,7 +295,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
     {
@@ -287,11 +303,24 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    #endregion   
+
+    #region Distinct
+    public IFromCommand<T> Distinct()
+    {
+        this.Visitor.Distinct();
+        return this;
     }
     #endregion
 
-    #region Take    
+    #region Take 
+    public IFromCommand<T> Skip(int offset)
+    {
+        this.Visitor.Skip(offset);
+        return this;
+    }
     public IFromCommand<T> Take(int limit)
     {
         this.Visitor.Take(limit);
@@ -302,8 +331,8 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
 public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
 {
     #region Constructor
-    public FromCommand(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
+        : base(entityType, dbContext, visitor) { }
     #endregion
 
     #region Join
@@ -337,7 +366,7 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
@@ -345,7 +374,7 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, TOther> RightJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
@@ -353,7 +382,7 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
@@ -363,7 +392,7 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", typeof(TOther), subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
@@ -373,7 +402,7 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(TOther), subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
@@ -383,7 +412,7 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
@@ -393,7 +422,7 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
@@ -403,7 +432,7 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
@@ -413,7 +442,7 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -463,7 +492,7 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewGroupCommand<T1, T2, TGrouping>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewGroupCommand<T1, T2, TGrouping>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -499,7 +528,7 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, TTarget>> fieldsExpr)
     {
@@ -507,7 +536,7 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -521,8 +550,8 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
 class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
 {
     #region Constructor
-    public FromCommand(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
+        : base(entityType, dbContext, visitor) { }
     #endregion
 
     #region Join
@@ -556,7 +585,7 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
@@ -564,7 +593,7 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
@@ -572,7 +601,7 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
@@ -582,7 +611,7 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", typeof(TOther), subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
@@ -592,7 +621,7 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(TOther), subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
@@ -602,7 +631,7 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
@@ -612,7 +641,7 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
@@ -622,7 +651,7 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
@@ -632,7 +661,7 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -682,7 +711,7 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewGroupCommand<T1, T2, T3, TGrouping>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewGroupCommand<T1, T2, T3, TGrouping>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -720,7 +749,7 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, TTarget>> fieldsExpr)
     {
@@ -728,15 +757,15 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 }
 class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
 {
     #region Constructor
-    public FromCommand(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
+        : base(entityType, dbContext, visitor) { }
     #endregion   
 
     #region Join
@@ -770,7 +799,7 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
@@ -778,7 +807,7 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
@@ -786,7 +815,7 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, T4, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
@@ -796,7 +825,7 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", typeof(TOther), subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, T4, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
@@ -806,7 +835,7 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(TOther), subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, T4, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
@@ -816,7 +845,7 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
@@ -826,7 +855,7 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
@@ -836,7 +865,7 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, T4, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
@@ -846,7 +875,7 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -896,7 +925,7 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewGroupCommand<T1, T2, T3, T4, TGrouping>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewGroupCommand<T1, T2, T3, T4, TGrouping>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -934,7 +963,7 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, TTarget>> fieldsExpr)
     {
@@ -942,15 +971,15 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 }
 class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4, T5>
 {
     #region Constructor
-    public FromCommand(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
+        : base(entityType, dbContext, visitor) { }
     #endregion
 
     #region Join
@@ -984,7 +1013,7 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
@@ -992,7 +1021,7 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
@@ -1000,7 +1029,7 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
@@ -1010,7 +1039,7 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", typeof(TOther), subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
@@ -1020,7 +1049,7 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(TOther), subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
@@ -1030,7 +1059,7 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
@@ -1040,7 +1069,7 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
@@ -1050,7 +1079,7 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
@@ -1060,7 +1089,7 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -1110,7 +1139,7 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewGroupCommand<T1, T2, T3, T4, T5, TGrouping>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewGroupCommand<T1, T2, T3, T4, T5, TGrouping>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -1148,7 +1177,7 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
     {
@@ -1156,15 +1185,15 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 }
 class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1, T2, T3, T4, T5, T6>
 {
     #region Constructor
-    public FromCommand(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
+        : base(entityType, dbContext, visitor) { }
     #endregion
 
     #region Join
@@ -1240,7 +1269,7 @@ class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1, T2, T3
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewGroupCommand<T1, T2, T3, T4, T5, T6, TGrouping>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewGroupCommand<T1, T2, T3, T4, T5, T6, TGrouping>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -1278,7 +1307,7 @@ class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1, T2, T3
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     public IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
     {
@@ -1286,7 +1315,7 @@ class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1, T2, T3
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
 }

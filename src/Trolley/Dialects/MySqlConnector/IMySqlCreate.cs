@@ -46,4 +46,13 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <returns>返回插入对象</returns>
     new IMySqlContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
     #endregion
+
+    #region From
+    IFromCommand<T> From<T>();
+    IFromCommand<T1, T2> From<T1, T2>();
+    IFromCommand<T1, T2, T3> From<T1, T2, T3>();
+    IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>();
+    IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
+    IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>();
+    #endregion
 }
