@@ -54,6 +54,20 @@ public interface ICreate<TEntity>
     IContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
     #endregion
 
+    #region From
+    IFromCommand<T> From<T>();
+    IFromCommand<T1, T2> From<T1, T2>();
+    IFromCommand<T1, T2, T3> From<T1, T2, T3>();
+    IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>();
+    IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
+    IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>();
+    #endregion
+
+    #region WithFrom
+    IFromCommand<TTarget> FromWith<TTarget>(IQuery<TTarget> cteSubQuery);
+    IFromCommand<TTarget> FromWith<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery);
+    #endregion
+
     //#region WithFrom
     ///// <summary>
     ///// 使用子查询批量插入数据，如果isUseCte为true，则包装成CTE子句，false则原始子查询

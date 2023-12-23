@@ -9,8 +9,8 @@ namespace Trolley.SqlServer;
 
 public static class SqlServerDialectExtensions
 {
-    public static IMySqlRepository CreateMySql(this IOrmDbFactory dbFactory, string dbKey = null, string tenantId = null)
-        => dbFactory.Create<IMySqlRepository>(dbKey, tenantId);
-    public static IMySqlRepository Create(this IOrmDbFactory dbFactory, string dbKey = null, string tenantId = null)
-        => dbFactory.Create<IMySqlRepository>(dbKey, tenantId);
+    //public static IMySqlRepository CreateMySql(this IOrmDbFactory dbFactory, string dbKey = null, string tenantId = null)
+    //    => dbFactory.Create<IMySqlRepository>(dbKey, tenantId);
+    //public static IMySqlRepository Create(this IOrmDbFactory dbFactory, string dbKey = null, string tenantId = null)
+    //    => dbFactory.Create<IMySqlRepository>(dbKey, tenantId);
 } 

@@ -53,7 +53,7 @@ public class MultiQueryBase : IMultiQueryBase
         this.Visitor.Select(sqlFormat, fieldExpr);
         var sql = this.Visitor.BuildSql(out _);
         Func<IDataReader, object> readerGetter = reader => reader.To<TTarget>();
-        this.MultipleQuery.AddReader(sql, readerGetter);
+        this.MultipleQuery.AddReader(typeof(TTarget), sql, readerGetter);
         return this.MultipleQuery;
     }
     #endregion

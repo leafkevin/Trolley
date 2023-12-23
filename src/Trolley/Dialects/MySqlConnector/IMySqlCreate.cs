@@ -45,14 +45,5 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
     /// <returns>返回插入对象</returns>
     new IMySqlContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
-    #endregion
-
-    #region From
-    IFromCommand<T> From<T>();
-    IFromCommand<T1, T2> From<T1, T2>();
-    IFromCommand<T1, T2, T3> From<T1, T2, T3>();
-    IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>();
-    IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
-    IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>();
-    #endregion
+    #endregion    
 }

@@ -56,6 +56,49 @@ public interface IFromCommand<T> : IFromCommand
     IFromCommand<T> UnionAll(Func<IFromQuery, IQuery<T>> subQuery);
     #endregion
 
+    #region CTE NextWith
+    /// <summary>
+    /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，多个CTE子句需要连续定义，用法：
+    /// <code>
+    /// var cteSubQueryObj = repository.From&lt;Menu&gt;() ... .Select( ... );
+    /// repository.FromWith(f =&gt; ... ).NextWith(cteSubQueryObj) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
+    /// <code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
+    /// </param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery);
+    /// <summary>
+    /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，也可以包含Inner/Left/Right Join子句引入前面定义的CTE表，表达式cteSubQuery第二参数是前一个CTE表,多个CTE子句需要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url }))
+    ///     .NextWith((f, cte1) =&gt; f.From&lt;Menu&gt;() ...
+    ///             .Select(x =&gt; new { ... })
+    ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+    ///             .LeftJoin(cte1, (a, b, c) =&gt; a.PageId == c.Id)
+    ///             .Select((a, b, c) =&gt; new { ... }))) ...
+    /// SQL:
+    /// WITH RECURSIVE MyCte1(Id,Url) AS 
+    /// ... ,
+    /// MyCte2(Id,Name,ParentId,Url) AS
+    /// (
+    ///     SELECT ... FROM `sys_menu` WHERE a.`Id`=1 UNION ALL
+    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCte2 b ON a.`ParentId`=b.`Id` LEFT JOIN MyCte1 ON a.`PageId`=c.`Id`
+    /// ) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
+    /// <code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
+    /// </param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T>, IQuery<TOther>> cteSubQuery);
+    #endregion
+
     #region Join
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
@@ -300,6 +343,54 @@ public interface IFromCommand<T> : IFromCommand
 }
 public interface IFromCommand<T1, T2> : IFromCommand
 {
+    #region CTE NextWith
+    /// <summary>
+    /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，多个CTE子句需要连续定义，用法：
+    /// <code>
+    /// var cteSubQueryObj = repository.From&lt;Menu&gt;() ... .Select( ... );
+    /// repository.FromWith(f =&gt; ... ) ...
+    ///     .NextWith(cteSubQueryObj) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
+    /// <code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
+    /// </param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery);
+    /// <summary>
+    /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，也可以包含Inner/Left/Right Join子句引入前面定义的CTE表，表达式cteSubQuery第二参数是前一个CTE表,多个CTE子句需要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url }))
+    ///     ...
+    ///     .NextWith((x, cte1, cte2) =&gt; x.From&lt;Menu&gt;() ...
+    ///             .Select(cte1, cte2 =&gt; new { ... })
+    ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+	///				...
+    ///             .LeftJoin(cte2, (a, b) =&gt; a.PageId == c.Id)
+    ///             .Select((a, b) =&gt; new { ... }))) ...
+    /// SQL:
+    /// WITH RECURSIVE MyCte1(Id,Url) AS 
+    /// ... ,
+    /// MyCteN(Id,Name,ParentId,Url) AS
+    /// (
+    ///     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
+    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCteN b ON a.`ParentId`=b.`Id` LEFT JOIN MyCteN ON a.`PageId`=c.`Id`
+    /// ) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
+    /// <code>
+    /// f.From&lt;Page&gt;() ... .Select((x, y) =&gt; new { ... })
+    /// </code>
+    /// </param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<TOther>> cteSubQuery);
+    #endregion
+
     #region Join
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
@@ -566,6 +657,54 @@ public interface IFromCommand<T1, T2> : IFromCommand
 }
 public interface IFromCommand<T1, T2, T3> : IFromCommand
 {
+    #region CTE NextWith
+    /// <summary>
+    /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，多个CTE子句需要连续定义，用法：
+    /// <code>
+    /// var cteSubQueryObj = repository.From&lt;Menu&gt;() ... .Select( ... );
+    /// repository.FromWith(f =&gt; ... ) ...
+    ///     .NextWith(cteSubQueryObj) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
+    /// <code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
+    /// </param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery);
+    /// <summary>
+    /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，也可以包含Inner/Left/Right Join子句引入前面定义的CTE表，表达式cteSubQuery第二参数是前一个CTE表,多个CTE子句需要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url }))
+    ///     ...
+    ///     .NextWith((x, cte1, cte2, cte3) =&gt; x.From&lt;Menu&gt;() ...
+    ///             .Select(cte1, cte2, cte3 =&gt; new { ... })
+    ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+	///				...
+    ///             .LeftJoin(cte3, (a, b, c) =&gt; a.PageId == c.Id)
+    ///             .Select((a, b, c) =&gt; new { ... }))) ...
+    /// SQL:
+    /// WITH RECURSIVE MyCte1(Id,Url) AS 
+    /// ... ,
+    /// MyCteN(Id,Name,ParentId,Url) AS
+    /// (
+    ///     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
+    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCteN b ON a.`ParentId`=b.`Id` LEFT JOIN MyCteN ON a.`PageId`=c.`Id`
+    /// ) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
+    /// <code>
+    /// f.From&lt;Page&gt;() ... .Select((x, y) =&gt; new { ... })
+    /// </code>
+    /// </param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<TOther>> cteSubQuery);
+    #endregion
+
     #region Join
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
@@ -832,6 +971,54 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
 }
 public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
 {
+    #region CTE NextWith
+    /// <summary>
+    /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，多个CTE子句需要连续定义，用法：
+    /// <code>
+    /// var cteSubQueryObj = repository.From&lt;Menu&gt;() ... .Select( ... );
+    /// repository.FromWith(f =&gt; ... ) ...
+    ///     .NextWith(cteSubQueryObj) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
+    /// <code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
+    /// </param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery);
+    /// <summary>
+    /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，也可以包含Inner/Left/Right Join子句引入前面定义的CTE表，表达式cteSubQuery第二参数是前一个CTE表,多个CTE子句需要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url }))
+    ///     ...
+    ///     .NextWith((x, cte1, cte2, cte3, cte4) =&gt; x.From&lt;Menu&gt;() ...
+    ///             .Select(cte1, cte2, cte3, cte4 =&gt; new { ... })
+    ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+	///				...
+    ///             .LeftJoin(cte4, (a, b, c, d) =&gt; a.PageId == c.Id)
+    ///             .Select((a, b, c, d) =&gt; new { ... }))) ...
+    /// SQL:
+    /// WITH RECURSIVE MyCte1(Id,Url) AS 
+    /// ... ,
+    /// MyCteN(Id,Name,ParentId,Url) AS
+    /// (
+    ///     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
+    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCteN b ON a.`ParentId`=b.`Id` LEFT JOIN MyCteN ON a.`PageId`=c.`Id`
+    /// ) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
+    /// <code>
+    /// f.From&lt;Page&gt;() ... .Select((x, y) =&gt; new { ... })
+    /// </code>
+    /// </param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<T4>, IQuery<TOther>> cteSubQuery);
+    #endregion
+
     #region Join
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
@@ -1098,6 +1285,54 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
 }
 public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
 {
+    #region CTE NextWith
+    /// <summary>
+    /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，多个CTE子句需要连续定义，用法：
+    /// <code>
+    /// var cteSubQueryObj = repository.From&lt;Menu&gt;() ... .Select( ... );
+    /// repository.FromWith(f =&gt; ... ) ...
+    ///     .NextWith(cteSubQueryObj) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
+    /// <code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
+    /// </param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, T5, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery);
+    /// <summary>
+    /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，也可以包含Inner/Left/Right Join子句引入前面定义的CTE表，表达式cteSubQuery第二参数是前一个CTE表,多个CTE子句需要连续定义，用法：
+    /// <code>
+    /// repository
+    ///     .FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url }))
+    ///     ...
+    ///     .NextWith((x, cte1, cte2, cte3, cte4, cte5) =&gt; x.From&lt;Menu&gt;() ...
+    ///             .Select(cte1, cte2, cte3, cte4, cte5 =&gt; new { ... })
+    ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+	///				...
+    ///             .LeftJoin(cte5, (a, b, c, d, e) =&gt; a.PageId == c.Id)
+    ///             .Select((a, b, c, d, e) =&gt; new { ... }))) ...
+    /// SQL:
+    /// WITH RECURSIVE MyCte1(Id,Url) AS 
+    /// ... ,
+    /// MyCteN(Id,Name,ParentId,Url) AS
+    /// (
+    ///     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
+    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCteN b ON a.`ParentId`=b.`Id` LEFT JOIN MyCteN ON a.`PageId`=c.`Id`
+    /// ) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">当前CTE临时返回的实体类型</typeparam>
+    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
+    /// <code>
+    /// f.From&lt;Page&gt;() ... .Select((x, y) =&gt; new { ... })
+    /// </code>
+    /// </param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, T5, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<T4>, IQuery<T5>, IQuery<TOther>> cteSubQuery);
+    #endregion
+
     #region Join
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:

@@ -126,6 +126,25 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     }
     #endregion
 
+    #region CTE NextWith
+    public IFromCommand<T, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery)
+    {
+        if (cteSubQuery == null)
+            throw new ArgumentNullException(nameof(cteSubQuery));
+
+        this.Visitor.FromWith(typeof(TOther), false, cteSubQuery);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<T, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T>, IQuery<TOther>> cteSubQuery)
+    {
+        if (cteSubQuery == null)
+            throw new ArgumentNullException(nameof(cteSubQuery));
+
+        this.Visitor.FromWith(typeof(TOther), false, this.DbContext, cteSubQuery);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    #endregion
+
     #region Join   
     public IFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
@@ -333,6 +352,25 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
     #region Constructor
     public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
         : base(entityType, dbContext, visitor) { }
+    #endregion
+
+    #region CTE NextWith
+    public IFromCommand<T1, T2, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery)
+    {
+        if (cteSubQuery == null)
+            throw new ArgumentNullException(nameof(cteSubQuery));
+
+        this.Visitor.FromWith(typeof(TOther), false, cteSubQuery);
+        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<T1, T2, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<TOther>> cteSubQuery)
+    {
+        if (cteSubQuery == null)
+            throw new ArgumentNullException(nameof(cteSubQuery));
+
+        this.Visitor.FromWith(typeof(TOther), false, this.DbContext, cteSubQuery);
+        return this.OrmProvider.NewFromCommand<T1, T2, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
     #endregion
 
     #region Join
@@ -554,6 +592,25 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
         : base(entityType, dbContext, visitor) { }
     #endregion
 
+    #region CTE NextWith
+    public IFromCommand<T1, T2, T3, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery)
+    {
+        if (cteSubQuery == null)
+            throw new ArgumentNullException(nameof(cteSubQuery));
+
+        this.Visitor.FromWith(typeof(TOther), false, cteSubQuery);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<T1, T2, T3, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<TOther>> cteSubQuery)
+    {
+        if (cteSubQuery == null)
+            throw new ArgumentNullException(nameof(cteSubQuery));
+
+        this.Visitor.FromWith(typeof(TOther), false, this.DbContext, cteSubQuery);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    #endregion
+
     #region Join
     public IFromCommand<T1, T2, T3> InnerJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
     {
@@ -766,7 +823,26 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
     #region Constructor
     public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
         : base(entityType, dbContext, visitor) { }
-    #endregion   
+    #endregion
+
+    #region CTE NextWith
+    public IFromCommand<T1, T2, T3, T4, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery)
+    {
+        if (cteSubQuery == null)
+            throw new ArgumentNullException(nameof(cteSubQuery));
+
+        this.Visitor.FromWith(typeof(TOther), false, cteSubQuery);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<T1, T2, T3, T4, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<T4>, IQuery<TOther>> cteSubQuery)
+    {
+        if (cteSubQuery == null)
+            throw new ArgumentNullException(nameof(cteSubQuery));
+
+        this.Visitor.FromWith(typeof(TOther), false, this.DbContext, cteSubQuery);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    #endregion
 
     #region Join
     public IFromCommand<T1, T2, T3, T4> InnerJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
@@ -980,6 +1056,25 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
     #region Constructor
     public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
         : base(entityType, dbContext, visitor) { }
+    #endregion
+
+    #region CTE NextWith
+    public IFromCommand<T1, T2, T3, T4, T5, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery)
+    {
+        if (cteSubQuery == null)
+            throw new ArgumentNullException(nameof(cteSubQuery));
+
+        this.Visitor.FromWith(typeof(TOther), false, cteSubQuery);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<T1, T2, T3, T4, T5, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T1>, IQuery<T2>, IQuery<T3>, IQuery<T4>, IQuery<T5>, IQuery<TOther>> cteSubQuery)
+    {
+        if (cteSubQuery == null)
+            throw new ArgumentNullException(nameof(cteSubQuery));
+
+        this.Visitor.FromWith(typeof(TOther), false, this.DbContext, cteSubQuery);
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
     #endregion
 
     #region Join

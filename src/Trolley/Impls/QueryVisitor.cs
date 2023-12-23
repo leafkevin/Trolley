@@ -174,18 +174,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters)
     {
         var builder = new StringBuilder();
-        if (this.CteQueries != null)
-        {
-            builder.Append("WITH ");
-            if (this.IsRecursive)
-                builder.Append("RECURSIVE ");
-            for (int i = 0; i < this.CteTables.Count; i++)
-            {
-                if (i > 0) builder.AppendLine(",");
-                builder.Append(this.CteTables[i].Body);
-                builder.AppendLine();
-            }
-        }
         var entityMapper = this.MapProvider.GetEntityMap(targetType);
         builder.Append($"INSERT INTO {this.OrmProvider.GetTableName(entityMapper.TableName)} (");
         int index = 0;
@@ -201,6 +189,19 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             index++;
         }
         builder.Append(") ");
+        //有CTE表
+        if (this.CteQueries != null)
+        {
+            builder.Append("WITH ");
+            if (this.IsRecursive)
+                builder.Append("RECURSIVE ");
+            for (int i = 0; i < this.CteTables.Count; i++)
+            {
+                if (i > 0) builder.AppendLine(",");
+                builder.Append(this.CteTables[i].Body);
+                builder.AppendLine();
+            }
+        }
         dbParameters = this.DbParameters;
         if (!string.IsNullOrEmpty(this.UnionSql))
         {
@@ -1509,7 +1510,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.GroupBySql = null;
         this.HavingSql = null;
         this.OrderBySql = null;
-        this.CteTableSql = null;
 
         this.IncludeSegments = null;
         this.LastIncludeSegment = null;

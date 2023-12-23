@@ -15,6 +15,7 @@ public class Create<TEntity> : ICreate<TEntity>
     #region Properties
     public DbContext DbContext { get; private set; }
     public ICreateVisitor Visitor { get; private set; }
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
@@ -52,20 +53,67 @@ public class Create<TEntity> : ICreate<TEntity>
         this.Visitor.WithBulk(insertObjs, bulkCount);
         return new ContinuedCreate<TEntity>(this.DbContext, this.Visitor);
     }
+    #endregion  
+
+    #region From
+    public IFromCommand<T> From<T>()
+    {
+        //TODO:需要测试dbParameters是否有值
+        var queryVisitor = this.Visitor.CreateQueryVisitor();
+        queryVisitor.From('b', null, typeof(T));
+        return this.OrmProvider.NewFromCommand<T>(typeof(TEntity), this.DbContext, queryVisitor);
+    }
+    public IFromCommand<T1, T2> From<T1, T2>()
+    {
+        //TODO:需要测试dbParameters是否有值
+        var queryVisitor = this.Visitor.CreateQueryVisitor();
+        queryVisitor.From('b', null, typeof(T1), typeof(T2));
+        return this.OrmProvider.NewFromCommand<T1, T2>(typeof(TEntity), this.DbContext, queryVisitor);
+    }
+    public IFromCommand<T1, T2, T3> From<T1, T2, T3>()
+    {
+        //TODO:需要测试dbParameters是否有值
+        var queryVisitor = this.Visitor.CreateQueryVisitor();
+        queryVisitor.From('b', null, typeof(T1), typeof(T2), typeof(T3));
+        return this.OrmProvider.NewFromCommand<T1, T2, T3>(typeof(TEntity), this.DbContext, queryVisitor);
+    }
+    public IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>()
+    {
+        //TODO:需要测试dbParameters是否有值
+        var queryVisitor = this.Visitor.CreateQueryVisitor();
+        queryVisitor.From('b', null, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4>(typeof(TEntity), this.DbContext, queryVisitor);
+    }
+    public IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
+    {
+        //TODO:需要测试dbParameters是否有值
+        var queryVisitor = this.Visitor.CreateQueryVisitor();
+        queryVisitor.From('b', null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5>(typeof(TEntity), this.DbContext, queryVisitor);
+    }
+    public IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
+    {
+        //TODO:需要测试dbParameters是否有值
+        var queryVisitor = this.Visitor.CreateQueryVisitor();
+        queryVisitor.From('b', null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
+        return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, T6>(typeof(TEntity), this.DbContext, queryVisitor);
+    }
     #endregion
 
     #region WithFrom
-    public ICreated<TEntity> WithFrom<TTarget>(IQuery<TTarget> cteSubQuery, bool isUseCte = false)
+    public IFromCommand<TTarget> FromWith<TTarget>(IQuery<TTarget> cteSubQuery)
     {
-        this.Visitor.WithFrom(cteSubQuery, isUseCte);
-        return new Created<TEntity>(this.DbContext, this.Visitor);
+        var queryVisitor = this.Visitor.CreateQueryVisitor(true);
+        queryVisitor.FromWith(typeof(TTarget), true, cteSubQuery);
+        return this.OrmProvider.NewFromCommand<TTarget>(typeof(TEntity), this.DbContext, queryVisitor);
     }
-    public ICreated<TEntity> WithFrom<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery, bool isUseCte = false)
+    public IFromCommand<TTarget> FromWith<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery)
     {
-        this.Visitor.WithFrom(cteSubQuery, isUseCte);
-        return new Created<TEntity>(this.DbContext, this.Visitor);
+        var queryVisitor = this.Visitor.CreateQueryVisitor(true);
+        queryVisitor.FromWith(typeof(TTarget), true, this.DbContext, cteSubQuery);
+        return this.OrmProvider.NewFromCommand<TTarget>(typeof(TEntity), this.DbContext, queryVisitor);
     }
-    #endregion     
+    #endregion
 }
 public class Created<TEntity> : ICreated<TEntity>
 {

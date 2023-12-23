@@ -42,9 +42,6 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
                     this.UpdateFields ??= new();
                     this.VisitSet(deferredSegment.Value as LambdaExpression);
                     break;
-                case "FromWith":
-                    sql = this.VisitWithFromFunc(deferredSegment.Value);
-                    break;
             }
         }
         if (this.IsBulk)
@@ -278,15 +275,15 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
         var entityMapper = this.Tables[0].Mapper;
         var builder = new StringBuilder();
 
-        if (this.IsUseCte) rawSql = queryVisitor.BuildCteTableSql(cteTableName, rawSql, readerFields, queryObj);      
+        if (this.IsUseCte) rawSql = queryVisitor.BuildCteTableSql(cteTableName, rawSql, readerFields, queryObj);
         builder.AppendLine(rawSql);
         string withTable = null;
-        if(this.IsUseCte)
+        if (this.IsUseCte)
         {
             if (queryVisitor.SelfTableSegment != null)
                 withTable = queryVisitor.SelfTableSegment.RefTableName;
             else withTable = cteTableName;
-        }       
+        }
         queryVisitor.Dispose();
 
         var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
