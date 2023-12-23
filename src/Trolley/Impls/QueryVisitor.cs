@@ -208,16 +208,16 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             });
         }
     }
-    public void From(Type targetType, IQueryBase subQueryObj) => this.From(targetType, () => subQueryObj);
-    public void From(Type targetType, DbContext dbContext, Delegate subQueryGetter)
+    public void From(Type targetType, bool isFirst, IVisitableQuery subQueryObj) => this.From(targetType, isFirst, () => subQueryObj);
+    public void From(Type targetType, bool isFirst, DbContext dbContext, Delegate subQueryGetter)
     {
-        this.From(targetType, () =>
+        this.From(targetType, isFirst, () =>
         {
             var fromQuery = new FromQuery(dbContext, this);
-            return subQueryGetter.DynamicInvoke(fromQuery) as IQueryBase;
+            return subQueryGetter.DynamicInvoke(fromQuery) as IVisitableQuery;
         });
     }
-    protected void From(Type targetType, Func<IQueryBase> queryObjGetter)
+    protected void From(Type targetType, bool isFirst, Func<IVisitableQuery> queryObjGetter)
     {
         //子查询使用，原WithTable方法
         this.IsFromQuery = true;
@@ -228,17 +228,42 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             subQueryObj.Visitor.CopyTo(this);
             subQueryObj.Visitor.Dispose();
         }
+        else if (isFirst) this.Clear();
         this.AddTable(targetType, null, TableType.FromQuery, $"({rawSql})", readerFields);
         this.IsFromQuery = false;
     }
-    public void FromWithFirst(Type targetType, Func<IQueryBase> cteQueryObjGetter)
+    public IVisitableQuery FromWith(Type targetType, bool isFirst, IVisitableQuery cteQueryObj)
+        => this.FromWith(targetType, true, () => cteQueryObj);
+
+    public IVisitableQuery FromWith(Type targetType, bool isFirst, DbContext dbContext, Delegate cteSubQueryGetter)
     {
-        this.CteTables = new();
-        this.CteQueries = new();
-        this.CteTableSegments = new();
+        return this.FromWith(targetType, true, () =>
+        {
+            var fromQuery = new FromQuery(dbContext, this);
+            if (isFirst) return cteSubQueryGetter.DynamicInvoke(fromQuery) as IVisitableQuery;
+
+            var parameters = new List<object> { fromQuery };
+            parameters.AddRange(this.CteQueries);
+            return cteSubQueryGetter.DynamicInvoke(parameters.ToArray()) as IVisitableQuery;
+        });
+    }
+    protected IVisitableQuery FromWith(Type targetType, bool isFirst, Func<IVisitableQuery> cteQueryObjGetter)
+    {
+        if (isFirst)
+        {
+            this.CteTables = new();
+            this.CteQueries = new();
+            this.CteTableSegments = new();
+        }
         var cteQueryObj = cteQueryObjGetter();
         var rawSql = cteQueryObj.Visitor.BuildSql(out var readerFields, false, false);
-        //没有添加过CTE表，需要添加
+        if (!this.Equals(cteQueryObj.Visitor))
+        {
+            cteQueryObj.Visitor.CopyTo(this);
+            cteQueryObj.Visitor.Dispose();
+        }
+        else if (isFirst) this.Clear();
+
         TableSegment tableSegment = null;
         if (this.SelfTableSegment == null)
             tableSegment = this.AddCteTable(targetType, cteQueryObj, rawSql, readerFields);
@@ -249,48 +274,15 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //    builder.Append("RECURSIVE ");   
         this.Tables.Add(tableSegment);
         this.UnionSql = null;
+        return cteQueryObj;
     }
-    public void FromWithFirst(Type targetType, DbContext dbContext, Delegate cteSubQueryGetter)
-    {
-        this.FromWithFirst(targetType, () =>
-        {
-            var fromQuery = new FromQuery(dbContext, this);
-            var cteQueryObj = cteSubQueryGetter.DynamicInvoke(fromQuery) as IQueryBase;
-            if (!this.Equals(cteQueryObj.Visitor))
-            {
-                cteQueryObj.Visitor.CopyTo(this);
-                cteQueryObj.Visitor.Dispose();
-            }
-            return cteQueryObj;
-        });
-    }
-    public void NextWith(Type targetType, DbContext dbContext, Delegate cteSubQueryGetter)
-    {
-        this.Clear(true);
-        var fromQuery = new FromQuery(dbContext, this);
-        var parameters = new List<object> { fromQuery };
-        parameters.AddRange(this.CteQueries);
-        var cteQueryObj = cteSubQueryGetter.DynamicInvoke(parameters.ToArray()) as IQueryBase;
-        var rawSql = cteQueryObj.Visitor.BuildSql(out var readerFields, false, false);
-        if (!this.Equals(cteQueryObj.Visitor))
-        {
-            cteQueryObj.Visitor.CopyTo(this);
-            cteQueryObj.Visitor.Dispose();
-        }
-        TableSegment tableSegment = null;
-        if (this.SelfTableSegment == null)
-            tableSegment = this.AddCteTable(targetType, cteQueryObj, rawSql, readerFields);
-        tableSegment.Body = this.BuildCteTableSql(tableSegment.RefTableName, rawSql, readerFields);
-        this.Tables.Add(tableSegment);
-        this.UnionSql = null;
-    }
-    public void Union(string union, Type targetType, IQueryBase subQuery)
+    public void Union(string union, Type targetType, IVisitableQuery subQuery)
     {
         //Union操作时，不使用当前Visitor中的对象生成TableSegment对象，使用子查询中的对象来生成TableSegment对象
         //当前Visitor中的对象只生成SQL
         var rawSql = this.BuildSql(out var readerFields, false, true);
-        this.Clear(true);
-        //使用子查询返回的IQueryBase对象和当前Visitor中的对象生成SQL+readerFields一起生成TableSegment对象
+        this.Clear();
+        //使用子查询返回的IVisitableQuery对象和当前Visitor中的对象生成SQL+readerFields一起生成TableSegment对象
         this.UseTable(targetType, rawSql, readerFields, subQuery, true);
         rawSql += union + Environment.NewLine + subQuery.Visitor.BuildSql(out _, false, true);
         if (!this.Equals(subQuery.Visitor))
@@ -303,13 +295,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public void Union(string union, Type targetType, DbContext dbContext, Delegate subQueryGetter)
     {
         var fromQuery = new FromQuery(dbContext, this);
-        var subQuery = subQueryGetter.DynamicInvoke(fromQuery) as IQueryBase;
+        var subQuery = subQueryGetter.DynamicInvoke(fromQuery) as IVisitableQuery;
         this.Union(union, targetType, subQuery);
     }
-    public void UnionRecursive(string union, Type targetType, DbContext dbContext, IQueryBase subQueryObj, Delegate selfSubQueryGetter)
+    public void UnionRecursive(string union, Type targetType, DbContext dbContext, IVisitableQuery subQueryObj, Delegate selfSubQueryGetter)
     {
         var rawSql = this.BuildSql(out var readerFields, false, true);
-        this.Clear(true);
+        this.Clear();
         //可能会有多个UnionRecursive场景，所以，SelfTableSegment要使用同一个引用对象，用一次就要更新一次body sql，最后FromWith/NextWith的时候，再更新body sql
         if (this.SelfTableSegment == null)
             this.SelfTableSegment = this.AddCteTable(targetType, subQueryObj, rawSql, readerFields);
@@ -317,7 +309,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var parameters = new List<object> { fromQuery };
         parameters.AddRange(this.CteQueries);
         //此时产生的queryObj是一个新的对象，只能用于解析sql，与传进来的queryObj不是同一个对象，舍弃
-        var subQuery = selfSubQueryGetter.DynamicInvoke(parameters.ToArray()) as IQueryBase;
+        var subQuery = selfSubQueryGetter.DynamicInvoke(parameters.ToArray()) as IVisitableQuery;
         rawSql += union + Environment.NewLine + subQuery.Visitor.BuildSql(out _, false, true);
         this.SelfTableSegment.Body = rawSql;
         this.UnionSql = rawSql;
@@ -356,7 +348,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             return this.InitTableAlias(f);
         });
     }
-    public void Join(string joinType, Type newEntityType, IQueryBase subQuery, Expression joinOn)
+    public void Join(string joinType, Type newEntityType, IVisitableQuery subQuery, Expression joinOn)
     {
         this.Join(joinType, joinOn, f =>
         {
@@ -374,7 +366,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.Join(joinType, joinOn, f =>
         {
             var fromQuery = new FromQuery(dbContext, this);
-            var subQueryObj = subQueryGetter.DynamicInvoke(fromQuery) as IQueryBase;
+            var subQueryObj = subQueryGetter.DynamicInvoke(fromQuery) as IVisitableQuery;
             var rawSql = subQueryObj.Visitor.BuildSql(out var readerFields, false);
             if (!this.Equals(subQueryObj.Visitor))
             {
@@ -1349,10 +1341,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         return tableSegment;
     }
-    public void Clear(bool isClearTables = false, bool isClearReaderFields = false)
+    public void Clear(bool isClearReaderFields = false)
     {
-        if (isClearTables)
-            this.Tables.Clear();
+        this.Tables.Clear();
         if (isClearReaderFields)
             this.ReaderFields?.Clear();
         this.WhereSql = null;
@@ -1461,7 +1452,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         return memberExprs;
     }
-    private TableSegment AddCteTable(Type targetType, IQueryBase cteQueryObj, string rawSql, List<ReaderField> readerFields)
+    private TableSegment AddCteTable(Type targetType, IVisitableQuery cteQueryObj, string rawSql, List<ReaderField> readerFields)
     {
         var tableSegment = this.AddTable(targetType, null, TableType.CteSelfRef, rawSql, readerFields);
         this.InitFromQueryReaderFields(tableSegment, readerFields);

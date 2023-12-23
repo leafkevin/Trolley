@@ -34,12 +34,20 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         {
 #>
     #region CTE NextWith
-    public IQuery<<#=tables#>, TOther> NextWith<TOther>(Func<IFromQuery, <#=cteQueryTables#>, IQuery<TOther>> cteSubQuery, string cteTableName = null)
+    public IQuery<<#=tables#>, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery)
     {
         if (cteSubQuery == null)
             throw new ArgumentNullException(nameof(cteSubQuery));
 
-        this.Visitor.NextWith(typeof(TOther), this.DbContext, cteSubQuery);
+        this.Visitor.FromWith(typeof(TOther), false, cteSubQuery);
+        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+    }
+    public IQuery<<#=tables#>, TOther> NextWith<TOther>(Func<IFromQuery, <#=cteQueryTables#>, IQuery<TOther>> cteSubQuery)
+    {
+        if (cteSubQuery == null)
+            throw new ArgumentNullException(nameof(cteSubQuery));
+
+        this.Visitor.FromWith(typeof(TOther), false, this.DbContext, cteSubQuery);
         return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -49,12 +57,20 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         {
 #>
     #region WithTable
+    public IQuery<<#=tables#>, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        this.Visitor.From(typeof(TOther), false, subQuery);
+        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+    }
     public IQuery<<#=tables#>, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        this.Visitor.From(typeof(TOther), this.DbContext, subQuery);
+        this.Visitor.From(typeof(TOther), false, this.DbContext, subQuery);
         return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     #endregion

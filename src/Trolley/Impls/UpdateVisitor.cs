@@ -25,7 +25,14 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public List<IDbDataParameter> FixedDbParameters { get; set; } = new();
 
     public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix) { }
+    {
+        this.DbKey = dbKey;
+        this.OrmProvider = ormProvider;
+        this.MapProvider = mapProvider;
+        this.IsParameterized = isParameterized;
+        this.TableAsStart = tableAsStart;
+        this.ParameterPrefix = parameterPrefix;
+    }
     public virtual void Initialize(Type entityType, bool isFirst = true)
     {
         if (isFirst)

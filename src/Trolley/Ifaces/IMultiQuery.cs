@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq.Expressions;
 
 namespace Trolley;
@@ -8,15 +7,8 @@ namespace Trolley;
 /// <summary>
 /// 查询对象
 /// </summary>
-public interface IMultiQueryBase
+public interface IMultiQueryBase : IVisitableQuery
 {
-    #region QueryVisitor
-    /// <summary>
-    /// Visitor对象
-    /// </summary>
-    IQueryVisitor Visitor { get; }
-    #endregion
-
     #region Count
     /// <summary>
     /// 返回数据条数
@@ -39,15 +31,6 @@ public interface IMultiQueryBase
     /// <param name="fields">原始字段字符串，默认值*</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(string fields = "*");
-    #endregion
-
-    #region ToSql
-    /// <summary>
-    /// 返回当前查询的SQL和参数列表
-    /// </summary>
-    /// <param name="dbParameters">参数列表</param>
-    /// <returns>当前查询的SQL</returns>
-    string ToSql(out List<IDbDataParameter> dbParameters);
     #endregion
 }
 /// <summary>
@@ -135,21 +118,20 @@ public interface IMultiQuery<T> : IMultiQueryBase
     ///         .Select(x =&gt; new { ... })
     ///     .UnionRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { ... })), "MenuList") ...
+    ///         .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE MenuList(Id,Name,ParentId,PageId) AS 
+    /// WITH RECURSIVE MyCte1(Id,Name,ParentId,PageId) AS 
     /// (
     /// SELECT ... FROM `sys_menu` WHERE `Id`=1 UNION
-    /// SELECT ... FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id` ...
+    /// SELECT ... FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id` ...
     /// ) ...
     /// </code>
     /// </summary>
     /// <param name="subQuery">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Menu&gt;().Where(x =&gt; ... ).Select(x =&gt; new { ... })</code>
     /// </param>
-    /// <param name="cteTableName">CTE表自身引用的表名称，不能为null</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UnionRecursive(Func<IFromQuery, IMultiQuery<T>, IQuery<T>> subQuery, string cteTableName);
+    IMultiQuery<T> UnionRecursive(Func<IFromQuery, IMultiQuery<T>, IQuery<T>> subQuery);
     /// <summary>
     /// 递归CTE子查询中的UnionAll操作，表达式subQuery中的第二参数是自身引用，用法：
     /// <code>
@@ -157,43 +139,42 @@ public interface IMultiQuery<T> : IMultiQueryBase
     ///         .Select(x =&gt; new { ... })
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { ... })), "MenuList") ...
+    ///         .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE MenuList(Id,Name,ParentId,PageId) AS 
+    /// WITH RECURSIVE MyCte1(Id,Name,ParentId,PageId) AS 
     /// (
     /// SELECT ... FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    /// SELECT ... FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id` ...
+    /// SELECT ... FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id` ...
     /// ) ...
     /// </summary>
     /// <param name="subQuery">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
     /// </param>
-    /// <param name="cteTableName">CTE表自身引用的表名称</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UnionAllRecursive(Func<IFromQuery, IMultiQuery<T>, IQuery<T>> subQuery, string cteTableName);
+    IMultiQuery<T> UnionAllRecursive(Func<IFromQuery, IMultiQuery<T>, IQuery<T>> subQuery);
     #endregion
 
     #region CTE NextWith
     /// <summary>
     /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，也可以包含Inner/Left/Right Join子句引入前面定义的CTE表，表达式cteSubQuery第二参数是前一个CTE表,多个CTE子句需要连续定义，用法：
     /// <code>
-    /// f.FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url })), "PageList")
+    /// f.FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url }))
     ///  .NextWith((f, cte1) =&gt; f.From&lt;Menu&gt;()
     ///         .Where(x =&gt; x.Id == 1)
-    ///         .Select(x =&gt; new { x.Id, x.Name, x.ParentId, Url = Sql.Null&lt;string&gt; })
+    ///         .Select(x =&gt; new { ... })
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
     ///         .LeftJoin(cte1, (a, b, c) =&gt; a.PageId == c.Id)
-    ///         .Select((a, b, c) =&gt; new { a.Id, a.Name, a.ParentId, c.Url })), "MenuPageList") ...
+    ///         .Select((a, b, c) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE PageList(Id,Url) AS 
+    /// WITH RECURSIVE MyCte1(Id,Url) AS 
     /// (
     ///     ...
     /// ),
-    /// MenuPageList(Id,Name,ParentId,Url) AS
+    /// MyCte2(Id,Name,ParentId,Url) AS
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId`, NULL AS `Url` FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT a.`Id`,a.`Name`,a.`ParentId`,c.Url FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id` LEFT JOIN PageList ON a.`PageId`=c.`Id`
+    ///     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
+    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCte2 b ON a.`ParentId`=b.`Id` LEFT JOIN MyCte1 ON a.`PageId`=c.`Id`
     /// ) ...
     /// </code>
     /// </summary>
@@ -201,10 +182,9 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
     /// <code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
     /// </param>
-    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
     /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T, TOther> NextWith<TOther>(Func<IFromQuery, IMultiQuery<T>, IQuery<TOther>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
+    IMultiQuery<T, TOther> NextWith<TOther>(Func<IFromQuery, IMultiQuery<T>, IQuery<TOther>> cteSubQuery);
     #endregion
 
     #region WithTable
@@ -297,12 +277,12 @@ public interface IMultiQuery<T> : IMultiQueryBase
     ///         .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId })), "MenuList") ...
+    ///         .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE MenuList(Id,Name,ParentId) AS
+    /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id`
+    ///     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
+    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id`
     /// ) ...
     /// </code>
     /// </summary>
@@ -316,15 +296,15 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <code>
     /// f.FromWith(f =&gt; f.From&lt;Menu&gt;()
     ///         .Where(x =&gt; x.Id == 1)
-    ///         .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
+    ///         .Select(x =&gt; new { ... })
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId })), "MenuList") ...
+    ///         .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE MenuList(Id,Name,ParentId) AS
+    /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a LEFT JOIN MenuList b ON a.`ParentId`=b.`Id`
+    ///     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
+    ///     SELECT ... FROM `sys_menu` a LEFT JOIN MyCte1 b ON a.`ParentId`=b.`Id`
     /// ) ...
     /// </code>
     /// </summary>
@@ -336,17 +316,16 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <summary>
     /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// f.FromWith(f =&gt; f.From&lt;Menu&gt;()
-    ///         .Where(x =&gt; x.Id == 1)
-    ///         .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
+    /// f.FromWith(f =&gt; f.From&lt;Menu&gt;() ...
+    ///         .Select(x =&gt; new { ... })
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId })), "MenuList") ...
+    ///         .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE MenuList(Id,Name,ParentId) AS
+    /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a RIGHT JOIN MenuList b ON a.`ParentId`=b.`Id`
+    ///     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
+    ///     SELECT ... FROM `sys_menu` a RIGHT JOIN MyCte1 b ON a.`ParentId`=b.`Id`
     /// ) ...
     /// </code>
     /// </summary>
@@ -672,25 +651,25 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <summary>
     /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，也可以包含Inner/Left/Right Join子句引入前面定义的CTE表，表达式cteSubQuery第二参数是前一个CTE表,多个CTE子句需要连续定义，用法：
     /// <code>
-    /// f.FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url })), "PageList")
+    /// f.FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url })))
     ///     ...
     ///     .NextWith((x, cte1, cte2) =&gt; x.From&lt;Menu&gt;()
     ///             .Where(cte1, cte2 =&gt; a.Id == 1)
-    ///             .Select(cte1, cte2 =&gt; new { a.Id, a.Name, a.ParentId, Url = Sql.Null&lt;string&gt; })
+    ///             .Select(cte1, cte2 =&gt; new { ... })
     ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
 	///				...
     ///             .LeftJoin(cte2, (a, b) =&gt; a.PageId == c.Id)
-    ///             .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId, c.Url })), "MenuPageList") ...
+    ///             .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE PageList(Id,Url) AS 
+    /// WITH RECURSIVE MyCte1(Id,Url) AS 
     /// (
     ///     ...
     /// ),
-    /// MenuPageList(Id,Name,ParentId,Url) AS
+    /// MyCte2(Id,Name,ParentId,Url) AS
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId`, NULL AS `Url` FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT a.`Id`,a.`Name`,a.`ParentId`,c.Url FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id` LEFT JOIN PageList ON a.`PageId`=c.`Id`
+    ///     SELECT ... FROM `sys_menu` WHERE `Id`=1 UNION ALL
+    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCte2 b ON a.`ParentId`=b.`Id` LEFT JOIN MyCte1 ON a.`PageId`=c.`Id`
     /// ) ...
     /// </code>
     /// </summary>
@@ -700,10 +679,9 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// f.From&lt;Page&gt;() ... .Select((x, y) =&gt; new { ... })
     /// </code>
     /// </param>
-    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
     /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, TOther> NextWith<TOther>(Func<IFromQuery, IMultiQuery<T1>, IMultiQuery<T2>, IQuery<TOther>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
+    IMultiQuery<T1, T2, TOther> NextWith<TOther>(Func<IFromQuery, IMultiQuery<T1>, IMultiQuery<T2>, IQuery<TOther>> cteSubQuery);
     #endregion
 
     #region WithTable
@@ -807,7 +785,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -821,7 +799,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -835,7 +813,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -1090,25 +1068,25 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <summary>
     /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，也可以包含Inner/Left/Right Join子句引入前面定义的CTE表，表达式cteSubQuery第二参数是前一个CTE表,多个CTE子句需要连续定义，用法：
     /// <code>
-    /// f.FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url })), "PageList")
+    /// f.FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url })))
     ///     ...
     ///     .NextWith((x, cte1, cte2, cte3) =&gt; x.From&lt;Menu&gt;()
     ///             .Where(cte1, cte2, cte3 =&gt; a.Id == 1)
-    ///             .Select(cte1, cte2, cte3 =&gt; new { a.Id, a.Name, a.ParentId, Url = Sql.Null&lt;string&gt; })
+    ///             .Select(cte1, cte2, cte3 =&gt; new { ... })
     ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
 	///				...
     ///             .LeftJoin(cte3, (a, b, c) =&gt; a.PageId == c.Id)
-    ///             .Select((a, b, c) =&gt; new { a.Id, a.Name, a.ParentId, c.Url })), "MenuPageList") ...
+    ///             .Select((a, b, c) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE PageList(Id,Url) AS 
+    /// WITH RECURSIVE MyCte1(Id,Url) AS 
     /// (
     ///     ...
     /// ),
-    /// MenuPageList(Id,Name,ParentId,Url) AS
+    /// MyCte2(Id,Name,ParentId,Url) AS
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId`, NULL AS `Url` FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT a.`Id`,a.`Name`,a.`ParentId`,c.Url FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id` LEFT JOIN PageList ON a.`PageId`=c.`Id`
+    ///     SELECT ... FROM `sys_menu` WHERE `Id`=1 UNION ALL
+    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCte2 b ON a.`ParentId`=b.`Id` LEFT JOIN MyCte1 ON a.`PageId`=c.`Id`
     /// ) ...
     /// </code>
     /// </summary>
@@ -1118,10 +1096,9 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// f.From&lt;Page&gt;() ... .Select((x, y) =&gt; new { ... })
     /// </code>
     /// </param>
-    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
     /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, TOther> NextWith<TOther>(Func<IFromQuery, IMultiQuery<T1>, IMultiQuery<T2>, IMultiQuery<T3>, IQuery<TOther>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
+    IMultiQuery<T1, T2, T3, TOther> NextWith<TOther>(Func<IFromQuery, IMultiQuery<T1>, IMultiQuery<T2>, IMultiQuery<T3>, IQuery<TOther>> cteSubQuery);
     #endregion
 
     #region WithTable
@@ -1225,7 +1202,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -1239,7 +1216,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -1253,7 +1230,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -1509,25 +1486,25 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <summary>
     /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，也可以包含Inner/Left/Right Join子句引入前面定义的CTE表，表达式cteSubQuery第二参数是前一个CTE表,多个CTE子句需要连续定义，用法：
     /// <code>
-    /// f.FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url })), "PageList")
+    /// f.FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url })))
     ///     ...
     ///     .NextWith((x, cte1, cte2, cte3, cte4) =&gt; x.From&lt;Menu&gt;()
     ///             .Where(cte1, cte2, cte3, cte4 =&gt; a.Id == 1)
-    ///             .Select(cte1, cte2, cte3, cte4 =&gt; new { a.Id, a.Name, a.ParentId, Url = Sql.Null&lt;string&gt; })
+    ///             .Select(cte1, cte2, cte3, cte4 =&gt; new { ... })
     ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
 	///				...
     ///             .LeftJoin(cte4, (a, b, c, d) =&gt; a.PageId == c.Id)
-    ///             .Select((a, b, c, d) =&gt; new { a.Id, a.Name, a.ParentId, c.Url })), "MenuPageList") ...
+    ///             .Select((a, b, c, d) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE PageList(Id,Url) AS 
+    /// WITH RECURSIVE MyCte1(Id,Url) AS 
     /// (
     ///     ...
     /// ),
-    /// MenuPageList(Id,Name,ParentId,Url) AS
+    /// MyCte2(Id,Name,ParentId,Url) AS
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId`, NULL AS `Url` FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT a.`Id`,a.`Name`,a.`ParentId`,c.Url FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id` LEFT JOIN PageList ON a.`PageId`=c.`Id`
+    ///     SELECT ... FROM `sys_menu` WHERE `Id`=1 UNION ALL
+    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCte2 b ON a.`ParentId`=b.`Id` LEFT JOIN MyCte1 ON a.`PageId`=c.`Id`
     /// ) ...
     /// </code>
     /// </summary>
@@ -1537,10 +1514,9 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// f.From&lt;Page&gt;() ... .Select((x, y) =&gt; new { ... })
     /// </code>
     /// </param>
-    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
     /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, TOther> NextWith<TOther>(Func<IFromQuery, IMultiQuery<T1>, IMultiQuery<T2>, IMultiQuery<T3>, IMultiQuery<T4>, IQuery<TOther>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
+    IMultiQuery<T1, T2, T3, T4, TOther> NextWith<TOther>(Func<IFromQuery, IMultiQuery<T1>, IMultiQuery<T2>, IMultiQuery<T3>, IMultiQuery<T4>, IQuery<TOther>> cteSubQuery);
     #endregion
 
     #region WithTable
@@ -1644,7 +1620,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -1658,7 +1634,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -1672,7 +1648,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -1929,25 +1905,25 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <summary>
     /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，也可以包含Inner/Left/Right Join子句引入前面定义的CTE表，表达式cteSubQuery第二参数是前一个CTE表,多个CTE子句需要连续定义，用法：
     /// <code>
-    /// f.FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url })), "PageList")
+    /// f.FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url })))
     ///     ...
     ///     .NextWith((x, cte1, cte2, cte3, cte4, cte5) =&gt; x.From&lt;Menu&gt;()
     ///             .Where(cte1, cte2, cte3, cte4, cte5 =&gt; a.Id == 1)
-    ///             .Select(cte1, cte2, cte3, cte4, cte5 =&gt; new { a.Id, a.Name, a.ParentId, Url = Sql.Null&lt;string&gt; })
+    ///             .Select(cte1, cte2, cte3, cte4, cte5 =&gt; new { ... })
     ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
 	///				...
     ///             .LeftJoin(cte5, (a, b, c, d, e) =&gt; a.PageId == c.Id)
-    ///             .Select((a, b, c, d, e) =&gt; new { a.Id, a.Name, a.ParentId, c.Url })), "MenuPageList") ...
+    ///             .Select((a, b, c, d, e) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE PageList(Id,Url) AS 
+    /// WITH RECURSIVE MyCte1(Id,Url) AS 
     /// (
     ///     ...
     /// ),
-    /// MenuPageList(Id,Name,ParentId,Url) AS
+    /// MyCte2(Id,Name,ParentId,Url) AS
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId`, NULL AS `Url` FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT a.`Id`,a.`Name`,a.`ParentId`,c.Url FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id` LEFT JOIN PageList ON a.`PageId`=c.`Id`
+    ///     SELECT ... FROM `sys_menu` WHERE `Id`=1 UNION ALL
+    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCte2 b ON a.`ParentId`=b.`Id` LEFT JOIN MyCte1 ON a.`PageId`=c.`Id`
     /// ) ...
     /// </code>
     /// </summary>
@@ -1957,10 +1933,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// f.From&lt;Page&gt;() ... .Select((x, y) =&gt; new { ... })
     /// </code>
     /// </param>
-    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
     /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, TOther> NextWith<TOther>(Func<IFromQuery, IMultiQuery<T1>, IMultiQuery<T2>, IMultiQuery<T3>, IMultiQuery<T4>, IMultiQuery<T5>, IQuery<TOther>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
+    IMultiQuery<T1, T2, T3, T4, T5, TOther> NextWith<TOther>(Func<IFromQuery, IMultiQuery<T1>, IMultiQuery<T2>, IMultiQuery<T3>, IMultiQuery<T4>, IMultiQuery<T5>, IQuery<TOther>> cteSubQuery);
     #endregion
 
     #region WithTable
@@ -2064,7 +2039,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -2078,7 +2053,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -2092,7 +2067,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -2350,25 +2325,25 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <summary>
     /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，也可以包含Inner/Left/Right Join子句引入前面定义的CTE表，表达式cteSubQuery第二参数是前一个CTE表,多个CTE子句需要连续定义，用法：
     /// <code>
-    /// f.FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url })), "PageList")
+    /// f.FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url })))
     ///     ...
     ///     .NextWith((x, cte1, cte2, cte3, cte4, cte5, cte6) =&gt; x.From&lt;Menu&gt;()
     ///             .Where(cte1, cte2, cte3, cte4, cte5, cte6 =&gt; a.Id == 1)
-    ///             .Select(cte1, cte2, cte3, cte4, cte5, cte6 =&gt; new { a.Id, a.Name, a.ParentId, Url = Sql.Null&lt;string&gt; })
+    ///             .Select(cte1, cte2, cte3, cte4, cte5, cte6 =&gt; new { ... })
     ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
 	///				...
     ///             .LeftJoin(cte6, (a, b, c, d, e, f) =&gt; a.PageId == c.Id)
-    ///             .Select((a, b, c, d, e, f) =&gt; new { a.Id, a.Name, a.ParentId, c.Url })), "MenuPageList") ...
+    ///             .Select((a, b, c, d, e, f) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE PageList(Id,Url) AS 
+    /// WITH RECURSIVE MyCte1(Id,Url) AS 
     /// (
     ///     ...
     /// ),
-    /// MenuPageList(Id,Name,ParentId,Url) AS
+    /// MyCte2(Id,Name,ParentId,Url) AS
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId`, NULL AS `Url` FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT a.`Id`,a.`Name`,a.`ParentId`,c.Url FROM `sys_menu` a INNER JOIN MenuList b ON a.`ParentId`=b.`Id` LEFT JOIN PageList ON a.`PageId`=c.`Id`
+    ///     SELECT ... FROM `sys_menu` WHERE `Id`=1 UNION ALL
+    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCte2 b ON a.`ParentId`=b.`Id` LEFT JOIN MyCte1 ON a.`PageId`=c.`Id`
     /// ) ...
     /// </code>
     /// </summary>
@@ -2378,10 +2353,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// f.From&lt;Page&gt;() ... .Select((x, y) =&gt; new { ... })
     /// </code>
     /// </param>
-    /// <param name="cteTableName">CTE表自身引用的表名称，如果在UnionRecursive/UnionAllRecursive方法中设置过了，此处无需设置</param>
     /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> NextWith<TOther>(Func<IFromQuery, IMultiQuery<T1>, IMultiQuery<T2>, IMultiQuery<T3>, IMultiQuery<T4>, IMultiQuery<T5>, IMultiQuery<T6>, IQuery<TOther>> cteSubQuery, string cteTableName = null, char tableAsStart = 'a');
+    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> NextWith<TOther>(Func<IFromQuery, IMultiQuery<T1>, IMultiQuery<T2>, IMultiQuery<T3>, IMultiQuery<T4>, IMultiQuery<T5>, IMultiQuery<T6>, IQuery<TOther>> cteSubQuery);
     #endregion
 
     #region WithTable
@@ -2485,7 +2459,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -2499,7 +2473,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -2513,7 +2487,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -2869,7 +2843,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -2883,7 +2857,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -2897,7 +2871,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -3254,7 +3228,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -3268,7 +3242,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -3282,7 +3256,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -3640,7 +3614,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -3654,7 +3628,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -3668,7 +3642,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -4027,7 +4001,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -4041,7 +4015,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -4055,7 +4029,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -4415,7 +4389,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -4429,7 +4403,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -4443,7 +4417,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -4804,7 +4778,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -4818,7 +4792,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -4832,7 +4806,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -5194,7 +5168,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -5208,7 +5182,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -5222,7 +5196,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -5585,7 +5559,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -5599,7 +5573,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -5613,7 +5587,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -5977,7 +5951,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -5991,7 +5965,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -6005,7 +5979,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// f.FromWith(...).NextWith(...)
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...), "MenuList") ...
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>

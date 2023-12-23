@@ -10,19 +10,19 @@ namespace Trolley;
 
 public class QueryAnonymousObject : IQueryAnonymousObject
 {
-    #region Fields
-    private readonly IQueryVisitor visitor;
+    #region Properties
+    public IQueryVisitor Visitor { get; private set; }
     #endregion
 
     #region Constructor
-    public QueryAnonymousObject(IQueryVisitor visitor) => this.visitor = visitor;
+    public QueryAnonymousObject(IQueryVisitor visitor) => this.Visitor = visitor;
     #endregion
 
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        dbParameters = this.visitor.DbParameters.Cast<IDbDataParameter>().ToList();
-        return this.visitor.BuildSql(out _);
+        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+        return this.Visitor.BuildSql(out _);
     }
     #endregion
 }
@@ -150,7 +150,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Union(" UNION ALL", typeof(T), this.DbContext, subQuery);
         return this;
     }
-    public IQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery, string cteTableName)
+    public IQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -158,7 +158,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.UnionRecursive(" UNION", typeof(T), this.DbContext, this, subQuery);
         return this;
     }
-    public IQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery, string cteTableName)
+    public IQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -169,23 +169,39 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region CTE NextWith
-    public IQuery<T, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T>, IQuery<TOther>> cteSubQuery, string cteTableName = null)
+    public IQuery<T, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery)
     {
         if (cteSubQuery == null)
             throw new ArgumentNullException(nameof(cteSubQuery));
 
-        this.Visitor.NextWith(typeof(TOther), this.DbContext, cteSubQuery);
+        this.Visitor.FromWith(typeof(TOther), false, cteSubQuery);
+        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+    }
+    public IQuery<T, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T>, IQuery<TOther>> cteSubQuery)
+    {
+        if (cteSubQuery == null)
+            throw new ArgumentNullException(nameof(cteSubQuery));
+
+        this.Visitor.FromWith(typeof(TOther), false, this.DbContext, cteSubQuery);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
     #region WithTable
+    public IQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        this.Visitor.From(typeof(TOther), false, subQuery);
+        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+    }
     public IQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        this.Visitor.From(typeof(TOther), this.DbContext, subQuery);
+        this.Visitor.From(typeof(TOther), false, this.DbContext, subQuery);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
