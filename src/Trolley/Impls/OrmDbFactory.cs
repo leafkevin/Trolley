@@ -9,7 +9,7 @@ public class OrmDbFactory : IOrmDbFactory
 {
     private OrmDbFactoryOptions options;
     private TheaDatabase defaultDatabase;
-    private Dictionary<OrmProviderType, IOrmProvider> typedOrmProviders;
+    private ConcurrentDictionary<OrmProviderType, IOrmProvider> typedOrmProviders;
     private ConcurrentDictionary<Type, IOrmProvider> ormProviders;
     private ConcurrentDictionary<string, TheaDatabase> databases;
     private ConcurrentDictionary<Type, IEntityMapProvider> mapProviders;
@@ -110,6 +110,7 @@ public class OrmDbFactory : IOrmDbFactory
         var tenantDatabase = database.GetTenantDatabase(tenantId);
         if (!this.TryGetMapProvider(database.OrmProviderType, out var mapProvider))
             throw new Exception($"未注册Key为{database.OrmProviderType.FullName}的EntityMapProvider");
+        Activator.CreateInstance()
         var connection = new TheaConnection
         {
             DbKey = dbKey,

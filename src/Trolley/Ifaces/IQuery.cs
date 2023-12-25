@@ -199,15 +199,14 @@ public interface IQuery<T> : IQueryBase
 
     #region CTE NextWith
     /// <summary>
-    /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，多个CTE子句需要连续定义，用法：
+    /// 继续使用CTE子句创建查询对象，不能自我引用不能递归查询，用法：
     /// <code>
     /// var cteSubQueryObj = repository.From&lt;Menu&gt;() ... .Select( ... );
     /// repository.FromWith(f =&gt; ... ).NextWith(cteSubQueryObj) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">当前CTE临时返回的实体类型</typeparam>
-    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
-    /// <code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
+    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：<code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery);

@@ -9,7 +9,7 @@ public static class Sql
     public static T Null<T>()
         => throw new NotImplementedException();
     /// <summary>
-    /// Select语句从数据库执行后，进行方法调用并把返回值赋值到对应的字段上，只做实体赋值解析，不实现
+    /// 用在修饰方法调用之后，表示前面的方法不做sql解析，当方法的参数从数据库读取后，再执行方法调用并把返回值赋值到对应的成员上，只做实体赋值解析，不实现
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="obj"></param>

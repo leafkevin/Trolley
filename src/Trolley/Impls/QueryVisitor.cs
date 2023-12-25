@@ -1310,6 +1310,20 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                                 else
                                 {
                                     //1:N场景，要在第二次查询的时候再做处理，此处只构建延迟处理Action
+                                    //但要先确定返回目标的当前成员是否支持Set，不支持Set无法完成
+                                    if (memberInfo is PropertyInfo propertyInfo && propertyInfo.GetSetMethod() == null)
+                                        throw new NotSupportedException($"类型{propertyInfo.DeclaringType.FullName}的成员{propertyInfo.Name}不支持Set操作");
+
+                                    readerFields.Add(new ReaderField
+                                    {
+                                        IsRef = true,//需要在构建实体的时候做处理
+                                        FieldType = ReaderFieldType.Entity,
+                                        FromMember = memberInfo,
+                                        TargetMember = memberInfo,
+                                        //引用字段设置为null，在赋值返回值的时候，设置为默认值
+                                        ReaderFields = null
+                                    });
+
                                     var includeSegment = this.IncludeSegments.Find(f => f.Path == path);
                                     var cacheKey = GetRefIncludeKey(memberInfo.DeclaringType, memberInfo.Name, includeSegment);
                                     var deferredSetter = targetRefIncludeValuesSetters.GetOrAdd(cacheKey, f =>

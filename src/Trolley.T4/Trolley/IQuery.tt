@@ -206,7 +206,7 @@ public interface IQuery<T> : IQueryBase
 
     #region CTE NextWith
     /// <summary>
-    /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，多个CTE子句需要连续定义，用法：
+    /// 继续使用CTE子句创建查询对象，不能自我引用不能递归查询，用法：
     /// <code>
     /// var cteSubQueryObj = repository.From&lt;Menu&gt;() ... .Select( ... );
     /// repository.FromWith(f =&gt; ... ).NextWith(cteSubQueryObj) ...
@@ -849,7 +849,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
 #>
     #region CTE NextWith
     /// <summary>
-    /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，多个CTE子句需要连续定义，用法：
+    /// 继续使用CTE子句创建查询对象，不能自我引用不能递归查询，用法：
     /// <code>
     /// var cteSubQueryObj = repository.From&lt;Menu&gt;() ... .Select( ... );
     /// repository.FromWith(f =&gt; ... ) ...

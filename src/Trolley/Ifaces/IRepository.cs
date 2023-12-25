@@ -202,7 +202,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     ///     .Select(x =&gt; new { ... });
     /// repository.FromWith(subQuery) ...
     /// SQL:
-    /// WITH MenuList(Id,Name,ParentId,PageId) AS 
+    /// WITH MyCte1(Id,Name,ParentId,PageId) AS 
     /// (
     ///     SELECT ... FROM `sys_menu`a
     /// )
@@ -216,16 +216,15 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <summary>
     /// 使用CTE子句创建查询对象，包含UnionRecursive或UnionAllRecursive子句可以自我引用递归查询，用法：
     /// <code>
-    /// repository
-    ///     .FromWith(f =&gt; f.From&lt;Menu&gt;() ...
-    ///             .Select(x =&gt; new { ... })
-    ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///             .Select((a, b) =&gt; new { ... }))) ...
+    /// repository.FromWith(f =&gt; f.From&lt;Menu&gt;() ...
+    ///         .Select(x =&gt; new { ... })
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+    ///         .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
     /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
     /// (
-    ///     SELECT ... FROM `sys_menu` WHERE a.`Id`=1 UNION ALL
+    ///     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
     ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id`
     /// ) ...
     /// </code>

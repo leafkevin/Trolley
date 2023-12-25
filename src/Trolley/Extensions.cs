@@ -121,7 +121,7 @@ public static class Extensions
     }
     public static bool IsParameter(this Expression expr, out string parameterName)
     {
-        var visitor = new TestVisitor();
+        var visitor = new IsParameterVisitor();
         visitor.Visit(expr);
         if (visitor.IsParameter)
         {
@@ -133,7 +133,7 @@ public static class Extensions
     }
     public static bool GetParameters(this Expression expr, out List<ParameterExpression> parameters)
     {
-        var visitor = new TestVisitor();
+        var visitor = new IsParameterVisitor();
         visitor.Visit(expr);
         if (visitor.IsParameter)
         {
@@ -145,7 +145,7 @@ public static class Extensions
     }
     public static bool GetParameterNames(this Expression expr, out List<string> parameterNames)
     {
-        var visitor = new TestVisitor();
+        var visitor = new IsParameterVisitor();
         visitor.Visit(expr);
         if (visitor.IsParameter)
         {
@@ -153,6 +153,18 @@ public static class Extensions
             return visitor.IsParameter;
         }
         parameterNames = null;
+        return false;
+    }
+    public static bool ReplaceParameters(this Expression expr, out List<ParameterExpression> parameters)
+    {
+        var visitor = new ReplaceParameterVisitor();
+        visitor.Visit(expr);
+        if (visitor.NewParameters != null)
+        {
+            parameters = visitor.NewParameters;
+            return true;
+        }
+        parameters = null;
         return false;
     }
     public static string NextReplace(this string content, string oldValue, string newValue)
@@ -451,6 +463,7 @@ public static class Extensions
                         readerBuilders.Add(readerField, current);
                     }
 
+                    var argsExprs = new List<Expression>();
                     while (index < endIndex)
                     {
                         var fieldType = reader.GetFieldType(index);
@@ -470,43 +483,45 @@ public static class Extensions
                             memberMapper = childReaderField.MemberMapper;
                             readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
                                 memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
-                            var parameters = readerField.DeferredMethod.GetParameters();
-                            if (parameters.Length > 0)
-                            {
-                                var argsIndex = readerField.ReaderFields[childIndex].Index;
-                                if (memberMapper.MemberType != parameters[argsIndex].ParameterType)
-                                    readerValueExpr = Expression.Convert(readerValueExpr, parameters[argsIndex].ParameterType);
-                                readerField.DeferredArguments.Insert(argsIndex, readerValueExpr);
-                            }
+                            argsExprs.Add(readerValueExpr);
                         }
                         childIndex++;
                         index++;
                     }
-
-                    Expression callExpr = null;
-                    if (readerField.DeferredTarget != null)
-                        callExpr = Expression.Call(readerField.DeferredTarget, readerField.DeferredMethod, readerField.DeferredArguments);
-                    else callExpr = Expression.Call(readerField.DeferredMethod, readerField.DeferredArguments);
+                    var executeExpr = Expression.Invoke(readerField.DeferredDelegate, argsExprs.ToArray());
                     if (current.IsDefault)
-                        current.Bindings.Add(Expression.Bind(readerField.TargetMember, callExpr));
-                    else current.Arguments.Add(callExpr);
+                        current.Bindings.Add(Expression.Bind(readerField.TargetMember, executeExpr));
+                    else current.Arguments.Add(executeExpr);
                 }
                 else
                 {
+                    //默认是目标类型，并且也只有第一个ReaderField才是目标类型
                     if (!readerField.IsTargetType)
                     {
-                        if (readerIndex == 0) parent = root;
-                        else if (readerField.Parent != null)
+                        if (readerField.Parent != null)
                             parent = readerBuilders[readerField.Parent];
                         else parent = root;
-                        //Include导航属性引用，并且是1:1关系，1:N关系的，在SetIncludeValues中单独处理了
+
+                        //Include导航属性引用单独处理，1:1关系直接赋值，1:N关系先设置默认值，后面在SetIncludeValues中再设置具体值
                         if (readerField.IsRef)
                         {
-                            var refReaderField = readerField.ReaderFields[0];
-                            if (readerBuilders.TryGetValue(refReaderField, out var buildInfo))
-                                current = buildInfo.Clone(root);
+                            Expression instanceExpr = null;
+                            //1:N关系，readerField.ReaderFields的值为null
+                            if (readerField.ReaderFields == null)
+                                instanceExpr = Expression.Default(readerField.FromMember.GetMemberType());
+                            else
+                            {
+                                var refReaderField = readerField.ReaderFields[0];
+                                var refBuildInfo = readerBuilders[refReaderField];
+                                instanceExpr = refBuildInfo.Instance;
+                            }
+                            if (parent.IsDefault)
+                                parent.Bindings.Add(Expression.Bind(readerField.FromMember, instanceExpr));
+                            else parent.Arguments.Add(instanceExpr);
+                            readerIndex++;
+                            continue;
                         }
-                        else current = NewBuildInfo(readerField.TargetMember.GetMemberType(), readerField.TargetMember, parent);
+                        current = NewBuildInfo(readerField.TargetMember.GetMemberType(), readerField.TargetMember, parent);
                     }
                     while (index < endIndex)
                     {
@@ -518,6 +533,7 @@ public static class Extensions
                         readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
                             childReaderField.MemberMapper.MemberType, fieldType, typeHandler, blockParameters, blockBodies);
 
+                        #region 注释
                         //switch (readerField.FieldType)
                         //{
                         //    case ReaderFieldType.AnonymousObject:
@@ -540,6 +556,7 @@ public static class Extensions
                         //            memberMapper.MemberType, fieldType, typeHandler, blockParameters, blockBodies);
                         //        break;
                         //}
+                        #endregion
                         if (current.IsDefault) current.Bindings.Add(Expression.Bind(fieldMember, readerValueExpr));
                         else current.Arguments.Add(readerValueExpr);
 
@@ -562,6 +579,8 @@ public static class Extensions
                             if (current.IsDefault)
                                 instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
                             else instanceExpr = Expression.New(current.Constructor, current.Arguments);
+                            current.Instance = instanceExpr;
+
                             //赋值给父对象的属性
                             if (current.Parent == null)
                                 break;
@@ -841,7 +860,8 @@ public static class Extensions
         public List<Expression> Arguments { get; set; }
         public MemberInfo FromMember { get; set; }
         public EntityBuildInfo Parent { get; set; }
-        public EntityBuildInfo Clone(EntityBuildInfo parent)
+        public Expression Instance { get; set; }
+        public EntityBuildInfo Clone(EntityBuildInfo parent, MemberInfo fromMember)
         {
             return new EntityBuildInfo
             {
@@ -849,7 +869,7 @@ public static class Extensions
                 Constructor = this.Constructor,
                 Bindings = this.Bindings,
                 Arguments = this.Arguments,
-                FromMember = this.FromMember,
+                FromMember = fromMember,
                 Parent = parent
             };
         }

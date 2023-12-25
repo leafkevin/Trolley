@@ -60,18 +60,9 @@ public class ReaderField
     /// </summary>
     public List<ReaderField> ReaderFields { get; set; }
     /// <summary>
-    /// 字段查询后，执行函数调用的目标对象
+    /// 延迟调用的委托
     /// </summary>
-    public Expression DeferredTarget { get; set; }
-    /// <summary>
-    /// 函数委托
-    /// 先从数据库中获取字段，再调用函数，赋值指定字段中
-    /// </summary>
-    public MethodInfo DeferredMethod { get; set; }
-    /// <summary>
-    /// 字段查询后，执行函数调用的参数
-    /// </summary>
-    public List<Expression> DeferredArguments { get; set; }
+    public Expression DeferredDelegate { get; set; }
     /// <summary>
     /// 是否是最外层目标类型，通常用判断第一个字段是否是参数访问，并且只有一个字段，可以有include操作
     /// </summary>

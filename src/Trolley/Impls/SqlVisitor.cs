@@ -400,26 +400,28 @@ public class SqlVisitor : ISqlVisitor
             || typeof(IAggregateSelect).IsAssignableFrom(methodCallExpr.Method.DeclaringType))
             return this.VisitSqlMethodCall(sqlSegment);
 
-        if (this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter) && !sqlSegment.IsDeferredFields)
+        if (!sqlSegment.IsDeferredFields && this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter))
             return formatter.Invoke(this, methodCallExpr, methodCallExpr.Object, sqlSegment.DeferredExprs, methodCallExpr.Arguments.ToArray());
 
         //延迟方法调用，两种场景：
-        //主动延迟方法调用：把返回的枚举列转成描述，参数就是枚举列，返回值是对应的描述
-        //Select子句中Include导航成员访问，主表数据已经查询了，此处成员访问只是多一个引用赋值动作，做成了延迟委托调用
+        //1.主动延迟方法调用：如，把返回的枚举列转成描述，参数就是枚举列，返回值是对应的描述
+        //2.Select子句中Include导航成员访问，主表数据已经查询了，此处成员访问只是多一个引用赋值动作，做成了延迟委托调用
         string fields = null;
         List<ReaderField> readerFields = null;
-        List<Expression> constArgs = null;
+        Expression deferredDelegate = null;
         if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
         {
             readerFields = new List<ReaderField>();
-            constArgs = new List<Expression>();
             var builder = new StringBuilder();
-            for (int i = 0; i < methodCallExpr.Arguments.Count; i++)
+            var visitor = new ReplaceParameterVisitor();
+            deferredDelegate = visitor.Visit(methodCallExpr);
+
+            foreach (var argsExpr in visitor.OrgMembers)
             {
-                var argumentSegment = this.VisitAndDeferred(new SqlSegment { Expression = methodCallExpr.Arguments[i] });
+                var argumentSegment = this.VisitAndDeferred(new SqlSegment { Expression = argsExpr });
                 if (argumentSegment.HasField)
                 {
-                    sqlSegment.Merge(argumentSegment);
+                    sqlSegment.HasField = true;
                     var fieldName = argumentSegment.Value.ToString();
                     readerFields.Add(new ReaderField
                     {
@@ -432,7 +434,6 @@ public class SqlVisitor : ISqlVisitor
                         builder.Append(',');
                     builder.Append(fieldName);
                 }
-                else constArgs.Add(Expression.Constant(argumentSegment.Value));
             }
             if (readerFields.Count > 0)
                 fields = builder.ToString();
@@ -446,9 +447,7 @@ public class SqlVisitor : ISqlVisitor
             {
                 FieldType = ReaderFieldType.DeferredFields,
                 Body = fields,
-                DeferredTarget = methodCallExpr.Object,
-                DeferredMethod = methodCallExpr.Method,
-                DeferredArguments = constArgs,
+                DeferredDelegate = deferredDelegate,
                 ReaderFields = readerFields
             }, false, false, true);
         }
@@ -629,7 +628,8 @@ public class SqlVisitor : ISqlVisitor
             //    break;
             case "Deferred":
                 sqlSegment.IsDeferredFields = true;
-                sqlSegment = this.VisitMethodCall(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                //TODO:测试是否方法被解析两次
+                //sqlSegment = this.VisitMethodCall(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 break;
             case "IsNull":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)

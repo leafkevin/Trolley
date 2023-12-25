@@ -5,11 +5,9 @@ namespace Trolley.MySqlConnector;
 public class MySqlRepository : Repository, IMySqlRepository
 {
     #region Constructor
-    public MySqlRepository(string dbKey, IDbConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
-        : base(dbKey, connection, ormProvider, mapProvider) { }
-    public MySqlRepository(TheaConnection connection, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
-        : base(connection, ormProvider, mapProvider) { }
-    #endregion
+    public MySqlRepository() { }
+    public MySqlRepository(DbContext dbContext) : base(dbContext) { }
+    #endregion 
 
     public new IMySqlCreate<TEntity> Create<TEntity>() => new MySqlCreate<TEntity>(this.DbContext);
     public new IMySqlUpdate<TEntity> Update<TEntity>() => new MySqlUpdate<TEntity>(this.DbContext);

@@ -54,7 +54,6 @@ public class OrmDbFactoryBuilder
         optionsInitializer.Invoke(this.options);
         return this;
     }
-
     public IOrmDbFactory Build()
     {
         var dbFactory = new OrmDbFactory();
