@@ -1,31 +1,36 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
+		<IsPackable>false</IsPackable>
+		<IsTestProject>true</IsTestProject>
 	</PropertyGroup>
 	<ItemGroup>
-	  <Compile Remove="PostgreSql\**" />
-	  <EmbeddedResource Remove="PostgreSql\**" />
-	  <None Remove="PostgreSql\**" />
+	  <Compile Remove="MySqlDatabaseGenerator.cs" />
+	  <Compile Remove="NpgSqlDatabaseGenerator.cs" />
+	  <Compile Remove="SqlServerDatabaseGenerator.cs" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.1" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2" />
-		<PackageReference Include="MySqlConnector" Version="2.2.5" />
-		<PackageReference Include="Npgsql" Version="7.0.2" />
-		<PackageReference Include="xunit" Version="2.4.2" />
-		<PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
+	  <Content Remove="E:\AppData\.nuget\packages\microsoft.testplatform.testhost\17.5.0\build\netcoreapp3.1\x64\testhost.dll" />
+	  <Content Remove="E:\AppData\.nuget\packages\microsoft.testplatform.testhost\17.5.0\build\netcoreapp3.1\x64\testhost.exe" />
+	</ItemGroup>
+	<ItemGroup>
+	  <None Remove="E:\AppData\.nuget\packages\xunit.runner.visualstudio\2.4.5\build\netcoreapp3.1\xunit.runner.reporters.netcoreapp10.dll" />
+	  <None Remove="E:\AppData\.nuget\packages\xunit.runner.visualstudio\2.4.5\build\netcoreapp3.1\xunit.runner.utility.netcoreapp10.dll" />
+	  <None Remove="E:\AppData\.nuget\packages\xunit.runner.visualstudio\2.4.5\build\netcoreapp3.1\xunit.runner.visualstudio.dotnetcore.testadapter.dll" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+		<PackageReference Include="xunit" Version="2.6.4" />
+		<PackageReference Include="xunit.runner.visualstudio" Version="2.5.6">
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
-		<PackageReference Include="coverlet.collector" Version="3.1.2">
+		<PackageReference Include="coverlet.collector" Version="6.0.0">
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
 	</ItemGroup>
 	<ItemGroup>
-	  <ProjectReference Include="..\..\src\Trolley.MySqlConnector\Trolley.MySqlConnector.csproj" />
-	  <ProjectReference Include="..\..\src\Trolley.SqlServer\Trolley.SqlServer.csproj" />
 	  <ProjectReference Include="..\..\src\Trolley\Trolley.csproj" />
 	</ItemGroup>
 </Project>

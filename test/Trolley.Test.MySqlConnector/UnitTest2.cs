@@ -3,11 +3,11 @@ using System;
 using Trolley.MySqlConnector;
 using Xunit;
 
-namespace Trolley.Test.MySql;
+namespace Trolley.Test.MySqlConnector;
 
-public class MySqlUnitTest2 : UnitTestBase
+public class UnitTest2 : UnitTestBase
 {
-    public MySqlUnitTest2()
+    public UnitTest2()
     {
         var services = new ServiceCollection();
         services.AddSingleton(f =>
@@ -18,7 +18,7 @@ public class MySqlUnitTest2 : UnitTestBase
                 f.Add("Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true);
             })
             .AddTypeHandler<JsonTypeHandler>()
-            .Configure<MySqlProvider, MySqlModelConfiguration>();
+            .Configure<MySqlProvider, ModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();

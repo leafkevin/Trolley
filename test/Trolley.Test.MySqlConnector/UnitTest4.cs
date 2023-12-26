@@ -1,85 +1,30 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
-using Trolley.SqlServer;
+using Trolley.MySqlConnector;
 using Xunit;
 
-namespace Trolley.Test.SqlServer;
+namespace Trolley.Test.MySqlConnector;
 
-public class SqlServerUnitTest4 : UnitTestBase
-{
-    enum Sex { Male, Female }
-    struct Studuent
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
-    }
-    public SqlServerUnitTest4()
+public class UnitTest4 : UnitTestBase
+{   
+    public UnitTest4()
     {
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-             .Register<SqlServerProvider>("fengling", true, f =>
-             {
-                 f.Add("Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true);
-             })
-             .AddTypeHandler<JsonTypeHandler>()
-             .Configure<SqlServerProvider, SqlServerModelConfiguration>();
+            .Register<MySqlProvider>("fengling", true, f =>
+            {
+                f.Add("Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true);
+            })
+            .AddTypeHandler<JsonTypeHandler>()
+            .Configure<MySqlProvider, ModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
         dbFactory = serviceProvider.GetService<IOrmDbFactory>();
-    }
-    [Fact]
-    public void IsEntityType()
-    {
-        Assert.False(typeof(Sex).IsEntityType(out _));
-        Assert.False(typeof(Sex?).IsEntityType(out _));
-        Assert.True(typeof(Studuent).IsEntityType(out _));
-        Assert.False(typeof(string).IsEntityType(out _));
-        Assert.False(typeof(int).IsEntityType(out _));
-        Assert.False(typeof(int?).IsEntityType(out _));
-        Assert.False(typeof(Guid).IsEntityType(out _));
-        Assert.False(typeof(Guid?).IsEntityType(out _));
-        Assert.False(typeof(DateTime).IsEntityType(out _));
-        Assert.False(typeof(DateTime?).IsEntityType(out _));
-        Assert.False(typeof(byte[]).IsEntityType(out _));
-        Assert.False(typeof(int[]).IsEntityType(out _));
-        Assert.False(typeof(List<int>).IsEntityType(out _));
-        Assert.False(typeof(List<int[]>).IsEntityType(out _));
-        Assert.False(typeof(Collection<string>).IsEntityType(out _));
-        Assert.False(typeof(DBNull).IsEntityType(out _));
-
-        var vt1 = ValueTuple.Create("kevin");
-        Assert.False(vt1.GetType().IsEntityType(out _));
-        var vt2 = ValueTuple.Create(1, "kevin", 25, 30000.00d);
-        Assert.True(vt2.GetType().IsEntityType(out _));
-        Assert.True(typeof((string Name, int Age)).IsEntityType(out _));
-        Assert.True(typeof(Dictionary<string, int>).IsEntityType(out _));
-        Assert.True(typeof(Studuent).IsEntityType(out _));
-        Assert.True(typeof(Teacher).IsEntityType(out _));
-
-        Assert.True(typeof(Dictionary<string, int>[]).IsEntityType(out _));
-        Assert.True(typeof(List<Dictionary<string, int>>).IsEntityType(out _));
-        Assert.True(typeof(List<Dictionary<string, int>[]>).IsEntityType(out _));
-        Assert.True(typeof(Collection<Dictionary<string, int>>).IsEntityType(out _));
-        Assert.True(typeof(Dictionary<string, Dictionary<string, int>>).IsEntityType(out _));
-
-        Assert.True(typeof(Teacher[]).IsEntityType(out _));
-        Assert.True(typeof(List<Teacher>).IsEntityType(out _));
-        Assert.True(typeof(List<Teacher[]>).IsEntityType(out _));
-        Assert.True(typeof(Collection<Teacher>).IsEntityType(out _));
-        Assert.True(typeof(Dictionary<string, Teacher>).IsEntityType(out _));
-
-        Assert.True(typeof(Studuent[]).IsEntityType(out _));
-        Assert.True(typeof(List<Studuent>).IsEntityType(out _));
-        Assert.True(typeof(List<Studuent[]>).IsEntityType(out _));
-        Assert.True(typeof(Collection<Studuent>).IsEntityType(out _));
-        Assert.True(typeof(Dictionary<string, Studuent>).IsEntityType(out _));
-    }
+    } 
     [Fact]
     public async void Delete()
     {
@@ -107,7 +52,7 @@ public class SqlServerUnitTest4 : UnitTestBase
         var sql = repository.Delete<User>()
             .Where(f => f.Id == 1)
             .ToSql(out var parameters);
-        Assert.True(sql == "DELETE FROM [sys_user] WHERE [Id]=1");
+        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id`=1");
         //Assert.True((int)parameters[0].Value == 1);
     }
     [Fact]
@@ -153,14 +98,14 @@ public class SqlServerUnitTest4 : UnitTestBase
         var sql = repository.Delete<User>()
             .Where(new[] { new { Id = 1 }, new { Id = 2 } })
             .ToSql(out var parameters);
-        Assert.True(sql == "DELETE FROM [sys_user] WHERE [Id] IN (@Id0,@Id1)");
+        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id` IN (@Id0,@Id1)");
         Assert.True((int)parameters[0].Value == 1);
         Assert.True((int)parameters[1].Value == 2);
 
         var sql1 = repository.Delete<Function>()
             .Where(new[] { new { MenuId = 1, PageId = 1 }, new { MenuId = 2, PageId = 2 } })
             .ToSql(out parameters);
-        Assert.True(sql1 == "DELETE FROM [sys_function] WHERE [MenuId]=@MenuId0 AND [PageId]=@PageId0;DELETE FROM [sys_function] WHERE [MenuId]=@MenuId1 AND [PageId]=@PageId1");
+        Assert.True(sql1 == "DELETE FROM `sys_function` WHERE `MenuId`=@MenuId0 AND `PageId`=@PageId0;DELETE FROM `sys_function` WHERE `MenuId`=@MenuId1 AND `PageId`=@PageId1");
         Assert.True(parameters.Count == 4);
         Assert.True((int)parameters[0].Value == 1);
         Assert.True((int)parameters[1].Value == 1);
@@ -210,7 +155,7 @@ public class SqlServerUnitTest4 : UnitTestBase
         var sql = repository.Delete<User>()
             .Where(new int[] { 1, 2 })
             .ToSql(out var parameters);
-        Assert.True(sql == "DELETE FROM [sys_user] WHERE [Id] IN (@Id0,@Id1)");
+        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id` IN (@Id0,@Id1)");
         Assert.True((int)parameters[0].Value == 1);
         Assert.True((int)parameters[1].Value == 2);
 
@@ -218,7 +163,7 @@ public class SqlServerUnitTest4 : UnitTestBase
         sql = repository.Delete<Order>()
             .Where(f => f.BuyerId == 1 && orderNos.Contains(f.OrderNo))
             .ToSql(out parameters);
-        Assert.True(sql == "DELETE FROM [sys_order] WHERE [BuyerId]=1 AND [OrderNo] IN (@p0,@p1,@p2)");
+        Assert.True(sql == "DELETE FROM `sys_order` WHERE `BuyerId`=1 AND `OrderNo` IN (@p0,@p1,@p2)");
         Assert.True((string)parameters[0].Value == orderNos[0]);
         Assert.True((string)parameters[1].Value == orderNos[1]);
         Assert.True((string)parameters[2].Value == orderNos[2]);
@@ -266,7 +211,7 @@ public class SqlServerUnitTest4 : UnitTestBase
         var sql = repository.Delete<User>()
            .Where(f => new int[] { 1, 2 }.Contains(f.Id))
            .ToSql(out var parameters);
-        Assert.True(sql == "DELETE FROM [sys_user] WHERE [Id] IN (1,2)");
+        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id` IN (1,2)");
         //Assert.True((int)parameters[0].Value == 1);
         //Assert.True((int)parameters[1].Value == 2);
     }
@@ -279,7 +224,7 @@ public class SqlServerUnitTest4 : UnitTestBase
             .Where(f => f.Name.Contains("kevin"))
             .And(isMale.HasValue, f => f.Age > 25)
             .ToSql(out _);
-        Assert.True(sql == "DELETE FROM [sys_user] WHERE [Name] LIKE '%kevin%' AND [Age]>25");
+        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Name` LIKE '%kevin%' AND `Age`>25");
     }
     [Fact]
     public void Delete_Enum_Fields()
@@ -288,27 +233,27 @@ public class SqlServerUnitTest4 : UnitTestBase
         var sql1 = repository.Delete<User>()
             .Where(f => f.Gender == Gender.Male)
             .ToSql(out _);
-        Assert.True(sql1 == "DELETE FROM [sys_user] WHERE [Gender]=2");
+        Assert.True(sql1 == "DELETE FROM `sys_user` WHERE `Gender`=2");
 
         var gender = Gender.Male;
         var sql2 = repository.Delete<User>()
             .Where(f => f.Gender == gender)
             .ToSql(out var parameters1);
-        Assert.True(sql2 == "DELETE FROM [sys_user] WHERE [Gender]=@p0");
+        Assert.True(sql2 == "DELETE FROM `sys_user` WHERE `Gender`=@p0");
         Assert.True(parameters1[0].ParameterName == "@p0");
-        Assert.True(parameters1[0].Value.GetType() == typeof(byte));
-        Assert.True((byte)parameters1[0].Value == (byte)gender);
+        Assert.True(parameters1[0].Value.GetType() == typeof(sbyte));
+        Assert.True((sbyte)parameters1[0].Value == (sbyte)gender);
 
         var sql3 = repository.Delete<Company>()
              .Where(f => f.Nature == CompanyNature.Internet)
              .ToSql(out _);
-        Assert.True(sql3 == "DELETE FROM [sys_company] WHERE [Nature]='Internet'");
+        Assert.True(sql3 == "DELETE FROM `sys_company` WHERE `Nature`='Internet'");
 
         var nature = CompanyNature.Internet;
         var sql4 = repository.Delete<Company>()
              .Where(f => f.Nature == nature)
              .ToSql(out var parameters2);
-        Assert.True(sql4 == "DELETE FROM [sys_company] WHERE [Nature]=@p0");
+        Assert.True(sql4 == "DELETE FROM `sys_company` WHERE `Nature`=@p0");
         Assert.True(parameters2[0].ParameterName == "@p0");
         Assert.True(parameters2[0].Value.GetType() == typeof(string));
         Assert.True((string)parameters2[0].Value == CompanyNature.Internet.ToString());

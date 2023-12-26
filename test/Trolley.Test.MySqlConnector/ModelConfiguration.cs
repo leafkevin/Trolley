@@ -2,9 +2,9 @@
 using System;
 using System.Data;
 
-namespace Trolley.Test.MySql;
+namespace Trolley.Test.MySqlConnector;
 
-class MySqlModelConfiguration : IModelConfiguration
+class ModelConfiguration : IModelConfiguration
 {
     public void OnModelCreating(ModelBuilder builder)
     {

@@ -7,7 +7,7 @@ public interface ISqlServerUpdate<TEntity> : IUpdate<TEntity>
 {
     #region InnerJoin
     /// <summary>
-    /// InnerJoin内连接表TSource部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// InnerJoin内连接表TSource部分字段数据，更新当前表TEntity数据
     /// </summary>
     /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -17,7 +17,7 @@ public interface ISqlServerUpdate<TEntity> : IUpdate<TEntity>
 
     #region LeftJoin
     /// <summary>
-    /// LeftJoin左连接表TSource部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// LeftJoin左连接表TSource部分字段数据，更新当前表TEntity数据
     /// </summary>
     /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>

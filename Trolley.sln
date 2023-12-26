@@ -17,6 +17,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trolley.MySqlConnector", "s
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trolley.SqlServer", "src\Trolley.SqlServer\Trolley.SqlServer.csproj", "{E4CBBDCB-A02C-4FE3-AC00-6378DE164947}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleApp1", "ConsoleApp1\ConsoleApp1.csproj", "{6B474E17-E794-4B01-B26F-5701F9D5A887}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Trolley.Test.MySqlConnector", "test\Trolley.Test.MySqlConnector\Trolley.Test.MySqlConnector.csproj", "{564B9B61-48F9-4A2D-9F95-5BD36F9118F7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Trolley.Test.SqlServer", "test\Trolley.Test.SqlServer\Trolley.Test.SqlServer.csproj", "{F9C47456-09F3-4955-A688-FA5C72F94900}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,6 +49,18 @@ Global
 		{E4CBBDCB-A02C-4FE3-AC00-6378DE164947}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E4CBBDCB-A02C-4FE3-AC00-6378DE164947}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E4CBBDCB-A02C-4FE3-AC00-6378DE164947}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6B474E17-E794-4B01-B26F-5701F9D5A887}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B474E17-E794-4B01-B26F-5701F9D5A887}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B474E17-E794-4B01-B26F-5701F9D5A887}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B474E17-E794-4B01-B26F-5701F9D5A887}.Release|Any CPU.Build.0 = Release|Any CPU
+		{564B9B61-48F9-4A2D-9F95-5BD36F9118F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{564B9B61-48F9-4A2D-9F95-5BD36F9118F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{564B9B61-48F9-4A2D-9F95-5BD36F9118F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{564B9B61-48F9-4A2D-9F95-5BD36F9118F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9C47456-09F3-4955-A688-FA5C72F94900}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9C47456-09F3-4955-A688-FA5C72F94900}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9C47456-09F3-4955-A688-FA5C72F94900}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9C47456-09F3-4955-A688-FA5C72F94900}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -53,6 +71,8 @@ Global
 		{35C14A66-EECB-490A-8958-5BB51932A339} = {139B7F3C-ABCC-4617-90D7-9279EFD8FC60}
 		{79C6A1C3-9AF7-4521-9153-25F2C6C79195} = {B5499ED1-D9F6-4B8F-8B58-AE3CDF2349D3}
 		{E4CBBDCB-A02C-4FE3-AC00-6378DE164947} = {B5499ED1-D9F6-4B8F-8B58-AE3CDF2349D3}
+		{564B9B61-48F9-4A2D-9F95-5BD36F9118F7} = {139B7F3C-ABCC-4617-90D7-9279EFD8FC60}
+		{F9C47456-09F3-4955-A688-FA5C72F94900} = {139B7F3C-ABCC-4617-90D7-9279EFD8FC60}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {9B4885C8-EC3C-46CC-9707-F16E2FCE8D2D}

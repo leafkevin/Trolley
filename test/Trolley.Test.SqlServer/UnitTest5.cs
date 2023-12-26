@@ -4,9 +4,9 @@ using Xunit;
 
 namespace Trolley.Test.SqlServer;
 
-public class SqlServerUnitTest5 : UnitTestBase
+public class UnitTest5 : UnitTestBase
 {
-    public SqlServerUnitTest5()
+    public UnitTest5()
     {
         var services = new ServiceCollection();
         services.AddSingleton(f =>
@@ -17,7 +17,7 @@ public class SqlServerUnitTest5 : UnitTestBase
                 f.Add("Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true);
             })
             .AddTypeHandler<JsonTypeHandler>()
-            .Configure<SqlServerProvider, SqlServerModelConfiguration>();
+            .Configure<SqlServerProvider, ModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();

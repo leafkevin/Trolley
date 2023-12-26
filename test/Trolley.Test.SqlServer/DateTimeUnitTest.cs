@@ -6,9 +6,9 @@ using Xunit;
 
 namespace Trolley.Test.SqlServer;
 
-public class SqlServerDateTimeUnitTest : UnitTestBase
+public class DateTimeUnitTest : UnitTestBase
 {
-    public SqlServerDateTimeUnitTest()
+    public DateTimeUnitTest()
     {
         var services = new ServiceCollection();
         services.AddSingleton(f =>
@@ -19,7 +19,7 @@ public class SqlServerDateTimeUnitTest : UnitTestBase
                 f.Add("Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true);
             })
             .AddTypeHandler<JsonTypeHandler>()
-            .Configure<SqlServerProvider, SqlServerModelConfiguration>();
+            .Configure<SqlServerProvider, ModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();

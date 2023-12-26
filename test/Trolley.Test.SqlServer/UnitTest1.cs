@@ -4,12 +4,13 @@ using System;
 using System.Collections.Generic;
 using Trolley.SqlServer;
 using Xunit;
+using Trolley.SqlServer;
 
 namespace Trolley.Test.SqlServer;
 
-public class SqlServerUnitTest1 : UnitTestBase
+public class UnitTest1 : UnitTestBase
 {
-    public SqlServerUnitTest1()
+    public UnitTest1()
     {
         var services = new ServiceCollection();
         services.AddSingleton(f =>
@@ -20,7 +21,7 @@ public class SqlServerUnitTest1 : UnitTestBase
                  f.Add("Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true);
              })
              .AddTypeHandler<JsonTypeHandler>()
-             .Configure<SqlServerProvider, SqlServerModelConfiguration>();
+             .Configure<SqlServerProvider, ModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
