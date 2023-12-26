@@ -618,11 +618,11 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <summary>
     /// 设置命令超时时间，本次命令执行有效，单位是秒
     /// </summary>
-    /// <param name="timeout">超时时间，单位是秒</param>
+    /// <param name="seconds">超时时间，单位是秒</param>
     /// <returns>返回仓储对象</returns>
-    IRepository Timeout(int timeout);
+    IRepository Timeout(int seconds);
     /// <summary>
-    /// 是否使用参数化，如果设置为true，本IRepository对象的所有查询语句中用到的变量都将变成参数
+    /// 是否使用参数化常量，如果设置为true，本IRepository对象的所有查询语句中用到的常量都将变成参数
     /// Create、Update、Delete操作本身就是参数化的，主要是Lambda表达式中用到的变量，如：
     /// string productNo="xxx";//变量，会使用参数化
     /// using var repository = dbFactory.Create().WithParameterized();

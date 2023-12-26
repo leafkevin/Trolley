@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
+using Trolley.MySqlConnector;
 
 namespace Trolley;
 
@@ -26,6 +27,7 @@ public interface IOrmProvider
     IDbDataParameter CreateParameter(string parameterName, object value);
     IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
 
+    IRepository CreateRepository(DbContext dbContext);
     IQuery<T> NewQuery<T>(DbContext dbContext, IQueryVisitor visitor);
     IQuery<T1, T2> NewQuery<T1, T2>(DbContext dbContext, IQueryVisitor visitor);
     IQuery<T1, T2, T3> NewQuery<T1, T2, T3>(DbContext dbContext, IQueryVisitor visitor);

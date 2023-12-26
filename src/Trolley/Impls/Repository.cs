@@ -17,12 +17,12 @@ public class Repository : IRepository
     #endregion
 
     #region Properties
-    public DbContext DbContext { get; set; }
-    public string DbKey => this.DbContext.DbKey;
-    public IDbConnection Connection => this.DbContext.Connection;
-    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
-    public IEntityMapProvider MapProvider => this.DbContext.MapProvider;
-    public IDbTransaction Transaction => this.DbContext.Transaction;
+    public virtual DbContext DbContext { get; set; }
+    public virtual string DbKey => this.DbContext.DbKey;
+    public virtual IDbConnection Connection => this.DbContext.Connection;
+    public virtual IOrmProvider OrmProvider => this.DbContext.OrmProvider;
+    public virtual IEntityMapProvider MapProvider => this.DbContext.MapProvider;
+    public virtual IDbTransaction Transaction => this.DbContext.Transaction;
     #endregion
 
     #region Constructor
@@ -31,61 +31,61 @@ public class Repository : IRepository
     #endregion
 
     #region From
-    public IQuery<T> From<T>(char tableAsStart = 'a', string suffixRawSql = null)
+    public virtual IQuery<T> From<T>(char tableAsStart = 'a', string suffixRawSql = null)
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, suffixRawSql, typeof(T));
         return this.OrmProvider.NewQuery<T>(this.DbContext, visitor);
     }
-    public IQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, null, typeof(T1), typeof(T2));
         return this.OrmProvider.NewQuery<T1, T2>(this.DbContext, visitor);
     }
-    public IQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3));
         return this.OrmProvider.NewQuery<T1, T2, T3>(this.DbContext, visitor);
     }
-    public IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4>(this.DbContext, visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5>(this.DbContext, visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6>(this.DbContext, visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7>(this.DbContext, visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this.DbContext, visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.DbContext, visitor);
     }
-    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
@@ -94,14 +94,14 @@ public class Repository : IRepository
     #endregion
 
     #region From SubQuery
-    public IQuery<T> From<T>(IQuery<T> subQuery)
+    public virtual IQuery<T> From<T>(IQuery<T> subQuery)
     {
         var visitor = subQuery.Visitor;
         visitor.From(typeof(T), true, subQuery);
         return subQuery;
     }
 
-    public IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery)
+    public virtual IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery)
     {
         var visitor = this.CreateQueryVisitor('a');
         return visitor.From(typeof(T), true, this.DbContext, subQuery) as IQuery<T>;
@@ -109,13 +109,13 @@ public class Repository : IRepository
     #endregion
 
     #region FromWith
-    public IQuery<T> FromWith<T>(IQuery<T> cteSubQuery)
+    public virtual IQuery<T> FromWith<T>(IQuery<T> cteSubQuery)
     {
         var visitor = cteSubQuery.Visitor;
         visitor.FromWith(typeof(T), true, cteSubQuery);
         return cteSubQuery;
     }
-    public IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery)
+    public virtual IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery)
     {
         var visitor = this.CreateQueryVisitor('a', true);
         return visitor.FromWith(typeof(T), true, this.DbContext, cteSubQuery) as IQuery<T>;
@@ -123,7 +123,7 @@ public class Repository : IRepository
     #endregion
 
     #region QueryFirst/Query
-    public TEntity QueryFirst<TEntity>(string rawSql, object parameters = null)
+    public virtual TEntity QueryFirst<TEntity>(string rawSql, object parameters = null)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
@@ -138,7 +138,7 @@ public class Repository : IRepository
             }
         });
     }
-    public async Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
+    public virtual async Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
@@ -153,7 +153,7 @@ public class Repository : IRepository
             }
         }, cancellationToken);
     }
-    public TEntity QueryFirst<TEntity>(object whereObj)
+    public virtual TEntity QueryFirst<TEntity>(object whereObj)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
@@ -166,7 +166,7 @@ public class Repository : IRepository
             f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
         });
     }
-    public async Task<TEntity> QueryFirstAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
+    public virtual async Task<TEntity> QueryFirstAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
@@ -179,7 +179,7 @@ public class Repository : IRepository
             f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
         }, cancellationToken);
     }
-    public List<TEntity> Query<TEntity>(string rawSql, object parameters = null)
+    public virtual List<TEntity> Query<TEntity>(string rawSql, object parameters = null)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
@@ -194,7 +194,7 @@ public class Repository : IRepository
             }
         });
     }
-    public async Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
+    public virtual async Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
@@ -209,7 +209,7 @@ public class Repository : IRepository
             }
         }, cancellationToken);
     }
-    public List<TEntity> Query<TEntity>(object whereObj)
+    public virtual List<TEntity> Query<TEntity>(object whereObj)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
@@ -222,7 +222,7 @@ public class Repository : IRepository
             f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
         });
     }
-    public async Task<List<TEntity>> QueryAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
+    public virtual async Task<List<TEntity>> QueryAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
@@ -238,14 +238,14 @@ public class Repository : IRepository
     #endregion
 
     #region Get
-    public TEntity Get<TEntity>(object whereObj) => this.DbContext.Get<TEntity>(whereObj);
-    public async Task<TEntity> GetAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
+    public virtual TEntity Get<TEntity>(object whereObj) => this.DbContext.Get<TEntity>(whereObj);
+    public virtual async Task<TEntity> GetAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
         => await this.DbContext.GetAsync<TEntity>(whereObj, cancellationToken);
     #endregion
 
     #region Create
     public virtual ICreate<TEntity> Create<TEntity>() => this.OrmProvider.NewCreate<TEntity>(this.DbContext);
-    public int Create<TEntity>(object insertObjs, int bulkCount = 500)
+    public virtual int Create<TEntity>(object insertObjs, int bulkCount = 500)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
@@ -315,7 +315,7 @@ public class Repository : IRepository
         }
         return result;
     }
-    public async Task<int> CreateAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
+    public virtual async Task<int> CreateAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
@@ -385,7 +385,7 @@ public class Repository : IRepository
         }
         return result;
     }
-    public int CreateIdentity<TEntity>(object insertObj)
+    public virtual int CreateIdentity<TEntity>(object insertObj)
     {
         if (insertObj == null)
             throw new ArgumentNullException(nameof(insertObj));
@@ -400,7 +400,7 @@ public class Repository : IRepository
             f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, insertObj);
         });
     }
-    public async Task<int> CreateIdentityAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
+    public virtual async Task<int> CreateIdentityAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
     {
         if (insertObj == null)
             throw new ArgumentNullException(nameof(insertObj));
@@ -415,7 +415,7 @@ public class Repository : IRepository
             f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, insertObj);
         }, cancellationToken);
     }
-    public long CreateIdentityLong<TEntity>(object insertObj)
+    public virtual long CreateIdentityLong<TEntity>(object insertObj)
     {
         if (insertObj == null)
             throw new ArgumentNullException(nameof(insertObj));
@@ -430,7 +430,7 @@ public class Repository : IRepository
             f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, insertObj);
         });
     }
-    public async Task<long> CreateIdentityLongAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
+    public virtual async Task<long> CreateIdentityLongAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
     {
         if (insertObj == null)
             throw new ArgumentNullException(nameof(insertObj));
@@ -449,7 +449,7 @@ public class Repository : IRepository
 
     #region Update
     public virtual IUpdate<TEntity> Update<TEntity>() => this.OrmProvider.NewUpdate<TEntity>(this.DbContext);
-    public int Update<TEntity>(object updateObjs, int bulkCount = 500)
+    public virtual int Update<TEntity>(object updateObjs, int bulkCount = 500)
     {
         if (updateObjs == null)
             throw new ArgumentNullException(nameof(updateObjs));
@@ -515,7 +515,7 @@ public class Repository : IRepository
         }
         return result;
     }
-    public async Task<int> UpdateAsync<TEntity>(object updateObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
+    public virtual async Task<int> UpdateAsync<TEntity>(object updateObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
     {
         if (updateObjs == null)
             throw new ArgumentNullException(nameof(updateObjs));
@@ -585,7 +585,7 @@ public class Repository : IRepository
 
     #region Delete
     public virtual IDelete<TEntity> Delete<TEntity>() => this.OrmProvider.NewDelete<TEntity>(this.DbContext);
-    public int Delete<TEntity>(object whereKeys)
+    public virtual int Delete<TEntity>(object whereKeys)
     {
         if (whereKeys == null)
             throw new ArgumentNullException(nameof(whereKeys));
@@ -636,7 +636,7 @@ public class Repository : IRepository
         }
         return result;
     }
-    public async Task<int> DeleteAsync<TEntity>(object whereKeys, CancellationToken cancellationToken = default)
+    public virtual async Task<int> DeleteAsync<TEntity>(object whereKeys, CancellationToken cancellationToken = default)
     {
         if (whereKeys == null)
             throw new ArgumentNullException(nameof(whereKeys));
@@ -690,7 +690,7 @@ public class Repository : IRepository
     #endregion
 
     #region Exists
-    public bool Exists<TEntity>(object whereObj)
+    public virtual bool Exists<TEntity>(object whereObj)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
@@ -704,7 +704,7 @@ public class Repository : IRepository
         });
         return result > 0;
     }
-    public async Task<bool> ExistsAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
+    public virtual async Task<bool> ExistsAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
@@ -718,14 +718,14 @@ public class Repository : IRepository
         }, cancellationToken);
         return result > 0;
     }
-    public bool Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate)
+    public virtual bool Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate)
         => this.From<TEntity>().Where(wherePredicate).Count() > 0;
-    public async Task<bool> ExistsAsync<TEntity>(Expression<Func<TEntity, bool>> wherePredicate, CancellationToken cancellationToken = default)
+    public virtual async Task<bool> ExistsAsync<TEntity>(Expression<Func<TEntity, bool>> wherePredicate, CancellationToken cancellationToken = default)
         => await this.From<TEntity>().Where(wherePredicate).CountAsync() > 0;
     #endregion
 
     #region Execute
-    public int Execute(string rawSql, object parameters = null)
+    public virtual int Execute(string rawSql, object parameters = null)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
@@ -740,7 +740,7 @@ public class Repository : IRepository
             }
         });
     }
-    public async Task<int> ExecuteAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
+    public virtual async Task<int> ExecuteAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
@@ -758,7 +758,7 @@ public class Repository : IRepository
     #endregion
 
     #region QueryMultiple
-    public IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries)
+    public virtual IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries)
     {
         if (subQueries == null)
             throw new ArgumentNullException(nameof(subQueries));
@@ -788,7 +788,7 @@ public class Repository : IRepository
         }
         return result;
     }
-    public async Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default)
+    public virtual async Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default)
     {
         if (subQueries == null)
             throw new ArgumentNullException(nameof(subQueries));
@@ -822,7 +822,7 @@ public class Repository : IRepository
     #endregion
 
     #region MultipleExecute
-    public void MultipleExecute(List<MultipleCommand> commands)
+    public virtual void MultipleExecute(List<MultipleCommand> commands)
     {
         if (commands == null || commands.Count == 0)
             throw new ArgumentNullException(nameof(commands));
@@ -883,7 +883,7 @@ public class Repository : IRepository
             if (isNeedClose) this.Dispose();
         }
     }
-    public async Task MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default)
+    public virtual async Task MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default)
     {
         if (commands == null || commands.Count == 0)
             throw new ArgumentNullException(nameof(commands));
@@ -947,41 +947,41 @@ public class Repository : IRepository
     #endregion
 
     #region Others
-    public void Close() => this.Dispose();
-    public async Task CloseAsync() => await this.DisposeAsync();
-    public IRepository Timeout(int timeout)
+    public virtual void Close() => this.Dispose();
+    public virtual async Task CloseAsync() => await this.DisposeAsync();
+    public virtual IRepository Timeout(int timeout)
     {
         this.DbContext.Connection.CommandTimeout = timeout;
         return this;
     }
-    public IRepository WithParameterized(bool isParameterized = true)
+    public virtual IRepository WithParameterized(bool isParameterized = true)
     {
         this.DbContext.IsParameterized = isParameterized;
         return this;
     }
-    public IRepository With(OrmDbFactoryOptions options)
+    public virtual IRepository With(OrmDbFactoryOptions options)
     {
         if (options == null) return this;
         this.DbContext.IsParameterized = options.IsParameterized;
         this.DbContext.Connection.CommandTimeout = options.Timeout;
         return this;
     }
-    public void BeginTransaction()
+    public virtual void BeginTransaction()
     {
         this.DbContext.Connection.Open();
         this.DbContext.Transaction = this.DbContext.Connection.BeginTransaction();
     }
-    public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
+    public virtual async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
         await this.DbContext.Connection.OpenAsync(cancellationToken);
         this.DbContext.Transaction = await this.DbContext.Connection.BeginTransactionAsync(cancellationToken);
     }
-    public void Commit()
+    public virtual void Commit()
     {
         this.Transaction?.Commit();
         this.Dispose();
     }
-    public async Task CommitAsync(CancellationToken cancellationToken = default)
+    public virtual async Task CommitAsync(CancellationToken cancellationToken = default)
     {
         if (this.Transaction != null)
         {
@@ -991,12 +991,12 @@ public class Repository : IRepository
         }
         await this.DisposeAsync();
     }
-    public void Rollback()
+    public virtual void Rollback()
     {
         this.Transaction?.Rollback();
         this.Dispose();
     }
-    public async Task RollbackAsync(CancellationToken cancellationToken = default)
+    public virtual async Task RollbackAsync(CancellationToken cancellationToken = default)
     {
         if (this.Transaction != null)
         {
@@ -1006,12 +1006,12 @@ public class Repository : IRepository
         }
         await this.DisposeAsync();
     }
-    public void Dispose()
+    public virtual void Dispose()
     {
         this.DbContext.Dispose();
         GC.SuppressFinalize(this);
     }
-    public async ValueTask DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
         await this.DbContext.DisposeAsync();
         GC.SuppressFinalize(this);

@@ -390,23 +390,22 @@ public class MySqlUnitTest1 : UnitTestBase
         int category = 1;
         var sql = repository.Create<Product>()
             .IgnoreInto()
-            .WithFrom(f =>
-                f.From<Brand>()
-                .Where(f => f.Id == 1)
-                .Select(f => new
-                {
-                    Id = f.Id + 1,
-                    ProductNo = "PN_" + f.BrandNo,
-                    Name = "PName_" + f.Name,
-                    BrandId = f.Id,
-                    CategoryId = category,
-                    f.CompanyId,
-                    f.IsEnabled,
-                    f.CreatedBy,
-                    f.CreatedAt,
-                    f.UpdatedBy,
-                    f.UpdatedAt
-                }))
+            .From<Brand>()
+            .Where(f => f.Id == 1)
+            .Select(f => new Product
+            {
+                Id = f.Id + 1,
+                ProductNo = "PN_" + f.BrandNo,
+                Name = "PName_" + f.Name,
+                BrandId = f.Id,
+                CategoryId = category,
+                CompanyId = f.CompanyId,
+                IsEnabled = f.IsEnabled,
+                CreatedBy = f.CreatedBy,
+                CreatedAt = DateTime.Now,
+                UpdatedBy = f.UpdatedBy,
+                UpdatedAt = DateTime.Now
+            })
            .ToSql(out var parameters);
         Assert.True(sql == "INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT a.`Id`+1,CONCAT('PN_',a.`BrandNo`),CONCAT('PName_',a.`Name`),a.`Id`,@p0,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1");
 

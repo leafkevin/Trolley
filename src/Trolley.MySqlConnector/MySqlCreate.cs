@@ -6,7 +6,6 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
 {
     #region Properties
     public MySqlCreateVisitor DialectVisitor { get; private set; }
-    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor

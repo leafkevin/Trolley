@@ -9,7 +9,7 @@ public class OrmDbFactory : IOrmDbFactory
 {
     private OrmDbFactoryOptions options;
     private TheaDatabase defaultDatabase;
-    private ConcurrentDictionary<OrmProviderType, IOrmProvider> typedOrmProviders;
+    private Dictionary<OrmProviderType, IOrmProvider> typedOrmProviders;
     private ConcurrentDictionary<Type, IOrmProvider> ormProviders;
     private ConcurrentDictionary<string, TheaDatabase> databases;
     private ConcurrentDictionary<Type, IEntityMapProvider> mapProviders;
@@ -102,7 +102,7 @@ public class OrmDbFactory : IOrmDbFactory
     //    };
     //    return new Repository(dbKey, connection, ormProvider, mapProvider).With(this.options);
     //}
-    public virtual TRepository Create<TRepository>(string dbKey = null, string tenantId = null) where TRepository : IRepository, new()
+    public virtual IRepository CreateRepository(string dbKey = null, string tenantId = null)
     {
         var database = this.GetDatabase(dbKey);
         if (!this.TryGetOrmProvider(database.OrmProviderType, out var ormProvider))
@@ -110,25 +110,23 @@ public class OrmDbFactory : IOrmDbFactory
         var tenantDatabase = database.GetTenantDatabase(tenantId);
         if (!this.TryGetMapProvider(database.OrmProviderType, out var mapProvider))
             throw new Exception($"未注册Key为{database.OrmProviderType.FullName}的EntityMapProvider");
-        Activator.CreateInstance()
+
         var connection = new TheaConnection
         {
             DbKey = dbKey,
             BaseConnection = ormProvider.CreateConnection(tenantDatabase.ConnectionString),
             OrmProvider = ormProvider
         };
-        var repository = new TRepository()
+        var dbContext = new DbContext
         {
-            DbContext = new DbContext
-            {
-                DbKey = dbKey,
-                Connection = connection,
-                OrmProvider = ormProvider,
-                MapProvider = mapProvider
-            }
+            DbKey = dbKey,
+            Connection = connection,
+            OrmProvider = ormProvider,
+            MapProvider = mapProvider,
+            Timeout = this.options.Timeout,
+            IsParameterized = this.options.IsParameterized
         };
-        //TODO:.With(this.options)
-        return repository;
+        return ormProvider.CreateRepository(dbContext);
     }
     public void With(OrmDbFactoryOptions options) => this.options = options;
     public void Build(Type ormProviderType)
@@ -145,10 +143,11 @@ public class OrmDbFactory : IOrmDbFactory
         this.options = options;
         this.defaultDatabase = defaultDatabase;
         this.ormProviders = new();
+        this.typedOrmProviders = new();
         ormProviderTypes.ForEach(f =>
         {
             var ormProvider = Activator.CreateInstance(f) as IOrmProvider;
-            this.ormProviders.TryAdd(f, ormProvider);
+            this.AddOrmProvider(ormProvider);
         });
         this.databases = databases;
         this.mapProviders = mapProviders;

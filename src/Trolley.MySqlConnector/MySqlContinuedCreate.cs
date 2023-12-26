@@ -68,5 +68,5 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
         base.OnlyFields(fieldsSelector);
         return this;
     }
-    #endregion
+    #endregion 
 }

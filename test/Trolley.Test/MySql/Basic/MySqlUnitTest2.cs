@@ -115,7 +115,7 @@ public class MySqlUnitTest2 : UnitTestBase
             .From(f => f.From<Order>()
                 .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
                 .GroupBy((a, b) => new { OrderId = a.Id, a.BuyerId })
-                .Select((x, a, b) => new { x.Grouping, ProductCount = x.CountDistinct(b.ProductId) }), 'c')
+                .Select((x, a, b) => new { x.Grouping, ProductCount = x.CountDistinct(b.ProductId) }))
             .InnerJoin<User>((x, y) => x.Grouping.BuyerId == y.Id)
             .Where((a, b) => a.ProductCount > 1)
             .Select((x, y) => new
@@ -1282,7 +1282,7 @@ SELECT * FROM (SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE
     {
         using var repository = dbFactory.Create();
         var sql = repository.FromWith(f => f.From<Menu>()
-                .Select(x => new { x.Id, x.Name, x.ParentId, x.PageId }), "MenuList")
+                .Select(x => new { x.Id, x.Name, x.ParentId, x.PageId }))
             .InnerJoin<Page>((a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
             .ToSql(out _);
@@ -1294,7 +1294,7 @@ SELECT `Id`,`Name`,`ParentId`,`PageId` FROM `sys_menu`
 SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN `sys_page` b ON a.`Id`=b.`Id`");
 
         var result = await repository.FromWith(f => f.From<Menu>()
-                .Select(x => new { x.Id, x.Name, x.ParentId, x.PageId }), "MenuList")
+                .Select(x => new { x.Id, x.Name, x.ParentId, x.PageId }))
             .InnerJoin<Page>((a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
             .ToListAsync();
@@ -1311,7 +1311,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN `sys_page
                     .Select(x => new { x.Id, x.Name, x.ParentId })
                 .UnionAllRecursive((x, self) => x.From<Menu>()
                     .InnerJoin(self, (a, b) => a.ParentId == b.Id)
-                    .Select((a, b) => new { a.Id, a.Name, a.ParentId }), "MenuList");
+                    .Select((a, b) => new { a.Id, a.Name, a.ParentId }));
         var sql = repository
             .FromWith(f => subQuery)
             .NextWith((x, cte1) => x.From<Page, Menu>()
@@ -1320,7 +1320,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN `sys_page
                 .UnionAllRecursive((x, self) => x.From<Menu>()
                     .InnerJoin<Page>((a, b) => a.PageId == b.Id)
                     .InnerJoin(cte1, (a, b, c) => a.Id == b.Id)
-                    .Select((x, y, z) => new { x.Id, x.ParentId, y.Url }), "MenuPageList"))
+                    .Select((x, y, z) => new { x.Id, x.ParentId, y.Url })))
             .InnerJoin((a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
             .ToSql(out _);
@@ -1342,7 +1342,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageL
                     .Select(x => new { x.Id, x.Name, x.ParentId })
                 .UnionAllRecursive((x, y) => x.From<Menu>()
                     .InnerJoin(y, (a, b) => a.ParentId == b.Id)
-                    .Select((a, b) => new { a.Id, a.Name, a.ParentId }), "MenuList"))
+                    .Select((a, b) => new { a.Id, a.Name, a.ParentId })))
             .NextWith((x, cte1) => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == 1)
@@ -1350,7 +1350,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageL
                 .UnionAllRecursive((x, self) => x.From<Page>()//.WithTable(self)
                     .InnerJoin(cte1, (a, b) => a.Id == b.Id)
                     .Where((a, b) => a.Id > 1)
-                    .Select((x, y) => new { y.Id, x.Url }), "MenuPageList"))
+                    .Select((x, y) => new { y.Id, x.Url })))
             .InnerJoin((a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
             .ToSql(out _);
@@ -1372,7 +1372,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageL
                     .Select(x => new { x.Id, x.Name, x.ParentId })
                 .UnionAllRecursive((x, self) => x.From<Menu>()
                     .InnerJoin(self, (a, b) => a.ParentId == b.Id)
-                    .Select((a, b) => new { a.Id, a.Name, a.ParentId }), "MenuList"))
+                    .Select((a, b) => new { a.Id, a.Name, a.ParentId })))
             .NextWith((f, cte1) => f.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == 1)
@@ -1405,7 +1405,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageL
                     .Select(x => new { x.Id, x.Name, x.ParentId })
                 .UnionAllRecursive((x, y) => x.From<Menu>()
                     .InnerJoin(y, (a, b) => a.ParentId == b.Id)
-                    .Select((a, b) => new { a.Id, a.Name, a.ParentId }), "MenuList"))
+                    .Select((a, b) => new { a.Id, a.Name, a.ParentId })))
             .NextWith((f, cte1) => f.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == 1)

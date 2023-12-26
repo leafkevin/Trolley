@@ -20,6 +20,7 @@ public abstract class BaseOrmProvider : IOrmProvider
     public abstract IDbConnection CreateConnection(string connectionString);
     public abstract IDbDataParameter CreateParameter(string parameterName, object value);
     public abstract IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
+    public abstract IRepository CreateRepository(DbContext dbContext);
 
     public virtual IQuery<T> NewQuery<T>(DbContext dbContext, IQueryVisitor visitor) => new Query<T>(dbContext, visitor);
     public virtual IQuery<T1, T2> NewQuery<T1, T2>(DbContext dbContext, IQueryVisitor visitor) => new Query<T1, T2>(dbContext, visitor);

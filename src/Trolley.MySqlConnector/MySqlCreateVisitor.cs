@@ -268,49 +268,6 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
         //}
         return this.Evaluate(sqlSegment);
     }
-    public override string VisitCteQueryVisitor(IQueryVisitor queryVisitor, object queryObj)
-    {
-        var cteTableName = "MyImportData";
-        var rawSql = queryVisitor.BuildSql(out var readerFields, false);
-        var entityMapper = this.Tables[0].Mapper;
-        var builder = new StringBuilder();
-
-        if (this.IsUseCte) rawSql = queryVisitor.BuildCteTableSql(cteTableName, rawSql, readerFields, queryObj);
-        builder.AppendLine(rawSql);
-        string withTable = null;
-        if (this.IsUseCte)
-        {
-            if (queryVisitor.SelfTableSegment != null)
-                withTable = queryVisitor.SelfTableSegment.RefTableName;
-            else withTable = cteTableName;
-        }
-        queryVisitor.Dispose();
-
-        var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
-        var fieldsBuilder = new StringBuilder($"{this.BuildHeadSql()} {tableName} (");
-        var valuesBuilder = new StringBuilder(" SELECT ");
-
-        for (int i = 0; i < readerFields.Count; i++)
-        {
-            var readerField = readerFields[i];
-            if (!entityMapper.TryGetMemberMap(readerField.TargetMember.Name, out var memberMapper))
-                continue;
-            var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
-            if (i > 0)
-            {
-                fieldsBuilder.Append(',');
-                valuesBuilder.Append(',');
-            }
-            fieldsBuilder.Append(fieldName);
-            valuesBuilder.Append(fieldName);
-        }
-        fieldsBuilder.Append(')');
-        valuesBuilder.Append($") FROM {this.OrmProvider.GetTableName(withTable)}");
-        rawSql = fieldsBuilder.Append(valuesBuilder).ToString();
-        fieldsBuilder.Clear();
-        valuesBuilder.Clear();
-        return rawSql;
-    }
     public virtual void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.TableAlias.Clear();

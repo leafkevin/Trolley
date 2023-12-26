@@ -21,6 +21,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     public IEntityMapProvider MapProvider { get; set; }
     public IDbTransaction Transaction { get; set; }
     public bool IsParameterized { get; set; }
+    public int Timeout { get; set; }
     public bool IsNeedClose => this.Transaction == null;
     #endregion
 
@@ -29,6 +30,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     {
         var command = this.Connection.CreateCommand();
         command.CommandType = CommandType.Text;
+        command.CommandTimeout = this.Timeout;
         command.Transaction = this.Transaction;
         return command;
     }
