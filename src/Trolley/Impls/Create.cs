@@ -138,6 +138,7 @@ public class Created<TEntity> : ICreated<TEntity>
         {
             using var command = this.DbContext.CreateCommand();
             bool isNeedClose = this.DbContext.IsNeedClose;
+            Exception exception = null;
             try
             {
                 int index = 0;
@@ -175,15 +176,17 @@ public class Created<TEntity> : ICreated<TEntity>
                 }
                 sqlBuilder.Clear();
             }
-            catch
+            catch (Exception ex)
             {
                 isNeedClose = true;
+                exception = ex;
             }
             finally
             {
                 command.Dispose();
                 if (isNeedClose) this.Dispose();
             }
+            if (exception != null) throw exception;
         }
         else
         {
@@ -199,6 +202,7 @@ public class Created<TEntity> : ICreated<TEntity>
         {
             using var command = this.DbContext.CreateDbCommand();
             bool isNeedClose = this.DbContext.IsNeedClose;
+            Exception exception = null;
             try
             {
                 int index = 0;
@@ -235,15 +239,17 @@ public class Created<TEntity> : ICreated<TEntity>
                 }
                 sqlBuilder.Clear();
             }
-            catch
+            catch (Exception ex)
             {
                 isNeedClose = true;
+                exception = ex;
             }
             finally
             {
                 command.Dispose();
                 if (isNeedClose) this.Dispose();
             }
+            if (exception != null) throw exception;
         }
         else
         {

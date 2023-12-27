@@ -138,6 +138,7 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
         using var command = this.DbContext.CreateCommand();
         int result = 0;
         bool isNeedClose = this.DbContext.IsNeedClose;
+        Exception exception = null;
         try
         {
             if (this.Visitor.IsBulk)
@@ -183,15 +184,17 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
                 result = command.ExecuteNonQuery();
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
+        if (exception != null) throw exception;
         return result;
     }
     public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -199,6 +202,7 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
         using var command = this.DbContext.CreateDbCommand();
         int result = 0;
         bool isNeedClose = this.DbContext.IsNeedClose;
+        Exception exception = null;
         try
         {
             if (this.Visitor.IsBulk)
@@ -244,15 +248,17 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
+        if (exception != null) throw exception;
         return result;
     }
     #endregion

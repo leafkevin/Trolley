@@ -607,7 +607,7 @@ public class RepositoryHelper
                 break;
             }
         }
-        var insertObjType = insertObjs.GetType();
+        var insertObjType = insertObj.GetType();
         var cacheKey = HashCode.Combine(dbKey, ormProvider, mapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames);
         (var headSqlParameterSetter, var commandInitializer) = createMultiSqlParametersCache.GetOrAdd(cacheKey, f =>
         {
@@ -636,6 +636,7 @@ public class RepositoryHelper
     }
     public static Action<StringBuilder, object> BuildCreateHeadSqlPart(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type insertObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames)
     {
+        //TODO:
         Action<StringBuilder, object> commandInitializer = null;
         var entityMapper = mapProvider.GetEntityMap(entityType);
         if (typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType))
@@ -685,7 +686,7 @@ public class RepositoryHelper
                 if (onlyFieldNames != null && !onlyFieldNames.Contains(memberInfo.Name))
                     continue;
 
-                if (index > 0) blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(',')));
+                if (index > 0) blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(",")));
                 var fieldNameExpr = Expression.Constant(ormProvider.GetFieldName(memberMapper.FieldName));
                 blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, fieldNameExpr));
                 index++;

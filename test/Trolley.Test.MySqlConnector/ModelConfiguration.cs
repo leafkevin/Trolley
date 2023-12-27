@@ -10,7 +10,7 @@ class ModelConfiguration : IModelConfiguration
     {
         builder.Entity<User>(f =>
         {
-            f.ToTable("sys_user").Key(t => t.Id).WithSharding(s => s.WithNameRule(n => $"{n}_{DateTime.Now.ToString("_yyyyMM")}"));
+            f.ToTable("sys_user").Key(t => t.Id).WithSharding(s => s.WithNameRule(n => $"{s.OrgTableName}_{DateTime.Now:yyyyMM}"));
             f.Member(t => t.Id).Field(nameof(User.Id)).NativeDbType(MySqlDbType.Int32).Required();
             f.Member(t => t.Name).Field(nameof(User.Name)).NativeDbType(MySqlDbType.VarChar);
             f.Member(t => t.Gender).Field(nameof(User.Gender)).NativeDbType(MySqlDbType.Byte);

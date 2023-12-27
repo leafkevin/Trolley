@@ -52,6 +52,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         TResult result = default;
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
         try
         {
             var entityType = typeof(TResult);
@@ -67,9 +68,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 else result = reader.To<TResult>();
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
@@ -77,6 +79,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
+        if (exception != null) throw exception;
         return result;
     }
     public async Task<TResult> QueryFirstAsync<TResult>(Action<IDbCommand> commandInitializer, CancellationToken cancellationToken)
@@ -85,6 +88,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         TResult result = default;
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
         try
         {
             var entityType = typeof(TResult);
@@ -100,9 +104,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 else result = reader.To<TResult>();
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
@@ -111,6 +116,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
+        if (exception != null) throw exception;
         return result;
     }
     public TResult QueryFirst<TResult>(IQueryVisitor visitor)
@@ -119,6 +125,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         TResult result = default;
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
         try
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
@@ -146,9 +153,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 visitor.SetIncludeValues(entityType, result, reader);
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
@@ -156,6 +164,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
+        if (exception != null) throw exception;
         return result;
     }
     public async Task<TResult> QueryFirstAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
@@ -164,6 +173,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         TResult result = default;
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
         try
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
@@ -191,9 +201,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 await visitor.SetIncludeValuesAsync(entityType, result, reader, cancellationToken);
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
@@ -202,6 +213,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
+        if (exception != null) throw exception;
         return result;
     }
     #endregion
@@ -213,6 +225,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         var result = new List<TResult>();
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
         try
         {
             var entityType = typeof(TResult);
@@ -237,9 +250,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
@@ -247,6 +261,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
+        if (exception != null) throw exception;
         return result;
     }
     public async Task<List<TResult>> QueryAsync<TResult>(Action<IDbCommand> commandInitializer, CancellationToken cancellationToken)
@@ -255,6 +270,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         var result = new List<TResult>();
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
         try
         {
             var entityType = typeof(TResult);
@@ -277,9 +293,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
@@ -288,6 +305,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
+        if (exception != null) throw exception;
         return result;
     }
     public List<TResult> Query<TResult>(IQueryVisitor visitor)
@@ -296,6 +314,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         var result = new List<TResult>();
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
         try
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
@@ -331,9 +350,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 visitor.SetIncludeValues(entityType, result, reader);
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
@@ -341,6 +361,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
+        if (exception != null) throw exception;
         return result;
     }
     public async Task<List<TResult>> QueryAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
@@ -349,6 +370,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         var result = new List<TResult>();
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
         try
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
@@ -385,9 +407,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 await visitor.SetIncludeValuesAsync(entityType, result, reader, cancellationToken);
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
@@ -396,6 +419,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
+        if (exception != null) throw exception;
         return result;
     }
     #endregion
@@ -407,6 +431,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         var result = new PagedList<TResult> { Data = new List<TResult>() };
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
         try
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
@@ -447,9 +472,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 visitor.SetIncludeValues(entityType, result, reader);
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
@@ -457,6 +483,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
+        if (exception != null) throw exception;
         return result;
     }
     public async Task<IPagedList<TResult>> QueryPageAsync<TResult>(IQueryVisitor visitor, int pageIndex, int pageSize, CancellationToken cancellationToken = default)
@@ -465,6 +492,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         var result = new PagedList<TResult> { Data = new List<TResult>() };
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
         try
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
@@ -505,9 +533,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 await visitor.SetIncludeValuesAsync(entityType, result.Data, reader, cancellationToken);
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
@@ -516,6 +545,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
+        if (exception != null) throw exception;
         return result;
     }
     #endregion
@@ -530,6 +560,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         TEntity result = default;
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
         try
         {
             var entityType = typeof(TEntity);
@@ -543,12 +574,18 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (reader.Read())
                 result = reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         }
+        catch (Exception ex)
+        {
+            isNeedClose = true;
+            exception = ex;
+        }
         finally
         {
             reader?.Dispose();
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
+        if (exception != null) throw exception;
         return result;
     }
     public async Task<TEntity> GetAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
@@ -560,6 +597,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         TEntity result = default;
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
         try
         {
             var entityType = typeof(TEntity);
@@ -574,6 +612,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (await reader.ReadAsync(cancellationToken))
                 result = reader.To<TEntity>(this.DbKey, this.OrmProvider, this.MapProvider);
         }
+        catch (Exception ex)
+        {
+            isNeedClose = true;
+            exception = ex;
+        }
         finally
         {
             if (reader != null)
@@ -581,6 +624,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
+        if (exception != null) throw exception;
         return result;
     }
     #endregion
@@ -592,6 +636,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         TResult result = default;
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
         try
         {
             commandInitializer.Invoke(command);
@@ -600,9 +645,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             reader = command.ExecuteReader(behavior);
             if (reader.Read()) result = reader.To<TResult>();
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
@@ -610,6 +656,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
+        if (exception != null) throw exception;
         return result;
     }
     public async Task<TResult> CreateIdentityAsync<TResult>(Action<IDbCommand> commandInitializer, CancellationToken cancellationToken)
@@ -618,6 +665,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         TResult result = default;
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
         try
         {
             commandInitializer.Invoke(command);
@@ -627,9 +675,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (await reader.ReadAsync(cancellationToken))
                 result = reader.To<TResult>();
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
@@ -638,6 +687,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
+        if (exception != null) throw exception;
         return result;
     }
     #endregion
@@ -648,21 +698,24 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         using var command = this.CreateCommand();
         int result = 0;
         bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
         try
         {
             commandInitializer.Invoke(command);
             this.Connection.Open();
             result = command.ExecuteNonQuery();
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
+        if (exception != null) throw exception;
         return result;
     }
     public async Task<int> ExecuteAsync(Action<IDbCommand> commandInitializer, CancellationToken cancellationToken)
@@ -670,21 +723,24 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         using var command = this.CreateDbCommand();
         int result = 0;
         bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
         try
         {
             commandInitializer.Invoke(command);
             await this.Connection.OpenAsync(cancellationToken);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
+        if (exception != null) throw exception;
         return result;
     }
     #endregion

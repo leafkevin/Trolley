@@ -9,7 +9,7 @@ public delegate string TimeShardingStrategy(string orgTableName, DateTime dateTi
 public delegate string TimeRangeShardingStrategy(string orgTableName, DateTime beginTime, DateTime endTime);
 public delegate string ParameterShardingStrategy<TParameter>(string orgTableName, TParameter parameter = default);
 public delegate string CustomShardingStrategy(string orgTableName, params object[] parameters);
-public class ShardingStrategyBuilder
+public class ShardingStrategyBuilder<TEntity>
 {
     private Delegate strategyRule;
     public string OrgTableName { get; private set; }
@@ -17,16 +17,16 @@ public class ShardingStrategyBuilder
     public ShardingStrategyBuilder(string orgTableName)
         => this.OrgTableName = orgTableName;
 
-    public ShardingStrategyBuilder WithNameRule(Expression<NameShardingStrategy> shardingStrategy)
+    public ShardingStrategyBuilder<TEntity> WithNameRule(Expression<NameShardingStrategy> shardingStrategy)
     {
         //this.strategyRule = shardingStrategy;
         return this;
     }
-    public ShardingStrategyBuilder WithTimeRule(Expression<TimeShardingStrategy> shardingStrategy)
+    public ShardingStrategyBuilder<TEntity> WithTimeRule(Expression<TimeShardingStrategy> shardingStrategy)
     {
         return this;
     }
-    public ShardingStrategyBuilder WithTimeRangeRule(Expression<TimeRangeShardingStrategy> shardingStrategy)
+    public ShardingStrategyBuilder<TEntity> WithTimeRangeRule(Expression<TimeRangeShardingStrategy> shardingStrategy)
     {
         return this;
     }

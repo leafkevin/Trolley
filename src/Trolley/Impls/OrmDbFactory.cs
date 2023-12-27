@@ -114,6 +114,7 @@ public class OrmDbFactory : IOrmDbFactory
         var connection = new TheaConnection
         {
             DbKey = dbKey,
+            ConnectionString = tenantDatabase.ConnectionString,
             BaseConnection = ormProvider.CreateConnection(tenantDatabase.ConnectionString),
             OrmProvider = ormProvider
         };
@@ -123,8 +124,8 @@ public class OrmDbFactory : IOrmDbFactory
             Connection = connection,
             OrmProvider = ormProvider,
             MapProvider = mapProvider,
-            Timeout = this.options.Timeout,
-            IsParameterized = this.options.IsParameterized
+            Timeout = this.options?.Timeout ?? 30,
+            IsParameterized = this.options?.IsParameterized ?? false
         };
         return ormProvider.CreateRepository(dbContext);
     }

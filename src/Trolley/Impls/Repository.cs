@@ -253,6 +253,7 @@ public class Repository : IRepository
         using var command = this.DbContext.CreateCommand();
         int result = 0;
         bool isNeedClose = this.DbContext.IsNeedClose;
+        Exception exception = null;
         try
         {
             var entityType = typeof(TEntity);
@@ -304,15 +305,17 @@ public class Repository : IRepository
                 result = command.ExecuteNonQuery();
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
+        if (exception != null) throw exception;
         return result;
     }
     public virtual async Task<int> CreateAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
@@ -323,6 +326,7 @@ public class Repository : IRepository
         using var command = this.DbContext.CreateDbCommand();
         int result = 0;
         bool isNeedClose = this.DbContext.IsNeedClose;
+        Exception exception = null;
         try
         {
             var entityType = typeof(TEntity);
@@ -374,15 +378,17 @@ public class Repository : IRepository
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
+        if (exception != null) throw exception;
         return result;
     }
     public virtual int CreateIdentity<TEntity>(object insertObj)
@@ -456,7 +462,8 @@ public class Repository : IRepository
 
         using var command = this.DbContext.CreateCommand();
         int result = 0;
-        bool isNeedClose = this.Transaction == null;
+        bool isNeedClose = this.DbContext.IsNeedClose;
+        Exception exception = null;
         try
         {
             var entityType = typeof(TEntity);
@@ -504,15 +511,17 @@ public class Repository : IRepository
                 result = command.ExecuteNonQuery();
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
+        if (exception != null) throw exception;
         return result;
     }
     public virtual async Task<int> UpdateAsync<TEntity>(object updateObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
@@ -523,6 +532,7 @@ public class Repository : IRepository
         using var command = this.DbContext.CreateDbCommand();
         int result = 0;
         bool isNeedClose = this.DbContext.IsNeedClose;
+        Exception exception = null;
         try
         {
             var entityType = typeof(TEntity);
@@ -570,15 +580,17 @@ public class Repository : IRepository
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
+        if (exception == null) throw exception;
         return result;
     }
     #endregion
@@ -593,6 +605,7 @@ public class Repository : IRepository
         using var command = this.DbContext.CreateCommand();
         int result = 0;
         bool isNeedClose = this.DbContext.IsNeedClose;
+        Exception exception = null;
         try
         {
             var entityType = typeof(TEntity);
@@ -617,6 +630,7 @@ public class Repository : IRepository
                     typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, sqlBuilder, entity, index);
                     index++;
                 }
+                if (!isMultiKeys) sqlBuilder.Append(')');
                 command.CommandText = sqlBuilder.ToString();
                 sqlBuilder.Clear();
             }
@@ -629,11 +643,17 @@ public class Repository : IRepository
             this.DbContext.Connection.Open();
             result = command.ExecuteNonQuery();
         }
+        catch (Exception ex)
+        {
+            isNeedClose = true;
+            exception = ex;
+        }
         finally
         {
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
+        if (exception != null) throw exception;
         return result;
     }
     public virtual async Task<int> DeleteAsync<TEntity>(object whereKeys, CancellationToken cancellationToken = default)
@@ -644,6 +664,7 @@ public class Repository : IRepository
         using var command = this.DbContext.CreateDbCommand();
         int result = 0;
         bool isNeedClose = this.DbContext.IsNeedClose;
+        Exception exception = null;
         try
         {
             var entityType = typeof(TEntity);
@@ -680,11 +701,17 @@ public class Repository : IRepository
             await this.DbContext.Connection.OpenAsync(cancellationToken);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
+        catch (Exception ex)
+        {
+            isNeedClose = true;
+            exception = ex;
+        }
         finally
         {
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
+        if (exception != null) throw exception;
         return result;
     }
     #endregion
@@ -767,6 +794,7 @@ public class Repository : IRepository
         IMultiQueryReader result = null;
         IDataReader reader = null;
         bool isNeedClose = this.DbContext.IsNeedClose;
+        Exception exception = null;
         try
         {
             using var multiQuery = new MultipleQuery(this.DbContext, command);
@@ -776,9 +804,10 @@ public class Repository : IRepository
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             result = new MultiQueryReader(command, reader, readerAfters, isNeedClose);
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
@@ -786,6 +815,7 @@ public class Repository : IRepository
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
+        if (exception != null) throw exception;
         return result;
     }
     public virtual async Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default)
@@ -797,6 +827,7 @@ public class Repository : IRepository
         IMultiQueryReader result = null;
         DbDataReader reader = null;
         bool isNeedClose = this.DbContext.IsNeedClose;
+        Exception exception = null;
         try
         {
             using var multiQuery = new MultipleQuery(this.DbContext, command);
@@ -806,9 +837,10 @@ public class Repository : IRepository
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             result = new MultiQueryReader(command, reader, readerAfters, isNeedClose);
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
@@ -817,6 +849,7 @@ public class Repository : IRepository
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
+        if (exception != null) throw exception;
         return null;
     }
     #endregion
@@ -829,6 +862,7 @@ public class Repository : IRepository
 
         using var command = this.DbContext.CreateCommand();
         bool isNeedClose = this.DbContext.IsNeedClose;
+        Exception exception = null;
         try
         {
             int commandIndex = 0;
@@ -873,15 +907,17 @@ public class Repository : IRepository
             this.DbContext.Connection.Open();
             var result = command.ExecuteNonQuery();
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
+        if (exception != null) throw exception;
     }
     public virtual async Task MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default)
     {
@@ -890,6 +926,7 @@ public class Repository : IRepository
 
         using var command = this.DbContext.CreateDbCommand();
         bool isNeedClose = this.DbContext.IsNeedClose;
+        Exception exception = null;
         try
         {
             int commandIndex = 0;
@@ -934,15 +971,17 @@ public class Repository : IRepository
             await this.DbContext.Connection.OpenAsync(cancellationToken);
             var result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
+        if (exception != null) throw exception;
     }
     #endregion
 
