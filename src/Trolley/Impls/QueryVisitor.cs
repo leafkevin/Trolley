@@ -1374,7 +1374,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 fieldName = this.GetQuotedValue(sqlSegment);
                 if (sqlSegment.IsExpression)
                     fieldName = $"({fieldName})";
-                if (sqlSegment.IsConstant || sqlSegment.IsParameter || sqlSegment.IsExpression
+                if (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression
                     || sqlSegment.IsMethodCall || sqlSegment.FromMember == null || sqlSegment.FromMember.Name != memberInfo.Name)
                     fieldName += " AS " + this.OrmProvider.GetFieldName(memberInfo.Name);
 
@@ -1384,7 +1384,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     TableSegment = sqlSegment.TableSegment,
                     FromMember = sqlSegment.FromMember,
                     TargetMember = memberInfo,
-                    IsOnlyField = !(sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall),
+                    IsOnlyField = !(sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall),
                     Body = fieldName
                 });
                 break;
@@ -1409,7 +1409,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 else fieldName = this.GetQuotedValue(sqlSegment);
                 if (sqlSegment.IsExpression)
                     fieldName = $"({fieldName})";
-                if (sqlSegment.IsConstant || sqlSegment.IsParameter || sqlSegment.IsExpression
+                if (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression
                     || sqlSegment.IsMethodCall || sqlSegment.FromMember == null || sqlSegment.FromMember.Name != memberInfo.Name)
                     fieldName += " AS " + this.OrmProvider.GetFieldName(memberInfo.Name);
 

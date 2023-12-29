@@ -433,7 +433,7 @@ partial class MySqlProvider
                                 else builder.Append($"ADDTIME({targetArgument}");
                                 builder.Append($",{this.GetQuotedValue(timeSpan)})");
                             }
-                            return targetSegment.Change(builder.ToString(), false, false, true, true);
+                            return targetSegment.Change(builder.ToString(), false, false, false, true);
                         }
                         //非常量、变量的，只能小于一天,数据库的Time类型映射成TimeSpan
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
@@ -503,17 +503,17 @@ partial class MySqlProvider
                     break;
                 case "AddMonths":
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
-                      {
-                          var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                          var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                          if ((targetSegment.IsConstant || targetSegment.IsVariable)
-                              && (rightSegment.IsConstant || rightSegment.IsVariable))
-                              return targetSegment.Merge(rightSegment, Convert.ToDateTime(targetSegment.Value).AddMonths(Convert.ToInt32(rightSegment.Value)));
+                    {
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        if ((targetSegment.IsConstant || targetSegment.IsVariable)
+                            && (rightSegment.IsConstant || rightSegment.IsVariable))
+                            return targetSegment.Merge(rightSegment, Convert.ToDateTime(targetSegment.Value).AddMonths(Convert.ToInt32(rightSegment.Value)));
 
-                          var targetArgument = visitor.GetQuotedValue(targetSegment);
-                          var rightArgument = visitor.GetQuotedValue(rightSegment);
-                          return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightSegment} MONTH)", false, false, false, true);
-                      });
+                        var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        var rightArgument = visitor.GetQuotedValue(rightSegment);
+                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightSegment} MONTH)", false, false, false, true);
+                    });
                     result = true;
                     break;
                 case "AddSeconds":
@@ -644,9 +644,12 @@ partial class MySqlProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
+                            {
+                                targetSegment.ExpectType = methodInfo.ReturnType;
                                 return targetSegment.Change(targetSegment.ToString());
+                            }
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
                             targetSegment.ExpectType = methodInfo.ReturnType;
                             return targetSegment.Change($"DATE_FORMAT({this.GetQuotedValue(targetSegment)},'%Y-%m-%d %H:%i:%s')", false, false, false, true);
                         });
@@ -718,7 +721,10 @@ partial class MySqlProvider
 
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (formatSegment.IsConstant || formatSegment.IsVariable))
+                            {
+                                targetSegment.ExpectType = methodInfo.ReturnType;
                                 return targetSegment.Merge(formatSegment, ((DateTime)targetSegment.Value).ToString(formatSegment.ToString()));
+                            }
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
                             targetSegment.ExpectType = methodInfo.ReturnType;

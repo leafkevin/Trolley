@@ -27,7 +27,7 @@ public class SqlSegment
     /// <summary>
     /// 是否有SQL参数，如：@p1,@p2
     /// </summary>
-    public bool IsParameter { get; set; }
+    public bool HasParameter { get; set; }
     /// <summary>
     /// 是否是常量值
     /// </summary>
@@ -83,30 +83,6 @@ public class SqlSegment
     public bool HasDeferred => this.DeferredExprs != null && this.DeferredExprs.Count > 0;
 
     /// <summary>
-    /// 表达式的所有下属子表达式都解析完毕，把每个子表达式HasField，IsParameter栏位值合并一下，以便外层判断
-    /// 通常是在二元操作后或是带有多个参数的方法调用后，进行此操作，并把Merge结果赋值到当前sqlSegment中
-    /// </summary>
-    /// <param name="rightSegment">右侧sqlSegment</param>
-    /// <returns>返回合并后的结果，并赋值到当前sqlSegment中</returns>
-    //public SqlSegment Merge(SqlSegment rightSegment)
-    //{
-    //    this.IsConstant = this.IsConstant && rightSegment.IsConstant;
-    //    this.IsVariable = this.IsVariable || rightSegment.IsVariable;
-    //    this.HasField = this.HasField || rightSegment.HasField;
-    //    this.IsParameter = this.IsParameter || rightSegment.IsParameter;
-    //    return this;
-    //}
-    //public SqlSegment Change(object value, bool isConstant = true, bool isExpression = false, bool isMethodCall = false)
-    //{
-    //    this.isFixValue = false;
-    //    this.IsConstant = isConstant;
-    //    this.IsExpression = isExpression;
-    //    this.IsMethodCall = isMethodCall;
-    //    this.Value = value;
-    //    return this;
-    //}
-
-    /// <summary>
     /// 只改变值
     /// </summary>
     /// <param name="value"></param>
@@ -136,6 +112,17 @@ public class SqlSegment
     /// <summary>
     /// 在解析函数时使用，明确是常量或是变量，需要Merge一下IsConstant和IsVariable
     /// </summary>
+    /// <param name="rightSegment"></param> 
+    /// <returns></returns>
+    public SqlSegment Merge(SqlSegment rightSegment)
+    {
+        this.IsConstant = this.IsConstant && rightSegment.IsConstant;
+        this.IsVariable = this.IsVariable || rightSegment.IsVariable;
+        return this;
+    }
+    /// <summary>
+    /// 在解析函数时使用，明确是常量或是变量，需要Merge一下IsConstant和IsVariable
+    /// </summary>
     /// <param name="rightSegment"></param>
     /// <param name="value"></param>
     /// <returns></returns>
@@ -143,6 +130,20 @@ public class SqlSegment
     {
         this.IsConstant = this.IsConstant && rightSegment.IsConstant;
         this.IsVariable = this.IsVariable || rightSegment.IsVariable;
+        this.Value = value;
+        return this;
+    }
+    /// <summary>
+    /// 在解析函数时使用，明确是常量或是变量，需要Merge一下IsConstant和IsVariable
+    /// </summary>
+    /// <param name="leftSegment"></param>
+    /// <param name="rightSegment"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public SqlSegment Merge(SqlSegment leftSegment, SqlSegment rightSegment, object value)
+    {
+        this.IsConstant = this.IsConstant && leftSegment.IsConstant && rightSegment.IsConstant;
+        this.IsVariable = this.IsVariable || leftSegment.IsVariable || rightSegment.IsVariable;
         this.Value = value;
         return this;
     }
@@ -161,32 +162,40 @@ public class SqlSegment
         this.IsConstant = isConstant;
         this.IsVariable = isVariable;
         this.HasField = this.HasField || rightSegment.HasField;
-        this.IsParameter = this.IsParameter || rightSegment.IsParameter;
+        this.HasParameter = this.HasParameter || rightSegment.HasParameter;
         this.IsExpression = isExpression;
         this.IsMethodCall = isMethodCall;
         this.Value = value;
         return this;
     }
-    //public SqlSegment ChangeValue(object value)
-    //{
-    //    this.Value = value;
-    //    return this;
-    //}
+    /// <summary>
+    /// 在解析函数时使用，明确调用后的结果，表达式或是方法调用，需要Merge一下HasField和IsParameter
+    /// </summary>
+    /// <param name="leftSegment"></param>
+    /// <param name="rightSegment"></param>
+    /// <param name="value"></param>
+    /// <param name="isConstant"></param>
+    /// <param name="isVariable"></param>
+    /// <param name="isExpression"></param>
+    /// <param name="isMethodCall"></param>
+    /// <returns></returns>
+    public SqlSegment Merge(SqlSegment leftSegment, SqlSegment rightSegment, object value, bool isConstant, bool isVariable, bool isExpression, bool isMethodCall = false)
+    {
+        this.IsConstant = isConstant;
+        this.IsVariable = isVariable;
+        this.HasField = this.HasField || leftSegment.HasField || rightSegment.HasField;
+        this.HasParameter = this.HasParameter || leftSegment.HasParameter || rightSegment.HasParameter;
+        this.IsExpression = isExpression;
+        this.IsMethodCall = isMethodCall;
+        this.Value = value;
+        return this;
+    }
+
     public SqlSegment Next(Expression nextExpr)
     {
         this.Expression = nextExpr;
         return this;
     }
-    //public SqlSegment ToParameter(ISqlVisitor visitor)
-    //{
-    //    if (this.IsVariable || (this.IsParameterized || visitor.IsParameterized) && this.IsConstant)
-    //    {
-    //        this.IsConstant = false;
-    //        this.IsVariable = false;
-    //        this.IsParameter = true;
-    //    }
-    //    return this;
-    //}
     public bool HasDeferrdNot() => this.DeferredExprs.IsDeferredNot();
     public void Push(DeferredExpr deferredExpr)
     {

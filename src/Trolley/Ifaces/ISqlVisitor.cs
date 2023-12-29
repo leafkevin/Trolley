@@ -11,6 +11,8 @@ public interface ISqlVisitor : IDisposable
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
     bool IsParameterized { get; set; }
+    bool IsSelect { get; }
+    bool IsWhere { get; }
 
     SqlSegment VisitAndDeferred(SqlSegment sqlSegment);
     SqlSegment Visit(SqlSegment sqlSegment);

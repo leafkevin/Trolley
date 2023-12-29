@@ -96,7 +96,7 @@ partial class MySqlProvider
                         var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (args0Segment.IsConstant || args0Segment.IsVariable)
                             return args0Segment.Change(methodInfo.Invoke(args0Segment.Value, null));
-                        return args0Segment.Change($"REVERSE({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
+                        return args0Segment.Change($"REVERSE({args0Segment})", false, false, false, true);
                     });
                     result = true;
                 }

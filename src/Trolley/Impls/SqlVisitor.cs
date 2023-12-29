@@ -22,8 +22,7 @@ public class SqlVisitor : ISqlVisitor
     protected List<TableSegment> Tables { get; set; } = new();
     protected Dictionary<string, TableSegment> TableAlias { get; set; } = new();
     protected List<ReaderField> ReaderFields { get; set; }
-    protected bool IsSelect { get; set; }
-    protected bool IsWhere { get; set; }
+  
     protected bool IsFromQuery { get; set; }
     protected string WhereSql { get; set; }
 
@@ -39,6 +38,8 @@ public class SqlVisitor : ISqlVisitor
     public bool IsParameterized { get; set; }
     public bool IsMultiple { get; set; }
     public int CommandIndex { get; set; }
+    public bool IsSelect { get; set; }
+    public bool IsWhere { get; set; }
 
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
@@ -280,7 +281,7 @@ public class SqlVisitor : ISqlVisitor
                 {
                     //??操作类型没有变更，可以当作Field使用
                     leftSegment.IsFieldType = true;
-                    return this.Change(sqlSegment, leftSegment, rightSegment, $"{operators}({strLeft},{strRight})", false, false, true);
+                    return sqlSegment.Merge(leftSegment, rightSegment, $"{operators}({strLeft},{strRight})", false, false, true);
                 }
 
                 if (leftSegment.IsExpression)
@@ -288,7 +289,7 @@ public class SqlVisitor : ISqlVisitor
                 if (rightSegment.IsExpression)
                     strRight = $"({strRight})";
 
-                return this.Change(sqlSegment, leftSegment, rightSegment, $"{strLeft}{operators}{strRight}", false, false, true);
+                return sqlSegment.Merge(leftSegment, rightSegment, $"{strLeft}{operators}{strRight}", false, false, true);
         }
         return sqlSegment;
     }
@@ -549,9 +550,6 @@ public class SqlVisitor : ISqlVisitor
 
         var leftArgument = this.GetQuotedValue(ifTrueSegment);
         var rightArgument = this.GetQuotedValue(ifFalseSegment);
-        sqlSegment.Merge(ifTrueSegment);
-        sqlSegment.Merge(ifFalseSegment);
-        this.ChangeSameType(ifTrueSegment, sqlSegment);
         sqlSegment.IsFieldType = true;
         return this.VisitDeferredBoolConditional(sqlSegment, conditionalExpr.IfTrue.Type == typeof(bool), leftArgument, rightArgument);
     }
@@ -645,7 +643,7 @@ public class SqlVisitor : ISqlVisitor
                 break;
             case "ToParameter":
                 sqlSegment.IsParameterized = true;
-                sqlSegment = this.Change(this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0])));
+                sqlSegment.Value = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 sqlSegment.IsParameterized = false;
                 break;
             case "In":
@@ -1281,7 +1279,7 @@ public class SqlVisitor : ISqlVisitor
             else this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value));
 
             sqlSegment.Value = parameterName;
-            sqlSegment.IsParameter = true;
+            sqlSegment.HasParameter = true;
             sqlSegment.IsVariable = false;
             sqlSegment.IsConstant = false;
             return parameterName;
@@ -1507,25 +1505,6 @@ public class SqlVisitor : ISqlVisitor
             rightSegment.MemberMapper = leftSegment.MemberMapper;
             return true;
         }
-
-        //var leftType = leftSegment.ExpectType ?? leftSegment.Expression.Type;
-        //var rightType = rightSegment.ExpectType ?? rightSegment.Expression.Type;
-        //if (leftType != rightType && (leftType.IsEnum || rightType.IsEnum)
-        //    && (rightSegment.IsConstant || rightSegment.IsVariable))
-        //{
-        //    rightSegment.ExpectType = leftSegment.ExpectType;
-        //    rightSegment.Value = Enum.ToObject(leftSegment.ExpectType, rightSegment.Value);
-        //    if (leftSegment.HasField)
-        //    {
-        //        rightSegment.MemberMapper = leftSegment.MemberMapper;
-        //        if (leftSegment.MemberMapper.DbDefaultType == typeof(string))
-        //        {
-        //            leftSegment.TargetType = typeof(string);
-        //            rightSegment.TargetType = typeof(string);
-        //        }
-        //    }
-        //    return true;
-        //}
         return false;
     }
     public LambdaExpression EnsureLambda(Expression expr)

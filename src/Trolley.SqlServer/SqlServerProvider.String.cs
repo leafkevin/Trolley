@@ -20,7 +20,7 @@ partial class SqlServerProvider
             {
                 //静态成员访问，理论上没有target对象，为了不再创建sqlSegment对象，外层直接把对象传了进来
                 case "Empty":
-                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change("''"));
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change("''", true));
                     result = true;
                     break;
             }
@@ -33,10 +33,9 @@ partial class SqlServerProvider
                 {
                     var targetSegment = visitor.VisitAndDeferred(target);
                     if (targetSegment.IsConstant || targetSegment.IsVariable)
-                        return visitor.Change(targetSegment, ((string)targetSegment.Value).Length);
+                        return targetSegment.Change(((string)targetSegment.Value).Length);
 
-                    var targetArgument = this.GetQuotedValue(targetSegment);
-                    return visitor.Change(targetSegment, $"LEN({targetArgument})", false, true);
+                    return targetSegment.Change($"LEN({targetSegment})", false, false, false, true);
                 });
                 result = true;
                 break;
@@ -93,14 +92,10 @@ partial class SqlServerProvider
                                 if (builder.Length > 0)
                                     builder.Append('+');
 
-                                if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string))
-                                {
-                                    if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
-                                        builder.Append(this.CastTo(typeof(string), sqlSegment.Value));
-                                    else if (sqlSegment.IsVariable || sqlSegment.IsConstant && visitor.IsParameterized)
-                                        builder.Append(visitor.GetParameterizedValue(sqlSegment));
-                                    else builder.Append(sqlSegment.Value.ToString());
-                                }
+                                if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string)
+                                    && (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall))
+                                    builder.Append(this.CastTo(typeof(string), sqlSegment.Value));
+                                builder.Append(visitor.GetQuotedValue(sqlSegment));
                             }
                             if (builder.Length > 0)
                             {
@@ -109,11 +104,9 @@ partial class SqlServerProvider
                                     builder.Append($"+'{constBuilder}'");
                                     constBuilder.Clear();
                                 }
-                                builder.Insert(0, '(');
-                                builder.Append(')');
                                 return resultSegment.Change(builder.ToString(), false, false, true);
                             }
-                            return resultSegment.Change(constBuilder.ToString());
+                            return resultSegment.Change(constBuilder.ToString(), true);
                         });
                         result = true;
                     }
@@ -130,14 +123,14 @@ partial class SqlServerProvider
                             var builder = new StringBuilder();
                             var constBuilder = new StringBuilder();
                             //已经被分割成了多个SqlSegment
-                            var concatSegments = visitor.ConvertFormatToConcatList(args);
+                            var concatExprs = visitor.ConvertFormatToConcatList(args);
                             SqlSegment resultSegment = null;
 
                             //123_{0}_345_{1}{2}_etr_{3}_fdr, 111,@p1,@p2,e4re
-                            for (var i = 0; i < concatSegments.Count; i++)
+                            for (var i = 0; i < concatExprs.Count; i++)
                             {
                                 //可能是一个sqlSegment，也可能是多个List<sqlSegment>
-                                var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = concatSegments[i] });
+                                var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = concatExprs[i] });
                                 if (i == 0) resultSegment = sqlSegment;
 
                                 if (sqlSegment.IsConstant)
@@ -155,17 +148,10 @@ partial class SqlServerProvider
                                 if (builder.Length > 0)
                                     builder.Append('+');
 
-                                if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string))
-                                {
-                                    if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
-                                        builder.Append(this.CastTo(typeof(string), sqlSegment.Value));
-                                    else if (sqlSegment.IsVariable || sqlSegment.IsConstant && visitor.IsParameterized)
-                                        builder.Append(visitor.GetParameterizedValue(sqlSegment));
-                                    else builder.Append(sqlSegment.Value.ToString());
-                                }
-
-                                builder.Append(visitor.Change(sqlSegment));
-                                if (i > 0) resultSegment.Merge(sqlSegment);
+                                if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string)
+                                    && (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall))
+                                    builder.Append(this.CastTo(typeof(string), sqlSegment.Value));
+                                builder.Append(visitor.GetQuotedValue(sqlSegment));
                             }
 
                             if (builder.Length > 0)
@@ -175,11 +161,9 @@ partial class SqlServerProvider
                                     builder.Append($"+'{constBuilder}'");
                                     constBuilder.Clear();
                                 }
-                                builder.Insert(0, '(');
-                                builder.Append(')');
                                 return resultSegment.Change(builder.ToString(), false, false, true);
                             }
-                            return resultSegment.Change(constBuilder.ToString());
+                            return resultSegment.Change(constBuilder.ToString(), true);
                         });
                         result = true;
                     }
@@ -197,9 +181,9 @@ partial class SqlServerProvider
                             var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
                             visitor.ChangeSameType(leftSegment, rightSegment);
-                            var leftArgument = this.GetQuotedValue(leftSegment);
-                            var rightArgument = this.GetQuotedValue(rightSegment);
-                            return visitor.Merge(leftSegment, rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END", true, false);
+                            var leftArgument = visitor.GetQuotedValue(leftSegment);
+                            var rightArgument = visitor.GetQuotedValue(rightSegment);
+                            return leftSegment.Merge(rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END", false, false, true);
                         });
                         result = true;
                     }
@@ -210,8 +194,8 @@ partial class SqlServerProvider
                         methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                         {
                             var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                            var valueArgument = this.GetQuotedValue(valueSegment);
-                            return visitor.Change(valueSegment, $"({valueArgument} IS NULL OR {valueArgument}='')", false, true);
+                            var valueArgument = visitor.GetQuotedValue(valueSegment);
+                            return valueSegment.Change($"({valueArgument} IS NULL OR {valueArgument}='')", false, false, false, true);
                         });
                         result = true;
                     }
@@ -222,8 +206,8 @@ partial class SqlServerProvider
                         methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            return visitor.Change(targetSegment, $"({targetArgument} IS NULL OR {targetArgument}='' OR TRIM({targetArgument})='')", false, true);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            return targetSegment.Change($"({targetArgument} IS NULL OR {targetArgument}='' OR TRIM({targetArgument})='')", false, false, false, true);
                         });
                         result = true;
                     }
@@ -239,10 +223,10 @@ partial class SqlServerProvider
                             if (!separatorSegment.IsConstant)
                                 throw new NotSupportedException("暂时不支持分隔符是非常量的表达式解析，可以考虑在表达式外Join后再进行查询");
 
-                            if (separatorSegment.IsConstant && (valuesSegment.IsConstant || valuesSegment.IsVariable))
-                                return visitor.Merge(valuesSegment, separatorSegment, string.Join(separatorSegment.ToString(), valuesSegment.Value as IEnumerable));
+                            if ((valuesSegment.IsConstant || valuesSegment.IsVariable))
+                                return valuesSegment.Change(string.Join(separatorSegment.ToString(), valuesSegment.Value as IEnumerable));
 
-                            SqlSegment resultSegment = null;
+                            var resultSegment = valuesSegment;
                             var separatorAugment = separatorSegment.ToString();
                             var enumerable = valuesSegment.Value as IEnumerable;
                             var builder = new StringBuilder();
@@ -253,7 +237,6 @@ partial class SqlServerProvider
                             {
                                 if (item is SqlSegment elementSegment)
                                 {
-                                    if (index == 0) resultSegment = elementSegment;
                                     if (elementSegment.IsConstant)
                                     {
                                         constBuilder.Append(elementSegment.ToString());
@@ -268,14 +251,10 @@ partial class SqlServerProvider
                                     }
                                     builder.Append('+');
 
-                                    if ((elementSegment.ExpectType ?? elementSegment.Expression.Type) != typeof(string))
-                                    {
-                                        if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
-                                            builder.Append(this.CastTo(typeof(string), elementSegment.Value));
-                                        else if (elementSegment.IsVariable || elementSegment.IsConstant && visitor.IsParameterized)
-                                            builder.Append(visitor.GetParameterizedValue(elementSegment));
-                                        else builder.Append(elementSegment.Value.ToString());
-                                    }
+                                    if ((elementSegment.ExpectType ?? elementSegment.Expression.Type) != typeof(string)
+                                        && (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall))
+                                        builder.Append(this.CastTo(typeof(string), elementSegment.Value));
+                                    builder.Append(visitor.GetQuotedValue(elementSegment));
                                 }
                                 else constBuilder.Append(item.ToString());
                                 index++;
@@ -287,11 +266,9 @@ partial class SqlServerProvider
                                     builder.Append($"+'{constBuilder}'");
                                     constBuilder.Clear();
                                 }
-                                builder.Insert(0, "(");
-                                builder.Append(')');
                                 return resultSegment.Change(builder.ToString(), false, false, true);
                             }
-                            return resultSegment.Change(constBuilder.ToString());
+                            return resultSegment.Change(constBuilder.ToString(), true);
                         });
                         result = true;
                     }
@@ -342,15 +319,10 @@ partial class SqlServerProvider
                                     }
                                     builder.Append('+');
 
-                                    if ((elementSegment.ExpectType ?? elementSegment.Expression.Type) != typeof(string))
-                                    {
-                                        if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
-                                            elementSegment.Value = this.CastTo(typeof(string), elementSegment.Value);
-                                        else elementSegment.Value = elementSegment.Value.ToString();
-                                    }
-
-                                    builder.Append(visitor.Change(elementSegment));
-                                    if (index > 0) resultSegment.Merge(elementSegment);
+                                    if ((elementSegment.ExpectType ?? elementSegment.Expression.Type) != typeof(string)
+                                        && (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall))
+                                        builder.Append(this.CastTo(typeof(string), elementSegment.Value));
+                                    builder.Append(visitor.GetQuotedValue(elementSegment));
                                 }
                                 else constBuilder.Append(item.ToString());
                                 index++;
@@ -362,11 +334,9 @@ partial class SqlServerProvider
                                     builder.Append($",'{constBuilder}'");
                                     constBuilder.Clear();
                                 }
-                                builder.Insert(0, "(");
-                                builder.Append(')');
                                 return resultSegment.Change(builder.ToString(), false, false, true);
                             }
-                            return resultSegment.Change(constBuilder.ToString());
+                            return resultSegment.Change(constBuilder.ToString(), true);
                         });
                         result = true;
                     }
@@ -378,11 +348,12 @@ partial class SqlServerProvider
                         {
                             var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                            var leftArgument = this.GetQuotedValue(leftSegment);
-                            var rightArgument = this.GetQuotedValue(rightSegment);
+                            visitor.ChangeSameType(leftSegment, rightSegment);
+                            var leftArgument = visitor.GetQuotedValue(leftSegment);
+                            var rightArgument = visitor.GetQuotedValue(rightSegment);
 
                             string equalsString = deferExprs.IsDeferredNot() ? "<>" : "=";
-                            return visitor.Merge(leftSegment, rightSegment, $"{leftArgument}{equalsString}{rightArgument}", true, false);
+                            return leftSegment.Merge(rightSegment, $"{leftArgument}{equalsString}{rightArgument}", false, false, true);
                         });
                         result = true;
                     }
@@ -405,15 +376,14 @@ partial class SqlServerProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-
                             string rightArgument = null;
                             if (rightSegment.IsConstant)
                                 rightArgument = $"'%{rightSegment}%'";
                             else rightArgument = $"'%'+{visitor.GetQuotedValue(rightSegment)}+'%'";
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
                             var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
-                            return visitor.Merge(targetSegment, rightSegment, $"{targetArgument}{notString} LIKE {rightArgument}", true, false);
+                            return targetSegment.Merge(rightSegment, $"{targetArgument}{notString} LIKE {rightArgument}", false, false, true);
                         });
                         result = true;
                     }
@@ -429,9 +399,10 @@ partial class SqlServerProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        visitor.ChangeSameType(targetSegment, rightSegment);
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return visitor.Merge(targetSegment, rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", true, false);
+                        return targetSegment.Merge(rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", false, false, true);
                     });
                     result = true;
                     break;
@@ -442,10 +413,9 @@ partial class SqlServerProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
-                                return visitor.Change(targetSegment, ((string)targetSegment.Value).Trim());
+                                return targetSegment.Change(((string)targetSegment.Value).Trim());
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            return visitor.Change(targetSegment, $"TRIM({targetArgument})", false, true);
+                            return targetSegment.Change($"TRIM({targetSegment})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -457,11 +427,11 @@ partial class SqlServerProvider
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
-                                return visitor.Merge(targetSegment, rightSegment, ((string)targetSegment.Value).Trim((char)rightSegment.Value));
+                                return targetSegment.Merge(rightSegment, ((string)targetSegment.Value).Trim((char)rightSegment.Value));
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            var rightArgument = this.GetQuotedValue(rightSegment);
-                            return visitor.Merge(targetSegment, rightSegment, $"TRIM({rightArgument} FROM {targetArgument})", false, true);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var rightArgument = visitor.GetQuotedValue(rightSegment);
+                            return targetSegment.Merge(rightSegment, $"TRIM({rightArgument} FROM {targetArgument})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -473,7 +443,7 @@ partial class SqlServerProvider
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
-                                return visitor.Merge(targetSegment, rightSegment, ((string)targetSegment.Value).Trim((char[])rightSegment.Value));
+                                return targetSegment.Merge(rightSegment, ((string)targetSegment.Value).Trim((char[])rightSegment.Value));
 
                             throw new NotSupportedException("暂时只支持Trim方法的参数是常量或变量的表达式解析");
                         });
@@ -487,10 +457,9 @@ partial class SqlServerProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
-                                return visitor.Change(targetSegment, ((string)targetSegment.Value).TrimStart());
+                                return targetSegment.Change(((string)targetSegment.Value).TrimStart());
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            return visitor.Change(targetSegment, $"LTRIM({targetArgument})", false, true);
+                            return targetSegment.Change($"LTRIM({targetSegment})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -502,12 +471,12 @@ partial class SqlServerProvider
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
-                                return visitor.Merge(targetSegment, rightSegment, ((string)targetSegment.Value).TrimStart((char)rightSegment.Value));
+                                return targetSegment.Merge(rightSegment, ((string)targetSegment.Value).TrimStart((char)rightSegment.Value));
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            var rightArgument = this.GetQuotedValue(rightSegment);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var rightArgument = visitor.GetQuotedValue(rightSegment);
                             //sql server 2022支持，其他版本不支持
-                            return visitor.Merge(targetSegment, rightSegment, $"LTRIM({targetArgument},{rightArgument})", false, true);
+                            return targetSegment.Merge(rightSegment, $"LTRIM({targetArgument},{rightArgument})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -518,8 +487,8 @@ partial class SqlServerProvider
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
-                        && (rightSegment.IsConstant || rightSegment.IsVariable))
-                                return visitor.Merge(targetSegment, rightSegment, ((string)targetSegment.Value).TrimStart((char[])rightSegment.Value));
+                                && (rightSegment.IsConstant || rightSegment.IsVariable))
+                                return targetSegment.Merge(rightSegment, ((string)targetSegment.Value).TrimStart((char[])rightSegment.Value));
 
                             throw new NotSupportedException("暂时只支持TrimStart方法的参数是常量或变量的表达式解析");
                         });
@@ -533,10 +502,9 @@ partial class SqlServerProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
-                                return visitor.Change(targetSegment, ((string)targetSegment.Value).TrimEnd());
+                                return targetSegment.Change(((string)targetSegment.Value).TrimEnd());
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            return visitor.Change(targetSegment, $"RTRIM({targetArgument})", false, true);
+                            return targetSegment.Change($"RTRIM({targetSegment})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -548,12 +516,12 @@ partial class SqlServerProvider
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
-                                return visitor.Merge(targetSegment, rightSegment, ((string)targetSegment.Value).TrimEnd((char)rightSegment.Value));
+                                return targetSegment.Merge(rightSegment, ((string)targetSegment.Value).TrimEnd((char)rightSegment.Value));
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            var rightArgument = this.GetQuotedValue(rightSegment);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var rightArgument = visitor.GetQuotedValue(rightSegment);
                             //sql server 2022支持，其他版本不支持
-                            return visitor.Merge(targetSegment, rightSegment, $"RTRIM({targetArgument},{rightArgument})", false, true);
+                            return targetSegment.Merge(rightSegment, $"RTRIM({targetArgument},{rightArgument})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -565,7 +533,7 @@ partial class SqlServerProvider
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
-                                return visitor.Merge(targetSegment, rightSegment, ((string)targetSegment.Value).TrimEnd((char[])rightSegment.Value));
+                                return targetSegment.Merge(rightSegment, ((string)targetSegment.Value).TrimEnd((char[])rightSegment.Value));
 
                             throw new NotSupportedException("暂时只支持TrimEnd方法的参数是常量或变量的表达式解析");
                         });
@@ -579,10 +547,9 @@ partial class SqlServerProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
-                                return visitor.Change(targetSegment, ((string)targetSegment.Value).ToUpper());
+                                return targetSegment.Change(((string)targetSegment.Value).ToUpper());
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            return visitor.Change(targetSegment, $"UPPER({targetArgument})", false, true);
+                            return targetSegment.Change($"UPPER({targetSegment})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -594,10 +561,9 @@ partial class SqlServerProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
-                                return visitor.Change(targetSegment, ((string)targetSegment.Value).ToLower());
+                                return targetSegment.Change(((string)targetSegment.Value).ToLower());
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            return visitor.Change(targetSegment, $"LOWER({targetArgument})", false, true);
+                            return targetSegment.Change($"LOWER({targetSegment})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -613,11 +579,12 @@ partial class SqlServerProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var targetArgument = this.GetQuotedValue(targetSegment);
-                        var rightArgument = this.GetQuotedValue(rightSegment);
+                        visitor.ChangeSameType(targetSegment, rightSegment);
+                        var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        var rightArgument = visitor.GetQuotedValue(rightSegment);
 
-                        string equalsString = deferExprs.IsDeferredNot() ? "<>" : "=";
-                        return visitor.Merge(targetSegment, rightSegment, $"{targetArgument}{equalsString}{rightArgument}", true, false);
+                        var equalsString = deferExprs.IsDeferredNot() ? "<>" : "=";
+                        return targetSegment.Merge(rightSegment, $"{targetArgument}{equalsString}{rightArgument}", false, false, true);
                     });
                     result = true;
                     break;
@@ -628,7 +595,7 @@ partial class SqlServerProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                            var targetArgument = this.GetQuotedValue(targetSegment);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
 
                             string rightArgument = null;
                             if (rightSegment.IsConstant)
@@ -636,7 +603,7 @@ partial class SqlServerProvider
                             else rightArgument = $"{visitor.GetQuotedValue(rightSegment)}+'%'";
 
                             var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
-                            return visitor.Merge(targetSegment, rightSegment.ToParameter(visitor), $"{targetArgument}{notString} LIKE {rightArgument}", true, false);
+                            return targetSegment.Merge(rightSegment, $"{targetArgument}{notString} LIKE {rightArgument}", false, false, true);
                         });
                         result = true;
                     }
@@ -648,7 +615,7 @@ partial class SqlServerProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                            var targetArgument = this.GetQuotedValue(targetSegment);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
 
                             string rightArgument = null;
                             if (rightSegment.IsConstant)
@@ -656,7 +623,7 @@ partial class SqlServerProvider
                             else rightArgument = $"'%'+{visitor.GetQuotedValue(rightSegment)}";
 
                             var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
-                            return visitor.Merge(targetSegment, rightSegment.ToParameter(visitor), $"{targetSegment}{notString} LIKE {rightArgument}", true, false);
+                            return targetSegment.Merge(rightSegment, $"{targetSegment}{notString} LIKE {rightArgument}", false, false, true);
                         });
                         result = true;
                     }
@@ -673,12 +640,12 @@ partial class SqlServerProvider
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (indexSegment.IsConstant || indexSegment.IsVariable)
                                 && (lengthSegment.IsConstant || lengthSegment.IsVariable))
-                                return visitor.Merge(targetSegment, indexSegment, lengthSegment, targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value), Convert.ToInt32(lengthSegment.Value)));
+                                return targetSegment.Merge(indexSegment, lengthSegment, targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value), Convert.ToInt32(lengthSegment.Value)));
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            var indexArgument = this.GetQuotedValue(indexSegment);
-                            var lengthArgument = this.GetQuotedValue(lengthSegment);
-                            return visitor.Merge(targetSegment, indexSegment, lengthSegment, $"SUBSTRING({this.GetQuotedValue(targetSegment)},{indexSegment}+1,{lengthSegment})", false, true);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var indexArgument = visitor.GetQuotedValue(indexSegment);
+                            var lengthArgument = visitor.GetQuotedValue(lengthSegment);
+                            return targetSegment.Merge(indexSegment, lengthSegment, $"SUBSTRING({targetArgument},{indexArgument}+1,{lengthArgument})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -691,11 +658,11 @@ partial class SqlServerProvider
 
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (indexSegment.IsConstant || indexSegment.IsVariable))
-                                return visitor.Merge(targetSegment, indexSegment, targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value)));
+                                return targetSegment.Merge(indexSegment, targetSegment.Value.ToString().Substring(Convert.ToInt32(indexSegment.Value)));
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            var indexArgument = this.GetQuotedValue(indexSegment);
-                            return visitor.Merge(targetSegment, indexSegment, $"SUBSTRING({targetArgument},{indexArgument}+1)", false, true);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var indexArgument = visitor.GetQuotedValue(indexSegment);
+                            return targetSegment.Merge(indexSegment, $"SUBSTRING({targetArgument},{indexArgument}+1)", false, false, false, true);
                         });
                         result = true;
                     }
@@ -714,10 +681,12 @@ partial class SqlServerProvider
                             {
                                 var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                                 if (targetSegment.IsConstant || targetSegment.IsVariable)
-                                    return visitor.Change(targetSegment, targetSegment.Value.ToString());
+                                {
+                                    targetSegment.ExpectType = methodInfo.ReturnType;
+                                    return targetSegment.Change(targetSegment.Value.ToString());
+                                }
 
-                                var targetArgument = this.GetQuotedValue(targetSegment);
-                                return visitor.Change(targetSegment, this.CastTo(typeof(string), targetArgument), false, true);
+                                return targetSegment.Change(this.CastTo(typeof(string), targetSegment.Value), false, false, false, true);
                             });
                             result = true;
                         }
@@ -736,11 +705,11 @@ partial class SqlServerProvider
                             var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (valueSegment.IsConstant || valueSegment.IsVariable))
-                                return visitor.Merge(targetSegment, valueSegment, visitor.Evaluate(orgExpr));
+                                return targetSegment.Merge(valueSegment, methodInfo.Invoke(targetSegment.Value, new object[] { valueSegment.Value }));
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            var valueArgument = this.GetQuotedValue(valueSegment);
-                            return visitor.Merge(targetSegment, valueSegment, $"CHARINDEX({valueArgument},{targetArgument})-1", true, false);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var valueArgument = visitor.GetQuotedValue(valueSegment);
+                            return targetSegment.Merge(valueSegment, $"CHARINDEX({valueArgument},{targetArgument})-1", false, false, true);
                         });
                         result = true;
                     }
@@ -754,15 +723,15 @@ partial class SqlServerProvider
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (valueSegment.IsConstant || valueSegment.IsVariable)
                                 && (startIndexSegment.IsConstant || startIndexSegment.IsVariable))
-                                return visitor.Merge(targetSegment, valueSegment, startIndexSegment, visitor.Evaluate(orgExpr));
+                                return targetSegment.Merge(valueSegment, startIndexSegment, methodInfo.Invoke(targetSegment.Value, new object[] { valueSegment.Value, startIndexSegment.Value }));
 
                             string indexArgument = null;
                             if (startIndexSegment.IsConstant)
                                 indexArgument = $"{(int)startIndexSegment.Value + 1}";
                             else indexArgument = $"{visitor.GetQuotedValue(startIndexSegment)}+1";
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            var valueArgument = this.GetQuotedValue(valueSegment);
-                            return visitor.Merge(targetSegment, valueSegment, startIndexSegment, $"CHARINDEX({valueArgument},{targetArgument},{indexArgument})-1", true, false);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var valueArgument = visitor.GetQuotedValue(valueSegment);
+                            return targetSegment.Merge(valueSegment, startIndexSegment, $"CHARINDEX({valueArgument},{targetArgument},{indexArgument})-1", false, false, true);
                         });
                         result = true;
                     }
@@ -776,11 +745,11 @@ partial class SqlServerProvider
                             var widthSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (widthSegment.IsConstant || widthSegment.IsVariable))
-                                return visitor.Merge(targetSegment, widthSegment, ((string)targetSegment.Value).PadLeft((int)widthSegment.Value));
+                                return targetSegment.Merge(widthSegment, ((string)targetSegment.Value).PadLeft((int)widthSegment.Value));
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            var widthArgument = this.GetQuotedValue(widthSegment);
-                            return visitor.Merge(targetSegment, widthSegment, $"LPAD({targetArgument},{widthArgument})", false, true);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var widthArgument = visitor.GetQuotedValue(widthSegment);
+                            return targetSegment.Merge(widthSegment, $"LPAD({targetArgument},{widthArgument})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -794,12 +763,12 @@ partial class SqlServerProvider
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (widthSegment.IsConstant || widthSegment.IsVariable)
                                 && (paddingSegment.IsConstant || paddingSegment.IsVariable))
-                                return visitor.Merge(targetSegment, widthSegment, paddingSegment, ((string)targetSegment.Value).PadLeft((int)widthSegment.Value, (char)paddingSegment.Value));
+                                return targetSegment.Merge(widthSegment, paddingSegment, ((string)targetSegment.Value).PadLeft((int)widthSegment.Value, (char)paddingSegment.Value));
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            var widthArgument = this.GetQuotedValue(widthSegment);
-                            var paddingArgument = this.GetQuotedValue(paddingSegment);
-                            return visitor.Merge(targetSegment, widthSegment, paddingSegment, $"LPAD({targetArgument},{widthArgument},{paddingArgument})", false, true);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var widthArgument = visitor.GetQuotedValue(widthSegment);
+                            var paddingArgument = visitor.GetQuotedValue(paddingSegment);
+                            return targetSegment.Merge(widthSegment, paddingSegment, $"LPAD({targetArgument},{widthArgument},{paddingArgument})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -813,11 +782,11 @@ partial class SqlServerProvider
                             var widthSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (widthSegment.IsConstant || widthSegment.IsVariable))
-                                return visitor.Merge(targetSegment, widthSegment, ((string)targetSegment.Value).PadRight((int)widthSegment.Value));
+                                return targetSegment.Merge(widthSegment, ((string)targetSegment.Value).PadRight((int)widthSegment.Value));
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            var widthArgument = this.GetQuotedValue(widthSegment);
-                            return visitor.Merge(targetSegment, widthSegment, $"RPAD({targetArgument},{widthArgument})", false, true);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var widthArgument = visitor.GetQuotedValue(widthSegment);
+                            return targetSegment.Merge(widthSegment, $"RPAD({targetArgument},{widthArgument})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -831,12 +800,12 @@ partial class SqlServerProvider
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (widthSegment.IsConstant || widthSegment.IsVariable)
                                 && (paddingSegment.IsConstant || paddingSegment.IsVariable))
-                                return visitor.Merge(targetSegment, widthSegment, paddingSegment, ((string)targetSegment.Value).PadRight((int)widthSegment.Value, (char)paddingSegment.Value));
+                                return targetSegment.Merge(widthSegment, paddingSegment, ((string)targetSegment.Value).PadRight((int)widthSegment.Value, (char)paddingSegment.Value));
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            var widthArgument = this.GetQuotedValue(widthSegment);
-                            var paddingArgument = this.GetQuotedValue(paddingSegment);
-                            return visitor.Merge(targetSegment, widthSegment, paddingSegment, $"RPAD({targetArgument},{widthArgument},{paddingArgument})", false, true);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var widthArgument = visitor.GetQuotedValue(widthSegment);
+                            var paddingArgument = visitor.GetQuotedValue(paddingSegment);
+                            return targetSegment.Merge(widthSegment, paddingSegment, $"RPAD({targetArgument},{widthArgument},{paddingArgument})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -852,12 +821,12 @@ partial class SqlServerProvider
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (oldSegment.IsConstant || oldSegment.IsVariable)
                                 && (newSegment.IsConstant || newSegment.IsVariable))
-                                return visitor.Merge(targetSegment, oldSegment, newSegment, ((string)targetSegment.Value).Replace((char)oldSegment.Value, (char)newSegment.Value));
+                                return targetSegment.Merge(oldSegment, newSegment, ((string)targetSegment.Value).Replace((char)oldSegment.Value, (char)newSegment.Value));
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            var oldArgument = this.GetQuotedValue(oldSegment);
-                            var newArgument = this.GetQuotedValue(newSegment);
-                            return visitor.Merge(targetSegment, oldSegment, newSegment, $"REPLACE({targetArgument},{oldArgument},{newArgument})", false, true);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var oldArgument = visitor.GetQuotedValue(oldSegment);
+                            var newArgument = visitor.GetQuotedValue(newSegment);
+                            return targetSegment.Merge(oldSegment, newSegment, $"REPLACE({targetArgument},{oldArgument},{newArgument})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -871,12 +840,12 @@ partial class SqlServerProvider
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (oldSegment.IsConstant || oldSegment.IsVariable)
                                 && (newSegment.IsConstant || newSegment.IsVariable))
-                                return visitor.Merge(targetSegment, oldSegment, newSegment, ((string)targetSegment.Value).Replace((string)oldSegment.Value, (string)newSegment.Value));
+                                return targetSegment.Merge(oldSegment, newSegment, ((string)targetSegment.Value).Replace((string)oldSegment.Value, (string)newSegment.Value));
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            var oldArgument = this.GetQuotedValue(oldSegment);
-                            var newArgument = this.GetQuotedValue(newSegment);
-                            return visitor.Merge(targetSegment, oldSegment, newSegment, $"REPLACE({targetArgument},{oldArgument},{newArgument})", false, true);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var oldArgument = visitor.GetQuotedValue(oldSegment);
+                            var newArgument = visitor.GetQuotedValue(newSegment);
+                            return targetSegment.Merge(oldSegment, newSegment, $"REPLACE({targetArgument},{oldArgument},{newArgument})", false, false, false, true);
                         });
                         result = true;
                     }
