@@ -54,11 +54,8 @@ public static class Extensions
         dbFactory.Configure<TOrmProvider>(new TModelConfiguration());
         return dbFactory;
     }
-    public static string GetQuotedValue(this IOrmProvider ormProvider, object value, string nullValue = "NULL")
-    {
-        if (value == null) return nullValue;
-        return ormProvider.GetQuotedValue(value.GetType(), value);
-    }
+    public static string GetQuotedValue(this IOrmProvider ormProvider, object value) 
+        => ormProvider.GetQuotedValue(value.GetType(), value);
     public static EntityMap GetEntityMap(this IEntityMapProvider mapProvider, Type entityType)
     {
         if (!mapProvider.TryGetEntityMap(entityType, out var mapper))
@@ -361,6 +358,8 @@ public static class Extensions
         }
         return false;
     }
+
+
     internal static void CopyTo(this IDataParameterCollection dbParameters, IDataParameterCollection other)
     {
         if (dbParameters == null || dbParameters.Count == 0)
@@ -526,7 +525,6 @@ public static class Extensions
                     while (index < endIndex)
                     {
                         var fieldType = reader.GetFieldType(index);
-                        //TODO:
                         childReaderField = readerField.ReaderFields[childIndex];
                         fieldMember = childReaderField.TargetMember;
                         typeHandler = childReaderField.MemberMapper.TypeHandler;

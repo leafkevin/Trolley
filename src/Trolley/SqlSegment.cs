@@ -62,7 +62,7 @@ public class SqlSegment
     /// </summary>
     public Type ReturnType { get; set; }
     /// <summary>
-    /// 当强制转换时，此字段值为转换后的类型，当枚举类型时，此字段值为枚举类型，其他场景就是当前表达式的类型
+    /// 当强制转换时，此字段值为转换后的类型，当枚举类型时，此字段值为枚举类型，其他场景为null
     /// </summary>
     public Type ExpectType { get; set; }
     /// <summary>
@@ -88,71 +88,105 @@ public class SqlSegment
     /// </summary>
     /// <param name="rightSegment">右侧sqlSegment</param>
     /// <returns>返回合并后的结果，并赋值到当前sqlSegment中</returns>
-    public SqlSegment Merge(SqlSegment rightSegment)
+    //public SqlSegment Merge(SqlSegment rightSegment)
+    //{
+    //    this.IsConstant = this.IsConstant && rightSegment.IsConstant;
+    //    this.IsVariable = this.IsVariable || rightSegment.IsVariable;
+    //    this.HasField = this.HasField || rightSegment.HasField;
+    //    this.IsParameter = this.IsParameter || rightSegment.IsParameter;
+    //    return this;
+    //}
+    //public SqlSegment Change(object value, bool isConstant = true, bool isExpression = false, bool isMethodCall = false)
+    //{
+    //    this.isFixValue = false;
+    //    this.IsConstant = isConstant;
+    //    this.IsExpression = isExpression;
+    //    this.IsMethodCall = isMethodCall;
+    //    this.Value = value;
+    //    return this;
+    //}
+
+    /// <summary>
+    /// 只改变值
+    /// </summary>
+    /// <param name="value"></param>
+    public SqlSegment Change(object value)
     {
-        this.IsConstant = this.IsConstant && rightSegment.IsConstant;
-        this.IsVariable = this.IsVariable || rightSegment.IsVariable;
-        this.HasField = this.HasField || rightSegment.HasField;
-        this.IsParameter = this.IsParameter || rightSegment.IsParameter;
-        return this;
-    }
-    public SqlSegment Merge(SqlSegment rightSegment, object value)
-    {
-        this.IsConstant = this.IsConstant && rightSegment.IsConstant;
-        this.IsVariable = this.IsVariable || rightSegment.IsVariable;
-        this.HasField = this.HasField || rightSegment.HasField;
-        this.IsParameter = this.IsParameter || rightSegment.IsParameter;
         this.Value = value;
         return this;
     }
-
-    public SqlSegment Change(object value, bool isConstant = true, bool isExpression = false, bool isMethodCall = false)
+    /// <summary>
+    /// 在解析函数时使用，明确调用后的结果，常量、变量、表达式和方法调用
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="isConstant"></param>
+    /// <param name="isVariable"></param>
+    /// <param name="isExpression"></param>
+    /// <param name="isMethodCall"></param>
+    /// <returns></returns>
+    public SqlSegment Change(object value, bool isConstant, bool isVariable = false, bool isExpression = false, bool isMethodCall = false)
     {
-        this.isFixValue = false;
         this.IsConstant = isConstant;
+        this.IsVariable = isVariable;
         this.IsExpression = isExpression;
         this.IsMethodCall = isMethodCall;
         this.Value = value;
         return this;
     }
-    public SqlSegment ChangeValue(object value)
+    /// <summary>
+    /// 在解析函数时使用，明确是常量或是变量，需要Merge一下IsConstant和IsVariable
+    /// </summary>
+    /// <param name="rightSegment"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public SqlSegment Merge(SqlSegment rightSegment, object value)
     {
+        this.IsConstant = this.IsConstant && rightSegment.IsConstant;
+        this.IsVariable = this.IsVariable || rightSegment.IsVariable;
         this.Value = value;
         return this;
     }
+    /// <summary>
+    /// 在解析函数时使用，明确调用后的结果，表达式或是方法调用，需要Merge一下HasField和IsParameter
+    /// </summary>
+    /// <param name="rightSegment"></param>
+    /// <param name="value"></param>
+    /// <param name="isConstant"></param>
+    /// <param name="isVariable"></param>
+    /// <param name="isExpression"></param>
+    /// <param name="isMethodCall"></param>
+    /// <returns></returns>
+    public SqlSegment Merge(SqlSegment rightSegment, object value, bool isConstant, bool isVariable, bool isExpression, bool isMethodCall = false)
+    {
+        this.IsConstant = isConstant;
+        this.IsVariable = isVariable;
+        this.HasField = this.HasField || rightSegment.HasField;
+        this.IsParameter = this.IsParameter || rightSegment.IsParameter;
+        this.IsExpression = isExpression;
+        this.IsMethodCall = isMethodCall;
+        this.Value = value;
+        return this;
+    }
+    //public SqlSegment ChangeValue(object value)
+    //{
+    //    this.Value = value;
+    //    return this;
+    //}
     public SqlSegment Next(Expression nextExpr)
     {
         this.Expression = nextExpr;
         return this;
     }
-    public SqlSegment Next(Expression nextExpr, object value)
-    {
-        this.Expression = nextExpr;
-        this.isFixValue = false;
-        this.Value = value;
-        return this;
-    }
-    public SqlSegment ToExpectType(IOrmProvider ormProvider)
-    {
-        if (this.ExpectType != this.Expression.Type)
-        {
-            if (this.HasField || this.IsParameter)
-                this.Value = ormProvider.CastTo(this.ExpectType, this.Value);
-            if (this.IsConstant || this.IsVariable)
-                this.Value = Convert.ChangeType(this.Value, this.ExpectType);
-        }
-        return this;
-    }
-    public SqlSegment ToParameter(ISqlVisitor visitor)
-    {
-        if (this.IsVariable || (this.IsParameterized || visitor.IsParameterized) && this.IsConstant)
-        {
-            this.IsConstant = false;
-            this.IsVariable = false;
-            this.IsParameter = true;
-        }
-        return this;
-    }
+    //public SqlSegment ToParameter(ISqlVisitor visitor)
+    //{
+    //    if (this.IsVariable || (this.IsParameterized || visitor.IsParameterized) && this.IsConstant)
+    //    {
+    //        this.IsConstant = false;
+    //        this.IsVariable = false;
+    //        this.IsParameter = true;
+    //    }
+    //    return this;
+    //}
     public bool HasDeferrdNot() => this.DeferredExprs.IsDeferredNot();
     public void Push(DeferredExpr deferredExpr)
     {

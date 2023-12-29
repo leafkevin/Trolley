@@ -31,13 +31,25 @@ public interface ISqlVisitor : IDisposable
     object Evaluate(Expression expr);
     T Evaluate<T>(Expression expr);
     object EvaluateAndCache(object entity, MemberInfo member);
-    SqlSegment Merge(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue);
-    SqlSegment Merge(SqlSegment sqlSegment, SqlSegment args0Segment, SqlSegment args1Segment, object segmentValue);
-    SqlSegment Merge(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue, bool isExpression, bool isMethodCall);
-    SqlSegment Merge(SqlSegment sqlSegment, SqlSegment args0Segment, SqlSegment args1Segment, object segmentValue, bool isExpression, bool isMethodCall);
-    SqlSegment Change(SqlSegment sqlSegment);
-    SqlSegment Change(SqlSegment sqlSegment, object segmentValue);
-    SqlSegment Change(SqlSegment sqlSegment, object segmentValue, bool isExpression, bool isMethodCall);
+    //SqlSegment Merge(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue);
+    //SqlSegment Merge(SqlSegment sqlSegment, SqlSegment args0Segment, SqlSegment args1Segment, object segmentValue);
+    //SqlSegment Merge(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue, bool isExpression, bool isMethodCall);
+    //SqlSegment Merge(SqlSegment sqlSegment, SqlSegment args0Segment, SqlSegment args1Segment, object segmentValue, bool isExpression, bool isMethodCall);
+    //SqlSegment Change(SqlSegment sqlSegment);
+    //SqlSegment Change(SqlSegment sqlSegment, object segmentValue);
+    //SqlSegment Change(SqlSegment sqlSegment, object segmentValue, bool isExpression, bool isMethodCall);
+
+
+
+    //TODO:
+    string GetParameterizedValue(SqlSegment sqlSegment);
+    //SqlSegment Change(SqlSegment sqlSegment, object segmentValue, bool isConstant = true, bool isVariable = false, bool isExpression = false, bool isMethodCall = false);
+    //SqlSegment Change(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue, bool isConstant = true, bool isVariable = false, bool isExpression = false, bool isMethodCall = false);
+    //SqlSegment Change(SqlSegment sqlSegment, SqlSegment leftSegment, SqlSegment rightSegment, object segmentValue, bool isConstant = true, bool isVariable = false, bool isExpression = false, bool isMethodCall = false);
+
+
+
+
     string GetQuotedValue(SqlSegment sqlSegment);
     string GetQuotedValue(object elementValue, SqlSegment arraySegment);
     SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment);

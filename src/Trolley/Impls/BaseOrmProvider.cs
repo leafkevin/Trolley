@@ -344,7 +344,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                             var targetArgument = this.GetQuotedValue(targetSegment);
                             var rightArgument = this.GetQuotedValue(rightSegment);
 
-                            return visitor.Merge(targetSegment, rightSegment, $"{targetArgument}={rightArgument}", true, false);
+                            return visitor.Change(targetSegment, rightSegment, $"{targetArgument}={rightArgument}", false, false, true);
                         });
                         result = true;
                     }
@@ -359,7 +359,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                             visitor.ChangeSameType(leftSegment, rightSegment);
                             var leftArgument = this.GetQuotedValue(leftSegment);
                             var rightArgument = this.GetQuotedValue(rightSegment);
-                            return visitor.Merge(leftSegment, rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END", true, false);
+                            return visitor.Change(leftSegment, rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END", false, false, true);
                         });
                         result = true;
                     }
@@ -374,7 +374,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                             visitor.ChangeSameType(targetSegment, rightSegment);
                             var targetArgument = this.GetQuotedValue(targetSegment);
                             var rightArgument = this.GetQuotedValue(rightSegment);
-                            return visitor.Merge(targetSegment, rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", true, false);
+                            return visitor.Change(targetSegment, rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", true, false);
                         });
                         result = true;
                     }

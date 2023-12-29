@@ -19,8 +19,8 @@ public class SqlVisitor : ISqlVisitor
     /// <summary>
     /// 所有表都是扁平化的，主表、1:1关系Include子表，也在这里
     /// </summary>
-    protected List<TableSegment> Tables { get; set; }
-    protected Dictionary<string, TableSegment> TableAlias { get; set; }
+    protected List<TableSegment> Tables { get; set; } = new();
+    protected Dictionary<string, TableSegment> TableAlias { get; set; } = new();
     protected List<ReaderField> ReaderFields { get; set; }
     protected bool IsSelect { get; set; }
     protected bool IsWhere { get; set; }
@@ -151,7 +151,7 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Not });
                     return this.Visit(sqlSegment.Next(unaryExpr.Operand));
                 }
-                return sqlSegment.ChangeValue($"~{this.Visit(sqlSegment)}");
+                return sqlSegment.Change($"~{this.Visit(sqlSegment)}");
             case ExpressionType.Convert:
                 //以下3种情况会走到此处
                 //(int)f.TotalAmount强制转换或是枚举f.Gender = Gender.Male表达式
@@ -278,15 +278,17 @@ public class SqlVisitor : ISqlVisitor
 
                 if (binaryExpr.NodeType == ExpressionType.Coalesce)
                 {
+                    //??操作类型没有变更，可以当作Field使用
                     leftSegment.IsFieldType = true;
-                    return this.Merge(leftSegment, rightSegment, $"{operators}({strLeft},{strRight})", false, true);
+                    return this.Change(sqlSegment, leftSegment, rightSegment, $"{operators}({strLeft},{strRight})", false, false, true);
                 }
 
                 if (leftSegment.IsExpression)
                     strLeft = $"({strLeft})";
                 if (rightSegment.IsExpression)
                     strRight = $"({strRight})";
-                return this.Merge(leftSegment, rightSegment, $"{strLeft}{operators}{strRight}", true, false);
+
+                return this.Change(sqlSegment, leftSegment, rightSegment, $"{strLeft}{operators}{strRight}", false, false, true);
         }
         return sqlSegment;
     }
@@ -627,7 +629,7 @@ public class SqlVisitor : ISqlVisitor
             //        lambdaExpr = Expression.Lambda(lambdaExpr.Body, visitedParameters);
             //    }
             //    var readerFields = this.FlattenFieldsTo(targetType, lambdaExpr);
-            //    sqlSegment.ChangeValue(readerFields);
+            //    sqlSegment.Change(readerFields);
             //    break;
             case "Deferred":
                 sqlSegment.IsDeferredFields = true;
@@ -663,13 +665,13 @@ public class SqlVisitor : ISqlVisitor
                         if (builder.Length > 0) builder.Append(',');
                         builder.Append(this.OrmProvider.GetQuotedValue(item));
                     }
-                    sqlSegment.ChangeValue(builder.ToString());
+                    sqlSegment.Change(builder.ToString());
                 }
                 else
                 {
                     lambdaExpr = methodCallExpr.Arguments[1] as LambdaExpression;
                     var sql = this.VisitFromQuery(lambdaExpr);
-                    sqlSegment.ChangeValue(sql);
+                    sqlSegment.Change(sql);
                 }
                 if (sqlSegment.HasDeferrdNot())
                     sqlSegment.Change($"{fieldSegment} NOT IN ({sqlSegment})", false, true, false);
@@ -1143,80 +1145,126 @@ public class SqlVisitor : ISqlVisitor
         #endregion     
         return result;
     }
-    public virtual SqlSegment Merge(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue)
-    {
-        sqlSegment.IsConstant = sqlSegment.IsConstant && rightSegment.IsConstant;
-        sqlSegment.IsVariable = sqlSegment.IsVariable || rightSegment.IsVariable;
-        sqlSegment.HasField = sqlSegment.HasField || rightSegment.HasField;
-        sqlSegment.IsParameter = sqlSegment.IsParameter || rightSegment.IsParameter;
-        return this.Change(sqlSegment, segmentValue);
-    }
-    public virtual SqlSegment Merge(SqlSegment sqlSegment, SqlSegment args0Segment, SqlSegment args1Segment, object segmentValue)
-    {
-        sqlSegment.IsConstant = sqlSegment.IsConstant && args0Segment.IsConstant && args1Segment.IsConstant;
-        sqlSegment.IsVariable = sqlSegment.IsVariable || args0Segment.IsVariable || args1Segment.IsVariable;
-        sqlSegment.HasField = sqlSegment.HasField || args0Segment.HasField || args1Segment.HasField;
-        sqlSegment.IsParameter = sqlSegment.IsParameter || args0Segment.IsParameter || args1Segment.IsParameter;
-        return this.Change(sqlSegment, segmentValue);
-    }
-    public virtual SqlSegment Merge(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue, bool isExpression, bool isMethodCall)
-    {
-        sqlSegment.IsConstant = sqlSegment.IsConstant && rightSegment.IsConstant;
-        sqlSegment.IsVariable = sqlSegment.IsVariable || rightSegment.IsVariable;
-        sqlSegment.HasField = sqlSegment.HasField || rightSegment.HasField;
-        sqlSegment.IsParameter = sqlSegment.IsParameter || rightSegment.IsParameter;
-        return this.Change(sqlSegment, segmentValue, isExpression, isMethodCall);
-    }
-    public virtual SqlSegment Merge(SqlSegment sqlSegment, SqlSegment args0Segment, SqlSegment args1Segment, object segmentValue, bool isExpression, bool isMethodCall)
-    {
-        sqlSegment.IsConstant = sqlSegment.IsConstant && args0Segment.IsConstant && args1Segment.IsConstant;
-        sqlSegment.IsVariable = sqlSegment.IsVariable || args0Segment.IsVariable || args1Segment.IsVariable;
-        sqlSegment.HasField = sqlSegment.HasField || args0Segment.HasField || args1Segment.HasField;
-        sqlSegment.IsParameter = sqlSegment.IsParameter || args0Segment.IsParameter || args1Segment.IsParameter;
-        return this.Change(sqlSegment, segmentValue, isExpression, isMethodCall);
-    }
-    public virtual SqlSegment Change(SqlSegment sqlSegment)
-    {
-        if (sqlSegment.IsVariable || (sqlSegment.IsParameterized || this.IsParameterized) && sqlSegment.IsConstant)
-        {
-            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
-            if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
+    //public virtual SqlSegment Merge(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue)
+    //{
+    //    sqlSegment.IsConstant = sqlSegment.IsConstant && rightSegment.IsConstant;
+    //    sqlSegment.IsVariable = sqlSegment.IsVariable || rightSegment.IsVariable;
+    //    sqlSegment.HasField = sqlSegment.HasField || rightSegment.HasField;
+    //    sqlSegment.IsParameter = sqlSegment.IsParameter || rightSegment.IsParameter;
+    //    return this.Change(sqlSegment, segmentValue);
+    //}
+    //public virtual SqlSegment Merge(SqlSegment sqlSegment, SqlSegment args0Segment, SqlSegment args1Segment, object segmentValue)
+    //{
+    //    sqlSegment.IsConstant = sqlSegment.IsConstant && args0Segment.IsConstant && args1Segment.IsConstant;
+    //    sqlSegment.IsVariable = sqlSegment.IsVariable || args0Segment.IsVariable || args1Segment.IsVariable;
+    //    sqlSegment.HasField = sqlSegment.HasField || args0Segment.HasField || args1Segment.HasField;
+    //    sqlSegment.IsParameter = sqlSegment.IsParameter || args0Segment.IsParameter || args1Segment.IsParameter;
+    //    return this.Change(sqlSegment, segmentValue);
+    //}
+    //public virtual SqlSegment Merge(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue, bool isExpression, bool isMethodCall)
+    //{
+    //    sqlSegment.IsConstant = sqlSegment.IsConstant && rightSegment.IsConstant;
+    //    sqlSegment.IsVariable = sqlSegment.IsVariable || rightSegment.IsVariable;
+    //    sqlSegment.HasField = sqlSegment.HasField || rightSegment.HasField;
+    //    sqlSegment.IsParameter = sqlSegment.IsParameter || rightSegment.IsParameter;
+    //    return this.Change(sqlSegment, segmentValue, isExpression, isMethodCall);
+    //}
+    //public virtual SqlSegment Merge(SqlSegment sqlSegment, SqlSegment args0Segment, SqlSegment args1Segment, object segmentValue, bool isExpression, bool isMethodCall)
+    //{
+    //    sqlSegment.IsConstant = sqlSegment.IsConstant && args0Segment.IsConstant && args1Segment.IsConstant;
+    //    sqlSegment.IsVariable = sqlSegment.IsVariable || args0Segment.IsVariable || args1Segment.IsVariable;
+    //    sqlSegment.HasField = sqlSegment.HasField || args0Segment.HasField || args1Segment.HasField;
+    //    sqlSegment.IsParameter = sqlSegment.IsParameter || args0Segment.IsParameter || args1Segment.IsParameter;
+    //    return this.Change(sqlSegment, segmentValue, isExpression, isMethodCall);
+    //}
+    //public virtual SqlSegment Change(SqlSegment sqlSegment)
+    //{
+    //    if (sqlSegment.IsVariable || (sqlSegment.IsParameterized || this.IsParameterized) && sqlSegment.IsConstant)
+    //    {
+    //        var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
+    //        if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
-            if (sqlSegment.MemberMapper != null)
-                this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
-            else this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value));
+    //        if (sqlSegment.MemberMapper != null)
+    //            this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
+    //        else this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value));
 
-            sqlSegment.Value = parameterName;
-            sqlSegment.IsParameter = true;
-            sqlSegment.IsVariable = false;
-            sqlSegment.IsConstant = false;
-            return sqlSegment;
-        }
-        if (sqlSegment.IsConstant && sqlSegment.MemberMapper != null && sqlSegment.TargetType != sqlSegment.ExpectType)
-        {
-            //只有常量和变量才有可能是数组
-            //TODO:待测试
-            if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
-                sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
+    //        sqlSegment.Value = parameterName;
+    //        sqlSegment.IsParameter = true;
+    //        sqlSegment.IsVariable = false;
+    //        sqlSegment.IsConstant = false;
+    //        return sqlSegment;
+    //    }
+    //    if (sqlSegment.IsConstant && sqlSegment.MemberMapper != null && sqlSegment.TargetType != sqlSegment.ExpectType)
+    //    {
+    //        //只有常量和变量才有可能是数组
+    //        //TODO:待测试
+    //        if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
+    //            sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
 
-            //sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.MemberMapper, sqlSegment.Value);
-            sqlSegment.ExpectType = sqlSegment.TargetType;
-        }
-        return sqlSegment;
-    }
-    public virtual SqlSegment Change(SqlSegment sqlSegment, object segmentValue)
+    //        //sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.MemberMapper, sqlSegment.Value);
+    //        sqlSegment.ExpectType = sqlSegment.TargetType;
+    //    }
+    //    return sqlSegment;
+    //}
+    //public virtual SqlSegment Change(SqlSegment sqlSegment, object segmentValue)
+    //{
+    //    sqlSegment.Value = segmentValue;
+    //    return this.Change(sqlSegment);
+    //}
+    //public virtual SqlSegment Change(SqlSegment sqlSegment, object segmentValue, bool isExpression, bool isMethodCall)
+    //{
+    //    sqlSegment.IsExpression = isExpression;
+    //    sqlSegment.IsMethodCall = isMethodCall;
+    //    if (sqlSegment.IsConstant && (isExpression || isMethodCall))
+    //        sqlSegment.IsConstant = false;
+    //    return this.Change(sqlSegment, segmentValue);
+    //}
+
+    public virtual string GetParameterizedValue(SqlSegment sqlSegment)
     {
-        sqlSegment.Value = segmentValue;
-        return this.Change(sqlSegment);
+        //默认只要是变量就设置为参数
+        //只有常量和变量才有可能是数组
+        if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
+            sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
+
+        var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
+        if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
+        if (sqlSegment.MemberMapper != null)
+            this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
+        else this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value));
+        return parameterName;
     }
-    public virtual SqlSegment Change(SqlSegment sqlSegment, object segmentValue, bool isExpression, bool isMethodCall)
-    {
-        sqlSegment.IsExpression = isExpression;
-        sqlSegment.IsMethodCall = isMethodCall;
-        if (sqlSegment.IsConstant && (isExpression || isMethodCall))
-            sqlSegment.IsConstant = false;
-        return this.Change(sqlSegment, segmentValue);
-    }
+    //public virtual SqlSegment Change(SqlSegment sqlSegment, object segmentValue, bool isConstant = true, bool isVariable = false, bool isExpression = false, bool isMethodCall = false)
+    //{
+    //    sqlSegment.Value = segmentValue;
+    //    sqlSegment.IsConstant = isConstant;
+    //    sqlSegment.IsVariable = isVariable;
+    //    sqlSegment.IsExpression = isExpression;
+    //    sqlSegment.IsMethodCall = isMethodCall;
+    //    return sqlSegment;
+    //}
+    //public virtual SqlSegment Change(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue, bool isConstant = true, bool isVariable = false, bool isExpression = false, bool isMethodCall = false)
+    //{
+    //    sqlSegment.Value = segmentValue;
+    //    sqlSegment.IsConstant = isConstant;
+    //    sqlSegment.IsVariable = isVariable;
+    //    sqlSegment.HasField = sqlSegment.HasField || rightSegment.HasField;
+    //    sqlSegment.IsParameter = sqlSegment.IsParameter || rightSegment.IsParameter;
+    //    sqlSegment.IsExpression = isExpression;
+    //    sqlSegment.IsMethodCall = isMethodCall;
+    //    return sqlSegment;
+    //}
+    //public virtual SqlSegment Change(SqlSegment sqlSegment, SqlSegment leftSegment, SqlSegment rightSegment, object segmentValue, bool isConstant = true, bool isVariable = false, bool isExpression = false, bool isMethodCall = false)
+    //{
+    //    sqlSegment.Value = segmentValue;
+    //    sqlSegment.IsConstant = isConstant;
+    //    sqlSegment.IsVariable = isVariable;
+    //    sqlSegment.HasField = leftSegment.HasField || rightSegment.HasField;
+    //    sqlSegment.IsParameter = leftSegment.IsParameter || rightSegment.IsParameter;
+    //    sqlSegment.IsExpression = isExpression;
+    //    sqlSegment.IsMethodCall = isMethodCall;
+    //    return sqlSegment;
+    //}
     public virtual string GetQuotedValue(SqlSegment sqlSegment)
     {
         //默认只要是变量就设置为参数
@@ -1241,14 +1289,12 @@ public class SqlVisitor : ISqlVisitor
         else if (sqlSegment.IsConstant)
         {
             //对枚举常量，且数据库类型是字符串类型做了特殊处理，目前只有这一种情况
+            //只有常量和变量才有可能是数组
+            if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
+                sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
+
             if (sqlSegment.MemberMapper != null)
-            {
-                //只有常量和变量才有可能是数组
-                if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
-                    sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
-                //sqlSegment.Value = this.OrmProvider.ToFieldValue(sqlSegment.MemberMapper, sqlSegment.Value);
-                return this.OrmProvider.GetQuotedValue(sqlSegment.Value);
-            }
+                return this.OrmProvider.GetQuotedValue(sqlSegment.MemberMapper.DbDefaultType, sqlSegment.Value);
             return this.OrmProvider.GetQuotedValue(sqlSegment);
         }
         //带有参数或字段的表达式或函数调用、或是只有参数或字段
@@ -1268,12 +1314,8 @@ public class SqlVisitor : ISqlVisitor
             else this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, elementValue));
             return parameterName;
         }
-        if (arraySegment.IsConstant && arraySegment.MemberMapper != null && arraySegment.TargetType != arraySegment.ExpectType)
-        {
-            //elementValue = this.OrmProvider.ToFieldValue(arraySegment.MemberMapper, elementValue);
-            //TODO:待测试
-            int dsfs = 0;
-        }
+        if (arraySegment.IsConstant && arraySegment.MemberMapper != null)
+            return this.OrmProvider.GetQuotedValue(arraySegment.MemberMapper.DbDefaultType, elementValue);
         return this.OrmProvider.GetQuotedValue(elementValue);
     }
     /// <summary>

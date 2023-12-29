@@ -26,6 +26,25 @@ public class MethodUnitTest : UnitTestBase
         dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
     [Fact]
+    public void Method_Convert()
+    {
+        Initialize();
+        using var repository = dbFactory.Create();
+        int age = 23;
+        var sql = repository.From<User>()
+            .Where(f => f.Id == 1)
+            .Select(f => new {// StringAge = "Age-" + Convert.ToString(age), StringId1 = "Id-" + Convert.ToString(f.Id), 
+                DoubleAge = Convert.ToDouble(f.Age) * 2 - 10 })
+            .ToSql(out _);
+        Assert.True(sql == "SELECT `Id` FROM `sys_user` WHERE `Id` IN (1,2,3)");
+
+        sql = repository.From<User>()
+            .Where(f => Sql.In(f.CreatedAt, new DateTime[] { DateTime.Parse("2023-03-03"), DateTime.Parse("2023-03-03 00:00:00"), DateTime.Parse("2023-03-03 06:06:06") }))
+            .Select(f => f.Id)
+            .ToSql(out _);
+        Assert.True(sql == "SELECT `Id` FROM `sys_user` WHERE `CreatedAt` IN ('2023-03-03 00:00:00.0000000','2023-03-03 00:00:00.0000000','2023-03-03 06:06:06.0000000')");
+    }
+    [Fact]
     public void SqlIn()
     {
         Initialize();

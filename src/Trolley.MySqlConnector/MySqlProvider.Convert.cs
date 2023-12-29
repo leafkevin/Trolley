@@ -36,23 +36,18 @@ partial class MySqlProvider
                         var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (args0Segment.IsConstant || args0Segment.IsVariable)
                         {
-                            var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
-                            var toValueDelegate = methodCallCache.GetOrAdd(cacheKey, f =>
-                            {
-                                var valueExpr = Expression.Parameter(typeof(object), "value");
-                                var callExpr = Expression.Call(methodInfo, valueExpr);
-                                var toValueExpr = Expression.Convert(callExpr, typeof(object));
-                                return Expression.Lambda(toValueExpr, valueExpr).Compile();
-                            });
-                            var toValue = toValueDelegate as Func<object, object>;
-                            //TODO:待测试
-                            //args0Segment.ExpectType = methodInfo.ReturnType;
-                            //args0Segment.Value = toValue.Invoke(args0Segment.Value);
-                            return visitor.Change(args0Segment);
+                            args0Segment.Value = methodInfo.Invoke(null, new object[] { args0Segment.Value });
+                            //类型改变了
+                            args0Segment.ExpectType = methodInfo.ReturnType;
+                            return args0Segment;
                         }
-                        var args0Argument = visitor.GetQuotedValue(args0Segment);
-                        //args0Segment.ExpectType = methodInfo.ReturnType;
-                        return visitor.Change(args0Segment, this.CastTo(methodCallExpr.Type, args0Argument), false, true);
+                        var args0Argument = args0Segment.Value;
+                        if ((args0Segment.ExpectType ?? args0Segment.Expression.Type) != methodInfo.ReturnType)
+                            args0Argument = this.CastTo(methodCallExpr.Type, args0Segment.Value);
+                        //类型改变了
+                        args0Segment.ExpectType = methodInfo.ReturnType;
+                        args0Segment.IsExpression = true;
+                        return args0Segment;
                     });
                     result = true;
                 }

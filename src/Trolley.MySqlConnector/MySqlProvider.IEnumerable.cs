@@ -30,6 +30,7 @@ partial class MySqlProvider
                         var elementSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
                         var arraySegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
 
+                        //TODO:数组优化
                         var enumerable = arraySegment.Value as IEnumerable;
                         foreach (var item in enumerable)
                         {
@@ -45,9 +46,9 @@ partial class MySqlProvider
                         {
                             var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
                             var elementArgument = visitor.GetQuotedValue(elementSegment);
-                            return visitor.Merge(elementSegment, arraySegment.ToParameter(visitor), $"{elementArgument} {notString}IN ({builder})", true, false);
+                            return elementSegment.Merge(arraySegment, $"{elementArgument} {notString}IN ({builder})", false, false, true);
                         }
-                        else return visitor.Change(elementSegment, "1<>0", true, false);
+                        else return elementSegment.Change("1<>0", false, false, true);
                     });
                     result = true;
                 }
@@ -78,9 +79,9 @@ partial class MySqlProvider
                         {
                             string elementArgument = visitor.GetQuotedValue(elementSegment);
                             var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
-                            return visitor.Merge(elementSegment, targetSegment.ToParameter(visitor), $"{elementArgument} {notString}IN ({builder})", true, false);
+                            return elementSegment.Merge(targetSegment, $"{elementArgument} {notString}IN ({builder})", false, false, true);
                         }
-                        else return visitor.Change(elementSegment, "1<>0", true, false);
+                        else return elementSegment.Change("1<>0", false, false, true);
                     });
                     return true;
                 }
@@ -94,20 +95,8 @@ partial class MySqlProvider
                     {
                         var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (args0Segment.IsConstant || args0Segment.IsVariable)
-                        {
-                            if (!methodCallCache.TryGetValue(cacheKey, out var reverseDelegate))
-                            {
-                                var sourceExpr = Expression.Parameter(target.Type, "source");
-                                var callExpr = Expression.Call(methodInfo, sourceExpr);
-                                var resultExpr = Expression.Convert(callExpr, typeof(object));
-                                reverseDelegate = Expression.Lambda<Func<object, object>>(resultExpr, sourceExpr).Compile();
-                                methodCallCache.TryAdd(cacheKey, reverseDelegate);
-                            }
-                            var toValue = reverseDelegate as Func<object, object>;
-                            args0Segment.Value = toValue.Invoke(args0Segment.Value);
-                            return visitor.Change(args0Segment);
-                        }
-                        return visitor.Change(args0Segment, $"REVERSE({visitor.GetQuotedValue(args0Segment)})", false, true);
+                            return args0Segment.Change(methodInfo.Invoke(args0Segment.Value, null));
+                        return args0Segment.Change($"REVERSE({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
                     });
                     result = true;
                 }

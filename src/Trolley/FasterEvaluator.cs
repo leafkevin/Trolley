@@ -7,7 +7,7 @@ using System.Reflection;
 
 namespace Trolley;
 
-static class FasterEvaluator
+public static class FasterEvaluator
 {
     private static ConcurrentDictionary<int, Func<object, object>> memberGetterCache = new();
     private static ConcurrentDictionary<int, Action<object, object>> memberSetterCache = new();

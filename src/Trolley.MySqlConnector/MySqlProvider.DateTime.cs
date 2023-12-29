@@ -18,27 +18,27 @@ partial class MySqlProvider
             {
                 //静态成员访问，理论上没有target对象，为了不再创建sqlSegment对象，外层直接把对象传了进来
                 case "MinValue":
-                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change(DateTime.MinValue));
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change(DateTime.MinValue, true));
                     result = true;
                     break;
                 case "MaxValue":
-                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change(DateTime.MaxValue));
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change(DateTime.MaxValue, true));
                     result = true;
                     break;
                 case "UnixEpoch":
-                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change(DateTime.UnixEpoch));
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change(DateTime.UnixEpoch, true));
                     result = true;
                     break;
                 case "Today":
-                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change("CURDATE()", false, false, true));
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change("CURDATE()", false, false, false, true));
                     result = true;
                     break;
                 case "Now":
-                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change("NOW()", false, false, true));
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change("NOW()", false, false, false, true));
                     result = true;
                     break;
                 case "UtcNow":
-                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change("UTC_TIMESTAMP()", false, false, true));
+                    memberAccessSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, target) => target.Change("UTC_TIMESTAMP()", false, false, false, true));
                     result = true;
                     break;
             }
@@ -57,9 +57,9 @@ partial class MySqlProvider
                         else targetSegment = visitor.VisitAndDeferred(target);
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Date);
+                            return targetSegment.Change(((DateTime)targetSegment.Value).Date);
 
-                        return visitor.Change(targetSegment, $"CONVERT({this.GetQuotedValue(targetSegment)},DATE)", false, true);
+                        return targetSegment.Change($"CONVERT({targetSegment},DATE)", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -73,9 +73,9 @@ partial class MySqlProvider
                         else targetSegment = visitor.VisitAndDeferred(target);
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Day);
+                            return targetSegment.Change(((DateTime)targetSegment.Value).Day);
 
-                        return visitor.Change(targetSegment, $"DAYOFMONTH({this.GetQuotedValue(targetSegment)})", false, true);
+                        return targetSegment.Change($"DAYOFMONTH({targetSegment})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -89,9 +89,9 @@ partial class MySqlProvider
                         else targetSegment = visitor.VisitAndDeferred(target);
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).DayOfWeek);
+                            return targetSegment.Change(((DateTime)targetSegment.Value).DayOfWeek);
 
-                        return visitor.Change(targetSegment, $"DAYOFWEEK({this.GetQuotedValue(targetSegment)})-1", true, false);
+                        return targetSegment.Change($"DAYOFWEEK({targetSegment})-1", false, false, true);
                     });
                     result = true;
                     break;
@@ -105,9 +105,9 @@ partial class MySqlProvider
                         else targetSegment = visitor.VisitAndDeferred(target);
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).DayOfYear);
+                            return targetSegment.Change(((DateTime)targetSegment.Value).DayOfYear);
 
-                        return visitor.Change(targetSegment, $"DAYOFYEAR({this.GetQuotedValue(targetSegment)})", false, true);
+                        return targetSegment.Change($"DAYOFYEAR({targetSegment})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -121,9 +121,9 @@ partial class MySqlProvider
                         else targetSegment = visitor.VisitAndDeferred(target);
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Hour);
+                            return targetSegment.Change(((DateTime)targetSegment.Value).Hour);
 
-                        return visitor.Change(targetSegment, $"HOUR({this.GetQuotedValue(targetSegment)})", false, true);
+                        return targetSegment.Change($"HOUR({targetSegment})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -137,7 +137,7 @@ partial class MySqlProvider
                         else targetSegment = visitor.VisitAndDeferred(target);
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Kind);
+                            return targetSegment.Change(((DateTime)targetSegment.Value).Kind);
 
                         throw new NotSupportedException("不支持的成员访问，DateTime只支持常量的Kind成员访问");
                     });
@@ -153,9 +153,9 @@ partial class MySqlProvider
                         else targetSegment = visitor.VisitAndDeferred(target);
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Millisecond);
+                            return targetSegment.Change(((DateTime)targetSegment.Value).Millisecond);
 
-                        return visitor.Change(targetSegment, $"FLOOR(MICROSECOND({this.GetQuotedValue(targetSegment)})/1000)", false, true);
+                        return targetSegment.Change($"FLOOR(MICROSECOND({targetSegment})/1000)", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -169,9 +169,9 @@ partial class MySqlProvider
                         else targetSegment = visitor.VisitAndDeferred(target);
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Minute);
+                            return targetSegment.Change(((DateTime)targetSegment.Value).Minute);
 
-                        return visitor.Change(targetSegment, $"MINUTE({this.GetQuotedValue(targetSegment)})", false, true);
+                        return targetSegment.Change($"MINUTE({targetSegment})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -185,9 +185,9 @@ partial class MySqlProvider
                         else targetSegment = visitor.VisitAndDeferred(target);
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Month);
+                            return targetSegment.Change(((DateTime)targetSegment.Value).Month);
 
-                        return visitor.Change(targetSegment, $"MONTH({this.GetQuotedValue(targetSegment)})", false, true);
+                        return targetSegment.Change($"MONTH({targetSegment})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -201,9 +201,9 @@ partial class MySqlProvider
                         else targetSegment = visitor.VisitAndDeferred(target);
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Second);
+                            return targetSegment.Change(((DateTime)targetSegment.Value).Second);
 
-                        return visitor.Change(targetSegment, $"SECOND({this.GetQuotedValue(targetSegment)})", false, true);
+                        return targetSegment.Change($"SECOND({targetSegment})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -217,9 +217,9 @@ partial class MySqlProvider
                         else targetSegment = visitor.VisitAndDeferred(target);
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Ticks);
+                            return targetSegment.Change(((DateTime)targetSegment.Value).Ticks);
 
-                        return visitor.Change(targetSegment, $"TIMESTAMPDIFF(MICROSECOND,'0001-01-01',{this.GetQuotedValue(targetSegment)})*10", true, false);
+                        return targetSegment.Change($"TIMESTAMPDIFF(MICROSECOND,'0001-01-01',{targetSegment})*10", false, false, true);
                     });
                     result = true;
                     break;
@@ -233,9 +233,9 @@ partial class MySqlProvider
                         else targetSegment = visitor.VisitAndDeferred(target);
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).TimeOfDay);
+                            return targetSegment.Change(((DateTime)targetSegment.Value).TimeOfDay);
 
-                        return visitor.Change(targetSegment, $"CONVERT({this.GetQuotedValue(targetSegment)},TIME)", false, true);
+                        return targetSegment.Change($"CONVERT({targetSegment},TIME)", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -249,9 +249,9 @@ partial class MySqlProvider
                         else targetSegment = visitor.VisitAndDeferred(target);
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            return visitor.Change(targetSegment, ((DateTime)targetSegment.Value).Year);
+                            return targetSegment.Change(((DateTime)targetSegment.Value).Year);
 
-                        return visitor.Change(targetSegment, $"YEAR({this.GetQuotedValue(targetSegment)})", false, true);
+                        return targetSegment.Change($"YEAR({targetSegment})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -277,11 +277,11 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
                         if ((leftSegment.IsConstant || leftSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
-                            return visitor.Merge(leftSegment, rightSegment, DateTime.DaysInMonth(Convert.ToInt32(leftSegment.Value), Convert.ToInt32(rightSegment.Value)));
+                            return leftSegment.Merge(rightSegment, DateTime.DaysInMonth(Convert.ToInt32(leftSegment.Value), Convert.ToInt32(rightSegment.Value)));
 
-                        var leftArgument = this.GetQuotedValue(leftSegment);
-                        var rightArgument = this.GetQuotedValue(rightSegment);
-                        return visitor.Merge(leftSegment, rightSegment, $"DAYOFMONTH(LAST_DAY(CONCAT({leftArgument},'-',{rightArgument},'-01')))", false, true);
+                        var leftArgument = visitor.GetQuotedValue(leftSegment);
+                        var rightArgument = visitor.GetQuotedValue(rightSegment);
+                        return leftSegment.Merge(rightSegment, $"DAYOFMONTH(LAST_DAY(CONCAT({leftArgument},'-',{rightArgument},'-01')))", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -290,10 +290,12 @@ partial class MySqlProvider
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
-                            return visitor.Change(valueSegment, DateTime.IsLeapYear(Convert.ToInt32(valueSegment.Value)));
+                            return valueSegment.Change(DateTime.IsLeapYear(Convert.ToInt32(valueSegment.Value)));
 
-                        var valueArgument = this.GetQuotedValue(valueSegment);
-                        return visitor.Change(valueSegment, $"(({valueArgument})%4=0 AND ({valueArgument})%100<>0 OR ({valueArgument})%400=0)", false, true);
+                        var valueArgument = valueSegment.Value;
+                        if (valueSegment.IsExpression)
+                            valueArgument = $"({valueSegment})";
+                        return valueSegment.Change($"{valueArgument}%4=0 AND {valueArgument}%100<>0 OR {valueArgument}%400=0", false, false, true);
                     });
                     result = true;
                     break;
@@ -303,10 +305,9 @@ partial class MySqlProvider
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
-                            return visitor.Change(valueSegment, DateTime.Parse(valueSegment.ToString()));
+                            return valueSegment.Change(DateTime.Parse(valueSegment.ToString()));
 
-                        var valueArgument = this.GetQuotedValue(valueSegment);
-                        return visitor.Change(valueSegment, $"CAST({valueArgument} AS DATETIME)", false, true);
+                        return valueSegment.Change($"CAST({valueSegment} AS DATETIME)", false, false, false, true);
                     });
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 3 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
@@ -323,7 +324,7 @@ partial class MySqlProvider
                         if ((valueSegment.IsConstant || valueSegment.IsVariable)
                             && (formatSegment.IsConstant || formatSegment.IsVariable)
                             && (providerSegment.IsConstant || providerSegment.IsVariable))
-                            return visitor.Merge(valueSegment, formatSegment, DateTime.ParseExact(valueSegment.ToString(), formatSegment.ToString(), (IFormatProvider)providerSegment.Value));
+                            return valueSegment.Merge(formatSegment, DateTime.ParseExact(valueSegment.ToString(), formatSegment.ToString(), (IFormatProvider)providerSegment.Value));
 
                         string formatArgument = null;
                         if (formatSegment.IsConstant)
@@ -377,9 +378,12 @@ partial class MySqlProvider
                                 formatArgument = formatArgument.NextReplace("tt", "%p");
                             else if (formatArgument.Contains("t"))
                                 formatArgument = formatArgument.NextReplace("t", "SUBSTRING(%p,1,1)");
+
+                            formatArgument = $"'{formatArgument}'";
                         }
-                        var valueArgument = this.GetQuotedValue(valueSegment);
-                        return visitor.Merge(valueSegment, formatSegment, $"STR_TO_DATE({valueArgument},'{formatArgument}')", false, true);
+                        else formatArgument = visitor.GetQuotedValue(formatSegment);
+                        var valueArgument = visitor.GetQuotedValue(valueSegment);
+                        return valueSegment.Merge(formatSegment, $"STR_TO_DATE({valueArgument},{formatArgument})", false, false, false, true);
                     });
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 1 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
@@ -392,9 +396,9 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
                         visitor.ChangeSameType(leftSegment, rightSegment);
 
-                        var leftArgument = this.GetQuotedValue(leftSegment);
-                        var rightArgument = this.GetQuotedValue(rightSegment);
-                        return visitor.Merge(leftSegment, rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END", true, false);
+                        var leftArgument = visitor.GetQuotedValue(leftSegment);
+                        var rightArgument = visitor.GetQuotedValue(rightSegment);
+                        return leftSegment.Merge(rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END", false, false, true);
                     });
                     result = true;
                     break;
@@ -411,9 +415,9 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
-                            return visitor.Merge(targetSegment, rightSegment, Convert.ToDateTime(targetSegment.Value).Add((TimeSpan)rightSegment.Value));
+                            return targetSegment.Merge(rightSegment, Convert.ToDateTime(targetSegment.Value).Add((TimeSpan)rightSegment.Value));
 
-                        var targetArgument = this.GetQuotedValue(targetSegment);
+                        var targetArgument = visitor.GetQuotedValue(targetSegment);
                         if (rightSegment.IsConstant || rightSegment.IsVariable)
                         {
                             var builder = new StringBuilder();
@@ -429,13 +433,11 @@ partial class MySqlProvider
                                 else builder.Append($"ADDTIME({targetArgument}");
                                 builder.Append($",{this.GetQuotedValue(timeSpan)})");
                             }
-                            //变量当作常量处理
-                            targetSegment.IsVariable = false;
-                            return targetSegment.Change(builder.ToString(), false, false, true);
+                            return targetSegment.Change(builder.ToString(), false, false, true, true);
                         }
                         //非常量、变量的，只能小于一天,数据库的Time类型映射成TimeSpan
-                        var rightArgument = this.GetQuotedValue(rightSegment);
-                        return visitor.Merge(targetSegment, rightSegment, $"ADDTIME({targetArgument},{rightArgument})", false, true);
+                        var rightArgument = visitor.GetQuotedValue(rightSegment);
+                        return targetSegment.Merge(rightSegment, $"ADDTIME({targetArgument},{rightArgument})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -446,11 +448,11 @@ partial class MySqlProvider
                          var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                          if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
-                             return visitor.Merge(targetSegment, rightSegment, Convert.ToDateTime(targetSegment.Value).AddDays(Convert.ToDouble(rightSegment.Value)));
+                             return targetSegment.Merge(rightSegment, Convert.ToDateTime(targetSegment.Value).AddDays(Convert.ToDouble(rightSegment.Value)));
 
-                         var targetArgument = this.GetQuotedValue(targetSegment);
-                         var rightArgument = this.GetQuotedValue(rightSegment);
-                         return visitor.Merge(targetSegment, rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} DAY)", false, true);
+                         var targetArgument = visitor.GetQuotedValue(targetSegment);
+                         var rightArgument = visitor.GetQuotedValue(rightSegment);
+                         return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} DAY)", false, false, false, true);
                      });
                     result = true;
                     break;
@@ -461,11 +463,11 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                            && (rightSegment.IsConstant || rightSegment.IsVariable))
-                            return visitor.Merge(targetSegment, rightSegment, Convert.ToDateTime(targetSegment.Value).AddHours(Convert.ToDouble(rightSegment.Value)));
+                            return targetSegment.Merge(rightSegment, Convert.ToDateTime(targetSegment.Value).AddHours(Convert.ToDouble(rightSegment.Value)));
 
-                        var targetArgument = this.GetQuotedValue(targetSegment);
-                        var rightArgument = this.GetQuotedValue(rightSegment);
-                        return visitor.Merge(targetSegment, rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} HOUR)", false, true);
+                        var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        var rightArgument = visitor.GetQuotedValue(rightSegment);
+                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} HOUR)", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -476,11 +478,11 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
-                            return visitor.Merge(targetSegment, rightSegment, Convert.ToDateTime(targetSegment.Value).AddMilliseconds(Convert.ToDouble(rightSegment.Value)));
+                            return targetSegment.Merge(rightSegment, Convert.ToDateTime(targetSegment.Value).AddMilliseconds(Convert.ToDouble(rightSegment.Value)));
 
-                        var targetArgument = this.GetQuotedValue(targetSegment);
-                        var rightArgument = this.GetQuotedValue(rightSegment);
-                        return visitor.Merge(targetSegment, rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument}*1000 MICROSECOND)", false, true);
+                        var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        var rightArgument = visitor.GetQuotedValue(rightSegment);
+                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument}*1000 MICROSECOND)", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -491,11 +493,11 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
-                            return visitor.Merge(targetSegment, rightSegment, Convert.ToDateTime(targetSegment.Value).AddMinutes(Convert.ToDouble(rightSegment.Value)));
+                            return targetSegment.Merge(rightSegment, Convert.ToDateTime(targetSegment.Value).AddMinutes(Convert.ToDouble(rightSegment.Value)));
 
-                        var targetArgument = this.GetQuotedValue(targetSegment);
-                        var rightArgument = this.GetQuotedValue(rightSegment);
-                        return visitor.Merge(targetSegment, rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} MINUTE)", false, true);
+                        var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        var rightArgument = visitor.GetQuotedValue(rightSegment);
+                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} MINUTE)", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -506,11 +508,11 @@ partial class MySqlProvider
                           var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                           if ((targetSegment.IsConstant || targetSegment.IsVariable)
                               && (rightSegment.IsConstant || rightSegment.IsVariable))
-                              return visitor.Merge(targetSegment, rightSegment, Convert.ToDateTime(targetSegment.Value).AddMonths(Convert.ToInt32(rightSegment.Value)));
+                              return targetSegment.Merge(rightSegment, Convert.ToDateTime(targetSegment.Value).AddMonths(Convert.ToInt32(rightSegment.Value)));
 
-                          var targetArgument = this.GetQuotedValue(targetSegment);
-                          var rightArgument = this.GetQuotedValue(rightSegment);
-                          return visitor.Merge(targetSegment, rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightSegment} MONTH)", false, true);
+                          var targetArgument = visitor.GetQuotedValue(targetSegment);
+                          var rightArgument = visitor.GetQuotedValue(rightSegment);
+                          return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightSegment} MONTH)", false, false, false, true);
                       });
                     result = true;
                     break;
@@ -521,11 +523,11 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
-                            return visitor.Merge(targetSegment, rightSegment, Convert.ToDateTime(targetSegment.Value).AddSeconds(Convert.ToDouble(rightSegment.Value)));
+                            return targetSegment.Merge(rightSegment, Convert.ToDateTime(targetSegment.Value).AddSeconds(Convert.ToDouble(rightSegment.Value)));
 
-                        var targetArgument = this.GetQuotedValue(targetSegment);
-                        var rightArgument = this.GetQuotedValue(rightSegment);
-                        return visitor.Merge(targetSegment, rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} SECOND)", false, true);
+                        var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        var rightArgument = visitor.GetQuotedValue(rightSegment);
+                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} SECOND)", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -536,11 +538,11 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
-                            return visitor.Merge(targetSegment, rightSegment, Convert.ToDateTime(targetSegment.Value).AddTicks(Convert.ToInt64(rightSegment.Value)));
+                            return targetSegment.Merge(rightSegment, Convert.ToDateTime(targetSegment.Value).AddTicks(Convert.ToInt64(rightSegment.Value)));
 
-                        var targetArgument = this.GetQuotedValue(targetSegment);
-                        var rightArgument = this.GetQuotedValue(rightSegment);
-                        return visitor.Merge(targetSegment, rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument}/10 MICROSECOND)", false, true);
+                        var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        var rightArgument = visitor.GetQuotedValue(rightSegment);
+                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument}/10 MICROSECOND)", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -551,11 +553,11 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
-                            return visitor.Merge(targetSegment, rightSegment, Convert.ToDateTime(targetSegment.Value).AddYears(Convert.ToInt32(rightSegment.Value)));
+                            return targetSegment.Merge(rightSegment, Convert.ToDateTime(targetSegment.Value).AddYears(Convert.ToInt32(rightSegment.Value)));
 
-                        var targetArgument = this.GetQuotedValue(targetSegment);
-                        var rightArgument = this.GetQuotedValue(rightSegment);
-                        return visitor.Merge(targetSegment, rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} YEAR)", false, true);
+                        var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        var rightArgument = visitor.GetQuotedValue(rightSegment);
+                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} YEAR)", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -568,11 +570,11 @@ partial class MySqlProvider
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
-                                return visitor.Merge(targetSegment, rightSegment, Convert.ToDateTime(targetSegment.Value).Subtract(Convert.ToDateTime(rightSegment.Value)));
+                                return targetSegment.Merge(rightSegment, Convert.ToDateTime(targetSegment.Value).Subtract(Convert.ToDateTime(rightSegment.Value)));
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
-                            var rightArgument = this.GetQuotedValue(rightSegment);
-                            return visitor.Merge(targetSegment, rightSegment, $"TIMEDIFF({targetArgument},{rightArgument})", false, true);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
+                            var rightArgument = visitor.GetQuotedValue(rightSegment);
+                            return targetSegment.Merge(rightSegment, $"TIMEDIFF({targetArgument},{rightArgument})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -584,9 +586,9 @@ partial class MySqlProvider
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
-                                return visitor.Merge(targetSegment, rightSegment, Convert.ToDateTime(targetSegment.Value).Subtract((TimeSpan)rightSegment.Value));
+                                return targetSegment.Merge(rightSegment, Convert.ToDateTime(targetSegment.Value).Subtract((TimeSpan)rightSegment.Value));
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
                             if (rightSegment.IsConstant || rightSegment.IsVariable)
                             {
                                 var builder = new StringBuilder();
@@ -602,13 +604,11 @@ partial class MySqlProvider
                                     else builder.Append($"SUBTIME({targetArgument}");
                                     builder.Append($",{this.GetQuotedValue(timeSpan)})");
                                 }
-                                //变量当作常量处理
-                                targetSegment.IsVariable = false;
                                 return targetSegment.Change(builder.ToString(), false, false, true);
                             }
                             //非常量、变量的，只能小于一天,数据库的Time类型映射成TimeSpan
-                            var rightArgument = this.GetQuotedValue(rightSegment);
-                            return visitor.Merge(targetSegment, rightSegment, $"SUBTIME({targetArgument},{rightArgument})", false, true);
+                            var rightArgument = visitor.GetQuotedValue(rightSegment);
+                            return targetSegment.Merge(rightSegment, $"SUBTIME({targetArgument},{rightArgument})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -618,9 +618,10 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var targetArgument = this.GetQuotedValue(targetSegment);
-                        var rightArgument = this.GetQuotedValue(rightSegment);
-                        return visitor.Merge(targetSegment, rightSegment, $"{targetArgument}={rightArgument}", true, false);
+                        visitor.ChangeSameType(targetSegment, rightSegment);
+                        var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        var rightArgument = visitor.GetQuotedValue(rightSegment);
+                        return targetSegment.Merge(rightSegment, $"{targetArgument}={rightArgument}", false, false, true);
                     });
                     result = true;
                     break;
@@ -629,9 +630,10 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        var targetArgument = this.GetQuotedValue(targetSegment);
-                        var rightArgument = this.GetQuotedValue(rightSegment);
-                        return visitor.Merge(targetSegment, rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", true, false);
+                        visitor.ChangeSameType(targetSegment, rightSegment);
+                        var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        var rightArgument = visitor.GetQuotedValue(rightSegment);
+                        return targetSegment.Merge(rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", false, false, true);
                     });
                     result = true;
                     break;
@@ -642,11 +644,11 @@ partial class MySqlProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
-                                return visitor.Change(targetSegment, visitor.Change(targetSegment).ToString());
+                                return targetSegment.Change(targetSegment.ToString());
 
                             var targetArgument = this.GetQuotedValue(targetSegment);
                             targetSegment.ExpectType = methodInfo.ReturnType;
-                            return visitor.Change(targetSegment, $"DATE_FORMAT({this.GetQuotedValue(targetSegment)},'%Y-%m-%d %H:%i:%s')", false, true);
+                            return targetSegment.Change($"DATE_FORMAT({this.GetQuotedValue(targetSegment)},'%Y-%m-%d %H:%i:%s')", false, false, false, true);
                         });
                         result = true;
                     }
@@ -655,12 +657,12 @@ partial class MySqlProvider
                         methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                            var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            var formatSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
 
                             string formatArgument = null;
-                            if (rightSegment.IsConstant || rightSegment.IsVariable)
+                            if (formatSegment.IsConstant || formatSegment.IsVariable)
                             {
-                                formatArgument = $"'{rightSegment}'";
+                                formatArgument = $"'{formatSegment}'";
 
                                 //分钟
                                 if (formatArgument.Contains("mm"))
@@ -710,15 +712,17 @@ partial class MySqlProvider
                                     formatArgument = formatArgument.NextReplace("tt", "%p");
                                 else if (formatArgument.Contains("t"))
                                     formatArgument = formatArgument.NextReplace("t", "SUBSTRING(%p,1,1)");
+                                formatArgument = $"'{formatArgument}'";
                             }
+                            else formatArgument = visitor.GetQuotedValue(formatSegment);
 
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
-                                && (rightSegment.IsConstant || rightSegment.IsVariable))
-                                return visitor.Merge(targetSegment, rightSegment, ((DateTime)targetSegment.Value).ToString(rightSegment.ToString()));
+                                && (formatSegment.IsConstant || formatSegment.IsVariable))
+                                return targetSegment.Merge(formatSegment, ((DateTime)targetSegment.Value).ToString(formatSegment.ToString()));
 
-                            var targetArgument = this.GetQuotedValue(targetSegment);
+                            var targetArgument = visitor.GetQuotedValue(targetSegment);
                             targetSegment.ExpectType = methodInfo.ReturnType;
-                            return visitor.Merge(targetSegment, rightSegment, $"DATE_FORMAT({targetArgument},{formatArgument})", false, true);
+                            return targetSegment.Merge(formatSegment, $"DATE_FORMAT({targetArgument},{formatArgument})", false, false, false, true);
                         });
                         result = true;
                     }

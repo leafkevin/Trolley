@@ -93,15 +93,10 @@ partial class MySqlProvider
                                 if (builder.Length > 0)
                                     builder.Append(',');
 
-                                if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string))
-                                {
-                                    if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
-                                        sqlSegment.Value = this.CastTo(typeof(string), sqlSegment.Value);
-                                    else sqlSegment.Value = sqlSegment.Value.ToString();
-                                }
-
+                                if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string) &&
+                                    (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall))
+                                    builder.Append(this.CastTo(typeof(string), sqlSegment.Value));
                                 builder.Append(visitor.GetQuotedValue(sqlSegment));
-                                if (i > 0) resultSegment.Merge(sqlSegment);
                             }
                             if (builder.Length > 0)
                             {
@@ -131,14 +126,14 @@ partial class MySqlProvider
                             var builder = new StringBuilder();
                             var constBuilder = new StringBuilder();
                             //已经被分割成了多个SqlSegment
-                            var concatSegments = visitor.ConvertFormatToConcatList(args);
+                            var concatExprs = visitor.ConvertFormatToConcatList(args);
                             SqlSegment resultSegment = null;
 
                             //123_{0}_345_{1}{2}_etr_{3}_fdr, 111,@p1,@p2,e4re
-                            for (var i = 0; i < concatSegments.Count; i++)
+                            for (var i = 0; i < concatExprs.Count; i++)
                             {
                                 //可能是一个sqlSegment，也可能是多个List<sqlSegment>
-                                var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = concatSegments[i] });
+                                var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = concatExprs[i] });
                                 if (i == 0) resultSegment = sqlSegment;
 
                                 if (sqlSegment.IsConstant)
@@ -156,15 +151,10 @@ partial class MySqlProvider
                                 if (builder.Length > 0)
                                     builder.Append(',');
 
-                                if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string))
-                                {
-                                    if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
-                                        sqlSegment.Value = this.CastTo(typeof(string), sqlSegment.Value);
-                                    else sqlSegment.Value = sqlSegment.Value.ToString();
-                                }
-
+                                if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string) &&
+                                    (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall))
+                                    builder.Append(this.CastTo(typeof(string), sqlSegment.Value));
                                 builder.Append(visitor.GetQuotedValue(sqlSegment));
-                                if (i > 0) resultSegment.Merge(sqlSegment);
                             }
 
                             if (builder.Length > 0)
@@ -267,15 +257,10 @@ partial class MySqlProvider
                                     }
                                     builder.Append(',');
 
-                                    if ((elementSegment.ExpectType ?? elementSegment.Expression.Type) != typeof(string))
-                                    {
-                                        if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
-                                            elementSegment.Value = this.CastTo(typeof(string), elementSegment.Value);
-                                        else elementSegment.Value = elementSegment.Value.ToString();
-                                    }
-
+                                    if ((elementSegment.ExpectType ?? elementSegment.Expression.Type) != typeof(string) &&
+                                        (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall))
+                                        builder.Append(this.CastTo(typeof(string), elementSegment.Value));
                                     builder.Append(visitor.GetQuotedValue(elementSegment));
-                                    if (index > 0) resultSegment.Merge(elementSegment);
                                 }
                                 else constBuilder.Append(item.ToString());
                                 index++;

@@ -608,7 +608,7 @@ public class RepositoryHelper
             }
         }
         var insertObjType = insertObj.GetType();
-        var cacheKey = HashCode.Combine(dbKey, ormProvider, mapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames);
+        var cacheKey = BuildInsertHashKey(dbKey, ormProvider, mapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames);
         (var headSqlParameterSetter, var commandInitializer) = createMultiSqlParametersCache.GetOrAdd(cacheKey, f =>
         {
             var entityMapper = mapProvider.GetEntityMap(entityType);
@@ -636,7 +636,6 @@ public class RepositoryHelper
     }
     public static Action<StringBuilder, object> BuildCreateHeadSqlPart(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type insertObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames)
     {
-        //TODO:
         Action<StringBuilder, object> commandInitializer = null;
         var entityMapper = mapProvider.GetEntityMap(entityType);
         if (typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType))
@@ -667,7 +666,6 @@ public class RepositoryHelper
         {
             var builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
             var insertObjExpr = Expression.Parameter(typeof(object), "insertObj");
-            var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
             var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
             var memberInfos = insertObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
@@ -691,8 +689,7 @@ public class RepositoryHelper
                 blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, fieldNameExpr));
                 index++;
             }
-            commandInitializer = Expression.Lambda<Action<StringBuilder, object>>(
-                Expression.Block(blockParameters, blockBodies), builderExpr, insertObjExpr).Compile();
+            commandInitializer = Expression.Lambda<Action<StringBuilder, object>>(Expression.Block(blockBodies), builderExpr, insertObjExpr).Compile();
         }
         return commandInitializer;
     }
@@ -812,6 +809,7 @@ public class RepositoryHelper
         else
         {
             var typedInsertObjExpr = Expression.Parameter(insertObjType, "typedInsertObj");
+            blockParameters.Add(typedInsertObjExpr);
             blockBodies.Add(Expression.Assign(typedInsertObjExpr, Expression.Convert(insertObjExpr, insertObjType)));
             var memberInfos = insertObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                  .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
@@ -1846,5 +1844,42 @@ public class RepositoryHelper
         else commandInitializer = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, int>>(
             Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, builderExpr, whereObjExpr, bulkIndexExpr).Compile();
         return commandInitializer;
+    }
+
+    public static int BuildInsertHashKey(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type insertObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames)
+    {
+        var hashCode = new HashCode();
+        hashCode.Add(dbKey);
+        hashCode.Add(ormProvider);
+        hashCode.Add(mapProvider);
+        hashCode.Add(entityType);
+        hashCode.Add(insertObjType);
+        AddFieldHashCode(hashCode, onlyFieldNames);
+        AddFieldHashCode(hashCode, ignoreFieldNames);
+        return hashCode.ToHashCode();
+    }
+    public static int BuildInsertHashKey(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type insertObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool isReturnIdentity)
+    {
+        var hashCode = new HashCode();
+        hashCode.Add(dbKey);
+        hashCode.Add(ormProvider);
+        hashCode.Add(mapProvider);
+        hashCode.Add(entityType);
+        hashCode.Add(insertObjType);
+        AddFieldHashCode(hashCode, onlyFieldNames);
+        AddFieldHashCode(hashCode, ignoreFieldNames);
+        hashCode.Add(isReturnIdentity);
+        return hashCode.ToHashCode();
+    }
+    private static void AddFieldHashCode(HashCode hashCode, List<string> fieldNames)
+    {
+        if (fieldNames == null)
+        {
+            hashCode.Add(0);
+            return;
+        }
+        hashCode.Add(fieldNames.Count);
+        foreach (var fieldName in fieldNames)
+            hashCode.Add(fieldName);
     }
 }

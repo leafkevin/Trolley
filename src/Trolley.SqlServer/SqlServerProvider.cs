@@ -45,9 +45,13 @@ public partial class SqlServerProvider : BaseOrmProvider
 
         defaultDbTypes[typeof(bool)] = SqlDbType.Bit;
         defaultDbTypes[typeof(byte)] = SqlDbType.TinyInt;
+        defaultDbTypes[typeof(sbyte)] = SqlDbType.TinyInt;
         defaultDbTypes[typeof(short)] = SqlDbType.SmallInt;
+        defaultDbTypes[typeof(ushort)] = SqlDbType.SmallInt;
         defaultDbTypes[typeof(int)] = SqlDbType.Int;
+        defaultDbTypes[typeof(uint)] = SqlDbType.Int;
         defaultDbTypes[typeof(long)] = SqlDbType.BigInt;
+        defaultDbTypes[typeof(ulong)] = SqlDbType.BigInt;
         defaultDbTypes[typeof(float)] = SqlDbType.Real;
         defaultDbTypes[typeof(double)] = SqlDbType.Float;
         defaultDbTypes[typeof(decimal)] = SqlDbType.Decimal;
@@ -61,9 +65,13 @@ public partial class SqlServerProvider : BaseOrmProvider
 
         defaultDbTypes[typeof(bool?)] = SqlDbType.Bit;
         defaultDbTypes[typeof(byte?)] = SqlDbType.TinyInt;
+        defaultDbTypes[typeof(sbyte?)] = SqlDbType.TinyInt;   
         defaultDbTypes[typeof(short?)] = SqlDbType.SmallInt;
+        defaultDbTypes[typeof(ushort?)] = SqlDbType.SmallInt;
         defaultDbTypes[typeof(int?)] = SqlDbType.Int;
+        defaultDbTypes[typeof(uint?)] = SqlDbType.Int;
         defaultDbTypes[typeof(long?)] = SqlDbType.BigInt;
+        defaultDbTypes[typeof(ulong?)] = SqlDbType.BigInt;
         defaultDbTypes[typeof(float?)] = SqlDbType.Real;
         defaultDbTypes[typeof(double?)] = SqlDbType.Float;
         defaultDbTypes[typeof(decimal?)] = SqlDbType.Decimal;

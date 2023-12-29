@@ -209,7 +209,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                     continue;
                 this.AddMemberElement(sqlSegment.Next(newExpr.Arguments[i]), memberMapper, builder);
             }
-            return sqlSegment.ChangeValue(builder.ToString());
+            return sqlSegment.Change (builder.ToString());
         }
         return this.Evaluate(sqlSegment);
     }
@@ -227,7 +227,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 continue;
             this.AddMemberElement(sqlSegment.Next(memberAssignment.Expression), memberMapper, builder);
         }
-        return sqlSegment.ChangeValue(builder.ToString());
+        return sqlSegment.Change (builder.ToString());
     }
     public void Clear()
     {

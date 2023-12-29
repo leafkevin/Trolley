@@ -100,6 +100,8 @@ public partial class MySqlProvider : BaseOrmProvider
         castTos[typeof(uint)] = "UNSIGNED";
         castTos[typeof(long)] = "SIGNED";
         castTos[typeof(ulong)] = "UNSIGNED";
+        castTos[typeof(float)] = "FLOAT";
+        castTos[typeof(double)] = "DOUBLE";        
         castTos[typeof(decimal)] = "DECIMAL(36,18)";
         castTos[typeof(DateTime)] = "DATETIME";
         castTos[typeof(DateOnly)] = "DATE";
@@ -114,6 +116,8 @@ public partial class MySqlProvider : BaseOrmProvider
         castTos[typeof(uint?)] = "UNSIGNED";
         castTos[typeof(long?)] = "SIGNED";
         castTos[typeof(ulong?)] = "UNSIGNED";
+        castTos[typeof(float?)] = "FLOAT";
+        castTos[typeof(double?)] = "DOUBLE";
         castTos[typeof(decimal?)] = "DECIMAL(36,18)";
         castTos[typeof(DateTime?)] = "DATETIME";
         castTos[typeof(DateOnly?)] = "DATE";

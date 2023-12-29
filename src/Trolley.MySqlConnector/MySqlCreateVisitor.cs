@@ -232,7 +232,7 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
             //    {
             //        this.AddSelectElement(newExpr.Arguments[i], newExpr.Members[i], readerFields);
             //    }
-            //    return sqlSegment.ChangeValue(readerFields);
+            //    return sqlSegment.Change(readerFields);
             //}
         }
         return this.Evaluate(sqlSegment);
@@ -264,7 +264,7 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
         //        var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
         //        this.AddSelectElement(memberAssignment.Expression, memberAssignment.Member, readerFields);
         //    }
-        //    return sqlSegment.ChangeValue(readerFields);
+        //    return sqlSegment.Change(readerFields);
         //}
         return this.Evaluate(sqlSegment);
     }

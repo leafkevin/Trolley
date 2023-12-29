@@ -96,12 +96,11 @@ partial class SqlServerProvider
                                 if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string))
                                 {
                                     if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
-                                        sqlSegment.Value = this.CastTo(typeof(string), sqlSegment.Value);
-                                    else sqlSegment.Value = sqlSegment.Value.ToString();
+                                        builder.Append(this.CastTo(typeof(string), sqlSegment.Value));
+                                    else if (sqlSegment.IsVariable || sqlSegment.IsConstant && visitor.IsParameterized)
+                                        builder.Append(visitor.GetParameterizedValue(sqlSegment));
+                                    else builder.Append(sqlSegment.Value.ToString());
                                 }
-
-                                builder.Append(visitor.GetQuotedValue(sqlSegment));
-                                if (i > 0) resultSegment.Merge(sqlSegment);
                             }
                             if (builder.Length > 0)
                             {
@@ -159,8 +158,10 @@ partial class SqlServerProvider
                                 if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string))
                                 {
                                     if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
-                                        sqlSegment.Value = this.CastTo(typeof(string), sqlSegment.Value);
-                                    else sqlSegment.Value = sqlSegment.Value.ToString();
+                                        builder.Append(this.CastTo(typeof(string), sqlSegment.Value));
+                                    else if (sqlSegment.IsVariable || sqlSegment.IsConstant && visitor.IsParameterized)
+                                        builder.Append(visitor.GetParameterizedValue(sqlSegment));
+                                    else builder.Append(sqlSegment.Value.ToString());
                                 }
 
                                 builder.Append(visitor.Change(sqlSegment));
@@ -270,12 +271,11 @@ partial class SqlServerProvider
                                     if ((elementSegment.ExpectType ?? elementSegment.Expression.Type) != typeof(string))
                                     {
                                         if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
-                                            elementSegment.Value = this.CastTo(typeof(string), elementSegment.Value);
-                                        else elementSegment.Value = elementSegment.Value.ToString();
+                                            builder.Append(this.CastTo(typeof(string), elementSegment.Value));
+                                        else if (elementSegment.IsVariable || elementSegment.IsConstant && visitor.IsParameterized)
+                                            builder.Append(visitor.GetParameterizedValue(elementSegment));
+                                        else builder.Append(elementSegment.Value.ToString());
                                     }
-
-                                    builder.Append(visitor.Change(elementSegment));
-                                    if (index > 0) resultSegment.Merge(elementSegment);
                                 }
                                 else constBuilder.Append(item.ToString());
                                 index++;

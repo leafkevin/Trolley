@@ -29,6 +29,7 @@ public class DateTimeUnitTest : UnitTestBase
     public async void MemberAccess()
     {
         this.Initialize();
+        var localDate = DateTime.Parse("2023-05-06").Date;
         using var repository = dbFactory.Create();
         var sql = repository.From<User>()
             .Where(f => f.Id == 1)
@@ -42,10 +43,12 @@ public class DateTimeUnitTest : UnitTestBase
                 DateTime.UnixEpoch,
                 DateTime.Parse("2023-05-06").Date,
                 CurrentDate = DateTime.Now.Date,
-                IsEquals = f.UpdatedAt.Equals(DateTime.Parse("2023-03-25"))
+                localDate,
+                IsEquals = f.UpdatedAt.Equals(DateTime.Parse("2023-03-25")),
+                IsEquals1 = f.UpdatedAt.Equals(localDate)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT NOW() AS `Now`,'0001-01-01 00:00:00.0000000' AS `MinValue`,'9999-12-31 23:59:59.9999999' AS `MaxValue`,UTC_TIMESTAMP() AS `UtcNow`,CURDATE() AS `Today`,'1970-01-01 00:00:00.0000000' AS `UnixEpoch`,'2023-05-06 00:00:00.0000000' AS `Date`,CONVERT(NOW(),DATE) AS `CurrentDate`,(`UpdatedAt`='2023-03-25 00:00:00.0000000') AS `IsEquals` FROM `sys_user` WHERE `Id`=1");
+        Assert.True(sql == "SELECT NOW() AS `Now`,'0001-01-01 00:00:00.0000000' AS `MinValue`,'9999-12-31 23:59:59.9999999' AS `MaxValue`,UTC_TIMESTAMP() AS `UtcNow`,CURDATE() AS `Today`,'1970-01-01 00:00:00.0000000' AS `UnixEpoch`,'2023-05-06 00:00:00.0000000' AS `Date`,CONVERT(NOW(),DATE) AS `CurrentDate`,(a.`UpdatedAt`='2023-03-25 00:00:00.0000000') AS `IsEquals` FROM `sys_user` a WHERE a.`Id`=1");
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new
@@ -59,7 +62,9 @@ public class DateTimeUnitTest : UnitTestBase
                 DateTime.UnixEpoch,
                 DateTime.Parse("2023-05-06").Date,
                 CurrentDate = DateTime.Now.Date,
-                IsEquals = f.UpdatedAt.Equals(DateTime.Parse("2023-03-25"))
+                localDate,
+                IsEquals = f.UpdatedAt.Equals(DateTime.Parse("2023-03-25")),
+                IsEquals1 = f.UpdatedAt.Equals(localDate)
             })
             .FirstAsync();
         Assert.True(result.MinValue == DateTime.MinValue);

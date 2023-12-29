@@ -196,7 +196,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             var insertObjType = insertObjs.GetType();
             var entityMapper = this.Tables[0].Mapper;
 
-            var cacheKey = HashCode.Combine(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
+            var cacheKey = RepositoryHelper.BuildInsertHashKey(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
             var headSqlBulkSetter = headSqlSetterCache.GetOrAdd(cacheKey, f => RepositoryHelper.BuildCreateHeadSqlPart(
                 this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames));
 
@@ -273,7 +273,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var insertObjType = insertObj.GetType();
-        var cacheKey = HashCode.Combine(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjType);
+        var cacheKey = RepositoryHelper.BuildInsertHashKey(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
         var headSqlSetter = headSqlSetterCache.GetOrAdd(cacheKey, f =>
             RepositoryHelper.BuildCreateHeadSqlPart(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames));
         var commandInitializerCache = this.IsMultiple ? multiValuesSqlParametersCache : valuesSqlParametersCache;
@@ -359,5 +359,28 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         base.Dispose();
         this.deferredSegments = null;
         this.InsertFields = null;
+    }
+    private int GetHashKey(Type entityType, Type insertObjType)
+    {
+        var hashCode = new HashCode();
+        hashCode.Add(this.DbKey);
+        hashCode.Add(this.OrmProvider);
+        hashCode.Add(this.MapProvider);
+        hashCode.Add(entityType);
+        hashCode.Add(insertObjType);
+        this.AddFieldHashCode(hashCode, this.OnlyFieldNames);
+        this.AddFieldHashCode(hashCode, this.IgnoreFieldNames);
+        return hashCode.ToHashCode();
+    }
+    private void AddFieldHashCode(HashCode hashCode, List<string> fieldNames)
+    {
+        if (fieldNames == null)
+        {
+            hashCode.Add(0);
+            return;
+        }
+        hashCode.Add(fieldNames.Count);
+        foreach (var fieldName in fieldNames)
+            hashCode.Add(fieldName);
     }
 }

@@ -57,7 +57,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var builder = new StringBuilder();
         if (this.CteQueries != null)
         {
-            //TODO:组织CTE SQL
             builder.Append("WITH ");
             if (this.IsRecursive)
                 builder.Append("RECURSIVE ");
@@ -1178,7 +1177,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 this.AddSelectElement(newExpr.Arguments[i], newExpr.Members[i], readerFields);
             }
-            return sqlSegment.ChangeValue(readerFields);
+            return sqlSegment.Change(readerFields);
         }
         return this.Evaluate(sqlSegment);
     }
@@ -1194,7 +1193,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
             this.AddSelectElement(memberAssignment.Expression, memberAssignment.Member, readerFields);
         }
-        return sqlSegment.ChangeValue(readerFields);
+        return sqlSegment.Change(readerFields);
     }
     public virtual void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, List<ReaderField> readerFields)
     {
@@ -1375,7 +1374,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 fieldName = this.GetQuotedValue(sqlSegment);
                 if (sqlSegment.IsExpression)
                     fieldName = $"({fieldName})";
-                if ((sqlSegment.IsParameter || sqlSegment.FromMember?.Name != memberInfo.Name))
+                if (sqlSegment.IsConstant || sqlSegment.IsParameter || sqlSegment.IsExpression
+                    || sqlSegment.IsMethodCall || sqlSegment.FromMember == null || sqlSegment.FromMember.Name != memberInfo.Name)
                     fieldName += " AS " + this.OrmProvider.GetFieldName(memberInfo.Name);
 
                 readerFields.Add(new ReaderField
@@ -1407,10 +1407,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     break;
                 }
                 else fieldName = this.GetQuotedValue(sqlSegment);
-                if (sqlSegment.IsExpression)//TODO:if (sqlSegment.IsExpression && !this.IsInsertTo)
+                if (sqlSegment.IsExpression)
                     fieldName = $"({fieldName})";
-                //if ((sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall || sqlSegment.FromMember?.Name != memberInfo.Name) && !this.IsInsertTo)
-                if ((sqlSegment.IsParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall))
+                if (sqlSegment.IsConstant || sqlSegment.IsParameter || sqlSegment.IsExpression
+                    || sqlSegment.IsMethodCall || sqlSegment.FromMember == null || sqlSegment.FromMember.Name != memberInfo.Name)
                     fieldName += " AS " + this.OrmProvider.GetFieldName(memberInfo.Name);
 
                 readerFields.Add(new ReaderField
