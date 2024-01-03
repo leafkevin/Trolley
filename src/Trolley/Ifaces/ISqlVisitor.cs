@@ -30,26 +30,7 @@ public interface ISqlVisitor : IDisposable
     SqlSegment VisitTypeIs(SqlSegment sqlSegment);
     SqlSegment Evaluate(SqlSegment sqlSegment);
     object Evaluate(Expression expr);
-    T Evaluate<T>(Expression expr); 
-    //SqlSegment Merge(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue);
-    //SqlSegment Merge(SqlSegment sqlSegment, SqlSegment args0Segment, SqlSegment args1Segment, object segmentValue);
-    //SqlSegment Merge(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue, bool isExpression, bool isMethodCall);
-    //SqlSegment Merge(SqlSegment sqlSegment, SqlSegment args0Segment, SqlSegment args1Segment, object segmentValue, bool isExpression, bool isMethodCall);
-    //SqlSegment Change(SqlSegment sqlSegment);
-    //SqlSegment Change(SqlSegment sqlSegment, object segmentValue);
-    //SqlSegment Change(SqlSegment sqlSegment, object segmentValue, bool isExpression, bool isMethodCall);
-
-
-
-    //TODO:
-    string GetParameterizedValue(SqlSegment sqlSegment);
-    //SqlSegment Change(SqlSegment sqlSegment, object segmentValue, bool isConstant = true, bool isVariable = false, bool isExpression = false, bool isMethodCall = false);
-    //SqlSegment Change(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue, bool isConstant = true, bool isVariable = false, bool isExpression = false, bool isMethodCall = false);
-    //SqlSegment Change(SqlSegment sqlSegment, SqlSegment leftSegment, SqlSegment rightSegment, object segmentValue, bool isConstant = true, bool isVariable = false, bool isExpression = false, bool isMethodCall = false);
-
-
-
-
+    T Evaluate<T>(Expression expr);
     string GetQuotedValue(SqlSegment sqlSegment);
     string GetQuotedValue(object elementValue, SqlSegment arraySegment);
     SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment);
