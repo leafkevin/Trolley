@@ -43,7 +43,7 @@ partial class MySqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Ticks);
 
-                        return targetSegment.Change($"TIME_TO_SEC({targetSegment})*10000000", false, false, true, true);
+                        return targetSegment.Change($"TIME_TO_SEC({targetSegment})*10000000", false, false, true);
                     });
                     result = true;
                     break;
@@ -278,8 +278,7 @@ partial class MySqlProvider
                             && (formatSegment.IsConstant || formatSegment.IsVariable))
                             return valueSegment.Merge(formatSegment, TimeSpan.ParseExact(valueSegment.ToString(), formatSegment.ToString(), CultureInfo.InvariantCulture));
 
-                        var valueArgument = visitor.GetQuotedValue(valueSegment);
-                        return valueSegment.Merge(formatSegment, $"CAST({valueArgument} AS TIME)", false, false, false, true);
+                        return valueSegment.Merge(formatSegment, $"CAST({valueSegment} AS TIME)", false, false, false, true);
                     });
                     result = true;
                     break;
