@@ -48,7 +48,7 @@ public class DateTimeUnitTest : UnitTestBase
                 IsEquals1 = f.UpdatedAt.Equals(localDate)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT NOW() AS `Now`,'0001-01-01 00:00:00.0000000' AS `MinValue`,'9999-12-31 23:59:59.9999999' AS `MaxValue`,UTC_TIMESTAMP() AS `UtcNow`,CURDATE() AS `Today`,'1970-01-01 00:00:00.0000000' AS `UnixEpoch`,'2023-05-06 00:00:00.0000000' AS `Date`,CONVERT(NOW(),DATE) AS `CurrentDate`,(a.`UpdatedAt`='2023-03-25 00:00:00.0000000') AS `IsEquals` FROM `sys_user` a WHERE a.`Id`=1");
+        Assert.True(sql == "SELECT NOW() AS `Now`,'0001-01-01 00:00:00.0000000' AS `MinValue`,'9999-12-31 23:59:59.9999999' AS `MaxValue`,UTC_TIMESTAMP() AS `UtcNow`,CURDATE() AS `Today`,'1970-01-01 00:00:00.0000000' AS `UnixEpoch`,'2023-05-06 00:00:00.0000000' AS `Date`,CONVERT(NOW(),DATE) AS `CurrentDate`,@p0 AS `localDate`,(a.`UpdatedAt`='2023-03-25 00:00:00.0000000') AS `IsEquals`,(a.`UpdatedAt`=@p1) AS `IsEquals1` FROM `sys_user` a WHERE a.`Id`=1");
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new
@@ -72,6 +72,7 @@ public class DateTimeUnitTest : UnitTestBase
         Assert.True(result.Today == DateTime.UtcNow.Date);
         Assert.True(result.UnixEpoch == DateTime.UnixEpoch);
         Assert.True(result.Date == DateTime.Parse("2023-05-06").Date);
+        Assert.True(result.localDate == localDate);
         Assert.True(result.IsEquals == result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")));
     }
     [Fact]
@@ -97,7 +98,7 @@ public class DateTimeUnitTest : UnitTestBase
                 ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT DATE_ADD(`CreatedAt`,INTERVAL 365 DAY) AS `Add`,DATE_ADD(`CreatedAt`,INTERVAL 30 DAY) AS `AddDays`,DATE_ADD(`CreatedAt`,INTERVAL 300*1000 MICROSECOND) AS `AddMilliseconds`,DATE_SUB(`CreatedAt`,INTERVAL 365 DAY) AS `Subtract1`,DATE_SUB(NOW(),INTERVAL 365 DAY) AS `Subtract2`,TIMEDIFF(`UpdatedAt`,`CreatedAt`) AS `Subtract3`,DAYOFMONTH(LAST_DAY(CONCAT(YEAR(NOW()),'-',MONTH(NOW()),'-01'))) AS `DayInMonth`,((YEAR(NOW()))%4=0 AND (YEAR(NOW()))%100<>0 OR (YEAR(NOW()))%400=0) AS `IsLeapYear1`,1 AS `IsLeapYear2`,CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) AS `Parse`,'2023-05-07 13:08:45.0000000' AS `ParseExact` FROM `sys_user` WHERE `UpdatedAt`>SUBTIME(DATE_SUB(NOW(),INTERVAL 365 DAY),'00:25:00.0000000')");
+        Assert.True(sql == "SELECT DATE_ADD(a.`CreatedAt`,INTERVAL 365 DAY) AS `Add`,DATE_ADD(a.`CreatedAt`,INTERVAL 30 DAY) AS `AddDays`,DATE_ADD(a.`CreatedAt`,INTERVAL 300*1000 MICROSECOND) AS `AddMilliseconds`,(DATE_SUB(a.`CreatedAt`,INTERVAL 365 DAY)) AS `Subtract1`,(DATE_SUB(NOW(),INTERVAL 365 DAY)) AS `Subtract2`,TIMEDIFF(a.`UpdatedAt`,a.`CreatedAt`) AS `Subtract3`,DAYOFMONTH(LAST_DAY(CONCAT(YEAR(NOW()),'-',MONTH(NOW()),'-01'))) AS `DayInMonth`,(YEAR(NOW())%4=0 AND YEAR(NOW())%100<>0 OR YEAR(NOW())%400=0) AS `IsLeapYear1`,1 AS `IsLeapYear2`,CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) AS `Parse`,'2023-05-07 13:08:45.0000000' AS `ParseExact` FROM `sys_user` a WHERE a.`UpdatedAt`>(SUBTIME(DATE_SUB(NOW(),INTERVAL 365 DAY),'00:25:00.0000000'))");
 
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
@@ -150,7 +151,7 @@ public class DateTimeUnitTest : UnitTestBase
                 ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (CASE WHEN `CreatedAt`='2023-03-03 00:00:00.0000000' THEN 0 WHEN `CreatedAt`>'2023-03-03 00:00:00.0000000' THEN 1 ELSE -1 END) AS `CompareTo`,DATE_SUB(`CreatedAt`,INTERVAL 365 DAY) AS `OneYearsAgo1`,TIMEDIFF(NOW(),'2023-03-20 00:00:00.0000000') AS `OneYearsAgo2`,DAYOFMONTH(LAST_DAY(CONCAT(YEAR(NOW()),'-',MONTH(NOW()),'-01'))) AS `DayInMonth`,((YEAR(NOW()))%4=0 AND (YEAR(NOW()))%100<>0 OR (YEAR(NOW()))%400=0) AS `IsLeapYear1`,1 AS `IsLeapYear2`,CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) AS `Parse`,'2023-05-07 13:08:45.0000000' AS `ParseExact` FROM `sys_user` WHERE (CASE WHEN `UpdatedAt`='2023-03-20 00:00:00.0000000' THEN 0 WHEN `UpdatedAt`>'2023-03-20 00:00:00.0000000' THEN 1 ELSE -1 END)>0");
+        Assert.True(sql == "SELECT (CASE WHEN a.`CreatedAt`='2023-03-03 00:00:00.0000000' THEN 0 WHEN a.`CreatedAt`>'2023-03-03 00:00:00.0000000' THEN 1 ELSE -1 END) AS `CompareTo`,(DATE_SUB(a.`CreatedAt`,INTERVAL 365 DAY)) AS `OneYearsAgo1`,TIMEDIFF(NOW(),'2023-03-20 00:00:00.0000000') AS `OneYearsAgo2`,DAYOFMONTH(LAST_DAY(CONCAT(YEAR(NOW()),'-',MONTH(NOW()),'-01'))) AS `DayInMonth`,(YEAR(NOW())%4=0 AND YEAR(NOW())%100<>0 OR YEAR(NOW())%400=0) AS `IsLeapYear1`,1 AS `IsLeapYear2`,CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) AS `Parse`,'2023-05-07 13:08:45.0000000' AS `ParseExact` FROM `sys_user` a WHERE (CASE WHEN a.`UpdatedAt`='2023-03-20 00:00:00.0000000' THEN 0 WHEN a.`UpdatedAt`>'2023-03-20 00:00:00.0000000' THEN 1 ELSE -1 END)>0");
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new
@@ -200,7 +201,7 @@ public class DateTimeUnitTest : UnitTestBase
                 DivOp2 = TimeSpan.FromHours(30) / TimeSpan.FromHours(3)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT ADDTIME(`CreatedAt`,'05:00:00.0000000') AS `AddOp`,SUBTIME(`CreatedAt`,'10:00:00.0000000') AS `SubOp`,ADDTIME(`SomeTimes`,'00:25:00.0000000') AS `AddOp1`,'1.05:45:00.0000000' AS `SubOp1`,TIMEDIFF(`UpdatedAt`,`CreatedAt`) AS `SubOp2`,'01:15:00.0000000' AS `MulOp`,'06:00:00.0000000' AS `DivOp1`,10 AS `DivOp2` FROM `sys_user` WHERE (CASE WHEN `UpdatedAt`='2023-03-20 00:00:00.0000000' THEN 0 WHEN `UpdatedAt`>'2023-03-20 00:00:00.0000000' THEN 1 ELSE -1 END)>0");
+        Assert.True(sql == "SELECT ADDTIME(a.`CreatedAt`,'05:00:00.0000000') AS `AddOp`,(SUBTIME(a.`CreatedAt`,'10:00:00.0000000')) AS `SubOp`,ADDTIME(a.`SomeTimes`,'00:25:00.0000000') AS `AddOp1`,'1.05:45:00.0000000' AS `SubOp1`,TIMEDIFF(a.`UpdatedAt`,a.`CreatedAt`) AS `SubOp2`,'01:15:00.0000000' AS `MulOp`,'06:00:00.0000000' AS `DivOp1`,10 AS `DivOp2` FROM `sys_user` a WHERE (CASE WHEN a.`UpdatedAt`='2023-03-20 00:00:00.0000000' THEN 0 WHEN a.`UpdatedAt`>'2023-03-20 00:00:00.0000000' THEN 1 ELSE -1 END)>0");
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new

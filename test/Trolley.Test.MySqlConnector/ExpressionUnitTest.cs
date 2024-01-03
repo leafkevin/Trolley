@@ -36,7 +36,7 @@ public class ExpressionUnitTest : UnitTestBase
             .Where(f => f.Name.Contains(lastName ?? firstName))
             .Select(f => new { HasName = f.Name ?? "NoName" })
             .ToSql(out var dbParameters);
-        Assert.True(sql == "SELECT COALESCE(`Name`,'NoName') AS `HasName` FROM `sys_user` WHERE `Name` LIKE CONCAT('%',@p0,'%')");
+        Assert.True(sql == "SELECT (COALESCE(a.`Name`,'NoName')) AS `HasName` FROM `sys_user` a WHERE a.`Name` LIKE CONCAT('%',@p0,'%')");
         Assert.True(dbParameters[0].Value.ToString() == firstName);
     }
     [Fact]

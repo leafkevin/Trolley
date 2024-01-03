@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Reflection;
 
 namespace Trolley;
 
@@ -31,8 +30,7 @@ public interface ISqlVisitor : IDisposable
     SqlSegment VisitTypeIs(SqlSegment sqlSegment);
     SqlSegment Evaluate(SqlSegment sqlSegment);
     object Evaluate(Expression expr);
-    T Evaluate<T>(Expression expr);
-    object EvaluateAndCache(object entity, MemberInfo member);
+    T Evaluate<T>(Expression expr); 
     //SqlSegment Merge(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue);
     //SqlSegment Merge(SqlSegment sqlSegment, SqlSegment args0Segment, SqlSegment args1Segment, object segmentValue);
     //SqlSegment Merge(SqlSegment sqlSegment, SqlSegment rightSegment, object segmentValue, bool isExpression, bool isMethodCall);

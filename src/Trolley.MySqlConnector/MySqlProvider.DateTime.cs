@@ -715,7 +715,6 @@ partial class MySqlProvider
                                     formatArgument = formatArgument.NextReplace("tt", "%p");
                                 else if (formatArgument.Contains("t"))
                                     formatArgument = formatArgument.NextReplace("t", "SUBSTRING(%p,1,1)");
-                                formatArgument = $"'{formatArgument}'";
                             }
                             else formatArgument = visitor.GetQuotedValue(formatSegment);
 

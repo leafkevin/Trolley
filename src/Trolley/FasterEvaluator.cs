@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
@@ -9,9 +8,6 @@ namespace Trolley;
 
 public static class FasterEvaluator
 {
-    private static ConcurrentDictionary<int, Func<object, object>> memberGetterCache = new();
-    private static ConcurrentDictionary<int, Action<object, object>> memberSetterCache = new();
-
     public static object Evaluate(this Expression expression, object target = null)
     {
         return expression switch
@@ -67,7 +63,7 @@ public static class FasterEvaluator
         var instance = expression.NewExpression.Evaluate();
         foreach (var binding in expression.Bindings)
         {
-            SetValueAndCache(instance, binding.Member, binding.Evaluate());
+            binding.Member.SetValue(instance, binding.Evaluate());
         }
         return instance;
     }
@@ -90,8 +86,8 @@ public static class FasterEvaluator
     {
         return member switch
         {
-            FieldInfo fieldInfo => EvaluateAndCache(obj, fieldInfo),
-            PropertyInfo propertyInfo => EvaluateAndCache(obj, propertyInfo),
+            FieldInfo fieldInfo => fieldInfo.GetValue(obj),
+            PropertyInfo propertyInfo => propertyInfo.GetValue(obj),
             MethodInfo methodInfo => methodInfo.Invoke(obj, parameters),
             _ => null
         };
@@ -102,46 +98,11 @@ public static class FasterEvaluator
             return memberAssignment.Expression.Evaluate();
         return null;
     }
-    public static object EvaluateAndCache(object entity, MemberInfo memberInfo)
+    static void SetValue(this MemberInfo member, object obj, object value)
     {
-        var type = entity.GetType();
-        var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
-        var cacheKey = HashCode.Combine(underlyingType, memberInfo);
-        var memberGetter = memberGetterCache.GetOrAdd(cacheKey, f =>
-        {
-            var objExpr = Expression.Parameter(typeof(object), "obj");
-            var typedObjExpr = Expression.Convert(objExpr, type);
-            Expression valueExpr = Expression.PropertyOrField(typedObjExpr, memberInfo.Name);
-            if (valueExpr.Type != typeof(object))
-                valueExpr = Expression.Convert(valueExpr, typeof(object));
-            return Expression.Lambda<Func<object, object>>(valueExpr, objExpr).Compile();
-        });
-        return memberGetter.Invoke(entity);
-    }
-    public static void SetValueAndCache(object entity, MemberInfo memberInfo, object value)
-    {
-        var type = entity.GetType();
-        var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
-        var cacheKey = HashCode.Combine(underlyingType, memberInfo);
-        var memberSetter = memberSetterCache.GetOrAdd(cacheKey, f =>
-        {
-            var objExpr = Expression.Parameter(typeof(object), "obj");
-            var valueExpr = Expression.Parameter(typeof(object), "value");
-            var typedObjExpr = Expression.Convert(objExpr, type);
-
-            Expression bodyExpr = null;
-            if (memberInfo is PropertyInfo propertyInfo)
-            {
-                var typedValueExpr = Expression.Convert(valueExpr, propertyInfo.PropertyType);
-                bodyExpr = Expression.Call(typedObjExpr, propertyInfo.GetSetMethod(), typedValueExpr);
-            }
-            else if (memberInfo is FieldInfo fieldInfo)
-            {
-                var typedValueExpr = Expression.Convert(valueExpr, fieldInfo.FieldType);
-                bodyExpr = Expression.Assign(Expression.Field(typedObjExpr, fieldInfo), typedValueExpr);
-            }
-            return Expression.Lambda<Action<object, object>>(bodyExpr, objExpr, valueExpr).Compile();
-        });
-        memberSetter.Invoke(entity, value);
+        if (member is FieldInfo fieldInfo)
+            fieldInfo.SetValue(obj, value);
+        else if (member is PropertyInfo propertyInfo)
+            propertyInfo.SetValue(obj, value);
     }
 }

@@ -438,7 +438,7 @@ public static class Extensions
                 //    else typeHandler = readerField.MemberMapper.TypeHandler;
                 //}
                 //TODO: 测试
-                typeHandler = readerField.MemberMapper.TypeHandler;
+                typeHandler = readerField.MemberMapper?.TypeHandler;
                 var readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
                     readerField.TargetMember.GetMemberType(), fieldType, typeHandler, blockParameters, blockBodies);
                 if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));

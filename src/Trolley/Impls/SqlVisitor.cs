@@ -22,7 +22,7 @@ public class SqlVisitor : ISqlVisitor
     protected List<TableSegment> Tables { get; set; } = new();
     protected Dictionary<string, TableSegment> TableAlias { get; set; } = new();
     protected List<ReaderField> ReaderFields { get; set; }
-  
+
     protected bool IsFromQuery { get; set; }
     protected string WhereSql { get; set; }
 
@@ -309,10 +309,10 @@ public class SqlVisitor : ISqlVisitor
                 {
                     sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.Null });
                     sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Not });
-                    return sqlSegment.Next(memberExpr.Expression);
+                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 }
                 else if (memberExpr.Member.Name == nameof(Nullable<bool>.Value))
-                    return sqlSegment.Next(memberExpr.Expression);
+                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 else throw new ArgumentException($"不支持的MemberAccess操作，表达式'{memberExpr}'返回值不是boolean类型");
             }
 
@@ -603,14 +603,6 @@ public class SqlVisitor : ISqlVisitor
         return (T)objValue;
     }
     public virtual object Evaluate(Expression expr) => expr.Evaluate();
-    /// <summary>
-    /// 计算entity成员member的值
-    /// </summary>
-    /// <param name="entity"></param>
-    /// <param name="member"></param>
-    /// <returns></returns>
-    public virtual object EvaluateAndCache(object entity, MemberInfo member)
-        => FasterEvaluator.EvaluateAndCache(entity, member);
     public virtual SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment)
     {
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
