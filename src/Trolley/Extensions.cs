@@ -300,7 +300,7 @@ public static class Extensions
     {
         var entityType = typeof(TEntity);
         var ormProviderType = ormProvider.GetType();
-        var cacheKey = GetTypeReaderKey(entityType, dbKey, ormProviderType, reader);
+        var cacheKey = GetTypeReaderKey(entityType, dbKey, ormProviderType, readerFields);
         if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
         {
             deserializer = CreateReaderDeserializer(ormProvider, reader, entityType, readerFields);
@@ -428,17 +428,6 @@ public static class Extensions
             {
                 var fieldType = reader.GetFieldType(index);
                 //变成子查询时，如果字段是Json实体类字段，必须带着MemberMapper，里面有TypeHandler
-                //if (readerField.IsOnlyField && readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.Entity)
-                //{                
-                //    if (readerField.MemberMapper == null)
-                //    {
-                //        var entityMapper = readerField.TableSegment.Mapper;
-                //        if (entityMapper.TryGetMemberMap(readerField.FromMember.Name, out var memberMapper))
-                //            typeHandler = memberMapper.TypeHandler;
-                //    }
-                //    else typeHandler = readerField.MemberMapper.TypeHandler;
-                //}
-                //TODO: 测试
                 typeHandler = readerField.MemberMapper?.TypeHandler;
                 var readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
                     readerField.TargetMember.GetMemberType(), fieldType, typeHandler, blockParameters, blockBodies);
@@ -471,14 +460,6 @@ public static class Extensions
                         if (readerField.ReaderFields != null)
                         {
                             childReaderField = readerField.ReaderFields[childIndex];
-                            //TODO:测试
-                            //if (childReaderField.MemberMapper == null)
-                            //{
-                            //    entityMapper = childReaderField.TableSegment.Mapper;
-                            //    if (entityMapper.TryGetMemberMap(childReaderField.FromMember.Name, out memberMapper))
-                            //        typeHandler = memberMapper.TypeHandler;
-                            //}
-                            //else typeHandler = childReaderField.MemberMapper.TypeHandler;
                             //本地函数调用
                             memberMapper = childReaderField.MemberMapper;
                             readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
@@ -488,7 +469,10 @@ public static class Extensions
                         childIndex++;
                         index++;
                     }
-                    var executeExpr = Expression.Invoke(readerField.DeferredDelegate, argsExprs.ToArray());
+                    Expression executeExpr = null;
+                    if (argsExprs.Count > 0)
+                        executeExpr = Expression.Invoke(readerField.DeferredDelegate, argsExprs.ToArray());
+                    else executeExpr = Expression.Invoke(readerField.DeferredDelegate);
                     if (current.IsDefault)
                         current.Bindings.Add(Expression.Bind(readerField.TargetMember, executeExpr));
                     else current.Arguments.Add(executeExpr);
@@ -532,30 +516,6 @@ public static class Extensions
                         readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
                             childReaderField.MemberMapper.MemberType, fieldType, typeHandler, blockParameters, blockBodies);
 
-                        #region 注释
-                        //switch (readerField.FieldType)
-                        //{
-                        //    case ReaderFieldType.AnonymousObject:
-                        //        fieldMember = readerField.ReaderFields[childIndex].FromMember;
-                        //        readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                        //            fieldMember.GetMemberType(), fieldType, null, blockParameters, blockBodies);
-                        //        break;
-                        //    case ReaderFieldType.Entity:
-                        //        childReaderField = readerField.ReaderFields[childIndex];
-                        //        fieldMember = childReaderField.FromMember;
-                        //        //if (childReaderField.MemberMapper == null)
-                        //        //{
-                        //        //    entityMapper = childReaderField.TableSegment.Mapper;
-                        //        //    if (entityMapper.TryGetMemberMap(childReaderField.FromMember.Name, out memberMapper))
-                        //        //        typeHandler = memberMapper.TypeHandler;
-                        //        //}
-                        //        //else typeHandler = childReaderField.MemberMapper.TypeHandler;
-                        //        typeHandler = childReaderField.MemberMapper.TypeHandler;
-                        //        readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                        //            memberMapper.MemberType, fieldType, typeHandler, blockParameters, blockBodies);
-                        //        break;
-                        //}
-                        #endregion
                         if (current.IsDefault) current.Bindings.Add(Expression.Bind(fieldMember, readerValueExpr));
                         else current.Arguments.Add(readerValueExpr);
 
@@ -834,6 +794,30 @@ public static class Extensions
         for (int i = 0; i < reader.FieldCount; i++)
         {
             hashCode.Add(reader.GetName(i));
+        }
+        return hashCode.ToHashCode();
+    }
+    private static int GetTypeReaderKey(Type entityType, string dbKey, Type ormProviderType, List<ReaderField> readerFields)
+    {
+        var hashCode = new HashCode();
+        hashCode.Add(dbKey);
+        hashCode.Add(ormProviderType);
+        hashCode.Add(entityType);
+        hashCode.Add(readerFields.Count);
+        foreach (var readerField in readerFields)
+        {
+            hashCode.Add(readerField.FieldType);
+            hashCode.Add(readerField.TargetMember);
+
+            if (readerField.ReaderFields != null)
+            {
+                hashCode.Add(readerField.ReaderFields.Count);
+                foreach (var childReaderField in readerField.ReaderFields)
+                {
+                    hashCode.Add(childReaderField.FieldType);
+                    hashCode.Add(childReaderField.TargetMember);
+                }
+            }
         }
         return hashCode.ToHashCode();
     }

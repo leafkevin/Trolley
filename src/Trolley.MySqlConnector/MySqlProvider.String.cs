@@ -435,8 +435,6 @@ partial class MySqlProvider
                         methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                            //TODO:
-                            //visitor.ChangeSameType(targetSegment, rightSegment);
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
                                 return targetSegment.Change(((string)targetSegment.Value).Trim());
 
@@ -450,8 +448,6 @@ partial class MySqlProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                            //TODO:
-                            visitor.ChangeSameType(targetSegment, rightSegment);
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
                                 return targetSegment.Merge(rightSegment, ((string)targetSegment.Value).Trim((char)rightSegment.Value));
@@ -468,9 +464,6 @@ partial class MySqlProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                            //TODO:
-                            visitor.ChangeSameType(targetSegment, rightSegment);
-
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
                                 return targetSegment.Merge(rightSegment, ((string)targetSegment.Value).Trim((char[])rightSegment.Value));
@@ -499,9 +492,6 @@ partial class MySqlProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                            //TODO:
-                            visitor.ChangeSameType(targetSegment, rightSegment);
-
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
                                 return targetSegment.Merge(rightSegment, ((string)targetSegment.Value).TrimStart((char)rightSegment.Value));
@@ -518,9 +508,6 @@ partial class MySqlProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                            //TODO:
-                            visitor.ChangeSameType(targetSegment, rightSegment);
-
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
                                 return targetSegment.Merge(rightSegment, ((string)targetSegment.Value).TrimStart((char[])rightSegment.Value));
@@ -549,10 +536,8 @@ partial class MySqlProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                            visitor.ChangeSameType(targetSegment, rightSegment);
-
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
-                                && (rightSegment.IsConstant || rightSegment.IsVariable))
+                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
                                 return targetSegment.Merge(rightSegment, ((string)targetSegment.Value).TrimEnd((char)rightSegment.Value));
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
@@ -567,8 +552,6 @@ partial class MySqlProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                            visitor.ChangeSameType(targetSegment, rightSegment);
-
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
                                 return targetSegment.Merge(rightSegment, ((string)targetSegment.Value).TrimEnd((char[])rightSegment.Value));

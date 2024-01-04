@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public sealed class TheaConnection : IDbConnection
+public sealed class TheaConnection : IDbConnection, IAsyncDisposable
 {
     private int isDisposed = 0;
 
@@ -101,7 +101,7 @@ public sealed class TheaConnection : IDbConnection
         this.Close();
         GC.SuppressFinalize(this);
     }
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await this.CloseAsync();
         GC.SuppressFinalize(this);

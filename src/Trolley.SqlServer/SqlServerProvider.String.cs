@@ -92,7 +92,7 @@ partial class SqlServerProvider
                                 if (builder.Length > 0)
                                     builder.Append('+');
 
-                                if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string))
+                                if (sqlSegment.GetExpectType(concatExprs[i]) != typeof(string))
                                 {
                                     if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
                                         sqlSegment.Value = this.CastTo(typeof(string), sqlSegment.Value);
@@ -152,7 +152,7 @@ partial class SqlServerProvider
                                 if (builder.Length > 0)
                                     builder.Append('+');
 
-                                if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string))
+                                if (sqlSegment.GetExpectType(concatExprs[i]) != typeof(string))
                                 {
                                     if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
                                         sqlSegment.Value = this.CastTo(typeof(string), sqlSegment.Value);
@@ -231,7 +231,7 @@ partial class SqlServerProvider
                             if (!separatorSegment.IsConstant)
                                 throw new NotSupportedException("暂时不支持分隔符是非常量的表达式解析，可以考虑在表达式外Join后再进行查询");
 
-                            if ((valuesSegment.IsConstant || valuesSegment.IsVariable))
+                            if (valuesSegment.IsConstant || valuesSegment.IsVariable)
                                 return valuesSegment.Change(string.Join(separatorSegment.ToString(), valuesSegment.Value as IEnumerable));
 
                             var resultSegment = valuesSegment;
@@ -259,7 +259,7 @@ partial class SqlServerProvider
                                     }
                                     builder.Append('+');
 
-                                    if ((elementSegment.ExpectType ?? elementSegment.Expression.Type) != typeof(string))
+                                    if (elementSegment.GetExpectType(elementSegment.Expression) != typeof(string))
                                     {
                                         if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
                                             elementSegment.Value = this.CastTo(typeof(string), elementSegment.Value);
@@ -330,7 +330,7 @@ partial class SqlServerProvider
                                     }
                                     builder.Append('+');
 
-                                    if ((elementSegment.ExpectType ?? elementSegment.Expression.Type) != typeof(string))
+                                    if (elementSegment.GetExpectType(elementSegment.Expression) != typeof(string))
                                     {
                                         if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
                                             elementSegment.Value = this.CastTo(typeof(string), elementSegment.Value);

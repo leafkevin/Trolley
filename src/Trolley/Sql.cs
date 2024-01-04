@@ -19,6 +19,7 @@ public static class Sql
         => throw new NotImplementedException();
     /// <summary>
     /// 当前字段或是表达式是否为NULL，只做条件解析，不实现
+    /// <code>x.BuyerId.IsNull()</code>
     /// </summary>
     /// <typeparam name="TField"></typeparam>
     /// <param name="field">字段访问</param>
@@ -26,27 +27,6 @@ public static class Sql
     /// <exception cref="NotImplementedException"></exception>
     public static bool IsNull<TField>(this TField field)
         => throw new NotImplementedException();
-    /// <summary>
-    /// 把当前对象类型转换为TTarget类型，相同名字的成员直接赋值，不存在的成员不做处理，只做实体赋值解析，不实现
-    /// </summary>
-    /// <typeparam name="TTarget"></typeparam>
-    /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
-    //public static TTarget FlattenTo<TTarget>()
-    //{
-    //    throw new NotImplementedException();
-    //}
-    /// <summary>
-    /// 把当前对象类型转换为TTarget类型，除了specialMemberInitializer表达式中的成员做特殊处理外，其他相同的成员名字直接赋值，不存在的成员不做处理，只做实体赋值解析，不实现
-    /// </summary>
-    /// <typeparam name="TTarget">类型</typeparam>
-    /// <param name="specialMemberInitializer">做特殊处理的成员赋值表达式</param>
-    /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
-    public static TTarget FlattenTo<TTarget>(Func<object> specialMemberInitializer)
-    {
-        throw new NotImplementedException();
-    }
     /// <summary>
     /// 数据分组后，把字段field的多行数据，用separator字符分割拼接在一起，行转列操作
     /// </summary>
@@ -63,14 +43,14 @@ public static class Sql
     //{
     //    throw new NotImplementedException();
     //}
-    public static int RowNumber()
-    {
-        throw new NotImplementedException();
-    }
-    public static int RowNumberOver(Func<RowNumberOver, RowNumberOver> overExpr)
-    {
-        throw new NotImplementedException();
-    }
+    //public static int RowNumber()
+    //{
+    //    throw new NotImplementedException();
+    //}
+    //public static int RowNumberOver(Func<RowNumberOver, RowNumberOver> overExpr)
+    //{
+    //    throw new NotImplementedException();
+    //}
     /// <summary>
     /// 参数化当前变量，常量不做参数化，当前值都将被参数化如：@p0,@p1等，本函数只用来解析，并不实现，用法：
     /// <code>
@@ -84,10 +64,10 @@ public static class Sql
     /// <param name="value">原值</param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    public static T ToParameter<T>(this T value)
-    {
-        throw new NotImplementedException();
-    }
+    //public static T ToParameter<T>(this T value)
+    //{
+    //    throw new NotImplementedException();
+    //}
     public static bool In<TElement>(TElement value, params TElement[] list)
     {
         throw new NotImplementedException();

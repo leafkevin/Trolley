@@ -444,13 +444,12 @@ public class SqlVisitor : ISqlVisitor
                 if (readerFields.Count > 0)
                     fields = builder.ToString();
             }
-            else deferredDelegate = methodCallExpr;
+            else deferredDelegate = Expression.Lambda(methodCallExpr);
 
             if (sqlSegment.IsDeferredFields || !string.IsNullOrEmpty(fields))
             {
                 if (readerFields == null)
                     fields = "NULL";
-                //fields = methodCallExpr.Type.IsValueType ? Activator.CreateInstance(methodCallExpr.Type).ToString() : "NULL";
                 return sqlSegment.Change(new ReaderField
                 {
                     FieldType = ReaderFieldType.DeferredFields,
@@ -623,11 +622,11 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment = this.VisitAndDeferred(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 }
                 break;
-            case "ToParameter":
-                sqlSegment.IsParameterized = true;
-                sqlSegment.Value = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                sqlSegment.IsParameterized = false;
-                break;
+            //case "ToParameter":
+            //    sqlSegment.IsParameterized = true;
+            //    sqlSegment.Value = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+            //    sqlSegment.IsParameterized = false;
+            //    break;
             case "In":
                 var elementType = methodCallExpr.Method.GetGenericArguments()[0];
                 var type = methodCallExpr.Arguments[1].Type;

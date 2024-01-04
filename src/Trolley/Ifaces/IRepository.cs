@@ -622,12 +622,9 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回仓储对象</returns>
     IRepository Timeout(int seconds);
     /// <summary>
-    /// 是否使用参数化常量，如果设置为true，本IRepository对象的所有查询语句中用到的常量都将变成参数
-    /// Create、Update、Delete操作本身就是参数化的，主要是Lambda表达式中用到的变量，如：
-    /// string productNo="xxx";//变量，会使用参数化
-    /// using var repository = dbFactory.Create().WithParameterized();
-    /// var result1 = await repository.QueryAsync&lt;Product&gt;(f =&gt; f.ProductNo.Contains(productNo));
-    /// var result2 = await repository.QueryAsync&lt;Product&gt;(f =&gt; f.ProductNo.Contains("PN-001"));//常量，不会使用参数化
+    /// 是否使用参数化常量，如果设置为true，本repository对象的所有查询语句中用到的常量都将变成参数
+    /// <code>var result = await repository.QueryAsync&lt;Product&gt;(f =&gt; f.ProductNo.Contains("PN-001"));</code>//常量PN-001，会被参数化
+    /// 默认情况下，所有变量都会参数化处理
     /// </summary>
     /// <param name="isParameterized">是否参数化</param>
     /// <returns>返回仓储对象</returns>

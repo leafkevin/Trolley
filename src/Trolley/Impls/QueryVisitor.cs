@@ -1391,7 +1391,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 if (sqlSegment.Value is ReaderField methodCallField)
                 {
                     //函数调用，参数引用多个字段
-                    //.SelectTo<DTO>((a, b ...) => new DTO
+                    //.SelectFlattenTo<DTO>((a, b ...) => new DTO
                     //{
                     //    ActivityTypeEnum = this.GetEmnuName(f.ActivityType)
                     //})
@@ -1402,7 +1402,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     readerFields.Add(methodCallField);
                     break;
                 }
-                else fieldName = this.GetQuotedValue(sqlSegment);
+                fieldName = this.GetQuotedValue(sqlSegment);
                 if (sqlSegment.IsExpression)
                     fieldName = $"({fieldName})";
                 if (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression

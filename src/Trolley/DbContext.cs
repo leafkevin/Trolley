@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public sealed class DbContext //: IDisposable, IAsyncDisposable
+public sealed class DbContext
 {
     #region Fields
     private int isDisposed = 0;
@@ -752,11 +752,6 @@ public sealed class DbContext //: IDisposable, IAsyncDisposable
             return;
         this.Connection?.Close();
         this.Transaction = null;
-        //this.DbKey = null;
-        //this.Connection = null;
-        //this.OrmProvider = null;
-        //this.MapProvider = null;
-        //GC.SuppressFinalize(this);
     }
     public async ValueTask CloseAsync()
     {
@@ -765,11 +760,6 @@ public sealed class DbContext //: IDisposable, IAsyncDisposable
 
         await this.Connection.CloseAsync();
         this.Transaction = null;
-        //this.DbKey = null;
-        //this.Connection = null;
-        //this.OrmProvider = null;
-        //this.MapProvider = null;
-        //GC.SuppressFinalize(this);
     }
     #endregion
 }

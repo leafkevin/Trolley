@@ -41,12 +41,13 @@ partial class MySqlProvider
                             args0Segment.ExpectType = methodInfo.ReturnType;
                             return args0Segment;
                         }
-                        var args0Argument = args0Segment.Value;
-                        if ((args0Segment.ExpectType ?? args0Segment.Expression.Type) != methodInfo.ReturnType)
-                            args0Argument = this.CastTo(methodCallExpr.Type, args0Segment.Value);
+                        if (args0Segment.GetExpectType(args[0]) != methodInfo.ReturnType)
+                        {
+                            args0Segment.Value = this.CastTo(methodCallExpr.Type, args0Segment.Value);
+                            args0Segment.IsMethodCall = true;
+                        }
                         //类型改变了
                         args0Segment.ExpectType = methodInfo.ReturnType;
-                        args0Segment.IsExpression = true;
                         return args0Segment;
                     });
                     result = true;
