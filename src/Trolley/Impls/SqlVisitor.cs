@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 
 namespace Trolley;
@@ -445,11 +444,13 @@ public class SqlVisitor : ISqlVisitor
                 if (readerFields.Count > 0)
                     fields = builder.ToString();
             }
+            else deferredDelegate = methodCallExpr;
 
             if (sqlSegment.IsDeferredFields || !string.IsNullOrEmpty(fields))
             {
                 if (readerFields == null)
                     fields = "NULL";
+                //fields = methodCallExpr.Type.IsValueType ? Activator.CreateInstance(methodCallExpr.Type).ToString() : "NULL";
                 return sqlSegment.Change(new ReaderField
                 {
                     FieldType = ReaderFieldType.DeferredFields,
@@ -611,22 +612,9 @@ public class SqlVisitor : ISqlVisitor
         LambdaExpression lambdaExpr = null;
         switch (methodCallExpr.Method.Name)
         {
-            //case "FlattenTo"://通常在最外层的SELECT中转为其他类型
-            //    var targetType = methodCallExpr.Method.ReturnType;
-            //    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
-            //    {
-            //        lambdaExpr = sqlSegment.OriginalExpression as LambdaExpression;
-            //        var visitedParameters = lambdaExpr.Parameters;
-            //        lambdaExpr = this.EnsureLambda(methodCallExpr.Arguments[0]);
-            //        lambdaExpr = Expression.Lambda(lambdaExpr.Body, visitedParameters);
-            //    }
-            //    var readerFields = this.FlattenFieldsTo(targetType, lambdaExpr);
-            //    sqlSegment.Change(readerFields);
-            //    break;
             case "Deferred":
                 sqlSegment.IsDeferredFields = true;
-                //TODO:测试是否方法被解析两次
-                //sqlSegment = this.VisitMethodCall(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                sqlSegment = this.VisitMethodCall(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 break;
             case "IsNull":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
@@ -1162,6 +1150,7 @@ public class SqlVisitor : ISqlVisitor
             return this.OrmProvider.GetQuotedValue(typedValue);
         }
         //带有参数或字段的表达式或函数调用、或是只有参数或字段
+        //TODO:本地函数调用返回值，非常量、变量、字段、SQL函数调用
         return sqlSegment.ToString();
     }
     public virtual string GetQuotedValue(object elementValue, SqlSegment arraySegment)
@@ -1655,48 +1644,6 @@ public class SqlVisitor : ISqlVisitor
         }
         return completedExprs;
     }
-    private bool FindReaderField(MemberInfo memberInfo, int index, out ReaderField readerField)
-    {
-        foreach (var tableSegment in this.Tables)
-        {
-            if (this.FindReaderField(tableSegment, memberInfo, index, out readerField))
-                return true;
-        }
-        readerField = null;
-        return false;
-    }
-    private bool FindReaderField(TableSegment tableSegment, MemberInfo memberInfo, int index, out ReaderField readerField)
-    {
-        switch (tableSegment.TableType)
-        {
-            case TableType.FromQuery:
-                if (tableSegment.ReaderFields == null || tableSegment.ReaderFields.Count == 0)
-                {
-                    readerField = null;
-                    return false;
-                }
-                readerField = tableSegment.ReaderFields.Find(f => f.FromMember.Name == memberInfo.Name);
-                if (readerField != null)
-                    readerField.TargetMember = memberInfo;
-                return readerField != null;
-            default:
-                //tableSegment.Mapper ??= this.MapProvider.GetEntityMap(tableSegment.EntityType);
-                if (!tableSegment.Mapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
-                {
-                    readerField = null;
-                    return false;
-                }
-                readerField = new ReaderField
-                {
-                    FieldType = ReaderFieldType.Field,
-                    FromMember = memberMapper.Member,
-                    TargetMember = memberInfo,
-                    TableSegment = tableSegment,
-                    Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(memberMapper.FieldName)
-                };
-                return true;
-        }
-    }
     private SqlSegment CreateConditionSegment(Expression conditionExpr)
     {
         var sqlSegment = new SqlSegment { Expression = conditionExpr };
@@ -1707,8 +1654,6 @@ public class SqlVisitor : ISqlVisitor
         }
         return sqlSegment;
     }
-
-
     class ConditionOperator
     {
         public string OperatorType { get; set; }

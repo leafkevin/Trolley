@@ -32,10 +32,10 @@ public static class Sql
     /// <typeparam name="TTarget"></typeparam>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    public static TTarget FlattenTo<TTarget>()
-    {
-        throw new NotImplementedException();
-    }
+    //public static TTarget FlattenTo<TTarget>()
+    //{
+    //    throw new NotImplementedException();
+    //}
     /// <summary>
     /// 把当前对象类型转换为TTarget类型，除了specialMemberInitializer表达式中的成员做特殊处理外，其他相同的成员名字直接赋值，不存在的成员不做处理，只做实体赋值解析，不实现
     /// </summary>

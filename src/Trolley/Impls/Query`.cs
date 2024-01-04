@@ -267,6 +267,11 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
+    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -654,6 +659,11 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
+    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, TTarget>> fieldsExpr)
@@ -1045,6 +1055,11 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
+    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1432,6 +1447,11 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
+    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
@@ -1823,6 +1843,11 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
         this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
+    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -2191,6 +2216,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
+    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr)
@@ -2563,6 +2593,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
         this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
+    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -2931,6 +2966,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
+    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr)
@@ -3303,6 +3343,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
         this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
+    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -3671,6 +3716,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
+    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr)
@@ -4043,6 +4093,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
         this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
+    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -4411,6 +4466,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
+    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr)
@@ -4783,6 +4843,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
         this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
+    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -5153,6 +5218,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
+    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -5418,6 +5488,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.Visitor.Select(null, fieldsExpr);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
+    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion

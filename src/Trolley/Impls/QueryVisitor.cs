@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -147,7 +148,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 builder.Append(" " + orderBy);
         }
         string others = builder.ToString();
+
         builder.Clear();
+        if (!string.IsNullOrEmpty(headSql))
+            builder.Append(headSql);
 
         if (this.skip.HasValue || this.limit.HasValue)
         {
@@ -279,8 +283,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 builder.Append(" " + orderBy);
         }
         string others = builder.ToString();
+
         builder.Clear();
-        builder.Append(headSql);
+        if (!string.IsNullOrEmpty(headSql))
+            builder.Append(headSql);
 
         if (this.skip.HasValue || this.limit.HasValue)
         {
@@ -1075,6 +1081,75 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsFromQuery = false;
         this.IsSelect = false;
     }
+    public virtual void SelectFlattenTo(Type targetType, Expression specialMemberSelector = null)
+    {
+        this.IsSelect = true;
+        if (specialMemberSelector != null)
+        {
+            var lambdaExpr = specialMemberSelector as LambdaExpression;
+            var sqlSegment = this.VisitMemberInit(new SqlSegment { Expression = lambdaExpr.Body });
+            this.ReaderFields = sqlSegment.Value as List<ReaderField>;
+            var existsMembers = this.ReaderFields.Select(f => f.TargetMember.Name).ToList();
+
+            var targetMembers = targetType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+
+            foreach (var memberInfo in targetMembers)
+            {
+                if (existsMembers.Contains(memberInfo.Name)) continue;
+                if (this.TryFindReaderField(memberInfo, out var readerField))
+                    this.ReaderFields.Add(readerField);
+            }
+        }
+        else
+        {
+            this.ReaderFields = new();
+            var targetMembers = targetType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+
+            foreach (var memberInfo in targetMembers)
+            {
+                if (this.TryFindReaderField(memberInfo, out var readerField))
+                    this.ReaderFields.Add(readerField);
+            }
+        }
+        this.IsFromQuery = false;
+        this.IsSelect = false;
+    }
+    public bool TryFindReaderField(MemberInfo memberInfo, out ReaderField readerField)
+    {
+        foreach (var tableSegment in this.Tables)
+        {
+            if (this.TryFindReaderField(tableSegment, memberInfo, out readerField))
+                return true;
+        }
+        readerField = null;
+        return false;
+    }
+    public bool TryFindReaderField(TableSegment tableSegment, MemberInfo memberInfo, out ReaderField readerField)
+    {
+        readerField = null;
+        if (tableSegment.ReaderFields != null)
+        {
+            readerField = tableSegment.ReaderFields.Find(f => f.FromMember.Name == memberInfo.Name);
+            if (readerField == null) return false;
+            readerField.TargetMember = memberInfo;
+        }
+        else
+        {
+            if (!tableSegment.Mapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
+                return false;
+            readerField = new ReaderField
+            {
+                FieldType = ReaderFieldType.Field,
+                FromMember = memberMapper.Member,
+                TargetMember = memberInfo,
+                TableSegment = tableSegment,
+                Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(memberMapper.FieldName)
+            };
+        }
+        return true;
+    }
     public virtual void Distinct() => this.IsDistinct = true;
     public virtual void Page(int pageIndex, int pageSize)
     {
@@ -1322,6 +1397,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     //})
                     methodCallField.FromMember = memberInfo;
                     methodCallField.TargetMember = memberInfo;
+                    if (methodCallField.FieldType == ReaderFieldType.DeferredFields && methodCallField.ReaderFields == null)
+                        methodCallField.Body += " AS " + this.OrmProvider.GetFieldName(memberInfo.Name);
                     readerFields.Add(methodCallField);
                     break;
                 }

@@ -413,6 +413,11 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
+    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+    }
     public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)

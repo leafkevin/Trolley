@@ -56,6 +56,7 @@ public interface IQueryVisitor : IDisposable
     void SelectGrouping();
     void SelectDefault(Expression defaultExpr);
     void Select(string sqlFormat, Expression selectExpr = null);
+    void SelectFlattenTo(Type targetType, Expression specialMemberSelector = null);
 
     void Distinct();
     void Page(int pageIndex, int pageSize);

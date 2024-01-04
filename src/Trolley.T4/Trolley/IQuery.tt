@@ -213,8 +213,7 @@ public interface IQuery<T> : IQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">当前CTE临时返回的实体类型</typeparam>
-    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
-    /// <code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
+    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：<code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery);
@@ -281,10 +280,9 @@ public interface IQuery<T> : IQueryBase
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级  
     /// <code>
-    /// repository.From&lt;Product&gt;()
-    ///   .Include(f =&gt; f.Brand) ...
-    /// repository.From&lt;Brand&gt;()
-    ///   .Include(f =&gt; f.Products) ...
+    /// repository.From&lt;Product&gt;().Include(f =&gt; f.Brand) ...
+    /// repository.From&lt;Brand&gt;().Include(f =&gt; f.Products) ...
+    /// repository.From&lt;Order&gt;().Include(f =&gt; f.Seller.Company.Products) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMember">导航属性泛型类型</typeparam>
@@ -297,8 +295,7 @@ public interface IQuery<T> : IQueryBase
     /// <code>
     /// repository.From&lt;User&gt;()
     ///   .IncludeMany(f =&gt; f.Orders)
-    ///   .Include(f =&gt; f.Product) //可继续加载订单中的产品信息
-    ///   ...
+    ///   .ThenInclude(f =&gt; f.Product) //可继续加载订单中的产品信息
     /// </code>
     /// </summary>
     /// <typeparam name="TElment">导航属性泛型类型</typeparam>
@@ -603,6 +600,14 @@ public interface IQuery<T> : IQueryBase
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
+    /// <summary>
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null);
     /// <summary>
     /// 选择指定聚合字段返回，可以是单个聚合字段或多个聚合字段的匿名对象，用法：
     /// <code>
@@ -1211,6 +1216,14 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);
+    /// <summary>
+    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
+    /// <code> ...SelectFlattenTo((a, b ...) =&gt; new OrderInfo{ b.Id, ... }) //使用第二表的Id字段作为Id成员</code>
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<<#=tables#>, TTarget>> specialMemberSelector = null);
 <#
         if(i < count)
         {

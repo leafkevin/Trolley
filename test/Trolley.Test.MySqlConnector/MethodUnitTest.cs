@@ -93,7 +93,7 @@ public class MethodUnitTest : UnitTestBase
         repository.Commit();
         var result = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { 8 }))
-            .Select(f => Sql.FlattenTo<OrderInfo>())
+            .SelectFlattenTo<OrderInfo>()
             .ToList();
         Assert.True(result[0].Id == 8);
         Assert.True(result[0].BuyerId == 1);

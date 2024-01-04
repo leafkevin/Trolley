@@ -435,7 +435,7 @@ public class MethodCallUnitTest : UnitTestBase
 
         var result = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { 8 }))
-            .Select(f => Sql.FlattenTo<OrderInfo>())
+            .SelectFlattenTo<OrderInfo>()
             .ToList();
         Assert.True(result[0].Id == 8);
         Assert.True(result[0].BuyerId == 1);
@@ -444,10 +444,10 @@ public class MethodCallUnitTest : UnitTestBase
 
         result = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { 8 }))
-            .Select(f => Sql.FlattenTo<OrderInfo>(() => new
+            .SelectFlattenTo(f => new OrderInfo
             {
                 Description = "TotalAmount:" + f.TotalAmount
-            }))
+            })
             .ToList();
         Assert.True(result[0].Id == 8);
         Assert.True(result[0].BuyerId == 1);
@@ -456,12 +456,12 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.True(result[0].Description == "TotalAmount:500");
 
         result = repository.From<Order>()
-           .Where(f => Sql.In(f.Id, new[] { 8 }))
-           .Select(f => Sql.FlattenTo<OrderInfo>(() => new
-           {
-               Description = this.DeferInvoke().Deferred()
-           }))
-           .ToList();
+            .Where(f => Sql.In(f.Id, new[] { 8 }))
+            .SelectFlattenTo(f => new OrderInfo
+            {
+                Description = this.DeferInvoke().Deferred()
+            })
+            .ToList();
         Assert.True(result[0].Id == 8);
         Assert.True(result[0].BuyerId == 1);
         Assert.True(result[0].OrderNo == "On-ZwYx");
