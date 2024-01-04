@@ -190,11 +190,19 @@ public class SqlSegment
         this.Value = value;
         return this;
     }
-
     public SqlSegment Next(Expression nextExpr)
     {
         this.Expression = nextExpr;
         return this;
+    }
+    public Type GetExpectType(Expression orgExpr)
+    {
+        if (this.ExpectType != null) return this.ExpectType;
+        if (this.IsExpression || this.IsMethodCall)
+            return orgExpr.Type.ToUnderlyingType();
+        if (this.HasField)
+            return this.MemberMapper.MemberType.ToUnderlyingType();
+        return this.Value.GetType().ToUnderlyingType();
     }
     public bool HasDeferrdNot() => this.DeferredExprs.IsDeferredNot();
     public void Push(DeferredExpr deferredExpr)

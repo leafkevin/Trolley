@@ -92,9 +92,13 @@ partial class MySqlProvider
                                 if (builder.Length > 0)
                                     builder.Append(',');
 
-                                if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string)
-                                    && (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall))
-                                    builder.Append(this.CastTo(typeof(string), sqlSegment.Value));
+                                if (sqlSegment.GetExpectType(concatExprs[i]) != typeof(string))
+                                {
+                                    if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                                        sqlSegment.Value = this.CastTo(typeof(string), sqlSegment.Value);
+                                    //把参数更改为字符串类型
+                                    else sqlSegment.Value = sqlSegment.Value.ToString();
+                                }
                                 builder.Append(visitor.GetQuotedValue(sqlSegment));
                             }
                             if (builder.Length > 0)
@@ -150,9 +154,13 @@ partial class MySqlProvider
                                 if (builder.Length > 0)
                                     builder.Append(',');
 
-                                if ((sqlSegment.ExpectType ?? sqlSegment.Expression.Type) != typeof(string)
-                                    && (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall))
-                                    builder.Append(this.CastTo(typeof(string), sqlSegment.Value));
+                                if (sqlSegment.GetExpectType(concatExprs[i]) != typeof(string))
+                                {
+                                    if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                                        sqlSegment.Value = this.CastTo(typeof(string), sqlSegment.Value);
+                                    //把参数更改为字符串类型
+                                    else sqlSegment.Value = sqlSegment.Value.ToString();
+                                }
                                 builder.Append(visitor.GetQuotedValue(sqlSegment));
                             }
 
@@ -227,7 +235,7 @@ partial class MySqlProvider
                             if (!separatorSegment.IsConstant)
                                 throw new NotSupportedException("暂时不支持分隔符是非常量的表达式解析，可以考虑在表达式外Join后再进行查询");
 
-                            if ((valuesSegment.IsConstant || valuesSegment.IsVariable))
+                            if (valuesSegment.IsConstant || valuesSegment.IsVariable)
                                 return valuesSegment.Change(string.Join(separatorSegment.ToString(), valuesSegment.Value as IEnumerable));
 
                             var resultSegment = valuesSegment;
@@ -255,9 +263,13 @@ partial class MySqlProvider
                                     }
                                     builder.Append(',');
 
-                                    if ((elementSegment.ExpectType ?? elementSegment.Expression.Type) != typeof(string)
-                                        && (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall))
-                                        builder.Append(this.CastTo(typeof(string), elementSegment.Value));
+                                    if (elementSegment.GetExpectType(elementSegment.Expression) != typeof(string))
+                                    {
+                                        if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
+                                            elementSegment.Value = this.CastTo(typeof(string), elementSegment.Value);
+                                        //把参数更改为字符串类型
+                                        else elementSegment.Value = elementSegment.Value.ToString();
+                                    }
                                     builder.Append(visitor.GetQuotedValue(elementSegment));
                                 }
                                 else constBuilder.Append(item.ToString());
@@ -324,9 +336,13 @@ partial class MySqlProvider
                                     }
                                     builder.Append(',');
 
-                                    if ((elementSegment.ExpectType ?? elementSegment.Expression.Type) != typeof(string)
-                                        && (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall))
-                                        builder.Append(this.CastTo(typeof(string), elementSegment.Value));
+                                    if (elementSegment.GetExpectType(elementSegment.Expression) != typeof(string))
+                                    {
+                                        if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
+                                            elementSegment.Value = this.CastTo(typeof(string), elementSegment.Value);
+                                        //把参数更改为字符串类型
+                                        else elementSegment.Value = elementSegment.Value.ToString();
+                                    }
                                     builder.Append(visitor.GetQuotedValue(elementSegment));
                                 }
                                 else constBuilder.Append(item.ToString());

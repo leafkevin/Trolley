@@ -51,6 +51,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.TableAsStart = tableAsStart;
         this.ParameterPrefix = parameterPrefix;
         this.DbParameters = dbParameters ?? new TheaDbParameterCollection();
+        this.IsNeedAlias = true;
     }
     public virtual string BuildSql(out List<ReaderField> readerFields, bool hasCteSql = true, bool isUnion = false)
     {
@@ -1074,88 +1075,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsFromQuery = false;
         this.IsSelect = false;
     }
-    protected void SelectToReaderFields(LambdaExpression toTargetExpr)
-    {
-        var sqlSegment = new SqlSegment { Expression = toTargetExpr.Body };
-        switch (toTargetExpr.Body.NodeType)
-        {
-            case ExpressionType.MemberAccess:
-                var memberExpr = toTargetExpr.Body as MemberExpression;
-                if (this.IsGroupingMember(memberExpr))
-                {
-                    //能够访问Grouping属性的场景，通常是在最外层的Select子句或是OrderBy子句
-                    //此处特殊处理
-                    if (this.IsFromQuery && memberExpr.Type.IsEntityType(out _))
-                        throw new NotSupportedException("FROM子查询中不支持实体类型成员MemberAccess表达式访问，只支持基础字段访问访问");
-
-                    foreach (var readerField in this.GroupFields)
-                    {
-                        if (readerField.TargetMember.Name != readerField.FromMember.Name)
-                            readerField.Body += $" AS {readerField.TargetMember.Name}";
-                    }
-                    this.ReaderFields = this.GroupFields;
-                }
-                else
-                {
-                    sqlSegment = this.VisitMemberAccess(sqlSegment);
-                    //实体类型成员访问，只有两种场景：主表的实体成员(Include子表访问)或是Grouping分组对象访问
-                    if (sqlSegment.MemberType == ReaderFieldType.Entity)
-                        this.ReaderFields = sqlSegment.Value as List<ReaderField>;
-                    else
-                    {
-                        //一定有成员成名
-                        this.ReaderFields = new List<ReaderField>
-                        {
-                            new ReaderField
-                            {
-                                FieldType = ReaderFieldType.Field ,
-                                TableSegment = sqlSegment.TableSegment,
-                                FromMember = sqlSegment.FromMember,
-                                MemberMapper = sqlSegment.MemberMapper,
-                                TargetMember =sqlSegment.FromMember,
-                                Body = sqlSegment.Value.ToString()
-                            }
-                        };
-                    }
-                }
-                break;
-            case ExpressionType.New:
-                sqlSegment = this.VisitNew(sqlSegment);
-                this.ReaderFields = sqlSegment.Value as List<ReaderField>;
-                break;
-            case ExpressionType.MemberInit:
-                sqlSegment = this.VisitMemberInit(sqlSegment);
-                this.ReaderFields = sqlSegment.Value as List<ReaderField>;
-                break;
-            case ExpressionType.Parameter:
-                sqlSegment = this.VisitParameter(sqlSegment);
-                this.ReaderFields = sqlSegment.Value as List<ReaderField>;
-                this.ReaderFields[0].IsTargetType = true;
-                break;
-            default:
-                //单个字段，有表达式计算二元操作或是有方法调用的场景
-                if (toTargetExpr.Body.NodeType == ExpressionType.Call)
-                    sqlSegment.OriginalExpression = toTargetExpr;
-                sqlSegment = this.VisitAndDeferred(sqlSegment);
-                if (sqlSegment.Value is List<ReaderField> readerFields)
-                    this.ReaderFields = readerFields;
-                else
-                {
-                    //单个值，单个字段访问或是有表达式访问或是函数调用等，不一定有成员名称，如：.Select(f => f.Age / 10 * 10)
-                    this.ReaderFields = new List<ReaderField>
-                    {
-                        new ReaderField
-                        {
-                            //可能字段组成来源多个表，不同字段运算或是函数调用，无需设置TableSegment/FromMember/TargetMember
-                            FieldType = sqlSegment.MemberType,
-                            Body = sqlSegment.Value.ToString()
-                        }
-                    };
-                }
-                break;
-        }
-    }
-
     public virtual void Distinct() => this.IsDistinct = true;
     public virtual void Page(int pageIndex, int pageSize)
     {

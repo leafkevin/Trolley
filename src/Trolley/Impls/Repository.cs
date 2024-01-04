@@ -299,8 +299,7 @@ public class Repository : IRepository
             else
             {
                 var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjs, null, null, false);
-                var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-                typedCommandInitializer.Invoke(command.Parameters, OrmProvider, insertObjs);
+                command.CommandText = commandInitializer.Invoke(command.Parameters, OrmProvider, insertObjs);
                 this.Connection.Open();
                 result = command.ExecuteNonQuery();
             }
@@ -372,8 +371,7 @@ public class Repository : IRepository
             else
             {
                 var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjs, null, null, false);
-                var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-                typedCommandInitializer.Invoke(command.Parameters, OrmProvider, insertObjs);
+                command.CommandText = commandInitializer.Invoke(command.Parameters, OrmProvider, insertObjs);
                 await this.DbContext.Connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
             }
@@ -402,8 +400,7 @@ public class Repository : IRepository
         {
             var entityType = typeof(TEntity);
             var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObj, null, null, true);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, insertObj);
+            f.CommandText = commandInitializer.Invoke(f.Parameters, this.OrmProvider, insertObj);
         });
     }
     public virtual async Task<int> CreateIdentityAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
@@ -417,8 +414,7 @@ public class Repository : IRepository
         {
             var entityType = typeof(TEntity);
             var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObj, null, null, true);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, insertObj);
+            f.CommandText = commandInitializer.Invoke(f.Parameters, this.OrmProvider, insertObj);
         }, cancellationToken);
     }
     public virtual long CreateIdentityLong<TEntity>(object insertObj)
@@ -432,8 +428,7 @@ public class Repository : IRepository
         {
             var entityType = typeof(TEntity);
             var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObj, null, null, true);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, insertObj);
+            f.CommandText = commandInitializer.Invoke(f.Parameters, this.OrmProvider, insertObj);
         });
     }
     public virtual async Task<long> CreateIdentityLongAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
@@ -447,8 +442,7 @@ public class Repository : IRepository
         {
             var entityType = typeof(TEntity);
             var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObj, null, null, true);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, insertObj);
+            f.CommandText = commandInitializer.Invoke(f.Parameters, this.OrmProvider, insertObj);
         }, cancellationToken);
     }
     #endregion

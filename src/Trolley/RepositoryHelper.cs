@@ -839,7 +839,7 @@ public class RepositoryHelper
                 blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, myParameterNameExpr));
 
                 var fieldValueExpr = Expression.PropertyOrField(typedInsertObjExpr, memberMapper.MemberName);
-                AddValueParameter(dbParametersExpr, ormProviderExpr, parameterNameExpr, fieldValueExpr, memberMapper, blockParameters, blockBodies);
+                AddValueParameter(dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueExpr, memberMapper, blockParameters, blockBodies);
                 index++;
             }
         }

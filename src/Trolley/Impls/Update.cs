@@ -297,8 +297,8 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
         {
             if (!hasWhere)
                 throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
-
-            sql = this.Visitor.BuildSql();
+            
+            sql = this.Visitor.BuildCommand(command);
         }
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();

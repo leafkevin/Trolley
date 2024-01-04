@@ -751,11 +751,11 @@ public sealed class DbContext //: IDisposable, IAsyncDisposable
         if (Interlocked.CompareExchange(ref this.isDisposed, 1, 0) != 0)
             return;
         this.Connection?.Close();
+        this.Transaction = null;
         //this.DbKey = null;
         //this.Connection = null;
         //this.OrmProvider = null;
         //this.MapProvider = null;
-        //this.Transaction = null;
         //GC.SuppressFinalize(this);
     }
     public async ValueTask CloseAsync()
@@ -764,11 +764,11 @@ public sealed class DbContext //: IDisposable, IAsyncDisposable
             return;
 
         await this.Connection.CloseAsync();
+        this.Transaction = null;
         //this.DbKey = null;
         //this.Connection = null;
         //this.OrmProvider = null;
         //this.MapProvider = null;
-        //this.Transaction = null;
         //GC.SuppressFinalize(this);
     }
     #endregion

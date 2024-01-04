@@ -30,7 +30,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.MapProvider = mapProvider;
         this.IsParameterized = isParameterized;
         this.TableAsStart = tableAsStart;
-        this.ParameterPrefix = parameterPrefix;
+        this.ParameterPrefix = parameterPrefix;      
     }
     public virtual void Initialize(Type entityType, bool isFirst = true)
     {
@@ -52,12 +52,17 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         string sql = null;
         this.DbParameters = command.Parameters;
+        this.UpdateFields = new();
+        this.WhereFields = new();
         foreach (var deferredSegment in this.deferredSegments)
         {
             switch (deferredSegment.Type)
             {
                 case "Set":
+                    this.VisitSet(deferredSegment.Value as Expression);
+                    break;
                 case "SetFrom":
+                    this.IsNeedAlias = true;
                     this.VisitSet(deferredSegment.Value as Expression);
                     break;
                 case "SetField":
@@ -67,6 +72,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     this.VisitSetWith(deferredSegment.Value);
                     break;
                 case "SetFromField":
+                    this.IsNeedAlias = true;
                     this.VisitSetFromField((FieldFromQuery)deferredSegment.Value);
                     break;
                 case "SetBulk":
@@ -737,13 +743,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         if (sqlSegment.IsConstant || sqlSegment.IsVariable)
         {
-            //只有常量和变量才有可能是数组
-            if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
-                sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
-
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-            this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
+            this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, sqlSegment.Value);
             this.UpdateFields.Add(new FieldsSegment { Type = "SQL", Fields = this.OrmProvider.GetFieldName(memberMapper.FieldName), Values = parameterName });
         }
     }
