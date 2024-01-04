@@ -335,14 +335,14 @@ public class Created<TEntity> : ICreated<TEntity>
 
     public void Dispose()
     {
-        this.DbContext.Dispose();
+        this.DbContext.Close();
         this.DbContext = null;
         this.Visitor.Dispose();
         this.Visitor = null;
     }
     public async ValueTask DisposeAsync()
     {
-        await this.DbContext.DisposeAsync();
+        await this.DbContext.CloseAsync();
         this.Visitor.Dispose();
     }
 }

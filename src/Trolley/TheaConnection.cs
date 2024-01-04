@@ -51,15 +51,15 @@ public sealed class TheaConnection : IDbConnection
 
     public IDbCommand CreateCommand()
     {
+        if (Interlocked.CompareExchange(ref this.isDisposed, 0, 1) == 1)
+            this.BaseConnection = this.OrmProvider.CreateConnection(this.ConnectionString);
+
         var command = this.BaseConnection.CreateCommand();
         command.CommandTimeout = this.CommandTimeout;
         return command;
     }
     public void Open()
     {
-        if (Interlocked.CompareExchange(ref this.isDisposed, 0, 1) == 1)
-            this.BaseConnection = this.OrmProvider.CreateConnection(this.ConnectionString);
-
         if (this.BaseConnection.State == ConnectionState.Broken)
             this.BaseConnection.Close();
         if (this.BaseConnection.State == ConnectionState.Closed)
@@ -71,9 +71,6 @@ public sealed class TheaConnection : IDbConnection
     }
     public async Task OpenAsync(CancellationToken cancellationToken)
     {
-        if (Interlocked.CompareExchange(ref this.isDisposed, 0, 1) == 1)
-            this.BaseConnection = this.OrmProvider.CreateConnection(this.ConnectionString);
-
         if (this.BaseConnection is not DbConnection connection)
             throw new Exception("当前数据库驱动不支持异步操作");
         if (connection.State == ConnectionState.Broken)
@@ -85,22 +82,28 @@ public sealed class TheaConnection : IDbConnection
             await connection.OpenAsync(cancellationToken);
         }
     }
-    public void Close() => this.Dispose();
-    public async Task CloseAsync() => await this.DisposeAsync();
-    public void Dispose()
+    public void Close()
     {
         if (Interlocked.CompareExchange(ref this.isDisposed, 1, 0) != 0)
             return;
-        this.BaseConnection.Dispose();
-        GC.SuppressFinalize(this);
+        this.BaseConnection.Close();
     }
-    public async Task DisposeAsync()
+    public async Task CloseAsync()
     {
         if (Interlocked.CompareExchange(ref this.isDisposed, 1, 0) != 0)
             return;
         if (this.BaseConnection is not DbConnection connection)
             throw new Exception("当前数据库驱动不支持异步操作");
-        await connection.DisposeAsync();
+        await connection.CloseAsync();
+    }
+    public void Dispose()
+    {
+        this.Close();
+        GC.SuppressFinalize(this);
+    }
+    public async Task DisposeAsync()
+    {
+        await this.CloseAsync();
         GC.SuppressFinalize(this);
     }
     public override int GetHashCode() => HashCode.Combine(this.DbKey, this.ConnectionString);

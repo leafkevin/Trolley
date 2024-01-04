@@ -266,8 +266,9 @@ public class SqlVisitor : ISqlVisitor
                 //... WHERE (int)(a.Price * a.Quartity)>500
                 //SELECT TotalAmount = (int)(amount + (a.Price + increasedPrice) * (a.Quartity + increasedCount)) ...FROM ...
                 //SELECT OrderNo = $"OrderNo-{f.CreatedAt.ToString("yyyyMMdd")}-{f.Id}"...FROM ...
-                var leftType = leftSegment.ExpectType ?? binaryExpr.Left.Type;
-                if (leftType.IsEnum)
+                var leftType = leftSegment.ExpectType ?? binaryExpr.Left.Type.ToUnderlyingType();
+                var rightType = rightSegment.ExpectType ?? binaryExpr.Right.Type.ToUnderlyingType();
+                if (leftType.IsEnum || rightType.IsEnum)
                 {
                     if (calcOps.Contains(operators))
                         throw new NotSupportedException($"枚举类成员{leftSegment.MemberMapper.MemberName}对应的数据库类型为非数字类型，不能进行{operators}操作，可以使用=、<>、IN、EXISTS等操作来代替，表达式：{binaryExpr}");
@@ -541,6 +542,8 @@ public class SqlVisitor : ISqlVisitor
         sqlSegment = this.Visit(sqlSegment.Next(conditionalExpr.Test));
         var ifTrueSegment = this.Visit(new SqlSegment { Expression = conditionalExpr.IfTrue });
         var ifFalseSegment = this.Visit(new SqlSegment { Expression = conditionalExpr.IfFalse });
+        if (!this.ChangeSameType(ifTrueSegment, ifFalseSegment))
+            this.ChangeSameType(ifFalseSegment, ifTrueSegment);
         var leftArgument = this.GetQuotedValue(ifTrueSegment);
         var rightArgument = this.GetQuotedValue(ifFalseSegment);
         var memberMapper = ifTrueSegment.MemberMapper ?? ifFalseSegment.MemberMapper;

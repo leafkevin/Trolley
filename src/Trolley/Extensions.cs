@@ -54,7 +54,7 @@ public static class Extensions
         dbFactory.Configure<TOrmProvider>(new TModelConfiguration());
         return dbFactory;
     }
-    public static string GetQuotedValue(this IOrmProvider ormProvider, object value) 
+    public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
         => ormProvider.GetQuotedValue(value.GetType(), value);
     public static EntityMap GetEntityMap(this IEntityMapProvider mapProvider, Type entityType)
     {
@@ -92,6 +92,7 @@ public static class Extensions
         underlyingType = type;
         return false;
     }
+    public static Type ToUnderlyingType(this Type type) => Nullable.GetUnderlyingType(type) ?? type;
     public static bool IsEnumType(this Type type, out Type underlyingType, out Type enumUnderlyingType)
     {
         type.IsNullableType(out underlyingType);

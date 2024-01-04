@@ -310,7 +310,7 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
     public void Dispose()
     {
         this.Visitor.Dispose();
-        this.DbContext.Dispose();
+        this.DbContext.Close();
     }
     #endregion
 }

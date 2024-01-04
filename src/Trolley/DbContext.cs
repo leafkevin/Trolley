@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public sealed class DbContext : IDisposable, IAsyncDisposable
+public sealed class DbContext //: IDisposable, IAsyncDisposable
 {
     #region Fields
     private int isDisposed = 0;
@@ -77,7 +77,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             reader?.Dispose();
             command.Dispose();
-            if (isNeedClose) this.Dispose();
+            if (isNeedClose) this.Close();
         }
         if (exception != null) throw exception;
         return result;
@@ -114,7 +114,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (reader != null)
                 await reader.DisposeAsync();
             await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync();
+            if (isNeedClose) await this.CloseAsync();
         }
         if (exception != null) throw exception;
         return result;
@@ -162,7 +162,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             reader?.Close();
             command.Dispose();
-            if (isNeedClose) this.Dispose();
+            if (isNeedClose) this.Close();
         }
         if (exception != null) throw exception;
         return result;
@@ -211,7 +211,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (reader != null)
                 await reader.DisposeAsync();
             await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync();
+            if (isNeedClose) await this.CloseAsync();
         }
         if (exception != null) throw exception;
         return result;
@@ -259,7 +259,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             reader?.Dispose();
             command.Dispose();
-            if (isNeedClose) this.Dispose();
+            if (isNeedClose) this.Close();
         }
         if (exception != null) throw exception;
         return result;
@@ -303,7 +303,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (reader != null)
                 await reader.DisposeAsync();
             await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync();
+            if (isNeedClose) await this.CloseAsync();
         }
         if (exception != null) throw exception;
         return result;
@@ -359,7 +359,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             reader?.Dispose();
             command.Dispose();
-            if (isNeedClose) this.Dispose();
+            if (isNeedClose) this.Close();
         }
         if (exception != null) throw exception;
         return result;
@@ -417,7 +417,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (reader != null)
                 await reader.DisposeAsync();
             await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync();
+            if (isNeedClose) await this.CloseAsync();
         }
         if (exception != null) throw exception;
         return result;
@@ -481,7 +481,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             reader?.Dispose();
             command.Dispose();
-            if (isNeedClose) this.Dispose();
+            if (isNeedClose) this.Close();
         }
         if (exception != null) throw exception;
         return result;
@@ -543,7 +543,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (reader != null)
                 await reader.DisposeAsync();
             await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync();
+            if (isNeedClose) await this.CloseAsync();
         }
         if (exception != null) throw exception;
         return result;
@@ -583,7 +583,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             reader?.Dispose();
             command.Dispose();
-            if (isNeedClose) this.Dispose();
+            if (isNeedClose) this.Close();
         }
         if (exception != null) throw exception;
         return result;
@@ -622,7 +622,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (reader != null)
                 await reader.DisposeAsync();
             await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync();
+            if (isNeedClose) await this.CloseAsync();
         }
         if (exception != null) throw exception;
         return result;
@@ -654,7 +654,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             reader?.Dispose();
             command.Dispose();
-            if (isNeedClose) this.Dispose();
+            if (isNeedClose) this.Close();
         }
         if (exception != null) throw exception;
         return result;
@@ -685,7 +685,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (reader != null)
                 await reader.DisposeAsync();
             await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync();
+            if (isNeedClose) await this.CloseAsync();
         }
         if (exception != null) throw exception;
         return result;
@@ -713,7 +713,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         finally
         {
             command.Dispose();
-            if (isNeedClose) this.Dispose();
+            if (isNeedClose) this.Close();
         }
         if (exception != null) throw exception;
         return result;
@@ -738,7 +738,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         finally
         {
             await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync();
+            if (isNeedClose) await this.CloseAsync();
         }
         if (exception != null) throw exception;
         return result;
@@ -746,30 +746,30 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     #endregion
 
     #region Dispose
-    public void Dispose()
+    public void Close()
     {
         if (Interlocked.CompareExchange(ref this.isDisposed, 1, 0) != 0)
             return;
-        this.Connection?.Dispose();
-        this.DbKey = null;
-        this.Connection = null;
-        this.OrmProvider = null;
-        this.MapProvider = null;
-        this.Transaction = null;
-        GC.SuppressFinalize(this);
+        this.Connection?.Close();
+        //this.DbKey = null;
+        //this.Connection = null;
+        //this.OrmProvider = null;
+        //this.MapProvider = null;
+        //this.Transaction = null;
+        //GC.SuppressFinalize(this);
     }
-    public async ValueTask DisposeAsync()
+    public async ValueTask CloseAsync()
     {
         if (Interlocked.CompareExchange(ref this.isDisposed, 1, 0) != 0)
             return;
 
-        await this.Connection.DisposeAsync();
-        this.DbKey = null;
-        this.Connection = null;
-        this.OrmProvider = null;
-        this.MapProvider = null;
-        this.Transaction = null;
-        GC.SuppressFinalize(this);
+        await this.Connection.CloseAsync();
+        //this.DbKey = null;
+        //this.Connection = null;
+        //this.OrmProvider = null;
+        //this.MapProvider = null;
+        //this.Transaction = null;
+        //GC.SuppressFinalize(this);
     }
     #endregion
 }

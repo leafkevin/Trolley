@@ -1018,7 +1018,7 @@ public class Repository : IRepository
     public virtual void Commit()
     {
         this.Transaction?.Commit();
-        this.Dispose();
+        this.DbContext.Close();
     }
     public virtual async Task CommitAsync(CancellationToken cancellationToken = default)
     {
@@ -1028,12 +1028,12 @@ public class Repository : IRepository
                 throw new NotSupportedException("当前数据库驱动不支持异步操作");
             await dbTransaction.CommitAsync(cancellationToken);
         }
-        await this.DisposeAsync();
+        await this.DbContext.CloseAsync();
     }
     public virtual void Rollback()
     {
         this.Transaction?.Rollback();
-        this.Dispose();
+        this.DbContext.Close();
     }
     public virtual async Task RollbackAsync(CancellationToken cancellationToken = default)
     {
@@ -1043,16 +1043,16 @@ public class Repository : IRepository
                 throw new NotSupportedException("当前数据库驱动不支持异步操作");
             await dbTransaction.RollbackAsync(cancellationToken);
         }
-        await this.DisposeAsync();
+        await this.DbContext.CloseAsync();
     }
     public virtual void Dispose()
     {
-        this.DbContext.Dispose();
+        this.DbContext.Close();
         GC.SuppressFinalize(this);
     }
     public virtual async ValueTask DisposeAsync()
     {
-        await this.DbContext.DisposeAsync();
+        await this.DbContext.CloseAsync();
         GC.SuppressFinalize(this);
     }
     ~Repository() => this.Dispose();

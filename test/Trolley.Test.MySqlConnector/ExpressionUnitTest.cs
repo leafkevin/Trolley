@@ -95,7 +95,7 @@ public class ExpressionUnitTest : UnitTestBase
         var sql2 = repository.From<Company>()
             .Where(f => (f.Nature ?? CompanyNature.Internet) == localNature)
             .ToSql(out var dbParameters);
-        Assert.True(sql2 == "SELECT `Id`,`Name`,`Nature`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy` FROM `sys_company` WHERE COALESCE(`Nature`,'Internet')=@p0");
+        Assert.True(sql2 == "SELECT a.`Id`,a.`Name`,a.`Nature`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_company` a WHERE (COALESCE(a.`Nature`,'Internet'))=@p0");
         Assert.True((string)dbParameters[0].Value == localNature.ToString());
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
         var result2 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == localNature);
@@ -105,7 +105,7 @@ public class ExpressionUnitTest : UnitTestBase
         var sql3 = repository.From<Company>()
         .Where(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature)
         .ToSql(out dbParameters);
-        Assert.True(sql3 == "SELECT `Id`,`Name`,`Nature`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy` FROM `sys_company` WHERE (CASE WHEN `IsEnabled`=1 THEN `Nature` ELSE 'Internet' END)=@p0");
+        Assert.True(sql3 == "SELECT a.`Id`,a.`Name`,a.`Nature`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_company` a WHERE (CASE WHEN a.`IsEnabled`=1 THEN a.`Nature` ELSE 'Internet' END)=@p0");
         Assert.True((string)dbParameters[0].Value == localNature.ToString());
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
         var result3 = await repository.QueryAsync<Company>(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature);
