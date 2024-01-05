@@ -8,6 +8,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Metadata;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -276,17 +277,11 @@ public class RepositoryHelper
         var whereObjExpr = Expression.Parameter(typeof(object), "whereObj");
 
         ParameterExpression suffixExpr = null;
-        ParameterExpression parameterNameExpr = null;
         var builderExpr = Expression.Variable(typeof(StringBuilder), "builder");
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
 
-        if (hasSuffix)
-        {
-            suffixExpr = Expression.Parameter(typeof(string), "suffix");
-            parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
-            blockParameters.Add(parameterNameExpr);
-        }
+        if (hasSuffix) suffixExpr = Expression.Parameter(typeof(string), "suffix");
         blockParameters.Add(builderExpr);
         var constructorExpr = typeof(StringBuilder).GetConstructor(Type.EmptyTypes);
         blockBodies.Add(Expression.Assign(builderExpr, Expression.New(constructorExpr)));
@@ -296,15 +291,18 @@ public class RepositoryHelper
         var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
         if (!string.IsNullOrEmpty(headSql))
             blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(headSql)));
+
         if (typeof(IDictionary<string, object>).IsAssignableFrom(whereObjType))
         {
+            var parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
             var dictExpr = Expression.Variable(typeof(IDictionary<string, object>), "dict");
             var fieldValueExpr = Expression.Variable(typeof(object), "fieldValue");
-            blockParameters.AddRange(new[] { dictExpr, fieldValueExpr });
+            blockParameters.AddRange(new[] { dictExpr, fieldValueExpr, parameterNameExpr });
             blockBodies.Add(Expression.Assign(dictExpr, Expression.Convert(whereObjExpr, typeof(IDictionary<string, object>))));
 
             var index = 0;
-            var concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
+            var concatMethodInfo1 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
+            var concatMethodInfo2 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string), typeof(string) });
             if (isWhereKey)
             {
                 var tryGetValueMethodInfo = typeof(IDictionary<string, object>).GetMethod(nameof(IDictionary<string, object>.TryGetValue));
@@ -319,7 +317,7 @@ public class RepositoryHelper
                     Expression myParameterNameExpr = Expression.Constant(parameterName);
                     if (hasSuffix)
                     {
-                        myParameterNameExpr = Expression.Call(concatMethodInfo, myParameterNameExpr, suffixExpr);
+                        myParameterNameExpr = Expression.Call(concatMethodInfo1, myParameterNameExpr, suffixExpr);
                         blockBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
                         myParameterNameExpr = parameterNameExpr;
                     }
@@ -343,21 +341,24 @@ public class RepositoryHelper
                 var breakLabel = Expression.Label();
                 var continueLabel = Expression.Label();
 
+                //var index = 0;
+                //var enumerator = dict.GetEnumerator();
+                //var entityMapper = new EntityMap{ ... };
+                var entityMapperExpr = Expression.Constant(entityMapper);
+                blockBodies.Add(Expression.Assign(indexExpr, Expression.Constant(0)));
+                methodInfo = typeof(IEnumerable<KeyValuePair<string, object>>).GetMethod("GetEnumerator");
+                blockBodies.Add(Expression.Assign(enumeratorExpr, Expression.Call(dictExpr, methodInfo)));
+
                 //if(!enumerator.MoveNext())
                 //  break;
                 var loopBodies = new List<Expression>();
-                methodInfo = typeof(IEnumerable<KeyValuePair<string, object>>).GetMethod("GetEnumerator");
-                loopBodies.Add(Expression.Assign(enumeratorExpr, Expression.Call(dictExpr, methodInfo)));
                 methodInfo = typeof(IEnumerator).GetMethod(nameof(IEnumerator.MoveNext));
                 var ifFalseExpr = Expression.IsFalse(Expression.Call(enumeratorExpr, methodInfo));
-                var ifThenExpr = Expression.IfThen(ifFalseExpr, Expression.Break(breakLabel));
+                loopBodies.Add(Expression.IfThen(ifFalseExpr, Expression.Break(breakLabel)));
 
-                //var entityMapper = new EntityMap{ ... };
                 //var itemKey = enumerator.Current.Key;
-                //var fieldValue = enumerator.Current.Value;
-                var entityMapperExpr = Expression.Constant(entityMapper);
+                //var fieldValue = enumerator.Current.Value;          
                 var currentExpr = Expression.Property(enumeratorExpr, nameof(IEnumerator.Current));
-                loopBodies.Add(Expression.Assign(indexExpr, Expression.Constant(0)));
                 loopBodies.Add(Expression.Assign(itemKeyExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Key))));
                 loopBodies.Add(Expression.Assign(fieldValueExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Value))));
 
@@ -377,15 +378,12 @@ public class RepositoryHelper
                 //if(isContinue)continue;
                 loopBodies.Add(Expression.IfThen(isContinueExpr, Expression.Continue(continueLabel)));
 
-                //var parameterName = ormProvider.ParameterPrefix + itemKey + multiMark;
+                //var parameterName = ormProvider.ParameterPrefix + itemKey + suffix;
                 Expression myParameterNameExpr = Expression.Constant(ormProvider.ParameterPrefix + (isWithKey ? "k" : ""));
-                myParameterNameExpr = Expression.Call(concatMethodInfo, myParameterNameExpr, itemKeyExpr);
                 if (hasSuffix)
-                {
-                    myParameterNameExpr = Expression.Call(concatMethodInfo, myParameterNameExpr, suffixExpr);
-                    loopBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
-                    myParameterNameExpr = parameterNameExpr;
-                }
+                    myParameterNameExpr = Expression.Call(concatMethodInfo2, myParameterNameExpr, itemKeyExpr, suffixExpr);
+                else myParameterNameExpr = Expression.Call(concatMethodInfo1, myParameterNameExpr, itemKeyExpr);
+                loopBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
 
                 //if(index > 0) builder.Append(" AND ");
                 var greaterThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0));
@@ -413,10 +411,15 @@ public class RepositoryHelper
         }
         else
         {
+            ParameterExpression parameterNameExpr = null;
             ParameterExpression typedWhereObjExpr = null;
             bool isEntityType = false;
             List<MemberInfo> memberInfos = null;
-
+            if (hasSuffix)
+            {
+                parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
+                blockParameters.Add(parameterNameExpr);
+            }
             if (whereObjType.IsEntityType(out _))
             {
                 isEntityType = true;
@@ -703,15 +706,10 @@ public class RepositoryHelper
         var blockBodies = new List<Expression>();
 
         ParameterExpression suffixExpr = null;
-        ParameterExpression parameterNameExpr = null;
-        if (hasSuffix)
-        {
-            suffixExpr = Expression.Parameter(typeof(string), "suffix");
-            parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
-            blockParameters.Add(parameterNameExpr);
-        }
-        MethodInfo methodInfo = null;
+        if (hasSuffix) suffixExpr = Expression.Parameter(typeof(string), "suffix");
         var entityMapper = mapProvider.GetEntityMap(entityType);
+
+        MethodInfo methodInfo = null;
         var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
         var concatMethodInfo1 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
         var concatMethodInfo2 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string), typeof(string) });
@@ -720,33 +718,35 @@ public class RepositoryHelper
         {
             var dictExpr = Expression.Variable(typeof(IDictionary<string, object>), "dict");
             var fieldValueExpr = Expression.Variable(typeof(object), "fieldValue");
-            blockParameters.AddRange(new[] { dictExpr, fieldValueExpr });
-            blockBodies.Add(Expression.Assign(dictExpr, Expression.Convert(insertObjExpr, typeof(IDictionary<string, object>))));
-
+            var parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
             var indexExpr = Expression.Variable(typeof(int), "index");
-            var enumeratorExpr = Expression.Variable(typeof(IEnumerable<KeyValuePair<string, object>>), "enumerator");
+            var enumeratorExpr = Expression.Variable(typeof(IEnumerator<KeyValuePair<string, object>>), "enumerator");
             var itemKeyExpr = Expression.Variable(typeof(string), "itemKey");
             var memberMapperExpr = Expression.Variable(typeof(MemberMap), "memberMapper");
             var outTypeExpr = Expression.Variable(typeof(Type), "outType");
-            blockParameters.AddRange(new[] { indexExpr, enumeratorExpr, itemKeyExpr, fieldValueExpr, memberMapperExpr, outTypeExpr });
+            blockParameters.AddRange(new[] { dictExpr, fieldValueExpr, parameterNameExpr, indexExpr, enumeratorExpr, itemKeyExpr, memberMapperExpr, outTypeExpr });
+            blockBodies.Add(Expression.Assign(dictExpr, Expression.Convert(insertObjExpr, typeof(IDictionary<string, object>))));
             var breakLabel = Expression.Label();
             var continueLabel = Expression.Label();
+
+            //var index = 0;
+            //var enumerator = dict.GetEnumerator();
+            //var entityMapper = new EntityMap{ ... };
+            var entityMapperExpr = Expression.Constant(entityMapper);
+            blockBodies.Add(Expression.Assign(indexExpr, Expression.Constant(0)));
+            methodInfo = typeof(IEnumerable<KeyValuePair<string, object>>).GetMethod("GetEnumerator");
+            blockBodies.Add(Expression.Assign(enumeratorExpr, Expression.Call(dictExpr, methodInfo)));
 
             //if(!enumerator.MoveNext())
             //  break;
             var loopBodies = new List<Expression>();
-            methodInfo = typeof(IEnumerable<KeyValuePair<string, object>>).GetMethod("GetEnumerator");
-            loopBodies.Add(Expression.Assign(enumeratorExpr, Expression.Call(dictExpr, methodInfo)));
             methodInfo = typeof(IEnumerator).GetMethod(nameof(IEnumerator.MoveNext));
             var ifFalseExpr = Expression.IsFalse(Expression.Call(enumeratorExpr, methodInfo));
-            var ifThenExpr = Expression.IfThen(ifFalseExpr, Expression.Break(breakLabel));
+            loopBodies.Add(Expression.IfThen(ifFalseExpr, Expression.Break(breakLabel)));
 
-            //var entityMapper = new EntityMap{ ... };
             //var itemKey = enumerator.Current.Key;
-            //var fieldValue = enumerator.Current.Value;
-            var entityMapperExpr = Expression.Constant(entityMapper);
+            //var fieldValue = enumerator.Current.Value;          
             var currentExpr = Expression.Property(enumeratorExpr, nameof(IEnumerator.Current));
-            loopBodies.Add(Expression.Assign(indexExpr, Expression.Constant(0)));
             loopBodies.Add(Expression.Assign(itemKeyExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Key))));
             loopBodies.Add(Expression.Assign(fieldValueExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Value))));
 
@@ -786,7 +786,7 @@ public class RepositoryHelper
             if (hasSuffix)
                 myParameterNameExpr = Expression.Call(concatMethodInfo2, myParameterNameExpr, itemKeyExpr, suffixExpr);
             else myParameterNameExpr = Expression.Call(concatMethodInfo1, myParameterNameExpr, itemKeyExpr);
-            blockBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
+            loopBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
 
             //if(index > 0) builder.Append(",");
             var greaterThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0));
@@ -808,8 +808,14 @@ public class RepositoryHelper
         }
         else
         {
-            var typedInsertObjExpr = Expression.Parameter(insertObjType, "typedInsertObj");
+            ParameterExpression parameterNameExpr = null;
+            var typedInsertObjExpr = Expression.Variable(insertObjType, "typedInsertObj");
             blockParameters.Add(typedInsertObjExpr);
+            if (hasSuffix)
+            {
+                parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
+                blockParameters.Add(parameterNameExpr);
+            }
             blockBodies.Add(Expression.Assign(typedInsertObjExpr, Expression.Convert(insertObjExpr, insertObjType)));
             var memberInfos = insertObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                  .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
@@ -1201,13 +1207,7 @@ public class RepositoryHelper
         var blockBodies = new List<Expression>();
 
         ParameterExpression suffixExpr = null;
-        ParameterExpression parameterNameExpr = null;
-        if (hasSuffix)
-        {
-            suffixExpr = Expression.Parameter(typeof(string), "suffix");
-            parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
-            blockParameters.Add(parameterNameExpr);
-        }
+        if (hasSuffix) suffixExpr = Expression.Parameter(typeof(string), "suffix");
         MethodInfo methodInfo = null;
         var entityMapper = mapProvider.GetEntityMap(entityType);
         var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
@@ -1218,33 +1218,35 @@ public class RepositoryHelper
         {
             var dictExpr = Expression.Variable(typeof(IDictionary<string, object>), "dict");
             var fieldValueExpr = Expression.Variable(typeof(object), "fieldValue");
-            blockParameters.AddRange(new[] { dictExpr, fieldValueExpr });
-            blockBodies.Add(Expression.Assign(dictExpr, Expression.Convert(updateObjExpr, typeof(IDictionary<string, object>))));
-
+            var parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
             var indexExpr = Expression.Variable(typeof(int), "index");
-            var enumeratorExpr = Expression.Variable(typeof(IEnumerable<KeyValuePair<string, object>>), "enumerator");
+            var enumeratorExpr = Expression.Variable(typeof(IEnumerator<KeyValuePair<string, object>>), "enumerator");
             var itemKeyExpr = Expression.Variable(typeof(string), "itemKey");
             var memberMapperExpr = Expression.Variable(typeof(MemberMap), "memberMapper");
             var outTypeExpr = Expression.Variable(typeof(Type), "outType");
-            blockParameters.AddRange(new[] { indexExpr, enumeratorExpr, itemKeyExpr, fieldValueExpr, memberMapperExpr, outTypeExpr });
+            blockParameters.AddRange(new[] { dictExpr, fieldValueExpr, parameterNameExpr, indexExpr, enumeratorExpr, itemKeyExpr, memberMapperExpr, outTypeExpr });
+            blockBodies.Add(Expression.Assign(dictExpr, Expression.Convert(updateObjExpr, typeof(IDictionary<string, object>))));
             var breakLabel = Expression.Label();
             var continueLabel = Expression.Label();
+
+            //var index = 0;
+            //var enumerator = dict.GetEnumerator();
+            //var entityMapper = new EntityMap{ ... };
+            var entityMapperExpr = Expression.Constant(entityMapper);
+            blockBodies.Add(Expression.Assign(indexExpr, Expression.Constant(0)));
+            methodInfo = typeof(IEnumerable<KeyValuePair<string, object>>).GetMethod("GetEnumerator");
+            blockBodies.Add(Expression.Assign(enumeratorExpr, Expression.Call(dictExpr, methodInfo)));
 
             //if(!enumerator.MoveNext())
             //  break;
             var loopBodies = new List<Expression>();
-            methodInfo = typeof(IEnumerable<KeyValuePair<string, object>>).GetMethod("GetEnumerator");
-            loopBodies.Add(Expression.Assign(enumeratorExpr, Expression.Call(dictExpr, methodInfo)));
             methodInfo = typeof(IEnumerator).GetMethod(nameof(IEnumerator.MoveNext));
             var ifFalseExpr = Expression.IsFalse(Expression.Call(enumeratorExpr, methodInfo));
-            var ifThenExpr = Expression.IfThen(ifFalseExpr, Expression.Break(breakLabel));
+            loopBodies.Add(Expression.IfThen(ifFalseExpr, Expression.Break(breakLabel)));
 
-            //var entityMapper = new EntityMap{ ... };
             //var itemKey = enumerator.Current.Key;
-            //var fieldValue = enumerator.Current.Value;
-            var entityMapperExpr = Expression.Constant(entityMapper);
+            //var fieldValue = enumerator.Current.Value;          
             var currentExpr = Expression.Property(enumeratorExpr, nameof(IEnumerator.Current));
-            loopBodies.Add(Expression.Assign(indexExpr, Expression.Constant(0)));
             loopBodies.Add(Expression.Assign(itemKeyExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Key))));
             loopBodies.Add(Expression.Assign(fieldValueExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Value))));
 
@@ -1280,12 +1282,12 @@ public class RepositoryHelper
             //if(isContinue)continue;
             loopBodies.Add(Expression.IfThen(isContinueExpr, Expression.Continue(continueLabel)));
 
-            //var parameterName = ormProvider.ParameterPrefix + itemKey + multiMark;
+            //var parameterName = ormProvider.ParameterPrefix + itemKey + suffix;
             Expression myParameterNameExpr = Expression.Constant(ormProvider.ParameterPrefix);
             if (hasSuffix)
                 myParameterNameExpr = Expression.Call(concatMethodInfo2, myParameterNameExpr, itemKeyExpr, suffixExpr);
             else myParameterNameExpr = Expression.Call(concatMethodInfo1, myParameterNameExpr, itemKeyExpr);
-            blockBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
+            loopBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
 
             //if(index > 0) builder.Append(",");
             var greaterThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0));
@@ -1311,8 +1313,15 @@ public class RepositoryHelper
         }
         else
         {
-            var typedUpdateObjExpr = Expression.Parameter(updateObjType, "typeUpdateObj");
+            ParameterExpression parameterNameExpr = null;
+            var typedUpdateObjExpr = Expression.Variable(updateObjType, "typeUpdateObj");
+            blockParameters.Add(typedUpdateObjExpr);
             blockBodies.Add(Expression.Assign(typedUpdateObjExpr, Expression.Convert(updateObjExpr, updateObjType)));
+            if (hasSuffix)
+            {
+                parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
+                blockParameters.Add(parameterNameExpr);
+            }
             var memberInfos = updateObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                 .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
 
@@ -1370,13 +1379,7 @@ public class RepositoryHelper
             var blockBodies = new List<Expression>();
 
             ParameterExpression suffixExpr = null;
-            ParameterExpression parameterNameExpr = null;
-            if (hasSuffix)
-            {
-                suffixExpr = Expression.Parameter(typeof(string), "suffix");
-                parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
-                blockParameters.Add(parameterNameExpr);
-            }
+            if (hasSuffix) suffixExpr = Expression.Parameter(typeof(string), "suffix");
             MethodInfo methodInfo = null;
             var entityMapper = mapProvider.GetEntityMap(entityType);
             var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
@@ -1390,68 +1393,37 @@ public class RepositoryHelper
             {
                 var dictExpr = Expression.Variable(typeof(IDictionary<string, object>), "dict");
                 var fieldValueExpr = Expression.Variable(typeof(object), "fieldValue");
-                blockParameters.AddRange(new[] { dictExpr, fieldValueExpr });
-                blockBodies.Add(Expression.Assign(dictExpr, Expression.Convert(updateObjExpr, typeof(IDictionary<string, object>))));
-
+                var parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
                 var indexExpr = Expression.Variable(typeof(int), "index");
-                var enumeratorExpr = Expression.Variable(typeof(IEnumerable<KeyValuePair<string, object>>), "enumerator");
+                var enumeratorExpr = Expression.Variable(typeof(IEnumerator<KeyValuePair<string, object>>), "enumerator");
                 var itemKeyExpr = Expression.Variable(typeof(string), "itemKey");
                 var memberMapperExpr = Expression.Variable(typeof(MemberMap), "memberMapper");
                 var outTypeExpr = Expression.Variable(typeof(Type), "outType");
-                blockParameters.AddRange(new[] { indexExpr, enumeratorExpr, itemKeyExpr, fieldValueExpr, memberMapperExpr, outTypeExpr });
+                blockParameters.AddRange(new[] { dictExpr, fieldValueExpr, parameterNameExpr, indexExpr, enumeratorExpr, itemKeyExpr, memberMapperExpr, outTypeExpr });
+                blockBodies.Add(Expression.Assign(dictExpr, Expression.Convert(updateObjExpr, typeof(IDictionary<string, object>))));
                 var breakLabel = Expression.Label();
                 var continueLabel = Expression.Label();
+
+                //var index = 0;
+                //var enumerator = dict.GetEnumerator();
+                //var entityMapper = new EntityMap{ ... };
+                var entityMapperExpr = Expression.Constant(entityMapper);
+                blockBodies.Add(Expression.Assign(indexExpr, Expression.Constant(0)));
+                methodInfo = typeof(IEnumerable<KeyValuePair<string, object>>).GetMethod("GetEnumerator");
+                blockBodies.Add(Expression.Assign(enumeratorExpr, Expression.Call(dictExpr, methodInfo)));
 
                 //if(!enumerator.MoveNext())
                 //  break;
                 var loopBodies = new List<Expression>();
-                methodInfo = typeof(IEnumerable<KeyValuePair<string, object>>).GetMethod("GetEnumerator");
-                loopBodies.Add(Expression.Assign(enumeratorExpr, Expression.Call(dictExpr, methodInfo)));
                 methodInfo = typeof(IEnumerator).GetMethod(nameof(IEnumerator.MoveNext));
                 var ifFalseExpr = Expression.IsFalse(Expression.Call(enumeratorExpr, methodInfo));
-                var ifThenExpr = Expression.IfThen(ifFalseExpr, Expression.Break(breakLabel));
+                loopBodies.Add(Expression.IfThen(ifFalseExpr, Expression.Break(breakLabel)));
 
-                //var entityMapper = new EntityMap{ ... };
                 //var itemKey = enumerator.Current.Key;
-                //var fieldValue = enumerator.Current.Value;
-                var entityMapperExpr = Expression.Constant(entityMapper);
+                //var fieldValue = enumerator.Current.Value;          
                 var currentExpr = Expression.Property(enumeratorExpr, nameof(IEnumerator.Current));
-                loopBodies.Add(Expression.Assign(indexExpr, Expression.Constant(0)));
                 loopBodies.Add(Expression.Assign(itemKeyExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Key))));
                 loopBodies.Add(Expression.Assign(fieldValueExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Value))));
-
-                //var isContinue = !entityMapper.TryGetMemberMap(itemKey, out var memberMapper)
-                //|| memberMapper.IsIgnore || memberMapper.IsNavigation
-                methodInfo = typeof(EntityMap).GetMethod(nameof(EntityMap.TryGetMemberMap));
-                Expression isContinueExpr = Expression.IsFalse(Expression.Call(entityMapperExpr, methodInfo, itemKeyExpr, memberMapperExpr));
-                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnore)));
-                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsNavigation)));
-                //|| memberMapper.IsKey
-                //if (!isWhereKey) isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsKey)));
-
-                //|| ignoreFields.Constains(itemKey) || !onlyFields.Constains(itemKey)
-                if (ignoreFieldNames != null)
-                {
-                    var ignoreFieldsExpr = Expression.Constant(ignoreFieldNames);
-                    methodInfo = typeof(Enumerable).GetMethod(nameof(Enumerable.Contains), new Type[] { typeof(string) });
-                    isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Call(methodInfo, ignoreFieldsExpr, itemKeyExpr));
-                }
-                if (onlyFieldNames != null)
-                {
-                    var onlyFieldsExpr = Expression.Constant(onlyFieldNames);
-                    methodInfo = typeof(Enumerable).GetMethod(nameof(Enumerable.Contains), new Type[] { typeof(string) });
-                    var isFalseExpr = Expression.IsFalse(Expression.Call(methodInfo, onlyFieldsExpr, itemKeyExpr));
-                    isContinueExpr = Expression.OrElse(isContinueExpr, isFalseExpr);
-                }
-
-                //|| (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
-                methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.IsEntityType));
-                var memberTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.MemberType));
-                var isEntityTypeExpr = Expression.Call(methodInfo, memberTypeExpr, outTypeExpr);
-                var isNullExpr = Expression.Equal(Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler)), Expression.Constant(null));
-                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.AndAlso(isEntityTypeExpr, isNullExpr));
-                //if(isContinue)continue;
-                loopBodies.Add(Expression.IfThen(isContinueExpr, Expression.Continue(continueLabel)));
 
                 var fieldNameExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.FieldName));
                 var getFieldNameMethodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetFieldName));
@@ -1504,8 +1476,14 @@ public class RepositoryHelper
             }
             else
             {
+                ParameterExpression parameterNameExpr = null;
                 var typedUpdateObjExpr = Expression.Parameter(updateObjType, "typeUpdateObj");
                 blockBodies.Add(Expression.Assign(typedUpdateObjExpr, Expression.Convert(updateObjExpr, updateObjType)));
+                if (hasSuffix)
+                {
+                    parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
+                    blockParameters.Add(parameterNameExpr);
+                }
                 var memberInfos = updateObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                     .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
 

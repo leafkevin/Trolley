@@ -30,6 +30,7 @@ public class UnitTest1 : UnitTestBase
     public async void Insert_Parameter()
     {
         using var repository = dbFactory.Create();
+        repository.Query<User>(f => f.Id == 4);
         repository.BeginTransaction();
         var count = repository.Delete<User>().Where(f => f.Id == 4).Execute();
         count = await repository.CreateAsync<User>(new
@@ -146,6 +147,7 @@ public class UnitTest1 : UnitTestBase
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
         var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
+        var now = DateTime.Now;
         var sql = repository.Create<User>()
             .WithBy(new
             {
@@ -155,14 +157,29 @@ public class UnitTest1 : UnitTestBase
                 CompanyId = 1,
                 Gender = Gender.Male,
                 IsEnabled = true,
-                CreatedAt = DateTime.Now,
+                CreatedAt = now,
                 CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
+                UpdatedAt = now,
                 UpdatedBy = 1
             })
-            .ToSql(out _);
+            .ToSql(out var dbParameters);
         repository.Commit();
         Assert.True(sql == "INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+        Assert.True((int)dbParameters[0].Value == 1);
+        Assert.True((string)dbParameters[1].Value == "leafkevin");
+        Assert.True((int)dbParameters[2].Value == 25);
+        Assert.True((int)dbParameters[3].Value == 1);
+        if (dbParameters[4] is MySqlParameter dbParameter)
+        {
+            repository.MapProvider.TryGetEntityMap(typeof(User), out var entityMapper);
+            Assert.True(dbParameter.MySqlDbType == (MySqlDbType)entityMapper.GetMemberMap("Gender").NativeDbType);
+            Assert.True((byte)dbParameter.Value == (byte)Gender.Male);
+        }
+        Assert.True((bool)dbParameters[5].Value == true);
+        Assert.True((DateTime)dbParameters[6].Value == now);
+        Assert.True((int)dbParameters[7].Value == 1);
+        Assert.True((DateTime)dbParameters[8].Value == now);
+        Assert.True((int)dbParameters[9].Value == 1);
     }
     [Fact]
     public async void Insert_WithBy_AnonymousObject_Condition()
@@ -207,7 +224,8 @@ public class UnitTest1 : UnitTestBase
                 CreatedBy = 1,
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
-            }).ExecuteAsync();
+            })
+            .ExecuteAsync();
         repository.Commit();
         Assert.Equal(1, count);
     }
@@ -226,7 +244,8 @@ public class UnitTest1 : UnitTestBase
                     { "CreatedBy", 1},
                     { "UpdatedAt", DateTime.Now},
                     { "UpdatedBy", 1}
-            }).Execute();
+            })
+            .ExecuteIdentity();
         var maxId = repository.From<Company>().Max(f => f.Id);
         Assert.Equal(maxId, id);
     }
@@ -667,60 +686,6 @@ public class UnitTest1 : UnitTestBase
             })
             .ExecuteAsync();
         Assert.True(count == 0);
-    }
-    [Fact]
-    public void Insert_IfNotExists()
-    {
-        using var repository = dbFactory.Create();
-        repository.BeginTransaction();
-        repository.Delete<Product>(2);
-        var brand = repository.Get<Brand>(1);
-        int category = 1;
-        var sql = repository.Create<Product>()
-           //.IfNotExists(new { Id = 2 })
-           .WithBy(new
-           {
-               Id = 2,
-               ProductNo = "PN_111",
-               Name = "PName_111",
-               BrandId = 1,
-               CategoryId = category,
-               CompanyId = 1,
-               IsEnabled = true,
-               CreatedBy = 1,
-               CreatedAt = DateTime.Now,
-               UpdatedBy = 1,
-               UpdatedAt = DateTime.Now
-           })
-           .ToSql(out var parameters);
-        Assert.True(sql == "INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT @Id,@ProductNo,@Name,@BrandId,@CategoryId,@CompanyId,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt WHERE NOT EXISTS(SELECT * FROM `sys_product` WHERE `Id`=@kId)");
-
-        //var count = repository.Create<Product>()
-        //   .From<Brand>()
-        //   .Select(f => new
-        //   {
-        //       Id = f.Id + 1,
-        //       ProductNo = "PN_" + f.BrandNo,
-        //       Name = "PName_" + f.Name,
-        //       BrandId = f.Id,
-        //       CategoryId = category,
-        //       f.CompanyId,
-        //       f.IsEnabled,
-        //       f.CreatedBy,
-        //       f.CreatedAt,
-        //       f.UpdatedBy,
-        //       f.UpdatedAt
-        //   })
-        //   .Where(f => f.Id == 1)
-        //   .Execute();
-        var product = repository.Get<Product>(2);
-        repository.Commit();
-        //Assert.True(count > 0);
-        Assert.NotNull(product);
-        Assert.True(product.ProductNo == "PN_" + brand.BrandNo);
-        Assert.True(product.Name == "PName_" + brand.Name);
-        Assert.NotNull(parameters);
-        Assert.True(parameters.Count >= 1);
     }
     [Fact]
     public void Insert_ToMultipleCommand()

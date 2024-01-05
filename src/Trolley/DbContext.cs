@@ -10,10 +10,6 @@ namespace Trolley;
 
 public sealed class DbContext
 {
-    #region Fields
-    private int isDisposed = 0;
-    #endregion
-
     #region Properties
     public string DbKey { get; set; }
     public TheaConnection Connection { get; set; }
@@ -748,16 +744,11 @@ public sealed class DbContext
     #region Dispose
     public void Close()
     {
-        if (Interlocked.CompareExchange(ref this.isDisposed, 1, 0) != 0)
-            return;
         this.Connection?.Close();
         this.Transaction = null;
     }
     public async ValueTask CloseAsync()
     {
-        if (Interlocked.CompareExchange(ref this.isDisposed, 1, 0) != 0)
-            return;
-
         await this.Connection.CloseAsync();
         this.Transaction = null;
     }

@@ -257,18 +257,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             commandInitializer = (builder, insertObj, suffix) => typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, builder, insertObj, suffix);
             return (insertObjs, bulkCount, headSqlSetter, commandInitializer);
         }
-    }
-    public void Clear()
-    {
-        this.Tables?.Clear();
-        this.TableAlias?.Clear();
-        this.ReaderFields?.Clear();
-        this.WhereSql = null;
-        this.TableAsStart = 'a';
-        this.IsNeedAlias = false;
-        this.deferredSegments.Clear();
-        this.InsertFields.Clear();
-    }
+    }  
     public virtual void VisitWithBy(object insertObj)
     {
         var entityType = this.Tables[0].EntityType;
@@ -284,13 +273,13 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var valuesBuilder = new StringBuilder();
         if (this.IsMultiple)
         {
-            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, object, string>;
-            typedCommandInitializer.Invoke(this.DbParameters, valuesBuilder, insertObj, $"_m{this.CommandIndex}");
+            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, string>;
+            typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, valuesBuilder, insertObj, $"_m{this.CommandIndex}");
         }
         else
         {
-            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, object>;
-            typedCommandInitializer.Invoke(this.DbParameters, valuesBuilder, insertObj);
+            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object>;
+            typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, valuesBuilder, insertObj);
         }
         this.InsertFields.Add(new FieldsSegment
         {
@@ -354,11 +343,24 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             return fieldNames;
         return null;
     }
+    public void Clear()
+    {
+        this.Tables?.Clear();
+        this.TableAlias?.Clear();
+        this.ReaderFields?.Clear();
+        this.WhereSql = null;
+        this.TableAsStart = 'a';
+        this.IsNeedAlias = false;
+        this.deferredSegments.Clear();
+        this.InsertFields.Clear();
+    }
     public override void Dispose()
     {
         base.Dispose();
         this.deferredSegments = null;
         this.InsertFields = null;
+        this.OnlyFieldNames = null;
+        this.IgnoreFieldNames = null;
     }
     private int GetHashKey(Type entityType, Type insertObjType)
     {

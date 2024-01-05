@@ -220,25 +220,7 @@ public class UnitTest2 : UnitTestBase
         if (result != null)
         {
             Assert.NotNull(result.Disputes);
-        }
-
-        var result1 = repository.From(f =>
-                f.From<Order, OrderDetail>('a')
-                 .Where((a, b) => a.Id == b.OrderId)
-                 .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
-                 .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
-                 .Select((x, a, b) => new { x.Grouping.BuyerId, x.Grouping.OrderId, ProductTotal = Sql.CountDistinct(b.ProductId) }))
-            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .Select((x, y) => Sql.FlattenTo<OrderBuyerInfo>(() => new { BuyerName = y.Name }))
-            .First();
-        if (result1 != null)
-        {
-            Assert.NotNull(result1);
-            Assert.True(result1.OrderId > 0);
-            Assert.True(result1.BuyerId > 0);
-            Assert.Null(result1.OrderNo);
-            Assert.NotNull(result1.BuyerName);
-        }
+        }       
     }
     [Fact]
     public void FromQuery_SubQuery3()
@@ -1443,7 +1425,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageL
         Assert.True(sql1 == "SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,c.`Id`,c.`OrderNo`,c.`ProductCount`,c.`TotalAmount`,c.`BuyerId`,c.`BuyerSource`,c.`SellerId`,c.`Products`,c.`Disputes`,c.`IsEnabled`,c.`CreatedAt`,c.`CreatedBy`,c.`UpdatedAt`,c.`UpdatedBy`,a.`TotalAmount` FROM (SELECT a.`Id` AS `OrderId`,a.`BuyerId`,SUM(b.`Amount`) AS `TotalAmount` FROM `sys_order` a,`sys_order_detail` b,`sys_user` c WHERE a.`Id`=b.`OrderId` AND a.`BuyerId`=c.`Id` AND c.`Age`>20 GROUP BY a.`Id`,a.`BuyerId` HAVING SUM(b.`Amount`)>500) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` INNER JOIN `sys_order` c ON a.`OrderId`=c.`Id`");
     }
     [Fact]
-    public void FlattenTo()
+    public void SelectFlattenTo()
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
@@ -1498,6 +1480,24 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN MenuPageL
         Assert.True(result[0].OrderNo == "On-ZwYx");
         Assert.NotNull(result[0].Description);
         Assert.True(result[0].Description == this.DeferInvoke());
+
+        var result1 = repository.From(f =>
+               f.From<Order, OrderDetail>('a')
+                .Where((a, b) => a.Id == b.OrderId)
+                .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
+                .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
+                .Select((x, a, b) => new { x.Grouping.BuyerId, x.Grouping.OrderId, ProductTotal = Sql.CountDistinct(b.ProductId) }))
+           .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+           .SelectFlattenTo((x, y) => new OrderBuyerInfo { BuyerName = y.Name })
+           .First();
+        if (result1 != null)
+        {
+            Assert.NotNull(result1);
+            Assert.True(result1.OrderId > 0);
+            Assert.True(result1.BuyerId > 0);
+            Assert.Null(result1.OrderNo);
+            Assert.NotNull(result1.BuyerName);
+        }
     }
     private string DeferInvoke() => "DeferInvoke";
 }

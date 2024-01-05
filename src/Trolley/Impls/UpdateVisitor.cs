@@ -30,7 +30,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.MapProvider = mapProvider;
         this.IsParameterized = isParameterized;
         this.TableAsStart = tableAsStart;
-        this.ParameterPrefix = parameterPrefix;      
+        this.ParameterPrefix = parameterPrefix;
     }
     public virtual void Initialize(Type entityType, bool isFirst = true)
     {
@@ -483,7 +483,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.TableAlias?.Clear();
         this.ReaderFields?.Clear();
         this.WhereSql = null;
-        this.LastWhereNodeType = OperationType.None;
         this.IsFromQuery = false;
         this.TableAsStart = 'a';
         this.IsNeedAlias = false;
@@ -500,8 +499,11 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         base.Dispose();
         this.deferredSegments = null;
         this.UpdateFields = null;
+        this.WhereFields = null;
         this.FixedSql = null;
         this.FixedDbParameters = null;
+        this.OnlyFieldNames = null;
+        this.IgnoreFieldNames = null;
     }
     public void InitTableAlias(LambdaExpression lambdaExpr)
     {

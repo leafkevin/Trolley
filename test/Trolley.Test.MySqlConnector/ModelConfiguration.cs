@@ -13,7 +13,7 @@ class ModelConfiguration : IModelConfiguration
             f.ToTable("sys_user").Key(t => t.Id).WithSharding(s => s.WithNameRule(n => $"{s.OrgTableName}_{DateTime.Now:yyyyMM}"));
             f.Member(t => t.Id).Field(nameof(User.Id)).NativeDbType(MySqlDbType.Int32).Required();
             f.Member(t => t.Name).Field(nameof(User.Name)).NativeDbType(MySqlDbType.VarChar);
-            f.Member(t => t.Gender).Field(nameof(User.Gender)).NativeDbType(MySqlDbType.Byte);
+            f.Member(t => t.Gender).Field(nameof(User.Gender)).NativeDbType(MySqlDbType.UByte);
             f.Member(t => t.Age).Field(nameof(User.Age)).NativeDbType(MySqlDbType.Int32);
             f.Member(t => t.CompanyId).Field(nameof(User.CompanyId)).NativeDbType(MySqlDbType.Int32);
             f.Member(t => t.GuidField).Field(nameof(User.GuidField)).NativeDbType(MySqlDbType.Guid);
@@ -31,7 +31,7 @@ class ModelConfiguration : IModelConfiguration
         builder.Entity<Company>(f =>
         {
             f.ToTable("sys_company").Key(t => t.Id);
-            f.Member(t => t.Id).Field(nameof(Company.Id)).NativeDbType(MySqlDbType.Int32);
+            f.Member(t => t.Id).Field(nameof(Company.Id)).NativeDbType(MySqlDbType.Int32).AutoIncrement();
             f.Member(t => t.Name).Field(nameof(Company.Name)).NativeDbType(MySqlDbType.VarChar);
             f.Member(t => t.Nature).Field(nameof(Company.Nature)).NativeDbType(MySqlDbType.VarChar);
             f.Member(t => t.IsEnabled).Field(nameof(Company.IsEnabled)).NativeDbType(MySqlDbType.Bool);

@@ -190,7 +190,7 @@ public class Created<TEntity> : ICreated<TEntity>
         }
         else
         {
-            result = this.DbContext.Execute(f => this.Visitor.BuildCommand(f, true));
+            result = this.DbContext.Execute(f => this.Visitor.BuildCommand(f, false));
             this.Dispose();
         }
         return result;
@@ -253,7 +253,7 @@ public class Created<TEntity> : ICreated<TEntity>
         }
         else
         {
-            result = await this.DbContext.ExecuteAsync(f => this.Visitor.BuildCommand(f, true), cancellationToken);
+            result = await this.DbContext.ExecuteAsync(f => this.Visitor.BuildCommand(f, false), cancellationToken);
             this.Dispose();
         }
         return result;
