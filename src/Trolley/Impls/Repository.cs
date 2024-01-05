@@ -127,6 +127,12 @@ public class Repository : IRepository
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
+        if (parameters != null)
+        {
+            var whereObjType = parameters.GetType();
+            if (!whereObjType.IsEntityType(out _))
+                throw new NotSupportedException("不支持的参数类型，QueryFirst方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
+        }
 
         return this.DbContext.QueryFirst<TEntity>(f =>
         {
@@ -142,6 +148,12 @@ public class Repository : IRepository
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
+        if (parameters != null)
+        {
+            var whereObjType = parameters.GetType();
+            if (!whereObjType.IsEntityType(out _))
+                throw new NotSupportedException("不支持的参数类型，QueryFirstAsync方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
+        }
 
         return await this.DbContext.QueryFirstAsync<TEntity>(f =>
         {
@@ -157,6 +169,9 @@ public class Repository : IRepository
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
+        var whereObjType = whereObj.GetType();
+        if (!whereObjType.IsEntityType(out _))
+            throw new NotSupportedException("不支持的参数类型，QueryFirst方法的whereObj参数，支持实体类型参数，命名、匿名对象或是字典对象");
 
         return this.DbContext.QueryFirst<TEntity>(f =>
         {
@@ -170,6 +185,9 @@ public class Repository : IRepository
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
+        var whereObjType = whereObj.GetType();
+        if (!whereObjType.IsEntityType(out _))
+            throw new NotSupportedException("不支持的参数类型，QueryFirstAsync方法的whereObj参数，支持实体类型参数，命名、匿名对象或是字典对象");
 
         return await this.DbContext.QueryFirstAsync<TEntity>(f =>
         {
@@ -183,6 +201,12 @@ public class Repository : IRepository
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
+        if (parameters != null)
+        {
+            var whereObjType = parameters.GetType();
+            if (!whereObjType.IsEntityType(out _))
+                throw new NotSupportedException("不支持的参数类型，Query方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
+        }
 
         return this.DbContext.Query<TEntity>(f =>
         {
@@ -198,6 +222,12 @@ public class Repository : IRepository
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
+        if (parameters != null)
+        {
+            var whereObjType = parameters.GetType();
+            if (!whereObjType.IsEntityType(out _))
+                throw new NotSupportedException("不支持的参数类型，QueryAsync方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
+        }
 
         return await this.DbContext.QueryAsync<TEntity>(f =>
         {
@@ -213,6 +243,9 @@ public class Repository : IRepository
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
+        var whereObjType = whereObj.GetType();
+        if (!whereObjType.IsEntityType(out _))
+            throw new NotSupportedException("不支持的参数类型，Query方法的whereObj参数，支持实体类型参数，命名、匿名对象或是字典对象");
 
         return this.DbContext.Query<TEntity>(f =>
         {
@@ -226,6 +259,9 @@ public class Repository : IRepository
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
+        var whereObjType = whereObj.GetType();
+        if (!whereObjType.IsEntityType(out _))
+            throw new NotSupportedException("不支持的参数类型，QueryAsync方法的whereObj参数，支持实体类型参数，命名、匿名对象或是字典对象");
 
         return await this.DbContext.QueryAsync<TEntity>(f =>
         {
@@ -1013,6 +1049,7 @@ public class Repository : IRepository
     {
         this.Transaction?.Commit();
         this.DbContext.Close();
+        this.DbContext.Transaction = null;
     }
     public virtual async Task CommitAsync(CancellationToken cancellationToken = default)
     {
@@ -1023,11 +1060,13 @@ public class Repository : IRepository
             await dbTransaction.CommitAsync(cancellationToken);
         }
         await this.DbContext.CloseAsync();
+        this.DbContext.Transaction = null;
     }
     public virtual void Rollback()
     {
         this.Transaction?.Rollback();
         this.DbContext.Close();
+        this.DbContext.Transaction = null;
     }
     public virtual async Task RollbackAsync(CancellationToken cancellationToken = default)
     {
@@ -1038,6 +1077,7 @@ public class Repository : IRepository
             await dbTransaction.RollbackAsync(cancellationToken);
         }
         await this.DbContext.CloseAsync();
+        this.DbContext.Transaction = null;
     }
     public virtual void Dispose()
     {

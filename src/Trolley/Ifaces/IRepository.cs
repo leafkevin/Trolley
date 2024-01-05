@@ -257,7 +257,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，用法：
     /// <code>
     /// repository.QueryFirst&lt;User&gt;(new { Id = 1, IsEnabled = true })
-    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
+    /// SQL: SELECT a.`Id`,a.`Name`, ... FROM `sys_user` a WHERE a.`Id`=@Id AND a.`IsEnabled`=@IsEnabled
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
@@ -268,7 +268,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，用法：
     /// <code>
     /// await repository.QueryFirstAsync&lt;User&gt;(new { Id = 1, IsEnabled = true })
-    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
+    /// SQL: SELECT a.`Id`,a.`Name`, ... FROM `sys_user` a WHERE a.`Id`=@Id AND a.`IsEnabled`=@IsEnabled
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
@@ -297,7 +297,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，用法：
     /// <code>
     /// repository.Query&lt;User&gt;(new { Id = 1, IsEnabled = true })
-    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
+    /// SQL: SELECT a.`Id`,a.`Name`, ... FROM `sys_user` a WHERE a.`Id`=@Id AND a.`IsEnabled`=@IsEnabled
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
@@ -308,7 +308,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，用法：
     /// <code>
     /// await repository.QueryAsync&lt;User&gt;(new { Id = 1, IsEnabled = true })
-    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
+    /// SQL: SELECT a.`Id`,a.`Name`, ... FROM `sys_user` a WHERE a.`Id`=@Id AND a.`IsEnabled`=@IsEnabled
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>

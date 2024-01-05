@@ -148,7 +148,7 @@ public interface ICreate<TEntity>
 /// 插入数据
 /// </summary>
 /// <typeparam name="TEntity">要插入的实体类型</typeparam>
-public interface ICreated<TEntity> : IDisposable
+public interface ICreated<TEntity>
 {
     #region Properties
     DbContext DbContext { get; }

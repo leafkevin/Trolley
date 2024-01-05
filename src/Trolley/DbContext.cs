@@ -741,16 +741,8 @@ public sealed class DbContext
     }
     #endregion
 
-    #region Dispose
-    public void Close()
-    {
-        this.Connection?.Close();
-        this.Transaction = null;
-    }
-    public async ValueTask CloseAsync()
-    {
-        await this.Connection.CloseAsync();
-        this.Transaction = null;
-    }
+    #region Close
+    public void Close() => this.Connection?.Close();
+    public async ValueTask CloseAsync() => await this.Connection.CloseAsync();
     #endregion
 }

@@ -163,6 +163,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         => this.OnlyFieldNames = this.VisitFields(fieldsSelector);
     public virtual string BuildMultiBulkSql(IDbCommand command)
     {
+        //多语句查询才会走到此分支
         if (!this.IsMultiple) return null;
 
         int index = 0;
@@ -170,7 +171,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
         var entityType = this.Tables[0].EntityType;
         //多语句执行，一次性不分批次
-        (var headSqlSetter, var commandInitializer) = RepositoryHelper.BuildCreateMultiSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjs, this.OnlyFieldNames, this.IgnoreFieldNames, false);
+        (var headSqlSetter, var commandInitializer) = RepositoryHelper.BuildCreateMultiSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjs, this.OnlyFieldNames, this.IgnoreFieldNames, true);
         foreach (var insertObj in insertObjs)
         {
             if (index > 0) builder.Append(',');
@@ -181,7 +182,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual (IEnumerable, int, Action<StringBuilder>, Action<StringBuilder, object, string>) BuildWithBulk(IDbCommand command)
     {
-        this.IsBulk = true;
         this.DbParameters = command.Parameters;
         var entityType = this.Tables[0].EntityType;
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
@@ -252,12 +252,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         }
         else
         {
-            (var headSqlSetter, var typedCommandInitializer) = RepositoryHelper.BuildCreateMultiSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjs, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple);
+            (var headSqlSetter, var typedCommandInitializer) = RepositoryHelper.BuildCreateMultiSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjs, this.OnlyFieldNames, this.IgnoreFieldNames, true);
             Action<StringBuilder, object, string> commandInitializer = null;
             commandInitializer = (builder, insertObj, suffix) => typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, builder, insertObj, suffix);
             return (insertObjs, bulkCount, headSqlSetter, commandInitializer);
         }
-    }  
+    }
     public virtual void VisitWithBy(object insertObj)
     {
         var entityType = this.Tables[0].EntityType;

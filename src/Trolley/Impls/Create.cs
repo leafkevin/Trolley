@@ -184,14 +184,15 @@ public class Created<TEntity> : ICreated<TEntity>
             finally
             {
                 command.Dispose();
-                if (isNeedClose) this.Dispose();
+                if (isNeedClose) this.Close();
             }
             if (exception != null) throw exception;
         }
         else
         {
             result = this.DbContext.Execute(f => this.Visitor.BuildCommand(f, false));
-            this.Dispose();
+            this.Visitor.Dispose();
+            this.Visitor = null;
         }
         return result;
     }
@@ -246,15 +247,16 @@ public class Created<TEntity> : ICreated<TEntity>
             }
             finally
             {
-                command.Dispose();
-                if (isNeedClose) this.Dispose();
+                await command.DisposeAsync();
+                if (isNeedClose) await this.CloseAsync();
             }
             if (exception != null) throw exception;
         }
         else
         {
             result = await this.DbContext.ExecuteAsync(f => this.Visitor.BuildCommand(f, false), cancellationToken);
-            this.Dispose();
+            this.Visitor.Dispose();
+            this.Visitor = null;
         }
         return result;
     }
@@ -264,25 +266,29 @@ public class Created<TEntity> : ICreated<TEntity>
     public int ExecuteIdentity()
     {
         var result = this.DbContext.CreateIdentity<int>(f => this.Visitor.BuildCommand(f, true));
-        this.Dispose();
+        this.Visitor.Dispose();
+        this.Visitor = null;
         return result;
     }
     public async Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
     {
         var result = await this.DbContext.CreateIdentityAsync<int>(f => this.Visitor.BuildCommand(f, true), cancellationToken);
-        this.Dispose();
+        this.Visitor.Dispose();
+        this.Visitor = null;
         return result;
     }
     public long ExecuteIdentityLong()
     {
         var result = this.DbContext.CreateIdentity<long>(f => this.Visitor.BuildCommand(f, true));
-        this.Dispose();
+        this.Visitor.Dispose();
+        this.Visitor = null;
         return result;
     }
     public async Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
     {
         var result = await this.DbContext.CreateIdentityAsync<long>(f => this.Visitor.BuildCommand(f, true), cancellationToken);
-        this.Dispose();
+        this.Visitor.Dispose();
+        this.Visitor = null;
         return result;
     }
     #endregion
@@ -291,7 +297,8 @@ public class Created<TEntity> : ICreated<TEntity>
     public MultipleCommand ToMultipleCommand()
     {
         var result = this.Visitor.CreateMultipleCommand();
-        this.Dispose();
+        this.Visitor.Dispose();
+        this.Visitor = null;
         return result;
     }
     #endregion
@@ -323,8 +330,6 @@ public class Created<TEntity> : ICreated<TEntity>
             }
             if (index > 0) sql = sqlBuilder.ToString();
             sqlBuilder.Clear();
-            if (index > 0)
-                sql = sqlBuilder.ToString();
         }
         else sql = this.Visitor.BuildCommand(command, false);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
@@ -333,17 +338,17 @@ public class Created<TEntity> : ICreated<TEntity>
     }
     #endregion
 
-    public void Dispose()
+    public void Close()
     {
         this.DbContext.Close();
-        this.DbContext = null;
         this.Visitor.Dispose();
         this.Visitor = null;
     }
-    public async ValueTask DisposeAsync()
+    public async ValueTask CloseAsync()
     {
         await this.DbContext.CloseAsync();
         this.Visitor.Dispose();
+        this.Visitor = null;
     }
 }
 public class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEntity>
