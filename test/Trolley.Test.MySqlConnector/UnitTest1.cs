@@ -55,7 +55,7 @@ public class UnitTest1 : UnitTestBase
     public async void Insert_RawSql()
     {
         using var repository = dbFactory.Create();
-        repository.BeginTransaction();       
+        repository.BeginTransaction();
         repository.Delete<Brand>().Where(new { Id = 1 }).Execute();
         var rawSql = "INSERT INTO sys_brand(Id,BrandNo,Name,IsEnabled,CreatedAt,CreatedBy,UpdatedAt,UpdatedBy) VALUES(@Id,@BrandNo,@Name,1,NOW(),@User,NOW(),@User)";
         var count = await repository.ExecuteAsync(rawSql, new
@@ -312,7 +312,7 @@ public class UnitTest1 : UnitTestBase
         Assert.Equal(1, count);
     }
     [Fact]
-    public async void Insert_WithBy_Dictionary_AutoIncrement()
+    public async void Insert_WithBy_AutoIncrement()
     {
         using var repository = dbFactory.Create();
         await repository.Delete<Company>().Where(f => f.Id == 1).ExecuteAsync();
@@ -591,106 +591,136 @@ public class UnitTest1 : UnitTestBase
         }
     }
     [Fact]
-    public void Insert_Select_From_Table1()
+    public async void Insert_Select_From_Table1()
     {
         using var repository = dbFactory.Create();
+        var id = 2;
+        var brandId = 1;
+        var name = "雪中飞羽绒裤";
+        int categoryId = 1;
         repository.BeginTransaction();
-        repository.Delete<Product>(2);
-        var brand = repository.Get<Brand>(1);
-        int category = 1;
+        repository.Delete<Product>(id);
+        var brand = repository.Get<Brand>(brandId);
         var sql = repository.Create<Product>()
             .IgnoreInto()
             .From<Brand>()
-            .Where(f => f.Id == 1)
+            .Where(f => f.Id == brandId)
             .Select(f => new Product
             {
-                Id = f.Id + 1,
-                ProductNo = "PN_" + f.BrandNo,
-                Name = "PName_" + f.Name,
+                Id = id,
+                ProductNo = "PN_" + id.ToString().PadLeft(3, '0'),
+                Name = name,
+                Price = 25.85,
                 BrandId = f.Id,
-                CategoryId = category,
+                CategoryId = categoryId,
                 CompanyId = f.CompanyId,
-                IsEnabled = f.IsEnabled,
-                CreatedBy = f.CreatedBy,
+                IsEnabled = true,
+                CreatedBy = 1,
                 CreatedAt = DateTime.Now,
-                UpdatedBy = f.UpdatedBy,
+                UpdatedBy = 1,
                 UpdatedAt = DateTime.Now
             })
-           .ToSql(out var parameters);
-        Assert.True(sql == "INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT a.`Id`+1,CONCAT('PN_',a.`BrandNo`),CONCAT('PName_',a.`Name`),a.`Id`,@p0,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1");
+           .ToSql(out _);
+        Assert.True(sql == "INSERT IGNORE INTO `sys_product` (`Id`,`ProductNo`,`Name`,`Price`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT @p1 AS `Id`,CONCAT('PN_',@p2) AS `ProductNo`,@p3 AS `Name`,25.85 AS `Price`,b.`Id` AS `BrandId`,@p4 AS `CategoryId`,b.`CompanyId`,1 AS `IsEnabled`,1 AS `CreatedBy`,NOW() AS `CreatedAt`,1 AS `UpdatedBy`,NOW() AS `UpdatedAt` FROM `sys_brand` b WHERE b.`Id`=@p0");
 
-        //var count = repository.Create<Product>()
-        //   .From<Brand>()
-        //   .Select(f => new
-        //   {
-        //       Id = f.Id + 1,
-        //       ProductNo = "PN_" + f.BrandNo,
-        //       Name = "PName_" + f.Name,
-        //       BrandId = f.Id,
-        //       CategoryId = category,
-        //       f.CompanyId,
-        //       f.IsEnabled,
-        //       f.CreatedBy,
-        //       f.CreatedAt,
-        //       f.UpdatedBy,
-        //       f.UpdatedAt
-        //   })
-        //   .Where(f => f.Id == 1)
-        //   .Execute();
-        //var product = repository.Get<Product>(2);
-        //repository.Commit();
-        ////Assert.True(count > 0);
-        //Assert.NotNull(product);
-        //Assert.True(product.ProductNo == "PN_" + brand.BrandNo);
-        //Assert.True(product.Name == "PName_" + brand.Name);
-        //Assert.NotNull(parameters);
-        //Assert.True(parameters.Count == 1);
+        var count = repository.Create<Product>()
+            .IgnoreInto()
+            .From<Brand>()
+            .Where(f => f.Id == brandId)
+            .Select(f => new Product
+            {
+                Id = id,
+                ProductNo = "PN_" + id.ToString().PadLeft(3, '0'),
+                Name = name,
+                Price = 25.85,
+                BrandId = f.Id,
+                CategoryId = categoryId,
+                CompanyId = f.CompanyId,
+                IsEnabled = true,
+                CreatedBy = 1,
+                CreatedAt = DateTime.Now,
+                UpdatedBy = 1,
+                UpdatedAt = DateTime.Now
+            })
+           .Execute();
+        var product = repository.Get<Product>(id);
+        repository.Commit();
+        Assert.True(count > 0);
+        Assert.NotNull(product);
+        Assert.True(product.ProductNo == "PN_" + id.ToString().PadLeft(3, '0'));
+        Assert.True(product.Name == name);
+        Assert.True(product.BrandId == brandId);
+
+        count = await repository.Create<Product>()
+            .IgnoreInto()
+            .From<Brand>()
+            .Where(f => f.Id == brandId)
+            .Select(f => new Product
+            {
+                Id = id,
+                ProductNo = "PN_" + id.ToString().PadLeft(3, '0'),
+                Name = name,
+                Price = 25.85,
+                BrandId = f.Id,
+                CategoryId = categoryId,
+                CompanyId = f.CompanyId,
+                IsEnabled = true,
+                CreatedBy = 1,
+                CreatedAt = DateTime.Now,
+                UpdatedBy = 1,
+                UpdatedAt = DateTime.Now
+            })
+           .ExecuteAsync();
+        Assert.True(count == 0);
     }
     [Fact]
     public async void Insert_Select_From_Table2()
     {
         using var repository = dbFactory.Create();
-        //var sql = repository.Create<OrderDetail>()
-        //    .From<Order, Product>()
-        //    .Where((a, b) => a.Id == 3 && b.Id == 1)
-        //    .Select((x, y) => new OrderDetail
-        //    {
-        //        Id = 7,
-        //        OrderId = x.Id,
-        //        ProductId = y.Id,
-        //        Price = y.Price,
-        //        Quantity = 3,
-        //        Amount = y.Price * 3,
-        //        IsEnabled = x.IsEnabled,
-        //        CreatedBy = x.CreatedBy,
-        //        CreatedAt = x.CreatedAt,
-        //        UpdatedBy = x.UpdatedBy,
-        //        UpdatedAt = x.UpdatedAt
-        //    })
-        //    .ToSql(out var parameters);
-        //Assert.True(sql == "INSERT INTO `sys_order_detail` (`Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT 7,a.`Id`,b.`Id`,b.`Price`,3,b.`Price`*3,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_order` a,`sys_product` b WHERE a.`Id`=3 AND b.`Id`=1");
-
+        var sql = repository.Create<OrderDetail>()
+            .IgnoreInto()
+            .From<Order, Product>()
+            .Where((a, b) => a.Id == 3 && b.Id == 1)
+            .Select((x, y) => new OrderDetail
+            {
+                Id = 7,
+                OrderId = x.Id,
+                ProductId = y.Id,
+                Price = y.Price,
+                Quantity = 3,
+                Amount = y.Price * 3,
+                IsEnabled = x.IsEnabled,
+                CreatedBy = x.CreatedBy,
+                CreatedAt = x.CreatedAt,
+                UpdatedBy = x.UpdatedBy,
+                UpdatedAt = x.UpdatedAt
+            })
+            .ToSql(out var parameters);
+        Assert.True(sql == "INSERT IGNORE INTO `sys_order_detail` (`Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT 7 AS `Id`,b.`Id` AS `OrderId`,c.`Id` AS `ProductId`,c.`Price`,3 AS `Quantity`,(c.`Price`*3) AS `Amount`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_order` b,`sys_product` c WHERE b.`Id`=3 AND c.`Id`=1");
+        await repository.BeginTransactionAsync();
         repository.Delete<OrderDetail>(7);
-        //var result = await repository.Create<OrderDetail>()
-        //   .From<Order, Product>()
-        //   .Where((a, b) => a.Id == 3 && b.Id == 1)
-        //   .Select((x, y) => new OrderDetail
-        //   {
-        //       Id = 7,
-        //       OrderId = x.Id,
-        //       ProductId = y.Id,
-        //       Price = y.Price,
-        //       Quantity = 3,
-        //       Amount = y.Price * 3,
-        //       IsEnabled = x.IsEnabled,
-        //       CreatedBy = x.CreatedBy,
-        //       CreatedAt = x.CreatedAt,
-        //       UpdatedBy = x.UpdatedBy,
-        //       UpdatedAt = x.UpdatedAt
-        //   })
-        //   .ExecuteAsync();
+        var result = await repository.Create<OrderDetail>()
+            .IgnoreInto()
+            .From<Order, Product>()
+            .Where((a, b) => a.Id == 3 && b.Id == 1)
+            .Select((x, y) => new OrderDetail
+            {
+                Id = 7,
+                OrderId = x.Id,
+                ProductId = y.Id,
+                Price = y.Price,
+                Quantity = 3,
+                Amount = y.Price * 3,
+                IsEnabled = x.IsEnabled,
+                CreatedBy = x.CreatedBy,
+                CreatedAt = x.CreatedAt,
+                UpdatedBy = x.UpdatedBy,
+                UpdatedAt = x.UpdatedAt
+            })
+           .ExecuteAsync();
         var orderDetail = repository.Get<OrderDetail>(7);
         var product = repository.Get<Product>(1);
+        await repository.CommitAsync();
         Assert.NotNull(orderDetail);
         Assert.True(orderDetail.OrderId == 3);
         Assert.True(orderDetail.ProductId == 1);
@@ -720,48 +750,47 @@ public class UnitTest1 : UnitTestBase
         });
         var result = repository.Get<Order>(1);
         repository.Commit();
-        if (count > 0)
-        {
-            Assert.True(!result.ProductCount.HasValue);
-        }
+        Assert.True(!result.ProductCount.HasValue);
     }
     [Fact]
     public void Insert_Json_Field()
     {
         using var repository = dbFactory.Create();
-        repository.BeginTransaction();
-        repository.Delete<Order>(4);
+        var dispute = new Dispute
+        {
+            Id = 2,
+            Content = "无良商家",
+            Result = "同意退款",
+            Users = "Buyer2,Seller2",
+            CreatedAt = DateTime.Parse("2023-03-05")
+        };
         var sql = repository.Create<Order>()
-            .WithBy(new Order
-            {
-                Id = 4,
-                OrderNo = "ON-001",
-                BuyerId = 1,
-                SellerId = 2,
-                TotalAmount = 500,
-                Products = new List<int> { 1, 2 },
-                Disputes = new Dispute
-                {
-                    Id = 2,
-                    Content = "无良商家",
-                    Result = "同意退款",
-                    Users = "Buyer2,Seller2",
-                    CreatedAt = DateTime.Parse("2023-03-05")
-                },
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            })
-            .ToSql(out var parameters);
+           .WithBy(new Order
+           {
+               Id = 4,
+               OrderNo = "ON-001",
+               BuyerId = 1,
+               SellerId = 2,
+               TotalAmount = 500,
+               Products = new List<int> { 1, 2 },
+               Disputes = dispute,
+               IsEnabled = true,
+               CreatedAt = DateTime.Now,
+               CreatedBy = 1,
+               UpdatedAt = DateTime.Now,
+               UpdatedBy = 1
+           })
+           .ToSql(out var parameters);
         Assert.True(sql == "INSERT INTO `sys_order` (`Id`,`OrderNo`,`TotalAmount`,`BuyerId`,`BuyerSource`,`SellerId`,`ProductCount`,`Products`,`Disputes`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) VALUES(@Id,@OrderNo,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@ProductCount,@Products,@Disputes,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
         Assert.True(parameters[4].ParameterName == "@BuyerSource");
         Assert.True(parameters[4].Value is DBNull);
         Assert.True(parameters[7].ParameterName == "@Products");
-        Assert.True((string)parameters[7].Value == "[1,2]");
+        Assert.True((string)parameters[7].Value == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
         Assert.True(parameters[8].ParameterName == "@Disputes");
-        Assert.True((string)parameters[8].Value == "{\"Id\":2,\"Users\":\"Buyer2,Seller2\",\"Content\":\"\\u65E0\\u826F\\u5546\\u5BB6\",\"Result\":\"\\u540C\\u610F\\u9000\\u6B3E\",\"CreatedAt\":\"2023-03-05T00:00:00\"}");
+        Assert.True((string)parameters[8].Value == new JsonTypeHandler().ToFieldValue(null, dispute).ToString());
+
+        repository.BeginTransaction();
+        repository.Delete<Order>(4);
         var count = repository.Create<Order>()
             .WithBy(new Order
             {
@@ -771,14 +800,7 @@ public class UnitTest1 : UnitTestBase
                 SellerId = 2,
                 TotalAmount = 500,
                 Products = new List<int> { 1, 2 },
-                Disputes = new Dispute
-                {
-                    Id = 2,
-                    Content = "无良商家",
-                    Result = "同意退款",
-                    Users = "Buyer2,Seller2",
-                    CreatedAt = DateTime.Now
-                },
+                Disputes = dispute,
                 IsEnabled = true,
                 CreatedAt = DateTime.Now,
                 CreatedBy = 1,
@@ -788,13 +810,10 @@ public class UnitTest1 : UnitTestBase
             .Execute();
         var order = repository.Get<Order>(4);
         repository.Commit();
-        if (count > 0)
-        {
-            Assert.NotEmpty(order.Products);
-            Assert.True(order.Products.Count == 2);
-            Assert.True(order.Products[0] == 1);
-            Assert.True(order.Products[1] == 2);
-        }
+        Assert.NotEmpty(order.Products);
+        Assert.NotNull(order.Disputes);
+        Assert.True(new JsonTypeHandler().ToFieldValue(null, order.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
+        Assert.True(new JsonTypeHandler().ToFieldValue(null, order.Disputes).ToString() == new JsonTypeHandler().ToFieldValue(null, dispute).ToString());
     }
     [Fact]
     public void Insert_Enum_Fields()
@@ -817,8 +836,8 @@ public class UnitTest1 : UnitTestBase
             .ToSql(out var parameters1);
         Assert.True(sql1 == "INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
         Assert.True(parameters1[4].ParameterName == "@Gender");
-        Assert.True(parameters1[4].Value.GetType() == typeof(sbyte));
-        Assert.True((sbyte)parameters1[4].Value == (sbyte)Gender.Male);
+        Assert.True(parameters1[4].Value.GetType() == typeof(byte));
+        Assert.True((byte)parameters1[4].Value == (byte)Gender.Male);
 
         var sql2 = repository.Create<Company>()
              .WithBy(new Company
@@ -875,6 +894,72 @@ public class UnitTest1 : UnitTestBase
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
             })
+            .ExecuteAsync();
+        Assert.True(count == 0);
+    }
+    [Fact]
+    public async void Insert_Ignore_OnlyFields()
+    {
+        this.Initialize();
+        using var repository = dbFactory.Create();
+        var sql = repository.Create<User>()
+            .IgnoreInto()
+            .WithBy(new
+            {
+                Id = 1,
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .OnlyFields(f => new { f.Id, f.Name, f.IsEnabled, f.CreatedBy, f.CreatedAt, f.UpdatedAt, f.UpdatedBy })
+            .ToSql(out var parameters);
+        Assert.True(sql == "INSERT IGNORE INTO `sys_user` (`Id`,`Name`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+        Assert.True(parameters.Count == 7);
+        repository.BeginTransaction();
+        repository.Delete<User>(1);
+        var count = await repository.Create<User>()
+            .IgnoreInto()
+            .WithBy(new
+            {
+                Id = 1,
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .OnlyFields(f => new { f.Id, f.Name, f.IsEnabled, f.CreatedBy, f.CreatedAt, f.UpdatedAt, f.UpdatedBy })
+            .ExecuteAsync();
+        var user = repository.Get<User>(1);
+        Assert.True(count == 1);
+        Assert.True(user.CompanyId == 0);
+        Assert.True(user.Gender == Gender.Unknown);
+        count = await repository.Create<User>()
+            .IgnoreInto()
+            .WithBy(new
+            {
+                Id = 1,
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .OnlyFields(f => new { f.Id, f.Name, f.IsEnabled, f.CreatedBy, f.CreatedAt, f.UpdatedAt, f.UpdatedBy })
             .ExecuteAsync();
         Assert.True(count == 0);
     }
@@ -954,7 +1039,8 @@ public class UnitTest1 : UnitTestBase
     public void Insert_OnDuplicateKeyUpdate()
     {
         using var repository = dbFactory.Create();
-        var sql = repository.Create<Order>()
+        UserSourceType? buyerSource = UserSourceType.Douyin;
+        var sql1 = repository.Create<Order>()
              .WithBy(new
              {
                  Id = 9,
@@ -983,14 +1069,43 @@ public class UnitTest1 : UnitTestBase
                     TotalAmount = 25,
                     Products = new List<int> { 1, 2 }
                 })
+                .Set(buyerSource.HasValue, new { BuyerSource = buyerSource })
+             )
+            .ToSql(out _);
+        Assert.True(sql1 == "INSERT INTO `sys_order` (`Id`,`OrderNo`,`BuyerId`,`SellerId`,`TotalAmount`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@OrderNo,@BuyerId,@SellerId,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerSource`=@BuyerSource AS row");
+
+        var sql2 = repository.Create<Order>()
+             .WithBy(new
+             {
+                 Id = 9,
+                 OrderNo = "ON-001",
+                 BuyerId = 1,
+                 SellerId = 2,
+                 TotalAmount = 500,
+                 Products = new List<int> { 1, 2 },
+                 Disputes = new Dispute
+                 {
+                     Id = 2,
+                     Content = "无良商家",
+                     Result = "同意退款",
+                     Users = "Buyer2,Seller2",
+                     CreatedAt = DateTime.Now
+                 },
+                 IsEnabled = true,
+                 CreatedAt = DateTime.Now,
+                 CreatedBy = 1,
+                 UpdatedAt = DateTime.Now,
+                 UpdatedBy = 1
+             })
+             .OnDuplicateKeyUpdate(x => x.Alias("row")
                 .Set(f => new
                 {
                     TotalAmount = f.TotalAmount + x.Values(f.TotalAmount),
                     Products = new List<int> { 1, 2 }
                 })
-                .Set(true, new { BuyerSource = UserSourceType.Douyin })
-                .Set(true, f => f.BuyerSource, UserSourceType.Douyin)
+                .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource)
              )
             .ToSql(out _);
+        Assert.True(sql2 == "");
     }
 }

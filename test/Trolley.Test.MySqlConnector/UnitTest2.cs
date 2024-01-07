@@ -171,10 +171,10 @@ public class UnitTest2 : UnitTestBase
         using var repository = dbFactory.Create();
         var sql = repository.From(f => f.From<Page, Menu>('o')
                  .Where((a, b) => a.Id == b.PageId)
-                 .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
-             .InnerJoin<Menu>((a, b) => a.Id == b.Id)
-             .Where((a, b) => a.Id == b.Id)
-             .Select((a, b) => new { a.Id, b.Name, a.ParentId, a.Url })
+                 .Select((x, y) => new { MenuId = y.Id, y.ParentId, x.Url }))
+             .InnerJoin<Menu>((a, b) => a.MenuId == b.Id)
+             .Where((a, b) => a.MenuId == b.Id)
+             .Select((a, b) => new { a.MenuId, b.Name, a.ParentId, a.Url })
              .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id`,b.`Name`,a.`ParentId`,a.`Url` FROM (SELECT p.`Id`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) a INNER JOIN `sys_menu` b ON a.`Id`=b.`Id` WHERE a.`Id`=b.`Id`");
 
@@ -220,7 +220,7 @@ public class UnitTest2 : UnitTestBase
         if (result != null)
         {
             Assert.NotNull(result.Disputes);
-        }       
+        }
     }
     [Fact]
     public void FromQuery_SubQuery3()

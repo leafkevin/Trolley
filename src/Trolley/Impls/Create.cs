@@ -58,42 +58,36 @@ public class Create<TEntity> : ICreate<TEntity>
     #region From
     public IFromCommand<T> From<T>()
     {
-        //TODO:需要测试dbParameters是否有值
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('b', null, typeof(T));
         return this.OrmProvider.NewFromCommand<T>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     public IFromCommand<T1, T2> From<T1, T2>()
     {
-        //TODO:需要测试dbParameters是否有值
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('b', null, typeof(T1), typeof(T2));
         return this.OrmProvider.NewFromCommand<T1, T2>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     public IFromCommand<T1, T2, T3> From<T1, T2, T3>()
     {
-        //TODO:需要测试dbParameters是否有值
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('b', null, typeof(T1), typeof(T2), typeof(T3));
         return this.OrmProvider.NewFromCommand<T1, T2, T3>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     public IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>()
     {
-        //TODO:需要测试dbParameters是否有值
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('b', null, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         return this.OrmProvider.NewFromCommand<T1, T2, T3, T4>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     public IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
     {
-        //TODO:需要测试dbParameters是否有值
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('b', null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
         return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     public IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
     {
-        //TODO:需要测试dbParameters是否有值
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('b', null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
         return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, T6>(typeof(TEntity), this.DbContext, queryVisitor);

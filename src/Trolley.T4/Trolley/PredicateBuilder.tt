@@ -1,0 +1,132 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
+<#@ output extension=".cs" #>
+using System;
+using System.Linq.Expressions;
+
+public class PredicateBuilder
+{
+    public static PredicateBuilder<T> Create<T>() => new PredicateBuilder<T>();
+<#
+    var count = 16;
+    var tables = "T1";
+    for (int i = 2; i <= count; i++)
+    {
+        tables += $", T{i}";
+#>
+    public static PredicateBuilder<<#=tables#>> Create<<#=tables#>>() => new PredicateBuilder<<#=tables#>>();
+<#  }#>
+}
+public class PredicateBuilder<T>
+{
+    private Expression<Func<T, bool>> expression;
+    public PredicateBuilder<T> And(Expression<Func<T, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
+    public PredicateBuilder<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+        => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
+    public PredicateBuilder<T> AndMerge(Func<PredicateBuilder<T>, PredicateBuilder<T>> mergePredicate)
+    {
+        if (mergePredicate == null) throw new ArgumentNullException(nameof(mergePredicate));
+        var builder = mergePredicate.Invoke(new PredicateBuilder<T>());
+        return this.Merge(Expression.AndAlso, builder.Build());
+    }
+    public PredicateBuilder<T> Or(Expression<Func<T, bool>> predicate) => this.Merge(Expression.OrElse, predicate);
+    public PredicateBuilder<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+        => this.Merge(condition, Expression.OrElse, ifPredicate, elsePredicate);
+    public PredicateBuilder<T> OrMerge(Func<PredicateBuilder<T>, PredicateBuilder<T>> mergePredicate)
+    {
+        if (mergePredicate == null) throw new ArgumentNullException(nameof(mergePredicate));
+        var builder = mergePredicate.Invoke(new PredicateBuilder<T>());
+        return this.Merge(Expression.OrElse, builder.Build());
+    }
+    public PredicateBuilder<T> Not()
+    {
+        if (this.expression == null) throw new NotSupportedException("当前表达式为null，不支持Not操作");
+        this.expression = Expression.Lambda<Func<T, bool>>(Expression.Not(this.expression.Body), this.expression.Parameters);
+        return this;
+    }
+    public PredicateBuilder<T> Not(bool condition)
+    {
+        if (condition) this.Not();
+        return this;
+    }
+    public Expression<Func<T, bool>> Build() => this.expression as Expression<Func<T, bool>>;
+    private PredicateBuilder<T> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T, bool>> predicate)
+    {
+        if (predicate == null) throw new ArgumentNullException(nameof(predicate));
+        if (this.expression == null) this.expression = predicate;
+        else
+        {
+            var body = mergeOp.Invoke(this.expression.Body, predicate.Body);
+            this.expression = Expression.Lambda<Func<T, bool>>(body, this.expression.Parameters);
+        }
+        return this;
+    }
+    private PredicateBuilder<T> Merge(bool condition, Func<Expression, Expression, Expression> mergeOp, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate)
+    {
+        if (condition) this.Merge(mergeOp, ifPredicate);
+        else if (elsePredicate != null) this.Merge(mergeOp, elsePredicate);
+        return this;
+    }
+}
+<#
+    tables = "T1";
+    for (int i = 2; i <= count; i++)
+    {
+        tables += $", T{i}";
+#>
+public class PredicateBuilder<<#=tables#>>
+{
+    private Expression<Func<<#=tables#>, bool>> expression;
+    public PredicateBuilder<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
+    public PredicateBuilder<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+        => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
+    public PredicateBuilder<<#=tables#>> AndMerge(Func<PredicateBuilder<<#=tables#>>, PredicateBuilder<<#=tables#>>> mergePredicate)
+    {
+        if (mergePredicate == null) throw new ArgumentNullException(nameof(mergePredicate));
+        var builder = mergePredicate.Invoke(new PredicateBuilder<<#=tables#>>());
+        return this.Merge(Expression.AndAlso, builder.Build());
+    }
+    public PredicateBuilder<<#=tables#>> Or(Expression<Func<<#=tables#>, bool>> predicate) => this.Merge(Expression.OrElse, predicate);
+    public PredicateBuilder<<#=tables#>> Or(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+        => this.Merge(condition, Expression.OrElse, ifPredicate, elsePredicate);
+    public PredicateBuilder<<#=tables#>> OrMerge(Func<PredicateBuilder<<#=tables#>>, PredicateBuilder<<#=tables#>>> mergePredicate)
+    {
+        if (mergePredicate == null) throw new ArgumentNullException(nameof(mergePredicate));
+        var builder = mergePredicate.Invoke(new PredicateBuilder<<#=tables#>>());
+        return this.Merge(Expression.OrElse, builder.Build());
+    }
+    public PredicateBuilder<<#=tables#>> Not()
+    {
+        if (this.expression == null) throw new NotSupportedException("当前表达式为null，不支持Not操作");
+        this.expression = Expression.Lambda<Func<<#=tables#>, bool>>(Expression.Not(this.expression.Body), this.expression.Parameters);
+        return this;
+    }
+    public PredicateBuilder<<#=tables#>> Not(bool condition)
+    {
+        if (condition) this.Not();
+        return this;
+    }
+    public Expression<Func<<#=tables#>, bool>> Build() => this.expression as Expression<Func<<#=tables#>, bool>>;
+    private PredicateBuilder<<#=tables#>> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<<#=tables#>, bool>> predicate)
+    {
+        if (predicate == null) throw new ArgumentNullException(nameof(predicate));
+        if (this.expression == null) this.expression = predicate;
+        else
+        {
+            var body = mergeOp.Invoke(this.expression.Body, predicate.Body);
+            this.expression = Expression.Lambda<Func<<#=tables#>, bool>>(body, this.expression.Parameters);
+        }
+        return this;
+    }
+    private PredicateBuilder<<#=tables#>> Merge(bool condition, Func<Expression, Expression, Expression> mergeOp, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate)
+    {
+        if (condition) this.Merge(mergeOp, ifPredicate);
+        else if (elsePredicate != null) this.Merge(mergeOp, elsePredicate);
+        return this;
+    }
+}
+<#  }#>

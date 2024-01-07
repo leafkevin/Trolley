@@ -202,8 +202,12 @@
       <LastGenOutput>MultiGroupingQuery.cs</LastGenOutput>
     </Content>
     <Content Include="Trolley\IFromCommand.tt">
-      <Generator>TextTemplatingFilePreprocessor</Generator>
+      <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IFromCommand.cs</LastGenOutput>
+    </Content>
+    <Content Include="Trolley\PredicateBuilder.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>PredicateBuilder.cs</LastGenOutput>
     </Content>
     <Content Include="Trolley\Update.tt">
       <Generator>TextTemplatingFileGenerator</Generator>

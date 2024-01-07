@@ -328,16 +328,9 @@ public class SqlVisitor : ISqlVisitor
                 //Where(f => f.Amount > 5)
                 //Select(f => new { f.OrderId, f.Disputes ...})
                 var tableSegment = this.TableAlias[parameterName];
-                var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
-
-                if (memberMapper.IsIgnore)
-                    throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
-                if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
-                    throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
-
                 sqlSegment.HasField = true;
-                sqlSegment.IsConstant = false;
                 sqlSegment.TableSegment = tableSegment;
+                MemberMap memberMapper = null;
 
                 if (tableSegment.TableType == TableType.FromQuery || tableSegment.TableType == TableType.CteSelfRef)
                 {
@@ -345,12 +338,18 @@ public class SqlVisitor : ISqlVisitor
                     //Json的实体类型字段
                     var readerField = tableSegment.ReaderFields.Count == 1 ? tableSegment.ReaderFields.First()
                         : tableSegment.ReaderFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
-                    sqlSegment.FromMember = memberMapper.Member;
-                    sqlSegment.MemberMapper = readerField.MemberMapper;
+                    memberMapper = readerField.MemberMapper;
+                    sqlSegment.FromMember = readerField.FromMember;
+                    sqlSegment.MemberMapper = memberMapper;
                     sqlSegment.Value = readerField.Body;
                 }
                 else
                 {
+                    memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
+                    if (memberMapper.IsIgnore)
+                        throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
+                    if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
+                        throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
                     sqlSegment.FromMember = memberMapper.Member;
                     sqlSegment.MemberMapper = memberMapper;
                     //查询时，IsNeedAlias始终为true，新增、更新、删除时，引用联表操作时，才会为true
@@ -433,7 +432,9 @@ public class SqlVisitor : ISqlVisitor
                         {
                             FieldType = ReaderFieldType.Field,
                             TableSegment = argumentSegment.TableSegment,
+                            MemberMapper = argumentSegment.MemberMapper,
                             FromMember = argumentSegment.FromMember,
+                            TargetMember = argumentSegment.FromMember,
                             Body = fieldName
                         });
                         if (builder.Length > 0)
@@ -774,16 +775,14 @@ public class SqlVisitor : ISqlVisitor
         var binaryExpr = sqlSegment.Expression as BinaryExpression;
         if (binaryExpr.NodeType == ExpressionType.Add && (binaryExpr.Left.Type == typeof(string) || binaryExpr.Right.Type == typeof(string)))
         {
-            //先打开所有要拼接的部分，最后再拼接
-            var concatExprs = this.SplitConcatList(sqlSegment.Expression);
             //调用拼接方法Concat,每个数据库Provider都实现了这个方法
             var methodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(object[]) });
-            var parameters = Expression.NewArrayInit(typeof(object), concatExprs);
+            var parameters = Expression.NewArrayInit(typeof(object), binaryExpr);
             var methodCallExpr = Expression.Call(methodInfo, parameters);
             sqlSegment.Expression = methodCallExpr;
             this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formater);
             //返回的SQL表达式中直接拼接好          
-            result = formater.Invoke(this, binaryExpr, null, null, concatExprs);
+            result = formater.Invoke(this, binaryExpr, null, null, binaryExpr);
             return true;
         }
         result = null;
@@ -890,7 +889,7 @@ public class SqlVisitor : ISqlVisitor
                         nextExpr = binaryExpr.Left;
                         continue;
                     }
-                    completedExprs.Add(nextExpr);
+                    completedExprs.Add(binaryExpr.Left);
                     if (isConcatBinary(binaryExpr.Right))
                     {
                         nextExpr = binaryExpr.Right;
@@ -974,22 +973,6 @@ public class SqlVisitor : ISqlVisitor
         }
         return completedExprs.ToArray();
     }
-    //public virtual List<ReaderField> AddIncludeTableReaderFields(ReaderField rootReaderField, TableSegment rootTableSegment)
-    //{
-    //    var readerFields = new List<ReaderField>();
-    //    fromSegment.Mapper ??= this.MapProvider.GetEntityMap(fromSegment.EntityType);
-    //    var lastReaderField = new ReaderField
-    //    {
-    //        Index = readerIndex,
-    //        FieldType = ReaderFieldType.Entity,
-    //        TableSegment = fromSegment,
-    //        ReaderFields = this.FlattenTableFields(fromSegment)
-    //        //最外层Select对象的成员，位于顶层, FromMember暂时不设置值，到Select时候去设置 
-    //    };
-    //    readerFields.Add(lastReaderField);
-    //    this.AddIncludeTables(lastReaderField, readerFields);
-    //    return readerFields;
-    //} 
     public virtual string VisitFromQuery(LambdaExpression lambdaExpr)
     {
         var currentExpr = lambdaExpr.Body;
@@ -1175,6 +1158,19 @@ public class SqlVisitor : ISqlVisitor
         }
         return this.OrmProvider.GetQuotedValue(elementValue);
     }
+    public virtual IQueryVisitor CreateQueryVisitor(bool isCteQuery = false)
+    {
+        var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+        queryVisiter.IsMultiple = this.IsMultiple;
+        queryVisiter.CommandIndex = this.CommandIndex;
+        if (isCteQuery)
+        {
+            queryVisiter.CteTables = new();
+            queryVisiter.CteQueries = new();
+            queryVisiter.CteTableSegments = new();
+        }
+        return queryVisiter;
+    }
     /// <summary>
     /// 用于Where条件中，IS NOT NULL,!= 两种情况判断
     /// </summary>
@@ -1221,129 +1217,6 @@ public class SqlVisitor : ISqlVisitor
             strExpression = $"CASE WHEN {strExpression} THEN {ifTrueValue} ELSE {ifFalseValue} END";
         return sqlSegment.Change(strExpression, false, false, true);
     }
-    //public List<ReaderField> FlattenFieldsTo(Type targetType, Expression toTargetExpr = null)
-    //{
-    //    List<ReaderField> targetFields = null;
-    //    if (targetType == null)
-    //        throw new ArgumentNullException(nameof(targetType));
-
-    //    //通过表达式设置的字段
-    //    bool isSpecified = false;
-    //    if (toTargetExpr != null)
-    //    {
-    //        this.SelectToReaderFields(toTargetExpr as LambdaExpression);
-    //        isSpecified = true;
-    //    }
-    //    else targetFields = new List<ReaderField>();
-
-    //    var targetMembers = targetType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-    //        .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
-
-    //    if (isSpecified)
-    //    {
-    //        foreach (var memberInfo in targetMembers)
-    //        {
-    //            var targetField = targetFields.Find(f => f.TargetMember.Name == memberInfo.Name);
-    //            if (targetField != null)
-    //            {
-    //                targetField.TargetMember = memberInfo;
-    //                continue;
-    //            }
-    //            if (this.FindReaderField(memberInfo, targetFields.Count, out var readerField))
-    //                targetFields.Add(readerField);
-    //        }
-    //    }
-    //    else
-    //    {
-    //        foreach (var memberInfo in targetMembers)
-    //        {
-    //            if (this.FindReaderField(memberInfo, targetFields.Count, out var readerField))
-    //                targetFields.Add(readerField);
-    //        }
-    //    }
-    //    return targetFields;
-    //}
-    public void SelectToReaderFields(LambdaExpression toTargetExpr)
-    {
-        var sqlSegment = new SqlSegment { Expression = toTargetExpr.Body };
-        switch (toTargetExpr.Body.NodeType)
-        {
-            case ExpressionType.MemberAccess:
-                var memberExpr = toTargetExpr.Body as MemberExpression;
-                if (this.IsGroupingMember(memberExpr))
-                {
-                    //能够访问Grouping属性的场景，通常是在最外层的Select子句或是OrderBy子句
-                    //此处特殊处理
-                    if (this.IsFromQuery && memberExpr.Type.IsEntityType(out _))
-                        throw new NotSupportedException("FROM子查询中不支持实体类型成员MemberAccess表达式访问，只支持基础字段访问访问");
-
-                    foreach (var readerField in this.GroupFields)
-                    {
-                        if (readerField.TargetMember.Name != readerField.FromMember.Name)
-                            readerField.Body += $" AS {readerField.TargetMember.Name}";
-                    }
-                    this.ReaderFields = this.GroupFields;
-                }
-                else
-                {
-                    sqlSegment = this.VisitMemberAccess(sqlSegment);
-                    //实体类型成员访问，只有两种场景：主表的实体成员(Include子表访问)或是Grouping分组对象访问
-                    if (sqlSegment.MemberType == ReaderFieldType.Entity)
-                        this.ReaderFields = sqlSegment.Value as List<ReaderField>;
-                    else
-                    {
-                        //一定有成员成名
-                        this.ReaderFields = new List<ReaderField>
-                        {
-                            new ReaderField
-                            {
-                                FieldType = ReaderFieldType.Field ,
-                                TableSegment = sqlSegment.TableSegment,
-                                FromMember = sqlSegment.FromMember,
-                                MemberMapper = sqlSegment.MemberMapper,
-                                TargetMember =sqlSegment.FromMember,
-                                Body = sqlSegment.Value.ToString()
-                            }
-                        };
-                    }
-                }
-                break;
-            case ExpressionType.New:
-                sqlSegment = this.VisitNew(sqlSegment);
-                this.ReaderFields = sqlSegment.Value as List<ReaderField>;
-                break;
-            case ExpressionType.MemberInit:
-                sqlSegment = this.VisitMemberInit(sqlSegment);
-                this.ReaderFields = sqlSegment.Value as List<ReaderField>;
-                break;
-            case ExpressionType.Parameter:
-                sqlSegment = this.VisitParameter(sqlSegment);
-                this.ReaderFields = sqlSegment.Value as List<ReaderField>;
-                this.ReaderFields[0].IsTargetType = true;
-                break;
-            default:
-                //单个字段，有表达式计算二元操作或是有方法调用的场景
-                if (toTargetExpr.Body.NodeType == ExpressionType.Call)
-                    sqlSegment.OriginalExpression = toTargetExpr;
-                sqlSegment = this.VisitAndDeferred(sqlSegment);
-                if (sqlSegment.Value is List<ReaderField> readerFields)
-                    this.ReaderFields = readerFields;
-                else
-                {
-                    //单个值，单个字段访问或是有表达式访问或是函数调用等，不一定有成员名称，如：.Select(f => f.Age / 10 * 10)
-                    this.ReaderFields = new List<ReaderField>
-                    {
-                        new ReaderField
-                        {
-                            //可能字段组成来源多个表，不同字段运算或是函数调用，无需设置TableSegment/FromMember/TargetMember
-                            FieldType = sqlSegment.MemberType,
-                            Body = sqlSegment.Value.ToString()
-                        }
-                    };
-                }
-                break;
-        }
-    }
     public List<ReaderField> FlattenTableFields(TableSegment tableSegment)
     {
         var targetFields = new List<ReaderField>();
@@ -1357,8 +1230,8 @@ public class SqlVisitor : ISqlVisitor
                 FieldType = ReaderFieldType.Field,
                 TableSegment = tableSegment,
                 FromMember = memberMapper.Member,
-                TargetMember = memberMapper.Member,
                 MemberMapper = memberMapper,
+                TargetMember = memberMapper.Member,
                 Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(memberMapper.FieldName)
             });
         }
@@ -1484,19 +1357,6 @@ public class SqlVisitor : ISqlVisitor
     {
         if (memberExpr == null) return false;
         return memberExpr.Member.Name == "Grouping" && typeof(IAggregateSelect).IsAssignableFrom(memberExpr.Member.DeclaringType);
-    }
-    public IQueryVisitor CreateQueryVisitor(bool isCteQuery = false)
-    {
-        var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
-        queryVisiter.IsMultiple = this.IsMultiple;
-        queryVisiter.CommandIndex = this.CommandIndex;
-        if (isCteQuery)
-        {
-            queryVisiter.CteTables = new();
-            queryVisiter.CteQueries = new();
-            queryVisiter.CteTableSegments = new();
-        }
-        return queryVisiter;
     }
     public virtual void Dispose()
     {

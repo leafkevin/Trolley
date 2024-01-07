@@ -15,7 +15,7 @@ partial class SqlServerProvider
         switch (methodInfo.Name)
         {
             case "Abs":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     return args0Segment.Change($"ABS({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
@@ -23,7 +23,7 @@ partial class SqlServerProvider
                 result = true;
                 break;
             case "Sign":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     return args0Segment.Change($"SIGN({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
@@ -31,7 +31,7 @@ partial class SqlServerProvider
                 result = true;
                 break;
             case "Floor":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     return args0Segment.Change($"FLOOR({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
@@ -39,7 +39,7 @@ partial class SqlServerProvider
                 result = true;
                 break;
             case "Ceiling":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     return args0Segment.Change($"CEILING({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
@@ -49,7 +49,7 @@ partial class SqlServerProvider
             case "Round":
                 if (parameterInfos.Length > 1 && parameterInfos[1].ParameterType == typeof(int))
                 {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         var args1Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
@@ -61,7 +61,7 @@ partial class SqlServerProvider
                 }
                 if (parameterInfos.Length == 1)
                 {
-                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         return args0Segment.Change($"ROUND({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
@@ -70,7 +70,7 @@ partial class SqlServerProvider
                 }
                 break;
             case "Exp":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     return args0Segment.Change($"EXP({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
@@ -78,7 +78,7 @@ partial class SqlServerProvider
                 result = true;
                 break;
             case "Log":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     return args0Segment.Change($"LOG({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
@@ -86,7 +86,7 @@ partial class SqlServerProvider
                 result = true;
                 break;
             case "Log10":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     return args0Segment.Change($"LOG10({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
@@ -94,7 +94,7 @@ partial class SqlServerProvider
                 result = true;
                 break;
             case "Pow":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     var args1Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
@@ -105,7 +105,7 @@ partial class SqlServerProvider
                 result = true;
                 break;
             case "Sqrt":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     return args0Segment.Change($"SQRT({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
@@ -113,7 +113,7 @@ partial class SqlServerProvider
                 result = true;
                 break;
             case "Cos":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     return args0Segment.Change($"COS({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
@@ -121,7 +121,7 @@ partial class SqlServerProvider
                 result = true;
                 break;
             case "Sin":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     return args0Segment.Change($"SIN({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
@@ -129,7 +129,7 @@ partial class SqlServerProvider
                 result = true;
                 break;
             case "Tan":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     return args0Segment.Change($"TAN({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
@@ -137,7 +137,7 @@ partial class SqlServerProvider
                 result = true;
                 break;
             case "Acos":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     return args0Segment.Change($"ACOS({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
@@ -145,7 +145,7 @@ partial class SqlServerProvider
                 result = true;
                 break;
             case "Asin":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     return args0Segment.Change($"ASIN({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
@@ -153,7 +153,7 @@ partial class SqlServerProvider
                 result = true;
                 break;
             case "Atan":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     return args0Segment.Change($"ATAN({visitor.GetQuotedValue(args0Segment)})", false, false, false, true);
@@ -161,7 +161,7 @@ partial class SqlServerProvider
                 result = true;
                 break;
             case "Atan2":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     var args1Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
@@ -172,7 +172,7 @@ partial class SqlServerProvider
                 result = true;
                 break;
             case "Truncate":
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     return args0Segment.Change($"TRUNCATE({visitor.GetQuotedValue(args0Segment)},0)", false, false, false, true);

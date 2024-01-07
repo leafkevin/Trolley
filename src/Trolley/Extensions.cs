@@ -182,7 +182,7 @@ public static class Extensions
         underlyingType = type;
         if (valueTypes.Contains(type) || type.FullName == "System.Data.Linq.Binary")
             return false;
-        underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+        underlyingType = type.ToUnderlyingType();
         if (valueTypes.Contains(underlyingType) || underlyingType.FullName == "System.Data.Linq.Binary" || underlyingType.IsEnum)
             return false;
         if (type.IsArray)
@@ -422,13 +422,11 @@ public static class Extensions
 
         while (readerIndex < readerFields.Count)
         {
-            ITypeHandler typeHandler = null;
             var readerField = readerFields[readerIndex];
             if (readerField.FieldType == ReaderFieldType.Field)
             {
                 var fieldType = reader.GetFieldType(index);
-                //变成子查询时，如果字段是Json实体类字段，必须带着MemberMapper，里面有TypeHandler
-                typeHandler = readerField.MemberMapper?.TypeHandler;
+                var typeHandler = readerField.MemberMapper?.TypeHandler;
                 var readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
                     readerField.TargetMember.GetMemberType(), fieldType, typeHandler, blockParameters, blockBodies);
                 if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
@@ -439,13 +437,13 @@ public static class Extensions
             {
                 MemberInfo fieldMember = null;
                 Expression readerValueExpr = null;
-                MemberMap memberMapper = null;
                 ReaderField childReaderField = null;
                 var childIndex = 0;
                 var endIndex = index + readerField.ReaderFields?.Count ?? 1;
 
                 if (readerField.FieldType == ReaderFieldType.DeferredFields)
                 {
+                    //TODO:测试
                     if (readerField.FromMember.GetMemberType().IsEntityType(out _))
                     {
                         current = NewBuildInfo(readerField.TargetMember.GetMemberType(), readerField.TargetMember, parent);
@@ -461,7 +459,7 @@ public static class Extensions
                         {
                             childReaderField = readerField.ReaderFields[childIndex];
                             //本地函数调用
-                            memberMapper = childReaderField.MemberMapper;
+                            var memberMapper = childReaderField.MemberMapper;
                             readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
                                 memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
                             argsExprs.Add(readerValueExpr);
@@ -492,7 +490,7 @@ public static class Extensions
                             Expression instanceExpr = null;
                             //1:N关系，readerField.ReaderFields的值为null
                             if (readerField.ReaderFields == null)
-                                instanceExpr = Expression.Default(readerField.FromMember.GetMemberType());
+                                instanceExpr = Expression.Default(readerField.TargetMember.GetMemberType());
                             else
                             {
                                 var refReaderField = readerField.ReaderFields[0];
@@ -500,7 +498,7 @@ public static class Extensions
                                 instanceExpr = refBuildInfo.Instance;
                             }
                             if (parent.IsDefault)
-                                parent.Bindings.Add(Expression.Bind(readerField.FromMember, instanceExpr));
+                                parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
                             else parent.Arguments.Add(instanceExpr);
                             readerIndex++;
                             continue;
@@ -512,9 +510,9 @@ public static class Extensions
                         var fieldType = reader.GetFieldType(index);
                         childReaderField = readerField.ReaderFields[childIndex];
                         fieldMember = childReaderField.TargetMember;
-                        typeHandler = childReaderField.MemberMapper.TypeHandler;
+                        var typeHandler = childReaderField.MemberMapper?.TypeHandler;
                         readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                            childReaderField.MemberMapper.MemberType, fieldType, typeHandler, blockParameters, blockBodies);
+                            fieldMember.GetMemberType(), fieldType, typeHandler, blockParameters, blockBodies);
 
                         if (current.IsDefault) current.Bindings.Add(Expression.Bind(fieldMember, readerValueExpr));
                         else current.Arguments.Add(readerValueExpr);

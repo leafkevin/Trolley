@@ -1,8 +1,12 @@
-﻿namespace Trolley.MySqlConnector;
+﻿using System.Data;
+
+namespace Trolley.MySqlConnector;
 
 partial class MySqlProvider
 {
     public override IRepository CreateRepository(DbContext dbContext) => new MySqlRepository(dbContext);
+    public override IQueryVisitor NewQueryVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
+        => new MySqlQueryVisitor(dbKey, this, mapProvider, isParameterized, tableAsStart, parameterPrefix, dbParameters);
     public override ICreate<TEntity> NewCreate<TEntity>(DbContext dbContext) => new MySqlCreate<TEntity>(dbContext);
     public override IContinuedCreate<TEntity> NewContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor)
         => new MySqlContinuedCreate<TEntity>(dbContext, visitor);

@@ -55,7 +55,7 @@ public static class FasterEvaluator
     public static object Evaluate(this NewExpression expression)
     {
         if (expression.Arguments.Count > 0)
-            return Activator.CreateInstance(expression.Type, expression.Arguments.Select(arg => arg.Evaluate()));
+            return Activator.CreateInstance(expression.Type, expression.Arguments.Select(arg => arg.Evaluate()).ToArray());
         else return Activator.CreateInstance(expression.Type);
     }
     public static object Evaluate(this MemberInitExpression expression)

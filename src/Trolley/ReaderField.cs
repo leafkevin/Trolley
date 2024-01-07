@@ -23,6 +23,7 @@ public class ReaderField
     public TableSegment TableSegment { get; set; }
     /// <summary>
     /// 原TableSegment表中的成员，Include子表的场景时，父亲对象中的成员，如：Order.Buyer成员，根据此成员信息设置主表属性值
+    /// 每变更一次子查询，都会更改此成员值，用于最外层与TargetMember比较，是否AS别名
     /// </summary>
     public MemberInfo FromMember { get; set; }
     /// <summary>
@@ -79,7 +80,7 @@ public enum ReaderFieldType : byte
     /// <summary>
     /// 字段
     /// </summary>
-    Field = 1,
+    Field,
     /// <summary>
     /// 实体类型，三种场景：参数访问，直接主表的Include导航属性成员访问，Grouping分组对象成员，返回的类型是ReaderField列表
     /// </summary>

@@ -1194,17 +1194,19 @@ public class RepositoryHelper
             return commandInitializer;
         });
     }
-    public static object BuildUpdateSetPartSqlParameters(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type updateObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool hasSuffix)
+    public static object BuildUpdateSetPartSqlParameters(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type updateObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool hasSuffix, bool isNeedParameters = true)
     {
-        var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
         var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
         var builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
         var updateObjExpr = Expression.Parameter(typeof(object), "updateObj");
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
 
+        ParameterExpression dbParametersExpr = null;
         ParameterExpression suffixExpr = null;
+        if (isNeedParameters) dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
         if (hasSuffix) suffixExpr = Expression.Parameter(typeof(string), "suffix");
+
         MethodInfo methodInfo = null;
         var entityMapper = mapProvider.GetEntityMap(entityType);
         var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
@@ -1287,9 +1289,15 @@ public class RepositoryHelper
             loopBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
 
             //if(index > 0) builder.Append(",");
-            var greaterThenExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0));
+            Expression greaterThanExpr = null;
+            if (isNeedParameters) greaterThanExpr = Expression.GreaterThan(indexExpr, Expression.Constant(0));
+            else
+            {
+                var lengthExpr = Expression.Property(builderExpr, nameof(StringBuilder.Length));
+                greaterThanExpr = Expression.GreaterThan(lengthExpr, Expression.Constant(0));
+            }
             var callExpr = Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(","));
-            loopBodies.Add(Expression.IfThen(greaterThenExpr, callExpr));
+            loopBodies.Add(Expression.IfThen(greaterThanExpr, callExpr));
 
             //builder.Append($"{ormProider.GetFieldName(itemKey)}={parameterName}");
             methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetFieldName));
@@ -1298,10 +1306,13 @@ public class RepositoryHelper
             loopBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant("=")));
             loopBodies.Add(Expression.Call(builderExpr, appendMethodInfo, parameterNameExpr));
 
-            //ormProvider.AddDbParameter(dbKey, dbParameters, memberMapper, parameterName, fieldValue);
-            methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.AddDbParameter));
-            loopBodies.Add(Expression.Call(methodInfo, ormProviderExpr, Expression.Constant(dbKey),
-                dbParametersExpr, memberMapperExpr, parameterNameExpr, fieldValueExpr));
+            if (isNeedParameters)
+            {
+                //ormProvider.AddDbParameter(dbKey, dbParameters, memberMapper, parameterName, fieldValue);
+                methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.AddDbParameter));
+                loopBodies.Add(Expression.Call(methodInfo, ormProviderExpr, Expression.Constant(dbKey),
+                    dbParametersExpr, memberMapperExpr, parameterNameExpr, fieldValueExpr));
+            }
 
             //index++;
             loopBodies.Add(Expression.AddAssign(indexExpr, Expression.Constant(1)));
@@ -1336,7 +1347,13 @@ public class RepositoryHelper
                     continue;
 
                 if (index > 0) blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(",")));
-
+                else if (!isNeedParameters)
+                {
+                    var lengthExpr = Expression.Property(builderExpr, nameof(StringBuilder.Length));
+                    var greaterThanExpr = Expression.GreaterThan(lengthExpr, Expression.Constant(0));
+                    var addCommaExpr = Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(","));
+                    blockBodies.Add(Expression.IfThen(greaterThanExpr, addCommaExpr));
+                }
                 Expression myParameterNameExpr = Expression.Constant(ormProvider.ParameterPrefix + memberMapper.MemberName);
                 if (hasSuffix)
                 {
@@ -1348,19 +1365,33 @@ public class RepositoryHelper
                 blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, fieldNameExpr));
                 blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, myParameterNameExpr));
 
-                var fieldValueExpr = Expression.PropertyOrField(typedUpdateObjExpr, memberMapper.MemberName);
-                AddValueParameter(dbParametersExpr, ormProviderExpr, parameterNameExpr, fieldValueExpr, memberMapper, blockParameters, blockBodies);
+                if (isNeedParameters)
+                {
+                    var fieldValueExpr = Expression.PropertyOrField(typedUpdateObjExpr, memberMapper.MemberName);
+                    AddValueParameter(dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueExpr, memberMapper, blockParameters, blockBodies);
+                }
                 index++;
             }
         }
 
         object result = null;
-        if (hasSuffix) result = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, string>>(
-            Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, builderExpr, updateObjExpr, suffixExpr).Compile();
-        else result = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, StringBuilder, object>>(
-            Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, builderExpr, updateObjExpr).Compile();
+        if (isNeedParameters)
+        {
+            if (hasSuffix) result = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, string>>(
+                Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, builderExpr, updateObjExpr, suffixExpr).Compile();
+            else result = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, StringBuilder, object>>(
+                Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, builderExpr, updateObjExpr).Compile();
+        }
+        else
+        {
+            if (hasSuffix) result = Expression.Lambda<Action<IOrmProvider, StringBuilder, object, string>>(
+                Expression.Block(blockParameters, blockBodies), ormProviderExpr, builderExpr, updateObjExpr, suffixExpr).Compile();
+            else result = Expression.Lambda<Action<IOrmProvider, StringBuilder, object>>(
+                Expression.Block(blockParameters, blockBodies), ormProviderExpr, builderExpr, updateObjExpr).Compile();
+        }
         return result;
     }
+
     public static object BuildUpdateSetWithPartSqlParameters(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type updateObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool hasSuffix)
     {
         var cacheKey = HashCode.Combine(dbKey, ormProvider, mapProvider, entityType, updateObjType, onlyFieldNames, ignoreFieldNames);

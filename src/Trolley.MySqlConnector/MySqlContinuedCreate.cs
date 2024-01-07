@@ -11,7 +11,10 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
 
     #region Constructor
     public MySqlContinuedCreate(DbContext dbContext, ICreateVisitor visitor)
-        : base(dbContext, visitor) { }
+        : base(dbContext, visitor)
+    {
+        this.DialectVisitor = this.Visitor as MySqlCreateVisitor;
+    }
     #endregion
 
     #region WithBy

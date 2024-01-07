@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Trolley.MySqlConnector;
 
-public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
+public class MySqlCreateVisitor : CreateVisitor
 {
     public bool IsUseIgnoreInto { get; set; }
     protected StringBuilder UpdateFields { get; set; }
@@ -115,17 +115,16 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var updateObjType = updateObj.GetType();
-        var setFieldsInitializer = RepositoryHelper.BuildUpdateSetPartSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple);
+        var setFieldsInitializer = RepositoryHelper.BuildUpdateSetPartSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple, false);
         if (this.IsMultiple)
         {
-            var typedSetFieldsInitializer = setFieldsInitializer as Action<IDataParameterCollection, StringBuilder, object, string>;
-            typedSetFieldsInitializer.Invoke(this.DbParameters, this.UpdateFields, updateObj, $"_m{this.CommandIndex}");
+            var typedSetFieldsInitializer = setFieldsInitializer as Action<IOrmProvider, StringBuilder, object, string>;
+            typedSetFieldsInitializer.Invoke(this.OrmProvider, this.UpdateFields, updateObj, $"_m{this.CommandIndex}");
         }
         else
         {
-            //TODO:参数名称，已经被create子句使用
-            var typedSetFieldsInitializer = setFieldsInitializer as Action<IDataParameterCollection, StringBuilder, object>;
-            typedSetFieldsInitializer.Invoke(this.DbParameters, this.UpdateFields, updateObj);
+            var typedSetFieldsInitializer = setFieldsInitializer as Action<IOrmProvider, StringBuilder, object>;
+            typedSetFieldsInitializer.Invoke(this.OrmProvider, this.UpdateFields, updateObj);
         }
     }
     public virtual void VisitSet(LambdaExpression lambdaExpr)
@@ -156,6 +155,7 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
                 case "Alias":
                     if (callExpr.Arguments.Count > 0)
                         aliasName = this.Evaluate<string>(callExpr.Arguments[0]);
+                    this.UpdateFields.Append($" AS {aliasName}");
                     isAlias = true;
                     break;
                 case "Set":
@@ -267,6 +267,20 @@ public class MySqlCreateVisitor : CreateVisitor, ICreateVisitor
         //    return sqlSegment.Change(readerFields);
         //}
         return this.Evaluate(sqlSegment);
+    }
+    public override IQueryVisitor CreateQueryVisitor(bool isCteQuery = false)
+    {
+        var queryVisiter = new MySqlQueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+        queryVisiter.IsMultiple = this.IsMultiple;
+        queryVisiter.CommandIndex = this.CommandIndex;
+        queryVisiter.IsUseIgnoreInto = this.IsUseIgnoreInto;
+        if (isCteQuery)
+        {
+            queryVisiter.CteTables = new();
+            queryVisiter.CteQueries = new();
+            queryVisiter.CteTableSegments = new();
+        }
+        return queryVisiter;
     }
     public virtual void InitTableAlias(LambdaExpression lambdaExpr)
     {

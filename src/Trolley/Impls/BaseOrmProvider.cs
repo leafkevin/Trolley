@@ -291,11 +291,6 @@ public abstract class BaseOrmProvider : IOrmProvider
         if (!memberAccessSqlFormatterCache.TryGetValue(cacheKey, out formatter))
         {
             bool result = false;
-            if (memberInfo.DeclaringType == typeof(DBNull))
-            {
-                formatter = (visitor, target) => SqlSegment.Null;
-                return true;
-            }
             if (memberInfo.DeclaringType == typeof(string) && this.TryGetStringMemberAccessSqlFormatter(memberExpr, out formatter))
                 return true;
             if (memberInfo.DeclaringType == typeof(DateTime) && this.TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out formatter))
@@ -413,7 +408,7 @@ public abstract class BaseOrmProvider : IOrmProvider
                         }
                         if (parameterInfos.Length > 1 && parameterInfos[0].ParameterType == typeof(Type))
                         {
-                            methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                            formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                             {
                                 SqlSegment resultSegment = null;
                                 var arguments = new List<object>();
