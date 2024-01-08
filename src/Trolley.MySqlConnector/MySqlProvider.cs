@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq.Expressions;
 
 namespace Trolley.MySqlConnector;
 
@@ -101,7 +102,7 @@ public partial class MySqlProvider : BaseOrmProvider
         castTos[typeof(long)] = "SIGNED";
         castTos[typeof(ulong)] = "UNSIGNED";
         castTos[typeof(float)] = "FLOAT";
-        castTos[typeof(double)] = "DOUBLE";        
+        castTos[typeof(double)] = "DOUBLE";
         castTos[typeof(decimal)] = "DECIMAL(36,18)";
         castTos[typeof(DateTime)] = "DATETIME";
         castTos[typeof(DateOnly)] = "DATE";
@@ -134,7 +135,7 @@ public partial class MySqlProvider : BaseOrmProvider
         return parameter;
     }
     public override string GetTableName(string entityName) => "`" + entityName + "`";
-    public override string GetFieldName(string propertyName) => "`" + propertyName + "`";
+    public override string GetFieldName(string fieldName) => "`" + fieldName + "`";
     public override object GetNativeDbType(Type fieldType)
     {
         if (!defaultDbTypes.TryGetValue(fieldType, out var dbType))
@@ -163,5 +164,45 @@ public partial class MySqlProvider : BaseOrmProvider
             return $"'{timeSpan.ToString("hh\\:mm\\:ss\\.fffffff")}'";
         }
         return base.GetQuotedValue(expectType, value);
+    }
+    public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
+    {
+        var methodInfo = methodCallExpr.Method;
+        var parameterInfos = methodInfo.GetParameters();
+        switch (methodInfo.Name)
+        {
+            case "Values":
+                var genericArgumentTypes = methodInfo.DeclaringType.GetGenericArguments();
+                if (genericArgumentTypes.Length == 1 && methodInfo.DeclaringType == typeof(IMySqlCreateDuplicateKeyUpdate<>).MakeGenericType(genericArgumentTypes[0]))
+                {
+                    var genericArgumentType = methodInfo.GetGenericArguments()[0];
+                    var cacheKey = HashCode.Combine(typeof(IMySqlCreateDuplicateKeyUpdate<>), methodInfo);
+                    //.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                    {
+                        var myVisitor = visitor as MySqlCreateVisitor;
+                        if (args[0] is not MemberExpression memberExpr)
+                            throw new NotSupportedException($"不支持的表达式访问，类型{methodInfo.DeclaringType.FullName}.Values方法，只支持MemberAccess访问，如：.Set(f =&gt; new {{TotalAmount = x.Values(f.TotalAmount)}})");
+                        if (!myVisitor.Tables[0].Mapper.TryGetMemberMap(memberExpr.Member.Name, out var memberMapper))
+                            throw new MissingMemberException($"类{myVisitor.Tables[0].EntityType.FullName}未找到成员{memberExpr.Member.Name}");
+
+                        //使用别名，一定要先使用，后使用的话，存在表达式计算场景无法解析，如：.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
+                        var fieldName = this.GetFieldName(memberMapper.FieldName);
+                        if (myVisitor.IsSetAlias) fieldName = myVisitor.SetRowAlias + "." + fieldName;
+                        else fieldName = $"VALUES({fieldName})";
+                        return new SqlSegment
+                        {
+                            MemberMapper = memberMapper,
+                            FromMember = memberMapper.Member,
+                            HasField = true,
+                            Value = fieldName
+                        };
+                    });
+                    return true;
+                }
+                break;
+        }
+        formatter = null;
+        return false;
     }
 }

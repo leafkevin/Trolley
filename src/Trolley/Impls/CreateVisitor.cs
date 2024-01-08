@@ -319,10 +319,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     var memberInfo = newExpr.Members[i];
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
                         continue;
-
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i], MemberMapper = memberMapper });
-                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberInfo.Name)
-                        fieldNames.Add(memberMapper.MemberName);
+                    if (newExpr.Arguments[i] is not MemberExpression memberExpr)
+                        throw new NotSupportedException($"不支持的表达式访问，只支持MemberAccess访问，Path:{newExpr.Arguments[i]}");
+                    fieldNames.Add(memberMapper.MemberName);
                 }
                 break;
             case ExpressionType.MemberInit:
@@ -332,10 +331,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
                     if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
                         continue;
-
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression });
-                    if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall && sqlSegment.FromMember.Name == memberAssignment.Member.Name)
-                        fieldNames.Add(memberMapper.MemberName);
+                    if (memberAssignment.Expression is not MemberExpression memberExpr)
+                        throw new NotSupportedException($"不支持的表达式访问，只支持MemberAccess访问，Path:{memberAssignment.Expression}");
+                    fieldNames.Add(memberMapper.MemberName);
                 }
                 break;
         }

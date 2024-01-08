@@ -135,7 +135,7 @@ public partial class SqlServerProvider : BaseOrmProvider
     public override IUpdateVisitor NewUpdateVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         => new SqlServerUpdateVisitor(dbKey, this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
 
-    public override string GetFieldName(string propertyName) => "[" + propertyName + "]";
+    public override string GetFieldName(string fieldName) => "[" + fieldName + "]";
     public override string GetTableName(string entityName) => "[" + entityName + "]";
     public override string GetPagingTemplate(int? skip, int? limit, string orderBy = null)
     {

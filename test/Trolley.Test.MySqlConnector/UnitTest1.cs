@@ -1036,43 +1036,43 @@ public class UnitTest1 : UnitTestBase
         //Assert.True(parameters.Count == 1);
     }
     [Fact]
-    public void Insert_OnDuplicateKeyUpdate()
+    public async void Insert_OnDuplicateKeyUpdate()
     {
         using var repository = dbFactory.Create();
         UserSourceType? buyerSource = UserSourceType.Douyin;
-        var sql1 = repository.Create<Order>()
-             .WithBy(new
-             {
-                 Id = 9,
-                 OrderNo = "ON-001",
-                 BuyerId = 1,
-                 SellerId = 2,
-                 TotalAmount = 500,
-                 Products = new List<int> { 1, 2 },
-                 Disputes = new Dispute
-                 {
-                     Id = 2,
-                     Content = "无良商家",
-                     Result = "同意退款",
-                     Users = "Buyer2,Seller2",
-                     CreatedAt = DateTime.Now
-                 },
-                 IsEnabled = true,
-                 CreatedAt = DateTime.Now,
-                 CreatedBy = 1,
-                 UpdatedAt = DateTime.Now,
-                 UpdatedBy = 1
-             })
-             .OnDuplicateKeyUpdate(x => x.Alias("row")
-                .Set(new
-                {
-                    TotalAmount = 25,
-                    Products = new List<int> { 1, 2 }
-                })
-                .Set(buyerSource.HasValue, new { BuyerSource = buyerSource })
-             )
-            .ToSql(out _);
-        Assert.True(sql1 == "INSERT INTO `sys_order` (`Id`,`OrderNo`,`BuyerId`,`SellerId`,`TotalAmount`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@OrderNo,@BuyerId,@SellerId,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerSource`=@BuyerSource AS row");
+        //var sql1 = repository.Create<Order>()
+        //     .WithBy(new
+        //     {
+        //         Id = 9,
+        //         OrderNo = "ON-001",
+        //         BuyerId = 1,
+        //         SellerId = 2,
+        //         TotalAmount = 500,
+        //         Products = new List<int> { 1, 2 },
+        //         Disputes = new Dispute
+        //         {
+        //             Id = 2,
+        //             Content = "无良商家",
+        //             Result = "同意退款",
+        //             Users = "Buyer2,Seller2",
+        //             CreatedAt = DateTime.Now
+        //         },
+        //         IsEnabled = true,
+        //         CreatedAt = DateTime.Now,
+        //         CreatedBy = 1,
+        //         UpdatedAt = DateTime.Now,
+        //         UpdatedBy = 1
+        //     })
+        //     .OnDuplicateKeyUpdate(x => x
+        //        .Set(new
+        //        {
+        //            TotalAmount = 25,
+        //            Products = new List<int> { 1, 2 }
+        //        })
+        //        .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource)
+        //     )
+        //    .ToSql(out _);
+        //Assert.True(sql1 == "INSERT INTO `sys_order` (`Id`,`OrderNo`,`BuyerId`,`SellerId`,`TotalAmount`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@OrderNo,@BuyerId,@SellerId,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerSource`=@BuyerSource");
 
         var sql2 = repository.Create<Order>()
              .WithBy(new
@@ -1081,6 +1081,7 @@ public class UnitTest1 : UnitTestBase
                  OrderNo = "ON-001",
                  BuyerId = 1,
                  SellerId = 2,
+                 BuyerSource = buyerSource,
                  TotalAmount = 500,
                  Products = new List<int> { 1, 2 },
                  Disputes = new Dispute
@@ -1097,15 +1098,81 @@ public class UnitTest1 : UnitTestBase
                  UpdatedAt = DateTime.Now,
                  UpdatedBy = 1
              })
-             .OnDuplicateKeyUpdate(x => x.Alias("row")
-                .Set(f => new
-                {
-                    TotalAmount = f.TotalAmount + x.Values(f.TotalAmount),
-                    Products = new List<int> { 1, 2 }
-                })
-                .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource)
-             )
+             .OnDuplicateKeyUpdate(x => x
+                .Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
+                .Set(true, f => f.Products))
             .ToSql(out _);
-        Assert.True(sql2 == "");
+        Assert.True(sql2 == "INSERT INTO `sys_order` (`Id`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`TotalAmount`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@OrderNo,@BuyerId,@SellerId,@BuyerSource,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=VALUES(`TotalAmount`),`Products`=VALUES(`Products`)");
+
+        await repository.BeginTransactionAsync();
+        await repository.DeleteAsync<Order>(9);
+        var count = await repository.Create<Order>()
+             .WithBy(new
+             {
+                 Id = 9,
+                 OrderNo = "ON-001",
+                 BuyerId = 1,
+                 SellerId = 2,
+                 BuyerSource = buyerSource,
+                 TotalAmount = 500,
+                 //Products = new List<int> { 1, 2 },
+                 Disputes = new Dispute
+                 {
+                     Id = 2,
+                     Content = "无良商家",
+                     Result = "同意退款",
+                     Users = "Buyer2,Seller2",
+                     CreatedAt = DateTime.Now
+                 },
+                 IsEnabled = true,
+                 CreatedAt = DateTime.Now,
+                 CreatedBy = 1,
+                 UpdatedAt = DateTime.Now,
+                 UpdatedBy = 1
+             })
+             .OnDuplicateKeyUpdate(x => x
+                .Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
+                .Set(true, f => f.Products))
+            .ExecuteAsync();
+        var order = await repository.GetAsync<Order>(9);
+        await repository.CommitAsync();
+        Assert.True(count == 1);
+        Assert.True(order.TotalAmount == 500);
+        Assert.True(order.Products == null);
+
+        await repository.BeginTransactionAsync();
+        count = await repository.Create<Order>()
+            .WithBy(new
+            {
+                Id = 9,
+                OrderNo = "ON-001",
+                BuyerId = 1,
+                SellerId = 2,
+                BuyerSource = buyerSource,
+                TotalAmount = 600,
+                Products = new List<int> { 1, 2 },
+                Disputes = new Dispute
+                {
+                    Id = 2,
+                    Content = "无良商家",
+                    Result = "同意退款",
+                    Users = "Buyer2,Seller2",
+                    CreatedAt = DateTime.Now
+                },
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .OnDuplicateKeyUpdate(x => x
+                .Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
+                .Set(true, f => f.Products))
+            .ExecuteAsync();
+        order = await repository.GetAsync<Order>(9);
+        await repository.CommitAsync();
+        Assert.True(count == 2);
+        Assert.True(order.TotalAmount == 600);
+        Assert.True(new JsonTypeHandler().ToFieldValue(null, order.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
     }
 }

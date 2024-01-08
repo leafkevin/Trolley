@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -10,8 +9,10 @@ namespace Trolley.MySqlConnector;
 public class MySqlCreateVisitor : CreateVisitor
 {
     public bool IsUseIgnoreInto { get; set; }
-    protected StringBuilder UpdateFields { get; set; }
-    protected bool IsUpdate { get; set; }
+    public StringBuilder UpdateFields { get; set; }
+    public bool IsUpdate { get; set; }
+    public bool IsSetAlias { get; set; }
+    public string SetRowAlias { get; set; } = "newRow";
 
     public MySqlCreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix) { }
@@ -40,7 +41,7 @@ public class MySqlCreateVisitor : CreateVisitor
                     break;
                 case "SetExpression":
                     this.UpdateFields ??= new();
-                    this.VisitSet(deferredSegment.Value as LambdaExpression);
+                    this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
                     break;
             }
         }
@@ -72,7 +73,6 @@ public class MySqlCreateVisitor : CreateVisitor
         bool hasUpdateFields = false;
         if (this.UpdateFields != null && this.UpdateFields.Length > 0)
         {
-            var sql = this.UpdateFields.Insert(0, " ON DUPLICATE KEY UPDATE ").ToString();
             valuesBuilder.Append(this.UpdateFields);
             this.UpdateFields = null;
             hasUpdateFields = true;
@@ -115,19 +115,19 @@ public class MySqlCreateVisitor : CreateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var updateObjType = updateObj.GetType();
-        var setFieldsInitializer = RepositoryHelper.BuildUpdateSetPartSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple, false);
+        var setFieldsInitializer = RepositoryHelper.BuildUpdateSetPartSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple, true);
         if (this.IsMultiple)
         {
-            var typedSetFieldsInitializer = setFieldsInitializer as Action<IOrmProvider, StringBuilder, object, string>;
-            typedSetFieldsInitializer.Invoke(this.OrmProvider, this.UpdateFields, updateObj, $"_m{this.CommandIndex}");
+            var typedSetFieldsInitializer = setFieldsInitializer as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, string>;
+            typedSetFieldsInitializer.Invoke(this.DbParameters, this.OrmProvider, this.UpdateFields, updateObj, $"_m{this.CommandIndex}");
         }
         else
         {
-            var typedSetFieldsInitializer = setFieldsInitializer as Action<IOrmProvider, StringBuilder, object>;
-            typedSetFieldsInitializer.Invoke(this.OrmProvider, this.UpdateFields, updateObj);
+            var typedSetFieldsInitializer = setFieldsInitializer as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object>;
+            typedSetFieldsInitializer.Invoke(this.DbParameters, this.OrmProvider, this.UpdateFields, updateObj);
         }
     }
-    public virtual void VisitSet(LambdaExpression lambdaExpr)
+    public virtual void VisitSetExpression(LambdaExpression lambdaExpr)
     {
         this.IsUpdate = true;
         var currentExpr = lambdaExpr.Body;
@@ -144,19 +144,17 @@ public class MySqlCreateVisitor : CreateVisitor
                 currentExpr = callExpr.Object;
             }
         }
-        var aliasName = "row";
-        bool isAlias = false;
         this.InitTableAlias(lambdaExpr);
+        bool isNeedAlias = false;
         while (callStack.TryPop(out var callExpr))
         {
             var genericArguments = callExpr.Method.GetGenericArguments();
             switch (callExpr.Method.Name)
             {
                 case "Alias":
-                    if (callExpr.Arguments.Count > 0)
-                        aliasName = this.Evaluate<string>(callExpr.Arguments[0]);
-                    this.UpdateFields.Append($" AS {aliasName}");
-                    isAlias = true;
+                    //if (callExpr.Arguments.Count > 0)
+                    //    this.SetRowAlias = this.Evaluate<string>(callExpr.Arguments[0]);
+                    this.IsSetAlias = true;
                     break;
                 case "Set":
                     //var genericType = genericArguments[0].DeclaringType;
@@ -164,8 +162,14 @@ public class MySqlCreateVisitor : CreateVisitor
                     {
                         //Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
                         if (callExpr.Arguments[0].Type.BaseType == typeof(LambdaExpression))
+                        {
+                            var argumentExpr = callExpr.Arguments[0];
+                            //if (argumentExpr.NodeType != ExpressionType.New && argumentExpr.NodeType != ExpressionType.MemberAccess)
+                            //    throw new NotSupportedException($"不支持的表达式访问，类型{callExpr.Method.DeclaringType.FullName}.Set方法，只支持MemberAccess/New访问，如：.Set(f =&gt; f.TotalAmount) 或 .Set(f =&gt; new {{TotalAmount = f.TotalAmount + x.Values(f.TotalAmount)}})");
                             this.VisitAndDeferred(new SqlSegment { Expression = callExpr.Arguments[0] });
-                        //Set<TUpdateObj>(TUpdateObj updateObj)
+                            isNeedAlias = true;
+                        }
+                        //Set<TUpdateObj>(TUpdateObj updateObj), 走参数
                         else this.VisitSetObject(this.Evaluate(callExpr.Arguments[0]));
                     }
                     else if (callExpr.Arguments.Count == 2)
@@ -173,8 +177,12 @@ public class MySqlCreateVisitor : CreateVisitor
                         //Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
                         if (callExpr.Arguments[1].Type.BaseType == typeof(LambdaExpression))
                         {
+                            var argumentExpr = callExpr.Arguments[1];
+                            //if (argumentExpr.NodeType != ExpressionType.New && argumentExpr.NodeType != ExpressionType.MemberAccess)
+                            //    throw new NotSupportedException($"不支持的表达式访问，类型{callExpr.Method.DeclaringType.FullName}.Set方法，只支持MemberAccess/New访问，如：.Set(true, f =&gt; f.TotalAmount) 或 .Set(true, f =&gt; new {{TotalAmount = f.TotalAmount + x.Values(f.TotalAmount)}})");
                             var condition = this.Evaluate<bool>(callExpr.Arguments[0]);
                             if (condition) this.VisitAndDeferred(new SqlSegment { Expression = callExpr.Arguments[1] });
+                            isNeedAlias = true;
                         }
                         else
                         {
@@ -195,77 +203,57 @@ public class MySqlCreateVisitor : CreateVisitor
                         if (condition) this.VisitWithSetField(callExpr.Arguments[1], this.Evaluate(callExpr.Arguments[2]));
                     }
                     break;
-                case "Values":
-                    var memberExpr = callExpr.Arguments[0] as MemberExpression;
-                    var memberMapper = this.Tables[0].Mapper.GetMemberMap(memberExpr.Member.Name);
-                    var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
-                    if (isAlias) this.UpdateFields.Append($"{fieldName}=VALUES({aliasName}.{fieldName})");
-                    else this.UpdateFields.Append($"{fieldName}=VALUES({fieldName})");
-                    break;
             }
         }
-        if (isAlias) this.UpdateFields.Append($" AS {aliasName}");
+        this.UpdateFields.Insert(0, " ON DUPLICATE KEY UPDATE ").ToString();
+        if (this.IsSetAlias && isNeedAlias) this.UpdateFields.Insert(0, $" AS {this.SetRowAlias}");
         this.IsUpdate = false;
+    }
+    public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
+    {
+        sqlSegment = base.VisitMemberAccess(sqlSegment);
+        if (this.IsUpdate)
+        {
+            //.Set(true, f => f.TotalAmount)) 特殊处理一下
+            sqlSegment.Value = $"VALUES({sqlSegment.Value})";
+            this.AddMemberElement(sqlSegment, sqlSegment.MemberMapper);
+        }
+        return sqlSegment;
     }
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
     {
+        //只有OnDuplicateKeyUpdate.Set时，才会走到此场景，如：.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
+        //INSERT INTO ... SELECT ... FROM ... 由FromCommand单独处理了，FromCommand走的是QueryVisitor的解析
         var newExpr = sqlSegment.Expression as NewExpression;
         if (newExpr.Type.Name.StartsWith("<>"))
         {
-            if (this.IsUpdate)
+            var entityMapper = this.Tables[0].Mapper;
+            for (int i = 0; i < newExpr.Arguments.Count; i++)
             {
-                var entityMapper = this.Tables[0].Mapper;
-                for (int i = 0; i < newExpr.Arguments.Count; i++)
-                {
-                    var memberInfo = newExpr.Members[i];
-                    if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
-                        continue;
-
-                    this.AddMemberElement(i, new SqlSegment { Expression = newExpr.Arguments[i], MemberMapper = memberMapper }, memberMapper);
-                }
-                return sqlSegment;
+                var memberInfo = newExpr.Members[i];
+                if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
+                    continue;
+                sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i], MemberMapper = memberMapper });
+                this.AddMemberElement(sqlSegment, memberMapper);
             }
-            //else if (this.IsSelect)
-            //{
-            //    var readerFields = new List<ReaderField>();
-            //    for (int i = 0; i < newExpr.Arguments.Count; i++)
-            //    {
-            //        this.AddSelectElement(newExpr.Arguments[i], newExpr.Members[i], readerFields);
-            //    }
-            //    return sqlSegment.Change(readerFields);
-            //}
+            return sqlSegment;
         }
         return this.Evaluate(sqlSegment);
     }
     public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
     {
         var memberInitExpr = sqlSegment.Expression as MemberInitExpression;
-        if (this.IsUpdate)
+        var entityMapper = this.Tables[0].Mapper;
+        for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
         {
-            var entityMapper = this.Tables[0].Mapper;
-            for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
-            {
-                if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)
-                    throw new NotImplementedException($"不支持除MemberBindingType.Assignment类型外的成员绑定表达式, {memberInitExpr.Bindings[i]}");
-                var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
-                    continue;
-
-                this.AddMemberElement(i, new SqlSegment { Expression = memberAssignment.Expression, MemberMapper = memberMapper }, memberMapper);
-            }
+            if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)
+                throw new NotImplementedException($"不支持除MemberBindingType.Assignment类型外的成员绑定表达式, {memberInitExpr.Bindings[i]}");
+            var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
+            if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
+                continue;
+            sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression, MemberMapper = memberMapper });
+            this.AddMemberElement(sqlSegment, memberMapper);
         }
-        //else if (this.IsSelect)
-        //{
-        //    var readerFields = new List<ReaderField>();
-        //    for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
-        //    {
-        //        if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)
-        //            throw new Exception("暂时不支持除MemberBindingType.Assignment类型外的成员绑定表达式");
-        //        var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-        //        this.AddSelectElement(memberAssignment.Expression, memberAssignment.Member, readerFields);
-        //    }
-        //    return sqlSegment.Change(readerFields);
-        //}
         return this.Evaluate(sqlSegment);
     }
     public override IQueryVisitor CreateQueryVisitor(bool isCteQuery = false)
@@ -295,40 +283,36 @@ public class MySqlCreateVisitor : CreateVisitor
             this.TableAlias.TryAdd(parameterExpr.Name, this.Tables[0]);
         }
     }
-    public void AddMemberElement(int index, SqlSegment sqlSegment, MemberMap memberMapper)
+    public void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)
     {
-        sqlSegment = this.VisitAndDeferred(sqlSegment);
-        //只一个成员访问，没有设置语句，什么也不做，忽略
-        if (sqlSegment.HasField && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall
-            && sqlSegment.FromMember.Name == memberMapper.MemberName)
-            return;
-
         if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
-        if (sqlSegment == SqlSegment.Null)
-            this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}=NULL");
-        else if (sqlSegment.IsVariable || sqlSegment.IsConstant)
-        {
-            //只有常量和变量才有可能是数组
-            if (sqlSegment.IsArray && sqlSegment.Value is List<SqlSegment> sqlSegments)
-                sqlSegment.Value = sqlSegments.Select(f => f.Value).ToArray();
+        var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
 
+        if (sqlSegment == SqlSegment.Null)
+            this.UpdateFields.Append($"{fieldName}=NULL");
+        else if (sqlSegment.IsConstant || sqlSegment.IsVariable)
+        {
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
             this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, sqlSegment.Value);
-            this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+            this.UpdateFields.Append($"{fieldName}={parameterName}");
         }
         //带有参数或字段的表达式或函数调用、或是只有参数或字段
-        else this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={sqlSegment.ToString()}");
+        //.Set(true, f => f.TotalAmount))
+        //.Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
+        else this.UpdateFields.Append($"{fieldName}={sqlSegment.Value.ToString()}");
     }
     public virtual void VisitWithSetField(Expression fieldSelector, object fieldValue)
     {
-        var lambdaExpr = fieldSelector as LambdaExpression;
+        var lambdaExpr = this.EnsureLambda(fieldSelector);
         var memberExpr = lambdaExpr.Body as MemberExpression;
         var entityMapper = this.Tables[0].Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-        this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, fieldValue);
+        //在前面insert的时候，参数有可能已经添加过了，此处需要判断是否需要添加
+        if (!this.DbParameters.Contains(parameterName))
+            this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, fieldValue);
         if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
         this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
     }

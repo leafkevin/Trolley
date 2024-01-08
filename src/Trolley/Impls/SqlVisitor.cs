@@ -14,22 +14,6 @@ public class SqlVisitor : ISqlVisitor
     private static ConcurrentDictionary<int, Func<object, object>> memberGetterCache = new();
     private static string[] calcOps = new string[] { ">", ">=", "<", "<=", "+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>" };
 
-    protected string ParameterPrefix { get; set; } = "p";
-    /// <summary>
-    /// 所有表都是扁平化的，主表、1:1关系Include子表，也在这里
-    /// </summary>
-    protected List<TableSegment> Tables { get; set; } = new();
-    protected Dictionary<string, TableSegment> TableAlias { get; set; } = new();
-    protected List<ReaderField> ReaderFields { get; set; }
-
-    protected bool IsFromQuery { get; set; }
-    protected string WhereSql { get; set; }
-
-    protected OperationType LastWhereNodeType { get; set; } = OperationType.None;
-    protected char TableAsStart { get; set; }
-    protected List<ReaderField> GroupFields { get; set; }
-
-
     public string DbKey { get; set; }
     public IDataParameterCollection DbParameters { get; set; }
     public IOrmProvider OrmProvider { get; set; }
@@ -37,9 +21,24 @@ public class SqlVisitor : ISqlVisitor
     public bool IsParameterized { get; set; }
     public bool IsMultiple { get; set; }
     public int CommandIndex { get; set; }
+    public string ParameterPrefix { get; set; } = "p";
+
+    /// <summary>
+    /// 所有表都是扁平化的，主表、1:1关系Include子表，也在这里
+    /// </summary>
+    public List<TableSegment> Tables { get; set; } = new();
+    public Dictionary<string, TableSegment> TableAlias { get; set; } = new();
     public bool IsSelect { get; set; }
     public bool IsWhere { get; set; }
     public bool IsNeedAlias { get; set; }
+
+    public List<ReaderField> ReaderFields { get; set; }
+    public bool IsFromQuery { get; set; }
+    public string WhereSql { get; set; }
+    public OperationType LastWhereNodeType { get; set; } = OperationType.None;
+    public char TableAsStart { get; set; }
+    public List<ReaderField> GroupFields { get; set; }
+
 
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {

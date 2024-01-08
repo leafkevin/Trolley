@@ -57,10 +57,6 @@ public class SqlSegment
     /// </summary>
     public bool IsFieldType { get; set; }
     /// <summary>
-    /// Select子句时，最外层的返回实体类型
-    /// </summary>
-    public Type ReturnType { get; set; }
-    /// <summary>
     /// 当强制转换时，此字段值为转换后的类型，当枚举类型时，此字段值为枚举类型，其他场景为null
     /// </summary>
     public Type ExpectType { get; set; }
