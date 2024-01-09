@@ -601,8 +601,8 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     #endregion
 
     #region MultipleExecute
-    void MultipleExecute(List<MultipleCommand> commands);
-    Task MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default);
+    int MultipleExecute(List<MultipleCommand> commands);
+    Task<int> MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default);
     #endregion
 
     #region Others

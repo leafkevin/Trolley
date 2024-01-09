@@ -61,6 +61,7 @@ public interface IDeleted<TEntity>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回删除行数</returns>
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+    MultipleCommand ToMultipleCommand();
     /// <summary>
     /// 返回当前查询的SQL和参数列表
     /// </summary>

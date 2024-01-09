@@ -1125,7 +1125,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 var memberExpr = toTargetExpr.Body as MemberExpression;
                 if (this.IsGroupingMember(memberExpr))
                 {
-                    //能够访问Grouping属性的场景，通常是在最外层的Select子句或是OrderBy子句                  
+                    //能够访问Grouping属性的场景，通常是在最外层的Select子句或是OrderBy子句
                     foreach (var readerField in this.GroupFields)
                     {
                         if (readerField.TargetMember.Name != readerField.FromMember.Name)
@@ -1307,18 +1307,23 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     var memberExpr = elementExpr as MemberExpression;
                     if (this.IsGroupingMember(memberExpr))
                     {
+                        List<ReaderField> groupFields = null;
+                        if (this.IsFromQuery) groupFields = new();
                         foreach (var readerField in this.GroupFields)
                         {
                             //子查询中的字段别名要带有本地化包装
                             if (readerField.TargetMember != null && readerField.FromMember.Name != readerField.TargetMember.Name)
                                 readerField.Body += " AS " + this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                            if (this.IsFromQuery) groupFields.Add(readerField);
                         }
+                        //在子查询中，Select了Group分组对象，为了避免在Clear时，把GroupFields元素清掉，放到一个新列表中
+                        if (!this.IsFromQuery) groupFields = this.GroupFields;
                         readerFields.Add(new ReaderField
                         {
                             FieldType = ReaderFieldType.Entity,
                             FromMember = memberInfo,
                             TargetMember = memberInfo,
-                            ReaderFields = this.GroupFields
+                            ReaderFields = groupFields
                         });
                         break;
                     }
@@ -1611,29 +1616,34 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.CteTableSegments = null;
         this.SelfTableSegment = null;
     }
-    protected void InitFromQueryReaderFields(TableSegment tableSegment, List<ReaderField> readerFields)
+    protected void InitFromQueryReaderFields(TableSegment tableSegment, List<ReaderField> readerFields, bool isNeedChange = true)
     {
         if (readerFields == null || readerFields.Count == 0)
             return;
 
         foreach (var readerField in readerFields)
         {
+            //子查询中，访问了实体类对象，比如：Grouping分组对象
             if (readerField.FieldType == ReaderFieldType.Entity)
             {
                 readerField.TableSegment = tableSegment;
-                this.InitFromQueryReaderFields(tableSegment, readerField.ReaderFields);
+                //实体类型字段的ReaderFields中FromMember、Body不需要变更，一变更就错了
+                this.InitFromQueryReaderFields(tableSegment, readerField.ReaderFields, false);
             }
             else
             {
                 readerField.TableSegment = tableSegment;
                 //已经变成子查询了，原表字段名已经没意义了，直接变成新的字段名
-                if (readerField.TargetMember != null)
-                    readerField.FromMember = readerField.TargetMember;
-                //重新设置body内容，表别名变更
-                readerField.Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(readerField.FromMember.Name);
-                //TODO:
-                //if (readerField.FromMember.Name != readerField.TargetMember.Name)
-                //    readerField.Body += " AS " + readerField.TargetMember.Name;
+                if (isNeedChange)
+                {
+                    if (readerField.TargetMember != null)
+                        readerField.FromMember = readerField.TargetMember;
+                    //重新设置body内容，表别名变更
+                    readerField.Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(readerField.FromMember.Name);
+                    //TODO:
+                    //if (readerField.FromMember.Name != readerField.TargetMember.Name)
+                    //    readerField.Body += " AS " + readerField.TargetMember.Name;
+                }
             }
         }
     }

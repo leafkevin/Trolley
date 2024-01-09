@@ -885,7 +885,7 @@ public class Repository : IRepository
     #endregion
 
     #region MultipleExecute
-    public virtual void MultipleExecute(List<MultipleCommand> commands)
+    public virtual int MultipleExecute(List<MultipleCommand> commands)
     {
         if (commands == null || commands.Count == 0)
             throw new ArgumentNullException(nameof(commands));
@@ -893,6 +893,7 @@ public class Repository : IRepository
         using var command = this.DbContext.CreateCommand();
         bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
+        int result = 0;
         try
         {
             int commandIndex = 0;
@@ -935,7 +936,7 @@ public class Repository : IRepository
             }
             command.CommandText = sqlBuilder.ToString();
             this.DbContext.Connection.Open();
-            var result = command.ExecuteNonQuery();
+            result = command.ExecuteNonQuery();
         }
         catch (Exception ex)
         {
@@ -948,8 +949,9 @@ public class Repository : IRepository
             if (isNeedClose) this.Dispose();
         }
         if (exception != null) throw exception;
+        return result;
     }
-    public virtual async Task MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default)
+    public virtual async Task<int> MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default)
     {
         if (commands == null || commands.Count == 0)
             throw new ArgumentNullException(nameof(commands));
@@ -957,6 +959,7 @@ public class Repository : IRepository
         using var command = this.DbContext.CreateDbCommand();
         bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
+        int result = 0;
         try
         {
             int commandIndex = 0;
@@ -999,7 +1002,7 @@ public class Repository : IRepository
             }
             command.CommandText = sqlBuilder.ToString();
             await this.DbContext.Connection.OpenAsync(cancellationToken);
-            var result = await command.ExecuteNonQueryAsync(cancellationToken);
+            result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch (Exception ex)
         {
@@ -1012,6 +1015,7 @@ public class Repository : IRepository
             if (isNeedClose) await this.DisposeAsync();
         }
         if (exception != null) throw exception;
+        return result;
     }
     #endregion
 

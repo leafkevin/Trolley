@@ -967,112 +967,70 @@ public class UnitTest1 : UnitTestBase
     public void Insert_ToMultipleCommand()
     {
         using var repository = dbFactory.Create();
-        //repository.BeginTransaction();
-        repository.Delete<Product>(2);
-        var brand = repository.Get<Brand>(1);
+        int id = 2;
         int category = 1;
-        //var multiCommand = repository.Create<Product>()
-        //   .WithBy(new
-        //   {
-        //       Id = 2,
-        //       ProductNo = "PN_111",
-        //       Name = "PName_111",
-        //       BrandId = 1,
-        //       CategoryId = category,
-        //       CompanyId = 1,
-        //       IsEnabled = true,
-        //       CreatedBy = 1,
-        //       CreatedAt = DateTime.Now,
-        //       UpdatedBy = 1,
-        //       UpdatedAt = DateTime.Now
-        //   })
-        //   .ToMultipleCommand();
-        //repository.MultipleExecute(new List<MultipleCommand> { multiCommand });
-        //Assert.True(sql == "INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT a.`Id`+1,CONCAT('PN_',a.`BrandNo`),CONCAT('PName_',a.`Name`),a.`Id`,@p0,a.`CompanyId`,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_brand` a WHERE a.`Id`=1");
-        repository.Delete<User>(4);
-        var count = repository.Create<User>()
-            .WithBy(new
-            {
-                Id = 4,
-                Name = "leafkevin",
-                Age = 25,
-                CompanyId = 1,
-                Gender = Gender.Male,
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1,
-                SomeTimes = TimeSpan.FromMinutes(35),
-                GuidField = Guid.NewGuid()
-            })
-            .Execute();
-        repository.Delete<Product>(2);
-        //var count1 = repository.Create<Product>()
-        //   .From<Brand>()
-        //   .Select(f => new
-        //   {
-        //       Id = f.Id + 1,
-        //       ProductNo = "PN_" + f.BrandNo,
-        //       Name = "PName_" + f.Name,
-        //       BrandId = f.Id,
-        //       CategoryId = category,
-        //       f.CompanyId,
-        //       f.IsEnabled,
-        //       f.CreatedBy,
-        //       f.CreatedAt,
-        //       f.UpdatedBy,
-        //       f.UpdatedAt
-        //   })
-        //   .Where(f => f.Id == 1)
-        //   .Execute();
-        var product = repository.Get<Product>(2);
-        //repository.Commit();
-        //Assert.True(count > 0);
-        //Assert.NotNull(product);
-        //Assert.True(product.ProductNo == "PN_" + brand.BrandNo);
-        //Assert.True(product.Name == "PName_" + brand.Name);
-        //Assert.NotNull(parameters);
-        //Assert.True(parameters.Count == 1);
+        var commands = new List<MultipleCommand>();
+        var deleteCommand = repository.Delete<Product>()
+            .Where(f => f.Id == id)
+            .ToMultipleCommand();
+        var insertCommand = repository.Create<Product>()
+           .WithBy(new
+           {
+               Id = 2,
+               ProductNo = "PN_111",
+               Name = "PName_111",
+               BrandId = 1,
+               CategoryId = category,
+               CompanyId = 1,
+               IsEnabled = true,
+               CreatedBy = 1,
+               CreatedAt = DateTime.Now,
+               UpdatedBy = 1,
+               UpdatedAt = DateTime.Now
+           })
+           .ToMultipleCommand();
+        commands.AddRange(new[] { deleteCommand, insertCommand });
+        var count = repository.MultipleExecute(commands);
+        Assert.True(count == 2);
     }
     [Fact]
     public async void Insert_OnDuplicateKeyUpdate()
     {
         using var repository = dbFactory.Create();
         UserSourceType? buyerSource = UserSourceType.Douyin;
-        //var sql1 = repository.Create<Order>()
-        //     .WithBy(new
-        //     {
-        //         Id = 9,
-        //         OrderNo = "ON-001",
-        //         BuyerId = 1,
-        //         SellerId = 2,
-        //         TotalAmount = 500,
-        //         Products = new List<int> { 1, 2 },
-        //         Disputes = new Dispute
-        //         {
-        //             Id = 2,
-        //             Content = "无良商家",
-        //             Result = "同意退款",
-        //             Users = "Buyer2,Seller2",
-        //             CreatedAt = DateTime.Now
-        //         },
-        //         IsEnabled = true,
-        //         CreatedAt = DateTime.Now,
-        //         CreatedBy = 1,
-        //         UpdatedAt = DateTime.Now,
-        //         UpdatedBy = 1
-        //     })
-        //     .OnDuplicateKeyUpdate(x => x
-        //        .Set(new
-        //        {
-        //            TotalAmount = 25,
-        //            Products = new List<int> { 1, 2 }
-        //        })
-        //        .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource)
-        //     )
-        //    .ToSql(out _);
-        //Assert.True(sql1 == "INSERT INTO `sys_order` (`Id`,`OrderNo`,`BuyerId`,`SellerId`,`TotalAmount`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@OrderNo,@BuyerId,@SellerId,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerSource`=@BuyerSource");
+        var sql1 = repository.Create<Order>()
+             .WithBy(new
+             {
+                 Id = 9,
+                 OrderNo = "ON-001",
+                 BuyerId = 1,
+                 SellerId = 2,
+                 TotalAmount = 500,
+                 Products = new List<int> { 1, 2 },
+                 Disputes = new Dispute
+                 {
+                     Id = 2,
+                     Content = "无良商家",
+                     Result = "同意退款",
+                     Users = "Buyer2,Seller2",
+                     CreatedAt = DateTime.Now
+                 },
+                 IsEnabled = true,
+                 CreatedAt = DateTime.Now,
+                 CreatedBy = 1,
+                 UpdatedAt = DateTime.Now,
+                 UpdatedBy = 1
+             })
+             .OnDuplicateKeyUpdate(x => x
+                .Set(new
+                {
+                    TotalAmount = 25,
+                    Products = new List<int> { 1, 2 }
+                })
+                .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource)
+             )
+            .ToSql(out _);
+        Assert.True(sql1 == "INSERT INTO `sys_order` (`Id`,`OrderNo`,`BuyerId`,`SellerId`,`TotalAmount`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@OrderNo,@BuyerId,@SellerId,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerSource`=@BuyerSource");
 
         var sql2 = repository.Create<Order>()
              .WithBy(new

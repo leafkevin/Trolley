@@ -113,15 +113,15 @@ public class UnitTest2 : UnitTestBase
         Initialize();
         using var repository = dbFactory.Create();
         var sql = repository
-            .From(f => f.From<Order>()
-                .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-                .GroupBy((a, b) => new { OrderId = a.Id, a.BuyerId })
-                .Select((x, a, b) => new { x.Grouping, ProductCount = x.CountDistinct(b.ProductId) }))
-            .InnerJoin<User>((x, y) => x.Grouping.BuyerId == y.Id)
+            .From(f => f.From<OrderDetail>()
+                .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+                .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
+                .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
+            .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
             .Where((a, b) => a.ProductCount > 1)
             .Select((x, y) => new
             {
-                x.Grouping,
+                x.Group,
                 Buyer = y,
                 x.ProductCount
             })

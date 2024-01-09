@@ -335,8 +335,18 @@ public class SqlVisitor : ISqlVisitor
                 {
                     //访问子查询表的成员，子查询表没有Mapper，也不会有实体类型成员
                     //Json的实体类型字段
-                    var readerField = tableSegment.ReaderFields.Count == 1 ? tableSegment.ReaderFields.First()
-                        : tableSegment.ReaderFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
+                    var fromReaderFields = tableSegment.ReaderFields;
+                    //子查询中，Select了Grouping分组对象，子查询中，只有一个分组对象才是实体类型
+                    if (memberExpr.Expression.NodeType != ExpressionType.Parameter)
+                    {
+                        var parentMemberExpr = memberExpr.Expression as MemberExpression;
+                        var parenetReaderField = tableSegment.ReaderFields.Count == 1 ? tableSegment.ReaderFields.First()
+                              : tableSegment.ReaderFields.Find(f => f.TargetMember.Name == parentMemberExpr.Member.Name);
+                        fromReaderFields = parenetReaderField.ReaderFields;
+                    }
+                    var readerField = fromReaderFields.Count == 1 ? tableSegment.ReaderFields.First()
+                        : fromReaderFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
+
                     memberMapper = readerField.MemberMapper;
                     sqlSegment.FromMember = readerField.FromMember;
                     sqlSegment.MemberMapper = memberMapper;
@@ -358,7 +368,7 @@ public class SqlVisitor : ISqlVisitor
                 }
                 //.NET枚举类型总是解析成对应的UnderlyingType数值类型，如：a.Gender ?? Gender.Male == Gender.Male
                 //如果枚举类型对应的数据库类型是字符串就会有问题，需要把数字变为枚举，再把枚举的名字字符串完成后续操作。
-                if (memberMapper.MemberType.IsEnumType(out var expectType, out _) && memberMapper.DbDefaultType == typeof(string))
+                if (memberMapper != null && memberMapper.MemberType.IsEnumType(out var expectType, out _) && memberMapper.DbDefaultType == typeof(string))
                 {
                     sqlSegment.ExpectType = expectType;
                     sqlSegment.TargetType = memberMapper.DbDefaultType;

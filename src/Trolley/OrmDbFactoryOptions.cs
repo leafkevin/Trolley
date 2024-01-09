@@ -1,4 +1,7 @@
-﻿namespace Trolley;
+﻿using System;
+using System.Data;
+
+namespace Trolley;
 
 public class OrmDbFactoryOptions
 {
@@ -12,4 +15,9 @@ public class OrmDbFactoryOptions
     /// 默认情况下，所有变量都会参数化处理
     /// </summary>
     public bool IsParameterized { get; set; }
+    public Action<IDbCommand> ExecuteBeforeFilter { get; set; }
+    public Action<IDbCommand> ExecuteAfterFilter { get; set; }
+    public Action<IDbCommand, object> InsertFilter { get; set; }
+    public Action<IDbCommand, object> UpdateFilter { get; set; }
+    public Action<IDbCommand, Exception> ExceptionFilter { get; set; }
 }
