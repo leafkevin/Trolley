@@ -330,27 +330,39 @@ public class SqlVisitor : ISqlVisitor
                 sqlSegment.HasField = true;
                 sqlSegment.TableSegment = tableSegment;
                 MemberMap memberMapper = null;
+                string fieldName = null;
 
                 if (tableSegment.TableType == TableType.FromQuery || tableSegment.TableType == TableType.CteSelfRef)
                 {
                     //访问子查询表的成员，子查询表没有Mapper，也不会有实体类型成员
                     //Json的实体类型字段
-                    var fromReaderFields = tableSegment.ReaderFields;
-                    //子查询中，Select了Grouping分组对象，子查询中，只有一个分组对象才是实体类型
+                    ReaderField readerField = null;
+                    //子查询中，Select了Grouping分组对象，子查询中，只有一个分组对象才是实体类型，目前子查询，只支持一层
+                    //取AS后的字段名，与原字段名不一定一样,AS后的字段名与memberExpr.Member.Name一致
                     if (memberExpr.Expression.NodeType != ExpressionType.Parameter)
                     {
+                        fieldName = this.OrmProvider.GetFieldName(memberExpr.Member.Name);
+                        if (this.IsNeedAlias) fieldName = tableSegment.AliasName + "." + fieldName;
+                        sqlSegment.Value = fieldName;
+
                         var parentMemberExpr = memberExpr.Expression as MemberExpression;
                         var parenetReaderField = tableSegment.ReaderFields.Count == 1 ? tableSegment.ReaderFields.First()
-                              : tableSegment.ReaderFields.Find(f => f.TargetMember.Name == parentMemberExpr.Member.Name);
-                        fromReaderFields = parenetReaderField.ReaderFields;
+                            : tableSegment.ReaderFields.Find(f => f.TargetMember.Name == parentMemberExpr.Member.Name);
+                        var fromReaderFields = parenetReaderField.ReaderFields;
+                        readerField = fromReaderFields.Count == 1 ? fromReaderFields.First()
+                            : fromReaderFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
+                        sqlSegment.FromMember = readerField.TargetMember;
                     }
-                    var readerField = fromReaderFields.Count == 1 ? tableSegment.ReaderFields.First()
-                        : fromReaderFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
-
+                    else
+                    {
+                        readerField = tableSegment.ReaderFields.Count == 1 ? tableSegment.ReaderFields.First()
+                          : tableSegment.ReaderFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
+                        fieldName = readerField.Body;
+                        sqlSegment.FromMember = readerField.TargetMember;
+                        sqlSegment.Value = readerField.Body;
+                    }
                     memberMapper = readerField.MemberMapper;
-                    sqlSegment.FromMember = readerField.FromMember;
                     sqlSegment.MemberMapper = memberMapper;
-                    sqlSegment.Value = readerField.Body;
                 }
                 else
                 {
@@ -362,7 +374,7 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment.FromMember = memberMapper.Member;
                     sqlSegment.MemberMapper = memberMapper;
                     //查询时，IsNeedAlias始终为true，新增、更新、删除时，引用联表操作时，才会为true
-                    var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
+                    fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                     if (this.IsNeedAlias) fieldName = tableSegment.AliasName + "." + fieldName;
                     sqlSegment.Value = fieldName;
                 }
@@ -482,12 +494,17 @@ public class SqlVisitor : ISqlVisitor
 
         var fromSegment = this.TableAlias[parameterExpr.Name];
         var readerFields = new List<ReaderField>();
+
+        //var childReaderFields = this.FlattenTableFields(fromSegment);
+        //var body = this.BuildSelectSql(childReaderFields);
         var readerField = new ReaderField
         {
             FieldType = ReaderFieldType.Entity,
             TableSegment = fromSegment,
             ReaderFields = this.FlattenTableFields(fromSegment),
             Path = parameterExpr.Name
+            //BuildSql时，再设置body
+            //Body = body
             //最外层Select对象的成员，位于顶层, FromMember暂时不设置值，到Select时候去设置 
         };
         //include表的ReaderField字段，紧跟在主表ReaderField后面
@@ -501,8 +518,14 @@ public class SqlVisitor : ISqlVisitor
         if (includedSegments.Count > 0)
         {
             parent.HasNextInclude = true;
+            var builder = new StringBuilder();
+
             foreach (var includedSegment in includedSegments)
             {
+                builder.Clear();
+                var childReaderFields = this.FlattenTableFields(includedSegment);
+                //var body = this.BuildSelectSql(this.FlattenTableFields(includedSegment),true);
+
                 var readerField = new ReaderField
                 {
                     FieldType = ReaderFieldType.Entity,
@@ -512,13 +535,32 @@ public class SqlVisitor : ISqlVisitor
                     TargetMember = includedSegment.FromMember.Member,
                     Parent = parent,
                     ReaderFields = this.FlattenTableFields(includedSegment),
-                    Path = includedSegment.Path
+                    Path = includedSegment.Path,
+                    //Body = body
                 };
                 readerFields.Add(readerField);
                 if (this.Tables.Exists(f => f.TableType == TableType.Include && f.FromTable == includedSegment))
                     this.AddIncludeTableReaderFields(readerField, readerFields);
             }
         }
+    }
+    protected string BuildSelectSql(List<ReaderField> readerFields, bool isNeedAlias = false)
+    {
+        var builder = new StringBuilder();
+        foreach (var readerField in readerFields)
+        {
+            if (builder.Length > 0)
+                builder.Append(',');
+            if (readerField.FieldType == ReaderFieldType.Entity)
+                builder.Append(this.BuildSelectSql(readerField.ReaderFields));
+            else
+            {
+                if (isNeedAlias && readerField.FromMember.Name != readerField.TargetMember.Name)
+                    readerField.Body += " AS " + this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                builder.Append(readerField.Body);
+            }
+        }
+        return builder.ToString();
     }
     public virtual SqlSegment VisitNew(SqlSegment sqlSegment)
     {

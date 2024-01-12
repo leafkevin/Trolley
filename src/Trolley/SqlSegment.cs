@@ -76,7 +76,7 @@ public class SqlSegment
     public Expression Expression { get; set; }
     public Expression OriginalExpression { get; set; }
     public bool HasDeferred => this.DeferredExprs != null && this.DeferredExprs.Count > 0;
-
+    public bool IsNeedSql { get; set; }
     /// <summary>
     /// 只改变值
     /// </summary>

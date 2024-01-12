@@ -21,8 +21,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trolley.Test.MySqlConnector
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trolley.Test.SqlServer", "test\Trolley.Test.SqlServer\Trolley.Test.SqlServer.csproj", "{F9C47456-09F3-4955-A688-FA5C72F94900}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleApp1", "ConsoleApp1\ConsoleApp1.csproj", "{574B28E1-5986-47AD-9BD2-BAD095DC5A33}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,10 +55,6 @@ Global
 		{F9C47456-09F3-4955-A688-FA5C72F94900}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F9C47456-09F3-4955-A688-FA5C72F94900}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F9C47456-09F3-4955-A688-FA5C72F94900}.Release|Any CPU.Build.0 = Release|Any CPU
-		{574B28E1-5986-47AD-9BD2-BAD095DC5A33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{574B28E1-5986-47AD-9BD2-BAD095DC5A33}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{574B28E1-5986-47AD-9BD2-BAD095DC5A33}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{574B28E1-5986-47AD-9BD2-BAD095DC5A33}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

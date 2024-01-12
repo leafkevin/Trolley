@@ -126,18 +126,18 @@ public class UnitTest2 : UnitTestBase
                 x.ProductCount
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT c.`OrderId`,c.`BuyerId`,d.`Id`,d.`Name`,d.`Gender`,d.`Age`,d.`CompanyId`,d.`GuidField`,d.`SomeTimes`,d.`SourceType`,d.`IsEnabled`,d.`CreatedAt`,d.`CreatedBy`,d.`UpdatedAt`,d.`UpdatedBy`,c.`ProductCount` FROM (SELECT a.`Id` AS `OrderId`,a.`BuyerId`,COUNT(DISTINCT b.`ProductId`) AS `ProductCount` FROM `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` GROUP BY a.`Id`,a.`BuyerId`) c INNER JOIN `sys_user` d ON c.`BuyerId`=d.`Id` WHERE c.`ProductCount`>1");
+        Assert.True(sql == "SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail` a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1");
 
         var result = repository
-            .From(f => f.From<Order>()
-                .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-                .GroupBy((a, b) => new { OrderId = a.Id, a.BuyerId })
-                .Select((x, a, b) => new { x.Grouping, ProductCount = x.CountDistinct(b.ProductId) }))
-            .InnerJoin<User>((x, y) => x.Grouping.BuyerId == y.Id)
+            .From(f => f.From<OrderDetail>()
+                .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+                .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
+                .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
+            .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
             .Where((a, b) => a.ProductCount > 1)
             .Select((x, y) => new
             {
-                x.Grouping,
+                x.Group,
                 Buyer = y,
                 x.ProductCount
             })
@@ -145,7 +145,7 @@ public class UnitTest2 : UnitTestBase
         if (result.Count > 0)
         {
             Assert.NotNull(result[0]);
-            Assert.NotNull(result[0].Grouping);
+            Assert.NotNull(result[0].Group);
             Assert.NotNull(result[0].Buyer);
             Assert.True(result[0].ProductCount > 1);
         }
