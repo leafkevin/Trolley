@@ -484,19 +484,10 @@ public static class Extensions
                             parent = readerBuilders[readerField.Parent];
                         else parent = root;
 
-                        //Include导航属性引用单独处理，1:1关系直接赋值，1:N关系先设置默认值，后面在SetIncludeValues中再设置具体值
                         if (readerField.IsRef)
                         {
-                            Expression instanceExpr = null;
-                            //1:N关系，readerField.ReaderFields的值为null
-                            if (readerField.ReaderFields == null)
-                                instanceExpr = Expression.Default(readerField.TargetMember.GetMemberType());
-                            else
-                            {
-                                var refReaderField = readerField.ReaderFields[0];
-                                var refBuildInfo = readerBuilders[refReaderField];
-                                instanceExpr = refBuildInfo.Instance;
-                            }
+                            //Include导航属性引用单独处理，先设置默认值，整个实体初始化完后再设置具体值
+                            var instanceExpr = Expression.Default(readerField.TargetMember.GetMemberType());
                             if (parent.IsDefault)
                                 parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
                             else parent.Arguments.Add(instanceExpr);

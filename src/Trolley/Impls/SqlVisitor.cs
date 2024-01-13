@@ -486,7 +486,7 @@ public class SqlVisitor : ISqlVisitor
     public virtual SqlSegment VisitParameter(SqlSegment sqlSegment)
     {
         var parameterExpr = sqlSegment.Expression as ParameterExpression;
-        //两种场景：.Select((x, y) => new { Order = x, ... }) 和 .Select((x, y) => x)
+        //两种场景：.Select((x, y) => new { Order = x, x.Seller, x.Buyer, ... }) 和 .Select((x, y) => x)
         //参数访问通常都是SELECT语句的实体访问
         if (!this.IsSelect) throw new NotSupportedException($"不支持的参数表达式访问，只支持Select语句中，{parameterExpr}");
         if (this.IsFromQuery)
@@ -1209,19 +1209,25 @@ public class SqlVisitor : ISqlVisitor
         }
         return this.OrmProvider.GetQuotedValue(elementValue);
     }
-    public virtual IQueryVisitor CreateQueryVisitor(bool isCteQuery = false)
-    {
-        var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
-        queryVisiter.IsMultiple = this.IsMultiple;
-        queryVisiter.CommandIndex = this.CommandIndex;
-        if (isCteQuery)
-        {
-            queryVisiter.CteTables = new();
-            queryVisiter.CteQueries = new();
-            queryVisiter.CteTableSegments = new();
-        }
-        return queryVisiter;
-    }
+    //public virtual IQueryVisitor CreateQueryVisitor(bool isNewCteQuery = false)
+    //{
+    //    var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+    //    queryVisiter.IsMultiple = this.IsMultiple;
+    //    queryVisiter.CommandIndex = this.CommandIndex;
+    //    if (isNewCteQuery)
+    //    {
+    //        queryVisiter.CteTables = new();
+    //        queryVisiter.CteQueries = new();
+    //        queryVisiter.CteTableSegments = new();
+    //    }
+    //    else
+    //    {
+    //        queryVisiter.CteTables = this.cteta;
+    //        queryVisiter.CteQueries = new();
+    //        queryVisiter.CteTableSegments = new();
+    //    }
+    //    return queryVisiter;
+    //}
     /// <summary>
     /// 用于Where条件中，IS NOT NULL,!= 两种情况判断
     /// </summary>
