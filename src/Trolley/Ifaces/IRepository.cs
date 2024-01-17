@@ -192,48 +192,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery);
-    #endregion
-
-    #region FromWith CTE
-    /// <summary>
-    /// 使用CTE子句创建查询对象，不能自我引用不能递归查询，用法：
-    /// <code>
-    /// var subQuery = repository.From&lt;Menu&gt;() ...
-    ///     .Select(x =&gt; new { ... });
-    /// repository.FromWith(subQuery) ...
-    /// SQL:
-    /// WITH MyCte1(Id,Name,ParentId,PageId) AS 
-    /// (
-    ///     SELECT ... FROM `sys_menu`a
-    /// )
-    /// ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
-    /// <param name="cteSubQuery">CTE 查询子句</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T> FromWith<T>(IQuery<T> cteSubQuery);
-    /// <summary>
-    /// 使用CTE子句创建查询对象，包含UnionRecursive或UnionAllRecursive子句可以自我引用递归查询，用法：
-    /// <code>
-    /// repository.FromWith(f =&gt; f.From&lt;Menu&gt;() ...
-    ///         .Select(x =&gt; new { ... })
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { ... }))) ...
-    /// SQL:
-    /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
-    /// (
-    ///     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
-    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id`
-    /// ) ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
-    /// <param name="cteSubQuery">CTE 查询子句</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery);
-    #endregion
+    #endregion 
 
     #region QueryFirst/Query
     /// <summary>

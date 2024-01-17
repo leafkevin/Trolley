@@ -16,7 +16,7 @@ public interface ICreateVisitor : IDisposable
 
     string BuildCommand(IDbCommand command, bool isReturnIdentity);
     MultipleCommand CreateMultipleCommand();
-    IQueryVisitor CreateQueryVisitor(bool isCteQuery = false);
+    IQueryVisitor CreateQueryVisitor();
     void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
     void Initialize(Type entityType, bool isFirst = true);
     string BuildSql();

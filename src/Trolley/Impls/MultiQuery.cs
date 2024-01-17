@@ -120,26 +120,7 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         this.Visitor.UnionRecursive(" UNION ALL", typeof(T), this.DbContext, this, subQuery);
         return this;
     }
-    #endregion
-
-    #region CTE NextWith
-    public IMultiQuery<T, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery)
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        this.Visitor.FromWith(typeof(TOther), false, cteSubQuery);
-        return new MultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
-    }
-    public IMultiQuery<T, TOther> NextWith<TOther>(Func<IFromQuery, IMultiQuery<T>, IQuery<TOther>> cteSubQuery)
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        this.Visitor.FromWith(typeof(TOther), false, this.DbContext, cteSubQuery);
-        return new MultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
-    }
-    #endregion
+    #endregion    
 
     #region WithTable
     public IMultiQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
@@ -147,7 +128,7 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        this.Visitor.From(typeof(TOther), false, this.DbContext, subQuery);
+        this.Visitor.From(typeof(TOther), this.DbContext, subQuery);
         return new MultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion

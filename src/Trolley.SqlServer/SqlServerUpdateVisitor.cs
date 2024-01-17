@@ -15,7 +15,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
         var builder = new StringBuilder($"UPDATE ");
         if (!this.IsJoin) builder.Append($"{entityTableName} ");
         var aliasName = this.Tables[0].AliasName;
-        if (this.IsNeedAlias || this.IsJoin)
+        if (this.IsNeedTableAlias || this.IsJoin)
             builder.Append($"{aliasName} ");
 
         if (this.IsJoin && this.Tables.Count > 1)
@@ -52,7 +52,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
             foreach (var whereField in this.WhereFields)
             {
                 if (index > 0) builder.Append(" AND ");
-                if (this.IsNeedAlias) builder.Append($"{aliasName}");
+                if (this.IsNeedTableAlias) builder.Append($"{aliasName}");
                 builder.Append($"{whereField.Fields}={whereField.Values}");
                 index++;
             }

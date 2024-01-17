@@ -237,7 +237,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         this.WhereSql = null; 
         this.IsFromQuery = false;
         this.TableAsStart = 'a';
-        this.IsNeedAlias = false;
+        this.IsNeedTableAlias = false;
     }
     public override void Dispose()
     {

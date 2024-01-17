@@ -97,28 +97,14 @@ public class Repository : IRepository
     public virtual IQuery<T> From<T>(IQuery<T> subQuery)
     {
         var visitor = subQuery.Visitor;
-        visitor.From(typeof(T), true, subQuery);
+        visitor.From(typeof(T), subQuery);
         return subQuery;
     }
 
     public virtual IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery)
     {
         var visitor = this.CreateQueryVisitor('a');
-        return visitor.From(typeof(T), true, this.DbContext, subQuery) as IQuery<T>;
-    }
-    #endregion
-
-    #region FromWith
-    public virtual IQuery<T> FromWith<T>(IQuery<T> cteSubQuery)
-    {
-        var visitor = cteSubQuery.Visitor;
-        visitor.FromWith(typeof(T), true, cteSubQuery);
-        return cteSubQuery;
-    }
-    public virtual IQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery)
-    {
-        var visitor = this.CreateQueryVisitor('a', true);
-        return visitor.FromWith(typeof(T), true, this.DbContext, cteSubQuery) as IQuery<T>;
+        return visitor.From(typeof(T), this.DbContext, subQuery) as IQuery<T>;
     }
     #endregion
 
@@ -1094,16 +1080,7 @@ public class Repository : IRepository
         GC.SuppressFinalize(this);
     }
     ~Repository() => this.Dispose();
-    private IQueryVisitor CreateQueryVisitor(char tableAsStart, bool isCteQuery = false)
-    {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart);
-        if (isCteQuery)
-        {
-            visitor.CteTables = new();
-            visitor.CteQueries = new();
-            visitor.CteTableSegments = new();
-        }
-        return visitor;
-    }
+    private IQueryVisitor CreateQueryVisitor(char tableAsStart)
+        => this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart);
     #endregion
 }

@@ -29,30 +29,7 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         : base(dbContext, visitor) { }
     #endregion
 
-<#
-        if(i < 7)
-        {
-#>
-    #region CTE NextWith
-    public IQuery<<#=tables#>, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery)
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        this.Visitor.FromWith(typeof(TOther), false, cteSubQuery);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
-    }
-    public IQuery<<#=tables#>, TOther> NextWith<TOther>(Func<IFromQuery, <#=cteQueryTables#>, IQuery<TOther>> cteSubQuery)
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        this.Visitor.FromWith(typeof(TOther), false, this.DbContext, cteSubQuery);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
-    }
-    #endregion
-
-<#      }
+<#        
         if(i < count)
         {
 #>
@@ -62,7 +39,7 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        this.Visitor.From(typeof(TOther), false, subQuery);
+        this.Visitor.From(typeof(TOther), subQuery);
         return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public IQuery<<#=tables#>, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
@@ -70,7 +47,7 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        this.Visitor.From(typeof(TOther), false, this.DbContext, subQuery);
+        this.Visitor.From(typeof(TOther), this.DbContext, subQuery);
         return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     #endregion

@@ -412,142 +412,149 @@ public static class Extensions
         var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
         var ormProviderExpr = Expression.Constant(ormProvider);
 
-        //int? parentIndex = null;
-        int index = 0, readerIndex = 0;
-        var root = NewBuildInfo(entityType);
-        var current = root;
-        var parent = root;
-        var readerBuilders = new Dictionary<ReaderField, EntityBuildInfo>();
-        var deferredBuilds = new Stack<EntityBuildInfo>();
-
-        while (readerIndex < readerFields.Count)
+        var resultLabelExpr = Expression.Label(entityType);
+        Expression returnExpr = null;
+        if (readerFields.Count == 1)
         {
-            var readerField = readerFields[readerIndex];
-            if (readerField.FieldType == ReaderFieldType.Field)
+            var readerField = readerFields[0];
+            var fieldType = reader.GetFieldType(0);
+            var typeHandler = readerField.MemberMapper?.TypeHandler;
+            returnExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(0),
+                readerField.FieldTargetType, fieldType, typeHandler, blockParameters, blockBodies);
+        }
+        else
+        {
+            int index = 0, readerIndex = 0;
+            var root = NewBuildInfo(entityType);
+            var current = root;
+            var parent = root;
+            var readerBuilders = new Dictionary<ReaderField, EntityBuildInfo>();
+            var deferredBuilds = new Stack<EntityBuildInfo>();
+            while (readerIndex < readerFields.Count)
             {
-                var fieldType = reader.GetFieldType(index);
-                var typeHandler = readerField.MemberMapper?.TypeHandler;
-                var readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                    readerField.TargetMember.GetMemberType(), fieldType, typeHandler, blockParameters, blockBodies);
-                if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
-                else root.Arguments.Add(readerValueExpr);
-                index++;
-            }
-            else
-            {
-                MemberInfo fieldMember = null;
-                Expression readerValueExpr = null;
-                ReaderField childReaderField = null;
-                var childIndex = 0;
-                var endIndex = index + readerField.ReaderFields?.Count ?? 1;
-
-                if (readerField.FieldType == ReaderFieldType.DeferredFields)
+                var readerField = readerFields[readerIndex];
+                if (readerField.FieldType == ReaderFieldType.Field)
                 {
-                    //TODO:测试
-                    if (readerField.FromMember.GetMemberType().IsEntityType(out _))
-                    {
-                        current = NewBuildInfo(readerField.TargetMember.GetMemberType(), readerField.TargetMember, parent);
-                        readerBuilders.Add(readerField, current);
-                    }
-
-                    var argsExprs = new List<Expression>();
-                    while (index < endIndex)
-                    {
-                        var fieldType = reader.GetFieldType(index);
-                        //延迟的方法调用，有字段值作为方法参数就读取，没有什么也不做
-                        if (readerField.ReaderFields != null)
-                        {
-                            childReaderField = readerField.ReaderFields[childIndex];
-                            //本地函数调用
-                            var memberMapper = childReaderField.MemberMapper;
-                            readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                                memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
-                            argsExprs.Add(readerValueExpr);
-                        }
-                        childIndex++;
-                        index++;
-                    }
-                    Expression executeExpr = null;
-                    if (argsExprs.Count > 0)
-                        executeExpr = Expression.Invoke(readerField.DeferredDelegate, argsExprs.ToArray());
-                    else executeExpr = Expression.Invoke(readerField.DeferredDelegate);
-                    if (current.IsDefault)
-                        current.Bindings.Add(Expression.Bind(readerField.TargetMember, executeExpr));
-                    else current.Arguments.Add(executeExpr);
+                    var fieldType = reader.GetFieldType(index);
+                    var typeHandler = readerField.MemberMapper?.TypeHandler;
+                    var readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
+                        readerField.TargetMember?.GetMemberType() ?? readerField.FieldTargetType, fieldType, typeHandler, blockParameters, blockBodies);
+                    if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
+                    else root.Arguments.Add(readerValueExpr);
+                    index++;
                 }
                 else
                 {
-                    //默认是目标类型，并且也只有第一个ReaderField才是目标类型
-                    if (!readerField.IsTargetType)
-                    {
-                        if (readerField.Parent != null)
-                            parent = readerBuilders[readerField.Parent];
-                        else parent = root;
+                    MemberInfo fieldMember = null;
+                    Expression readerValueExpr = null;
+                    ReaderField childReaderField = null;
+                    var childIndex = 0;
+                    var endIndex = index + (readerField.ReaderFields?.Count ?? 1);
 
-                        if (readerField.IsRef)
+                    if (readerField.FieldType == ReaderFieldType.DeferredFields)
+                    {
+                        //TODO:测试
+                        if (readerField.TargetMember != null && readerField.TargetMember.GetMemberType().IsEntityType(out _))
                         {
-                            //Include导航属性引用单独处理，先设置默认值，整个实体初始化完后再设置具体值
-                            var instanceExpr = Expression.Default(readerField.TargetMember.GetMemberType());
-                            if (parent.IsDefault)
-                                parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
-                            else parent.Arguments.Add(instanceExpr);
-                            readerIndex++;
-                            continue;
+                            current = NewBuildInfo(readerField.TargetMember.GetMemberType(), readerField.TargetMember, parent);
+                            readerBuilders.Add(readerField, current);
                         }
-                        current = NewBuildInfo(readerField.TargetMember.GetMemberType(), readerField.TargetMember, parent);
+                        Expression executeExpr = null;
+                        List<Expression> argsExprs = null;
+                        if (endIndex > index)
+                        {
+                            argsExprs = new List<Expression>();
+                            while (index < endIndex)
+                            {
+                                var fieldType = reader.GetFieldType(index);
+                                //延迟的方法调用，有字段值作为方法参数就读取，没有什么也不做
+                                childReaderField = readerField.ReaderFields[childIndex];
+                                //本地函数调用
+                                var memberMapper = childReaderField.MemberMapper;
+                                readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
+                                    memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
+                                argsExprs.Add(readerValueExpr);
+                                childIndex++;
+                                index++;
+                            }
+                            executeExpr = Expression.Invoke(readerField.DeferredDelegate, argsExprs.ToArray());
+                        }
+                        else executeExpr = Expression.Invoke(readerField.DeferredDelegate);
+                        if (current.IsDefault)
+                            current.Bindings.Add(Expression.Bind(readerField.TargetMember, executeExpr));
+                        else current.Arguments.Add(executeExpr);
                     }
-                    while (index < endIndex)
+                    else if (readerField.FieldType == ReaderFieldType.IncludeRef)
                     {
-                        var fieldType = reader.GetFieldType(index);
-                        childReaderField = readerField.ReaderFields[childIndex];
-                        fieldMember = childReaderField.TargetMember;
-                        var typeHandler = childReaderField.MemberMapper?.TypeHandler;
-                        readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                            fieldMember.GetMemberType(), fieldType, typeHandler, blockParameters, blockBodies);
-
-                        if (current.IsDefault) current.Bindings.Add(Expression.Bind(fieldMember, readerValueExpr));
-                        else current.Arguments.Add(readerValueExpr);
-
-                        childIndex++;
-                        index++;
-                    }
-
-                    //有include对象
-                    if (readerField.HasNextInclude)
-                    {
-                        deferredBuilds.Push(current);
-                        readerBuilders.Add(readerField, current);
+                        //Include导航属性引用不能单独Select，前面一定有Parameter访问
+                        //Include导航属性引用单独处理，先设置默认值，在整个实体初始化完后，再设置具体值，初始化Action在成员访问的时候，已经构建好了
+                        var instanceExpr = Expression.Default(readerField.TargetMember.GetMemberType());
+                        if (parent.IsDefault)
+                            parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
+                        else parent.Arguments.Add(instanceExpr);
+                        readerIndex++;
+                        continue;
                     }
                     else
                     {
-                        do
+                        //默认是目标类型，并且也只有第一个ReaderField才是目标类型
+                        if (!readerField.IsTargetType)
                         {
-                            //创建子对象，并赋值给父对象的属性,直到Select语句
-                            Expression instanceExpr = null;
-                            if (current.IsDefault)
-                                instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
-                            else instanceExpr = Expression.New(current.Constructor, current.Arguments);
-                            current.Instance = instanceExpr;
-
-                            //赋值给父对象的属性
-                            if (current.Parent == null)
-                                break;
-                            if (current.Parent.IsDefault)
-                                current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
-                            else current.Parent.Arguments.Add(instanceExpr);
+                            if (readerField.Parent != null)
+                                parent = readerBuilders[readerField.Parent];
+                            else parent = root;
+                            current = NewBuildInfo(readerField.TargetMember.GetMemberType(), readerField.TargetMember, parent);
                         }
-                        while (deferredBuilds.TryPop(out current));
+                        while (index < endIndex)
+                        {
+                            var fieldType = reader.GetFieldType(index);
+                            childReaderField = readerField.ReaderFields[childIndex];
+                            fieldMember = childReaderField.TargetMember;
+                            var typeHandler = childReaderField.MemberMapper?.TypeHandler;
+                            readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
+                                fieldMember.GetMemberType(), fieldType, typeHandler, blockParameters, blockBodies);
+
+                            if (current.IsDefault) current.Bindings.Add(Expression.Bind(fieldMember, readerValueExpr));
+                            else current.Arguments.Add(readerValueExpr);
+
+                            childIndex++;
+                            index++;
+                        }
+
+                        //有include对象
+                        if (readerField.HasNextInclude)
+                        {
+                            deferredBuilds.Push(current);
+                            readerBuilders.Add(readerField, current);
+                        }
+                        else
+                        {
+                            do
+                            {
+                                //创建子对象，并赋值给父对象的属性,直到Select语句
+                                Expression instanceExpr = null;
+                                if (current.IsDefault)
+                                    instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
+                                else instanceExpr = Expression.New(current.Constructor, current.Arguments);
+                                current.Instance = instanceExpr;
+
+                                //赋值给父对象的属性
+                                if (current.Parent == null)
+                                    break;
+                                if (current.Parent.IsDefault)
+                                    current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
+                                else current.Parent.Arguments.Add(instanceExpr);
+                            }
+                            while (deferredBuilds.TryPop(out current));
+                        }
                     }
                 }
+                readerIndex++;
             }
-            readerIndex++;
+            if (root.IsDefault)
+                returnExpr = Expression.MemberInit(Expression.New(root.Constructor), root.Bindings);
+            else returnExpr = Expression.New(root.Constructor, root.Arguments);
         }
-        var resultLabelExpr = Expression.Label(entityType);
-        Expression returnExpr = null;
-        if (root.IsDefault)
-            returnExpr = Expression.MemberInit(Expression.New(root.Constructor), root.Bindings);
-        else returnExpr = Expression.New(root.Constructor, root.Arguments);
-
         blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
         return Expression.Lambda(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();

@@ -92,19 +92,16 @@ public class Create<TEntity> : ICreate<TEntity>
         queryVisitor.From('b', null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
         return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, T6>(typeof(TEntity), this.DbContext, queryVisitor);
     }
-    #endregion
-
-    #region WithFrom
-    public IFromCommand<TTarget> FromWith<TTarget>(IQuery<TTarget> cteSubQuery)
+    public IFromCommand<TTarget> From<TTarget>(IQuery<TTarget> subQuery)
     {
-        var queryVisitor = this.Visitor.CreateQueryVisitor(true);
-        queryVisitor.FromWith(typeof(TTarget), true, cteSubQuery);
+        var queryVisitor = this.Visitor.CreateQueryVisitor();
+        queryVisitor.From(typeof(TTarget), subQuery);
         return this.OrmProvider.NewFromCommand<TTarget>(typeof(TEntity), this.DbContext, queryVisitor);
     }
-    public IFromCommand<TTarget> FromWith<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery)
+    public IFromCommand<TTarget> From<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery)
     {
-        var queryVisitor = this.Visitor.CreateQueryVisitor(true);
-        queryVisitor.FromWith(typeof(TTarget), true, this.DbContext, cteSubQuery);
+        var queryVisitor = this.Visitor.CreateQueryVisitor();
+        queryVisitor.From(typeof(TTarget), this.DbContext, cteSubQuery);
         return this.OrmProvider.NewFromCommand<TTarget>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     #endregion

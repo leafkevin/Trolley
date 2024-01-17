@@ -97,22 +97,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
     public IMultiQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery, char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(typeof(T), true, this.DbContext, subQuery);
-        return new MultiQuery<T>(this, visitor);
-    }
-    #endregion
-
-    #region FromWith
-    public IMultiQuery<T> FromWith<T>(IQuery<T> cteSubQuery)
-    {
-        var visitor = this.CreateQueryVisitor('a', true);
-        visitor.FromWith(typeof(T), true, cteSubQuery);
-        return new MultiQuery<T>(this, visitor);
-    }
-    public IMultiQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery)
-    {
-        var visitor = this.CreateQueryVisitor('a', true);
-        visitor.FromWith(typeof(T), true, this.DbContext, cteSubQuery);
+        visitor.From(typeof(T), this.DbContext, subQuery);
         return new MultiQuery<T>(this, visitor);
     }
     #endregion
@@ -288,16 +273,11 @@ public class MultipleQuery : IMultipleQuery, IDisposable
     }
     #endregion
 
-    private IQueryVisitor CreateQueryVisitor(char tableAsStart, bool isCteQuery = false)
+    private IQueryVisitor CreateQueryVisitor(char tableAsStart)
     {
         var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.DbContext.IsParameterized, tableAsStart);
         visitor.DbParameters = this.Command.Parameters;
-        if (isCteQuery)
-        {
-            visitor.CteTables = new();
-            visitor.CteQueries = new();
-            visitor.CteTableSegments = new();
-        }
+        //TODO:支持CTE
         return visitor;
     }
 }

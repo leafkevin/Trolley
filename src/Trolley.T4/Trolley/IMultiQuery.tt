@@ -14,7 +14,7 @@ namespace Trolley;
 /// <summary>
 /// 查询对象
 /// </summary>
-public interface IMultiQueryBase : IVisitableQuery
+public interface IMultiQueryBase : IQuery
 {
     #region Count
     /// <summary>
@@ -159,39 +159,6 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// </param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> UnionAllRecursive(Func<IFromQuery, IMultiQuery<T>, IQuery<T>> subQuery);
-    #endregion
-
-    #region CTE NextWith
-    /// <summary>
-    /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，也可以包含Inner/Left/Right Join子句引入前面定义的CTE表，表达式cteSubQuery第二参数是前一个CTE表,多个CTE子句需要连续定义，用法：
-    /// <code>
-    /// f.FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url }))
-    ///  .NextWith((f, cte1) =&gt; f.From&lt;Menu&gt;()
-    ///         .Where(x =&gt; x.Id == 1)
-    ///         .Select(x =&gt; new { ... })
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .LeftJoin(cte1, (a, b, c) =&gt; a.PageId == c.Id)
-    ///         .Select((a, b, c) =&gt; new { ... }))) ...
-    /// SQL:
-    /// WITH RECURSIVE MyCte1(Id,Url) AS 
-    /// (
-    ///     ...
-    /// ),
-    /// MyCte2(Id,Name,ParentId,Url) AS
-    /// (
-    ///     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
-    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCte2 b ON a.`ParentId`=b.`Id` LEFT JOIN MyCte1 ON a.`PageId`=c.`Id`
-    /// ) ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">当前CTE临时返回的实体类型</typeparam>
-    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
-    /// <code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
-    /// </param>
-    /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T, TOther> NextWith<TOther>(Func<IFromQuery, IMultiQuery<T>, IQuery<TOther>> cteSubQuery);
     #endregion
 
     #region WithTable
@@ -679,47 +646,6 @@ public interface IMultiQuery<T> : IMultiQueryBase
 public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
 {
 <#
-        if(i < 7)
-        {
-#>
-    #region CTE NextWith
-    /// <summary>
-    /// 继续使用CTE子句创建查询对象，可以包含Union/UnionAll子句自我引用递归查询，也可以包含Inner/Left/Right Join子句引入前面定义的CTE表，表达式cteSubQuery第二参数是前一个CTE表,多个CTE子句需要连续定义，用法：
-    /// <code>
-    /// f.FromWith(f =&gt; ... .Select(f =&gt; new { a.Id, a.Url })))
-    ///     ...
-    ///     .NextWith((x, <#=cteTableAlias#>) =&gt; x.From&lt;Menu&gt;()
-    ///             .Where(<#=cteTableAlias#> =&gt; a.Id == 1)
-    ///             .Select(<#=cteTableAlias#> =&gt; new { ... })
-    ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///             .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-	///				...
-    ///             .LeftJoin(<#=currentCteTableAlias#>, (<#=tableAlias#>) =&gt; a.PageId == c.Id)
-    ///             .Select((<#=tableAlias#>) =&gt; new { ... }))) ...
-    /// SQL:
-    /// WITH RECURSIVE MyCte1(Id,Url) AS 
-    /// (
-    ///     ...
-    /// ),
-    /// MyCte2(Id,Name,ParentId,Url) AS
-    /// (
-    ///     SELECT ... FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCte2 b ON a.`ParentId`=b.`Id` LEFT JOIN MyCte1 ON a.`PageId`=c.`Id`
-    /// ) ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">当前CTE临时返回的实体类型</typeparam>
-    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：
-    /// <code>
-    /// f.From&lt;Page&gt;() ... .Select((x, y) =&gt; new { ... })
-    /// </code>
-    /// </param>
-    /// <param name="tableAsStart">CTE子句中使用的表别名开始字母，默认从字母a开始</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<<#=tables#>, TOther> NextWith<TOther>(Func<IFromQuery, <#=cteQueryTables#>, IQuery<TOther>> cteSubQuery);
-    #endregion
-
-<#      }
         if(i < count)
         {
 #>

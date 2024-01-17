@@ -13,28 +13,26 @@ public interface IQueryVisitor : IDisposable
 {
     bool IsMultiple { get; set; }
     int CommandIndex { get; set; }
-    List<TableSegment> CteTables { get; set; }
-    List<object> CteQueries { get; set; }
-    Dictionary<object, TableSegment> CteTableSegments { get; set; }
+    //List<TableSegment> CteTables { get; set; }
+    List<ICteQuery> CteQueries { get; set; }
     IDataParameterCollection DbParameters { get; set; }
-    TableSegment SelfTableSegment { get; set; }
+    bool IsUseFieldAlias { get; set; }
+    bool IsUseCteTable { get; set; }
 
-    string BuildSql(out List<ReaderField> readerFields, bool hasCteSql = true, bool isUnion = false);
+    string BuildSql(out List<ReaderField> readerFields);
     string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters);
+    string BuildCteTableSql(string tableName, out bool isRecursive);
     void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes);
-    IVisitableQuery From(Type targetType, bool isFirst, IVisitableQuery subQueryObj);
-    IVisitableQuery From(Type targetType, bool isFirst, DbContext dbContext, Delegate subQueryGetter);
-    IVisitableQuery FromWith(Type targetType, bool isFirst, IVisitableQuery cteQueryObjGetter);
-    IVisitableQuery FromWith(Type targetType, bool isFirst, DbContext dbContext, Delegate cteSubQueryGetter);
+    void From(Type targetType, IQuery subQueryObj);
+    IQuery From(Type targetType, DbContext dbContext, Delegate subQueryGetter);
 
-    void Union(string union, Type targetType, IVisitableQuery subQuery);
+    void Union(string union, Type targetType, IQuery subQuery);
     void Union(string union, Type targetType, DbContext dbContext, Delegate subQueryGetter);
-    void UnionRecursive(string union, Type targetType, DbContext dbContext, IVisitableQuery subQueryObj, Delegate selfSubQueryGetter);
-    TableSegment UseTable(Type targetType, string rawSql, List<ReaderField> readerFields, object queryObj, bool isUnion);
+    void UnionRecursive(string union, Type targetType, DbContext dbContext, IQuery subQueryObj, Delegate selfSubQueryGetter);
 
     public void Join(string joinType, Expression joinOn);
     void Join(string joinType, Type newEntityType, Expression joinOn);
-    void Join(string joinType, Type newEntityType, IVisitableQuery subQuery, Expression joinOn);
+    void Join(string joinType, Type newEntityType, IQuery subQuery, Expression joinOn);
     void Join(string joinType, Type newEntityType, DbContext dbContext, Delegate subQueryGetter, Expression joinOn);
 
     void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null);

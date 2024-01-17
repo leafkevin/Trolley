@@ -30,7 +30,7 @@ public class SqlVisitor : ISqlVisitor
     public Dictionary<string, TableSegment> TableAlias { get; set; } = new();
     public bool IsSelect { get; set; }
     public bool IsWhere { get; set; }
-    public bool IsNeedAlias { get; set; }
+    public bool IsNeedTableAlias { get; set; }
 
     public List<ReaderField> ReaderFields { get; set; }
     public bool IsFromQuery { get; set; }
@@ -38,7 +38,7 @@ public class SqlVisitor : ISqlVisitor
     public OperationType LastWhereNodeType { get; set; } = OperationType.None;
     public char TableAsStart { get; set; }
     public List<ReaderField> GroupFields { get; set; }
-
+    public List<ICteQuery> CteQueries { get; set; }
 
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
@@ -342,7 +342,7 @@ public class SqlVisitor : ISqlVisitor
                     if (memberExpr.Expression.NodeType != ExpressionType.Parameter)
                     {
                         fieldName = this.OrmProvider.GetFieldName(memberExpr.Member.Name);
-                        if (this.IsNeedAlias) fieldName = tableSegment.AliasName + "." + fieldName;
+                        if (this.IsNeedTableAlias) fieldName = tableSegment.AliasName + "." + fieldName;
                         sqlSegment.Value = fieldName;
 
                         var parentMemberExpr = memberExpr.Expression as MemberExpression;
@@ -375,7 +375,7 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment.MemberMapper = memberMapper;
                     //查询时，IsNeedAlias始终为true，新增、更新、删除时，引用联表操作时，才会为true
                     fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
-                    if (this.IsNeedAlias) fieldName = tableSegment.AliasName + "." + fieldName;
+                    if (this.IsNeedTableAlias) fieldName = tableSegment.AliasName + "." + fieldName;
                     sqlSegment.Value = fieldName;
                 }
                 //.NET枚举类型总是解析成对应的UnderlyingType数值类型，如：a.Gender ?? Gender.Male == Gender.Male
@@ -452,9 +452,8 @@ public class SqlVisitor : ISqlVisitor
                         readerFields.Add(new ReaderField
                         {
                             FieldType = ReaderFieldType.Field,
-                            TableSegment = argumentSegment.TableSegment,
-                            MemberMapper = argumentSegment.MemberMapper,
                             FromMember = argumentSegment.FromMember,
+                            MemberMapper = argumentSegment.MemberMapper,
                             TargetMember = argumentSegment.FromMember,
                             Body = fieldName
                         });
@@ -493,22 +492,15 @@ public class SqlVisitor : ISqlVisitor
             throw new NotSupportedException($"FROM子查询中不支持参数表达式访问，只支持基础字段访问访问,{parameterExpr}");
 
         var fromSegment = this.TableAlias[parameterExpr.Name];
-        var readerFields = new List<ReaderField>();
-
-        //var childReaderFields = this.FlattenTableFields(fromSegment);
-        //var body = this.BuildSelectSql(childReaderFields);
         var readerField = new ReaderField
         {
             FieldType = ReaderFieldType.Entity,
             TableSegment = fromSegment,
             ReaderFields = this.FlattenTableFields(fromSegment),
             Path = parameterExpr.Name
-            //BuildSql时，再设置body
-            //Body = body
-            //最外层Select对象的成员，位于顶层, FromMember暂时不设置值，到Select时候去设置 
         };
         //include表的ReaderField字段，紧跟在主表ReaderField后面
-        readerFields.Add(readerField);
+        var readerFields = new List<ReaderField>() { readerField };
         this.AddIncludeTableReaderFields(readerField, readerFields);
         return sqlSegment.Change(readerFields);
     }
@@ -518,14 +510,9 @@ public class SqlVisitor : ISqlVisitor
         if (includedSegments.Count > 0)
         {
             parent.HasNextInclude = true;
-            var builder = new StringBuilder();
-
             foreach (var includedSegment in includedSegments)
             {
-                builder.Clear();
                 var childReaderFields = this.FlattenTableFields(includedSegment);
-                //var body = this.BuildSelectSql(this.FlattenTableFields(includedSegment),true);
-
                 var readerField = new ReaderField
                 {
                     FieldType = ReaderFieldType.Entity,
@@ -535,8 +522,7 @@ public class SqlVisitor : ISqlVisitor
                     TargetMember = includedSegment.FromMember.Member,
                     Parent = parent,
                     ReaderFields = this.FlattenTableFields(includedSegment),
-                    Path = includedSegment.Path,
-                    //Body = body
+                    Path = includedSegment.Path
                 };
                 readerFields.Add(readerField);
                 if (this.Tables.Exists(f => f.TableType == TableType.Include && f.FromTable == includedSegment))
@@ -700,6 +686,14 @@ public class SqlVisitor : ISqlVisitor
                 }
                 else
                 {
+                    var visitor = this.CreateQueryVisitor();
+                    var fromQuery = new FromQuery(this.DbKey, this.OrmProvider, this.MapProvider, visitor, this.IsParameterized);
+                    var queryObj = methodCallExpr.Method.Invoke(null, new object[] { fromQuery });
+                    if (queryObj is ICteQuery cteQuery)
+                    {
+
+                    }
+
                     lambdaExpr = methodCallExpr.Arguments[1] as LambdaExpression;
                     var sql = this.VisitFromQuery(lambdaExpr);
                     sqlSegment.Change(sql);
@@ -1042,16 +1036,19 @@ public class SqlVisitor : ISqlVisitor
             callStack.Push(callExpr);
             currentExpr = callExpr.Object;
         }
-
-        if (this is not IQueryVisitor queryVisitor)
-            queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
         var fromQuery = new FromQuery(this.DbKey, this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
-        var queryObj = firstExpr.Evaluate(fromQuery);
+        var queryObj = firstExpr.Evaluate(fromQuery) as IQuery;
         while (callStack.TryPop(out var callExpr))
         {
             callExpr.Evaluate(queryObj);
         }
-        var result = queryVisitor.BuildSql(out _);
+        var result = queryObj.Visitor.BuildSql(out _);
+        //TODO:CTE表场景有待处理
+        //if (!queryVisitor.Equals(queryObj.Visitor))
+        //{
+        //    queryObj.Visitor.CopyTo(queryVisitor);
+        //}
         #region 注释
         //var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
         //queryVisitor.IsNeedAlias = this.IsNeedAlias;
@@ -1155,7 +1152,7 @@ public class SqlVisitor : ISqlVisitor
         //    }
         //}      
         //var result = queryVisitor.BuildSql(out _);
-        #endregion     
+        #endregion
         return result;
     }
     public virtual string GetQuotedValue(SqlSegment sqlSegment)
@@ -1209,25 +1206,14 @@ public class SqlVisitor : ISqlVisitor
         }
         return this.OrmProvider.GetQuotedValue(elementValue);
     }
-    //public virtual IQueryVisitor CreateQueryVisitor(bool isNewCteQuery = false)
-    //{
-    //    var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
-    //    queryVisiter.IsMultiple = this.IsMultiple;
-    //    queryVisiter.CommandIndex = this.CommandIndex;
-    //    if (isNewCteQuery)
-    //    {
-    //        queryVisiter.CteTables = new();
-    //        queryVisiter.CteQueries = new();
-    //        queryVisiter.CteTableSegments = new();
-    //    }
-    //    else
-    //    {
-    //        queryVisiter.CteTables = this.cteta;
-    //        queryVisiter.CteQueries = new();
-    //        queryVisiter.CteTableSegments = new();
-    //    }
-    //    return queryVisiter;
-    //}
+    public virtual IQueryVisitor CreateQueryVisitor()
+    {
+        var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+        queryVisiter.IsMultiple = this.IsMultiple;
+        queryVisiter.CommandIndex = this.CommandIndex;
+        queryVisiter.CteQueries = this.CteQueries;
+        return queryVisiter;
+    }
     /// <summary>
     /// 用于Where条件中，IS NOT NULL,!= 两种情况判断
     /// </summary>
@@ -1294,6 +1280,7 @@ public class SqlVisitor : ISqlVisitor
         }
         return targetFields;
     }
+
     public bool IsDateTimeOperator(SqlSegment sqlSegment, out SqlSegment result)
     {
         var binaryExpr = sqlSegment.Expression as BinaryExpression;

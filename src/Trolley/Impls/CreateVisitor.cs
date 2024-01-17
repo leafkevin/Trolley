@@ -340,7 +340,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (fieldNames.Count > 0)
             return fieldNames;
         return null;
-    }
+    }  
     public void Clear()
     {
         this.Tables?.Clear();
@@ -348,7 +348,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.ReaderFields?.Clear();
         this.WhereSql = null;
         this.TableAsStart = 'a';
-        this.IsNeedAlias = false;
+        this.IsNeedTableAlias = false;
         this.deferredSegments.Clear();
         this.InsertFields.Clear();
     }

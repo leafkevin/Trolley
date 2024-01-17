@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -39,12 +40,6 @@ public class ReaderField
     /// </summary>
     public string Body { get; set; }
     /// <summary>
-    /// 当前ReaderField是否是已有Include表中的ReaderField的引用
-    /// ReaderField引用，查询数据库时，不会重复查询字段，在创建返回实体的时候，把对应数据再设置进去
-    /// Include表引用时，主表数据返回，Include表引用才生效
-    /// </summary>
-    public bool IsRef { get; set; }
-    /// <summary>
     /// Include子表的主表ReaderField引用
     /// </summary>
     public ReaderField Parent { get; set; }
@@ -68,6 +63,10 @@ public class ReaderField
     /// 是否是最外层目标类型，通常用判断第一个字段是否是参数访问，并且只有一个字段，可以有include操作
     /// </summary>
     public bool IsTargetType { get; set; }
+    /// <summary>
+    /// 当前字段类型，单个字段时使用
+    /// </summary>
+    public Type FieldTargetType { get; set; }
     /// <summary>
     /// 最外层Select时，原参数访问的路径，如：.Select(x => new { Order = x, x.Seller.Company })中的x, x.Seller.Company
     /// 当有Include导航属性成员访问时，查找其主表在Select返回的实体中的属性值，构造延迟属性设置方法

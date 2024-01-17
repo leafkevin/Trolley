@@ -1261,6 +1261,30 @@ SELECT * FROM (SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE
 SELECT * FROM (SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`>2 ORDER BY `Id` DESC LIMIT 1) a");
     }
     [Fact]
+    public void Union_Cte()
+    {
+        this.Initialize();
+        using var repository = this.dbFactory.Create();
+        var sql = repository.FromWith(f => f.From<Menu>()
+                .Select(x => new { x.Id, x.Name, x.ParentId, x.PageId }))
+            .InnerJoin<Page>((a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+            .UnionAll(f => f.From<Order>()
+                .Where(x => x.Id > 2)
+                .OrderByDescending(f => f.Id)
+                .Select(x => new
+                {
+                    x.Id,
+                    Name = x.OrderNo,
+                    ParentId = x.SellerId,
+                    Url = x.BuyerId.ToString()
+                })
+                .Take(1))
+            .ToSql(out _);
+        Assert.True(sql == @"SELECT * FROM (SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`<3 ORDER BY `Id` LIMIT 1) a UNION ALL
+SELECT * FROM (SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`>2 ORDER BY `Id` DESC LIMIT 1) a");
+    }
+    [Fact]
     public async void Query_WithCte()
     {
         using var repository = dbFactory.Create();
@@ -1289,25 +1313,28 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM MenuList a INNER JOIN `sys_page
     {
         //this.Initialize();
         using var repository = dbFactory.Create();
-        var subQuery = repository.From<Menu>()
+        var myCteTable1 = repository
+            .From<Menu>()
                     .Where(x => x.Id == 1)
                     .Select(x => new { x.Id, x.Name, x.ParentId })
                 .UnionAllRecursive((x, self) => x.From<Menu>()
                     .InnerJoin(self, (a, b) => a.ParentId == b.Id)
-                    .Select((a, b) => new { a.Id, a.Name, a.ParentId }));
-        var sql = repository
-            .FromWith(f => subQuery)
-            .NextWith((x, cte1) => x.From<Page, Menu>()
+                    .Select((a, b) => new { a.Id, a.Name, a.ParentId }))
+                .AsCteTable("myCteTable1");
+        var myCteTable2 = repository
+            .From(x => x.From<Page, Menu>()
                     .Where((a, b) => a.Id == b.PageId)
                     .Select((x, y) => new { y.Id, y.ParentId, x.Url })
                 .UnionAllRecursive((x, self) => x.From<Menu>()
                     .InnerJoin<Page>((a, b) => a.PageId == b.Id)
-                    .InnerJoin(cte1, (a, b, c) => a.Id == b.Id)
-                    .Select((x, y, z) => new { x.Id, x.ParentId, y.Url })))
-            .InnerJoin((a, b) => a.Id == b.Id)
-            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-            .ToSql(out _);
+                    .Select((x, y) => new { x.Id, x.ParentId, y.Url })))
+             .AsCteTable("myCteTable2");
 
+        var sql = repository
+            .From(myCteTable2)
+            .InnerJoin(myCteTable1, (a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, b.Name, a.ParentId, a.Url })
+            .ToSql(out _);
         Assert.True(sql == @"WITH RECURSIVE MenuList(Id,Name,ParentId) AS 
 (
 SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL

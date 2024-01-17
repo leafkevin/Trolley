@@ -147,47 +147,6 @@ public interface IMultipleQuery
     IMultiQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery, char tableAsStart = 'a');
     #endregion
 
-    #region FromWith CTE
-    /// <summary>
-    /// 使用CTE子句创建查询对象，不能自我引用不能递归查询，用法：
-    /// <code>
-    /// var subQuery = f.From&lt;Menu&gt;()
-    ///     .Select(x =&gt; new { ... });
-    /// f.FromWith(subQuery) ...
-    /// SQL:
-    /// WITH MyCte1(Id,Name,ParentId,PageId) AS 
-    /// (
-    ///     SELECT ... FROM `sys_menu`
-    /// )
-    /// ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
-    /// <param name="cteSubQuery">CTE 查询子句</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T> FromWith<T>(IQuery<T> cteSubQuery);
-    /// <summary>
-    /// 使用CTE子句创建查询对象，包含UnionRecursive或UnionAllRecursive子句可以自我引用递归查询，用法：
-    /// <code>
-    /// f.FromWith(f =&gt; f.From&lt;Menu&gt;() ...
-    ///         .Select(x =&gt; new { ... })
-    ///     .UnionRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { ... }))) ...
-    /// SQL:
-    /// WITH RECURSIVE MyCte1(Id,Name,ParentId,PageId) AS 
-    /// (
-    /// SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION
-    /// SELECT ... FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id` ...
-    /// ) ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="T">CTE With子句的临时实体类型，通常是一个匿名的</typeparam>
-    /// <param name="cteSubQuery">CTE 查询子句</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T> FromWith<T>(Func<IFromQuery, IQuery<T>> cteSubQuery);
-    #endregion
-
     #region QueryFirst/Query
     /// <summary>
     /// 使用原始SQL语句rawSql查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值

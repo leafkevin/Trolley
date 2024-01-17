@@ -62,7 +62,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     this.VisitSet(deferredSegment.Value as Expression);
                     break;
                 case "SetFrom":
-                    this.IsNeedAlias = true;
+                    this.IsNeedTableAlias = true;
                     this.VisitSet(deferredSegment.Value as Expression);
                     break;
                 case "SetField":
@@ -72,7 +72,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     this.VisitSetWith(deferredSegment.Value);
                     break;
                 case "SetFromField":
-                    this.IsNeedAlias = true;
+                    this.IsNeedTableAlias = true;
                     this.VisitSetFromField((FieldFromQuery)deferredSegment.Value);
                     break;
                 case "SetBulk":
@@ -116,7 +116,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var entityTableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
         var builder = new StringBuilder($"UPDATE {entityTableName} ");
         var aliasName = this.Tables[0].AliasName;
-        if (this.IsNeedAlias)
+        if (this.IsNeedTableAlias)
             builder.Append($"{aliasName} ");
 
         if (this.IsJoin && this.Tables.Count > 1)
@@ -138,7 +138,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             foreach (var setField in this.UpdateFields)
             {
                 if (index > 0) builder.Append(',');
-                if (this.IsNeedAlias) builder.Append($"{aliasName}.");
+                if (this.IsNeedTableAlias) builder.Append($"{aliasName}.");
                 builder.Append($"{setField.Fields}={setField.Values}");
                 index++;
             }
@@ -165,7 +165,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             foreach (var whereField in this.WhereFields)
             {
                 if (index > 0) builder.Append(" AND ");
-                if (this.IsNeedAlias) builder.Append($"{aliasName}");
+                if (this.IsNeedTableAlias) builder.Append($"{aliasName}");
                 builder.Append($"{whereField.Fields}={whereField.Values}");
                 index++;
             }
@@ -181,7 +181,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public virtual IUpdateVisitor From(params Type[] entityTypes)
     {
-        this.IsNeedAlias = true;
+        this.IsNeedTableAlias = true;
         this.IsFrom = true;
         int tableIndex = this.TableAsStart + this.Tables.Count;
         for (int i = 0; i < entityTypes.Length; i++)
@@ -196,7 +196,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public virtual IUpdateVisitor Join(string joinType, Type entityType, Expression joinOn)
     {
-        this.IsNeedAlias = true;
+        this.IsNeedTableAlias = true;
         this.IsJoin = true;
         var lambdaExpr = joinOn as LambdaExpression;
         var joinTable = new TableSegment
@@ -239,7 +239,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public virtual IUpdateVisitor SetFrom(Expression fieldsAssignment)
     {
-        this.IsNeedAlias = true;
+        this.IsNeedTableAlias = true;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "SetFrom",
@@ -249,7 +249,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public virtual IUpdateVisitor SetFrom(Expression fieldSelector, Expression valueSelector)
     {
-        this.IsNeedAlias = true;
+        this.IsNeedTableAlias = true;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "SetFromField",
@@ -328,7 +328,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var builder = new StringBuilder($"UPDATE {this.OrmProvider.GetTableName(entityMapper.TableName)} SET ");
         var aliasName = this.Tables[0].AliasName;
         //sql server表别名就是表名，长度>1
-        if (this.IsNeedAlias && aliasName.Length == 1)
+        if (this.IsNeedTableAlias && aliasName.Length == 1)
             builder.Append($"{aliasName} ");
 
         int index = 0;
@@ -338,7 +338,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             foreach (var setField in this.UpdateFields)
             {
                 if (index > 0) builder.Append(',');
-                if (this.IsNeedAlias) builder.Append($"{aliasName}.");
+                if (this.IsNeedTableAlias) builder.Append($"{aliasName}.");
                 builder.Append($"{setField.Fields}={setField.Values}");
                 index++;
             }
@@ -380,7 +380,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             foreach (var whereField in this.WhereFields)
             {
                 if (index > 0) builder.Append(" AND ");
-                if (this.IsNeedAlias) builder.Append($"{aliasName}");
+                if (this.IsNeedTableAlias) builder.Append($"{aliasName}");
                 builder.Append($"{whereField.Fields}={whereField.Values}");
                 index++;
             }
@@ -485,7 +485,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.WhereSql = null;
         this.IsFromQuery = false;
         this.TableAsStart = 'a';
-        this.IsNeedAlias = false;
+        this.IsNeedTableAlias = false;
 
         this.IsFrom = false;
         this.IsJoin = false;
@@ -616,7 +616,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public virtual void VisitSetFromField(object deferredSegmentValue)
     {
-        this.IsNeedAlias = true;
+        this.IsNeedTableAlias = true;
         var entityMapper = this.Tables[0].Mapper;
         (var fieldSelector, var valueSelector) = ((Expression, Expression))deferredSegmentValue;
         var lambdaExpr = fieldSelector as LambdaExpression;

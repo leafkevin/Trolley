@@ -63,49 +63,49 @@ public interface ICreate<TEntity>
     IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>();
     #endregion
 
-    #region FromWith
-    /// <summary>
-    /// 使用CTE子查询批量插入数据，不能自我引用不能递归查询，用法：
-    /// var subQuery = repository.From&lt;Menu&gt;() ...
-    ///     .Select(x =&gt; new { ... });
-    /// repository.Create&lt;Page&gt;().FromWith(subQuery) ...
-    /// SQL:
-    /// INSERT INTO `sys_page` ( ...)
-    /// WITH MyCte1(Id,Name,ParentId,PageId) AS 
-    /// (
-    ///     SELECT ... FROM `sys_menu`a
-    /// )
-    /// SELECT ... FROM MyCte1 a ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TTarget">CTE子查询返回的实体类型</typeparam>
-    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：<code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
-    /// <returns></returns>
-    IFromCommand<TTarget> FromWith<TTarget>(IQuery<TTarget> cteSubQuery);
-    /// <summary>
-    /// 使用CTE子查询批量插入数据,可以包含Union/UnionAll子句自我引用递归查询，也可以包含Inner/Left/Right Join子句引入前面定义的CTE表，表达式cteSubQuery第二参数是前一个CTE表,多个CTE子句需要连续定义，用法：
-    /// <code>
-    /// repository.Create&lt;Menu&gt;()
-    ///     .FromWith(f =&gt; f.From&lt;Menu&gt;() ...
-    ///         .Select(x =&gt; new { ... })
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { ... }))) ...
-    /// SQL:
-    /// INSERT INTO `sys_page`( ... )
-    /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
-    /// (
-    ///     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
-    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id`
-    /// )
-    /// SELECT ... FROM MyCte1 a ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TTarget">CTE子查询返回的实体类型</typeparam>
-    /// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：<code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
-    /// <returns></returns>
-    IFromCommand<TTarget> FromWith<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery);
-    #endregion
+    //#region FromWith
+    ///// <summary>
+    ///// 使用CTE子查询批量插入数据，不能自我引用不能递归查询，用法：
+    ///// var subQuery = repository.From&lt;Menu&gt;() ...
+    /////     .Select(x =&gt; new { ... });
+    ///// repository.Create&lt;Page&gt;().FromWith(subQuery) ...
+    ///// SQL:
+    ///// INSERT INTO `sys_page` ( ...)
+    ///// WITH MyCte1(Id,Name,ParentId,PageId) AS 
+    ///// (
+    /////     SELECT ... FROM `sys_menu`a
+    ///// )
+    ///// SELECT ... FROM MyCte1 a ...
+    ///// </code>
+    ///// </summary>
+    ///// <typeparam name="TTarget">CTE子查询返回的实体类型</typeparam>
+    ///// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：<code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
+    ///// <returns></returns>
+    //IFromCommand<TTarget> FromWith<TTarget>(IQuery<TTarget> cteSubQuery);
+    ///// <summary>
+    ///// 使用CTE子查询批量插入数据,可以包含Union/UnionAll子句自我引用递归查询，也可以包含Inner/Left/Right Join子句引入前面定义的CTE表，表达式cteSubQuery第二参数是前一个CTE表,多个CTE子句需要连续定义，用法：
+    ///// <code>
+    ///// repository.Create&lt;Menu&gt;()
+    /////     .FromWith(f =&gt; f.From&lt;Menu&gt;() ...
+    /////         .Select(x =&gt; new { ... })
+    /////     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    /////         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+    /////         .Select((a, b) =&gt; new { ... }))) ...
+    ///// SQL:
+    ///// INSERT INTO `sys_page`( ... )
+    ///// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
+    ///// (
+    /////     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
+    /////     SELECT ... FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id`
+    ///// )
+    ///// SELECT ... FROM MyCte1 a ...
+    ///// </code>
+    ///// </summary>
+    ///// <typeparam name="TTarget">CTE子查询返回的实体类型</typeparam>
+    ///// <param name="cteSubQuery">CTE子查询，一定带有Select语句，如：<code>f.From&lt;Page&gt;() ... Select((x, y) =&gt; new { ... })</code>
+    ///// <returns></returns>
+    //IFromCommand<TTarget> FromWith<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery);
+    //#endregion
 
     //#region WithFrom
     ///// <summary>

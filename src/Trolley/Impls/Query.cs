@@ -11,7 +11,8 @@ namespace Trolley;
 public class QueryAnonymousObject : IQueryAnonymousObject
 {
     #region Properties
-    public IQueryVisitor Visitor { get; private set; }
+    public virtual DbContext DbContext { get; private set; }
+    public virtual IQueryVisitor Visitor { get; private set; }
     #endregion
 
     #region Constructor
@@ -19,7 +20,7 @@ public class QueryAnonymousObject : IQueryAnonymousObject
     #endregion
 
     #region ToSql
-    public string ToSql(out List<IDbDataParameter> dbParameters)
+    public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         return this.Visitor.BuildSql(out _);
@@ -29,9 +30,9 @@ public class QueryAnonymousObject : IQueryAnonymousObject
 public class QueryBase : IQueryBase
 {
     #region Properties
-    public DbContext DbContext { get; private set; }
-    public IQueryVisitor Visitor { get; private set; }
-    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
+    public virtual DbContext DbContext { get; private set; }
+    public virtual IQueryVisitor Visitor { get; private set; }
+    public virtual IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
@@ -43,7 +44,7 @@ public class QueryBase : IQueryBase
     #endregion
 
     #region Select	
-    public IQueryAnonymousObject SelectAnonymous(string fields = "*")
+    public virtual IQueryAnonymousObject SelectAnonymous(string fields = "*")
     {
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
@@ -51,7 +52,7 @@ public class QueryBase : IQueryBase
         this.Visitor.Select(fields);
         return new QueryAnonymousObject(this.Visitor);
     }
-    public IQuery<TTarget> Select<TTarget>(string fields = "*")
+    public virtual IQuery<TTarget> Select<TTarget>(string fields = "*")
     {
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
@@ -59,19 +60,14 @@ public class QueryBase : IQueryBase
         this.Visitor.Select(fields);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    //public IQuery<TTarget> SelectTo<TTarget>(Expression<Func<TTarget>> specialMemberInitializer = null)
-    //{
-    //    this.Visitor.Select(fields);
-    //    return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
-    //}
     #endregion
 
     #region Count
-    public int Count() => this.QueryFirstValue<int>("COUNT(1)");
-    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+    public virtual int Count() => this.QueryFirstValue<int>("COUNT(1)");
+    public virtual async Task<int> CountAsync(CancellationToken cancellationToken = default)
         => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken);
-    public long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
-    public async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+    public virtual long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
+    public virtual async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
         => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
     #endregion
 
@@ -112,13 +108,20 @@ public class Query<T> : QueryBase, IQuery<T>
     private int pageSize;
     #endregion
 
+    #region Properties
+    /// <summary>
+    /// 表名或是子查询表SQL，CTE表场景时，在AsCteTable方法调用前，一个临时表名
+    /// </summary>
+    public string Body { get; set; }
+    #endregion
+
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
         : base(dbContext, visitor) { }
     #endregion
 
     #region Union/UnionAll
-    public IQuery<T> Union(IQuery<T> subQuery)
+    public virtual IQuery<T> Union(IQuery<T> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -126,7 +129,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Union(" UNION", typeof(T), subQuery);
         return this;
     }
-    public IQuery<T> Union(Func<IFromQuery, IQuery<T>> subQuery)
+    public virtual IQuery<T> Union(Func<IFromQuery, IQuery<T>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -134,7 +137,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Union(" UNION", typeof(T), this.DbContext, subQuery);
         return this;
     }
-    public IQuery<T> UnionAll(IQuery<T> subQuery)
+    public virtual IQuery<T> UnionAll(IQuery<T> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -142,7 +145,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Union(" UNION ALL", typeof(T), subQuery);
         return this;
     }
-    public IQuery<T> UnionAll(Func<IFromQuery, IQuery<T>> subQuery)
+    public virtual IQuery<T> UnionAll(Func<IFromQuery, IQuery<T>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -150,7 +153,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Union(" UNION ALL", typeof(T), this.DbContext, subQuery);
         return this;
     }
-    public IQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
+    public virtual IQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -158,7 +161,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.UnionRecursive(" UNION", typeof(T), this.DbContext, this, subQuery);
         return this;
     }
-    public IQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
+    public virtual IQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -168,46 +171,27 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
-    #region CTE NextWith
-    public IQuery<T, TOther> NextWith<TOther>(IQuery<TOther> cteSubQuery)
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        this.Visitor.FromWith(typeof(TOther), false, cteSubQuery);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
-    }
-    public IQuery<T, TOther> NextWith<TOther>(Func<IFromQuery, IQuery<T>, IQuery<TOther>> cteSubQuery)
-    {
-        if (cteSubQuery == null)
-            throw new ArgumentNullException(nameof(cteSubQuery));
-
-        this.Visitor.FromWith(typeof(TOther), false, this.DbContext, cteSubQuery);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
-    }
-    #endregion
-
     #region WithTable
-    public IQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        this.Visitor.From(typeof(TOther), false, subQuery);
+        this.Visitor.From(typeof(TOther), subQuery);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public IQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
+    public virtual IQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        this.Visitor.From(typeof(TOther), false, this.DbContext, subQuery);
+        this.Visitor.From(typeof(TOther), this.DbContext, subQuery);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
     #region Join
-    public IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -215,7 +199,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -223,7 +207,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public IQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -231,7 +215,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public IQuery<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IQuery<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -241,7 +225,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Join("INNER JOIN", typeof(TOther), subQuery, joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public IQuery<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IQuery<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -251,7 +235,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Join("LEFT JOIN", typeof(TOther), subQuery, joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public IQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -261,7 +245,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), subQuery, joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public IQuery<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IQuery<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -271,7 +255,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Join("INNER JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public IQuery<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IQuery<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -281,7 +265,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Join("LEFT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public IQuery<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IQuery<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -294,7 +278,7 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region Include
-    public IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
+    public virtual IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
@@ -302,7 +286,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Include(memberSelector);
         return new IncludableQuery<T, TMember>(this.DbContext, this.Visitor);
     }
-    public IIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    public virtual IIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
@@ -313,7 +297,7 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region Where/And
-    public IQuery<T> Where(Expression<Func<T, bool>> predicate)
+    public virtual IQuery<T> Where(Expression<Func<T, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -321,7 +305,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Where(predicate);
         return this;
     }
-    public IQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+    public virtual IQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -331,7 +315,7 @@ public class Query<T> : QueryBase, IQuery<T>
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
-    public IQuery<T> And(Expression<Func<T, bool>> predicate)
+    public virtual IQuery<T> And(Expression<Func<T, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -339,7 +323,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.And(predicate);
         return this;
     }
-    public IQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+    public virtual IQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -352,7 +336,7 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region GroupBy
-    public IGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
+    public virtual IGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
@@ -363,9 +347,9 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region OrderBy
-    public IQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
+    public virtual IQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-    public IQuery<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
+    public virtual IQuery<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -374,9 +358,9 @@ public class Query<T> : QueryBase, IQuery<T>
             this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
-    public IQuery<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr)
+    public virtual IQuery<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public IQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
+    public virtual IQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -388,14 +372,14 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region Select
-    public IQuery<T> Select()
+    public virtual IQuery<T> Select()
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.Select(null, defaultExpr);
         return this;
     }
     //TODO:
-    //public IQuery<TTarget> Select<TTarget>(TTarget parameters)
+    //public virtual IQuery<TTarget> Select<TTarget>(TTarget parameters)
     //{
     //    if (parameters == null)
     //        throw new ArgumentNullException(nameof(parameters));
@@ -405,7 +389,7 @@ public class Query<T> : QueryBase, IQuery<T>
     //    //this.Visitor.Select()
     //    return fromQuery;
     //}
-    public IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
+    public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -413,12 +397,12 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
+    public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
     {
         this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
-    public IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
+    public virtual IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -429,7 +413,7 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region Distinct
-    public IQuery<T> Distinct()
+    public virtual IQuery<T> Distinct()
     {
         this.Visitor.Distinct();
         return this;
@@ -437,7 +421,7 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region Skip/Take/Page
-    public IQuery<T> Skip(int offset)
+    public virtual IQuery<T> Skip(int offset)
     {
         this.offset = offset;
         if (this.pageSize > 0)
@@ -445,7 +429,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Skip(offset);
         return this;
     }
-    public IQuery<T> Take(int limit)
+    public virtual IQuery<T> Take(int limit)
     {
         this.pageSize = limit;
         if (this.offset.HasValue)
@@ -453,7 +437,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Take(limit);
         return this;
     }
-    public IQuery<T> Page(int pageIndex, int pageSize)
+    public virtual IQuery<T> Page(int pageIndex, int pageSize)
     {
         this.pageIndex = pageIndex;
         this.pageSize = pageSize;
@@ -463,56 +447,56 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region Count
-    public int Count<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual int Count<TField>(Expression<Func<T, TField>> fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     }
-    public async Task<int> CountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<int> CountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
     }
-    public int CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual int CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
     }
-    public async Task<int> CountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<int> CountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
     }
-    public long LongCount<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual long LongCount<TField>(Expression<Func<T, TField>> fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
     }
-    public async Task<long> LongCountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<long> LongCountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
     }
-    public long LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual long LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
     }
-    public async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
@@ -522,56 +506,56 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region Aggregate
-    public TField Sum<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual TField Sum<TField>(Expression<Func<T, TField>> fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
     }
-    public async Task<TField> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<TField> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
     }
-    public TField Avg<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual TField Avg<TField>(Expression<Func<T, TField>> fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
     }
-    public async Task<TField> AvgAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<TField> AvgAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
     }
-    public TField Max<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual TField Max<TField>(Expression<Func<T, TField>> fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
     }
-    public async Task<TField> MaxAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<TField> MaxAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
     }
-    public TField Min<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual TField Min<TField>(Expression<Func<T, TField>> fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
     }
-    public async Task<TField> MinAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
+    public virtual async Task<TField> MinAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
@@ -581,16 +565,16 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region First/ToList/ToPageList/ToDictionary
-    public T First() => this.DbContext.QueryFirst<T>(this.Visitor);
-    public async Task<T> FirstAsync(CancellationToken cancellationToken = default)
+    public virtual T First() => this.DbContext.QueryFirst<T>(this.Visitor);
+    public virtual async Task<T> FirstAsync(CancellationToken cancellationToken = default)
         => await this.DbContext.QueryFirstAsync<T>(this.Visitor, cancellationToken);
-    public List<T> ToList() => this.DbContext.Query<T>(this.Visitor);
-    public async Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
+    public virtual List<T> ToList() => this.DbContext.Query<T>(this.Visitor);
+    public virtual async Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
         => await this.DbContext.QueryAsync<T>(this.Visitor, cancellationToken);
-    public IPagedList<T> ToPageList() => this.DbContext.QueryPage<T>(this.Visitor, this.pageIndex, this.pageSize);
-    public async Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default)
+    public virtual IPagedList<T> ToPageList() => this.DbContext.QueryPage<T>(this.Visitor, this.pageIndex, this.pageSize);
+    public virtual async Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default)
         => await this.DbContext.QueryPageAsync<T>(this.Visitor, this.pageIndex, this.pageSize, cancellationToken);
-    public Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull
+    public virtual Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull
     {
         if (keySelector == null)
             throw new ArgumentNullException(nameof(keySelector));
@@ -599,7 +583,7 @@ public class Query<T> : QueryBase, IQuery<T>
 
         return this.ToList().ToDictionary(keySelector, valueSelector);
     }
-    public async Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull
+    public virtual async Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull
     {
         if (keySelector == null)
             throw new ArgumentNullException(nameof(keySelector));
@@ -611,6 +595,17 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
+    #region AsCteTable
+    public ICteQuery<T> AsCteTable(string tableName)
+    {
+        var queryObj = new CteQuery<T>(this.DbContext, this.Visitor);
+        queryObj.Body = this.Visitor.BuildCteTableSql(tableName, out var isRecursive);
+        queryObj.TableName = tableName;
+        queryObj.IsRecursive = isRecursive;
+        return queryObj;
+    }
+    #endregion
+
     #region ToSql
     public override string ToSql(out List<IDbDataParameter> dbParameters)
     {
@@ -619,5 +614,58 @@ public class Query<T> : QueryBase, IQuery<T>
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         return this.Visitor.BuildSql(out _);
     }
+    #endregion
+}
+public class CteQuery<T> : Query<T>, ICteQuery<T>
+{
+    #region Properties
+    public virtual string TableName { get; set; }
+    public virtual string Body { get; set; }
+    public virtual bool IsRecursive { get; set; }
+    #endregion
+
+    #region Constructor
+    public CteQuery(DbContext dbContext, IQueryVisitor visitor)
+        : base(dbContext, visitor) { }
+    public CteQuery(IQuery queryObj)
+        : base(queryObj.DbContext, queryObj.Visitor) { }
+    #endregion
+
+    #region 不支持的方法
+    public override IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector) => throw new NotSupportedException("不支持的方法调用");
+    public override IIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null) => throw new NotSupportedException("不支持的方法调用");
+    public override IQueryAnonymousObject SelectAnonymous(string fields = "*") => throw new NotSupportedException("不支持的方法调用");
+
+    public override int Count() => throw new NotSupportedException("不支持的方法调用");
+    public override Task<int> CountAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");
+    public override int Count<TField>(Expression<Func<T, TField>> fieldExpr) => throw new NotSupportedException("不支持的方法调用");
+    public override Task<int> CountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");
+    public override int CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr) => throw new NotSupportedException("不支持的方法调用");
+    public override Task<int> CountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");
+
+    public override long LongCount() => throw new NotSupportedException("不支持的方法调用");
+    public override Task<long> LongCountAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");
+    public override long LongCount<TField>(Expression<Func<T, TField>> fieldExpr) => throw new NotSupportedException("不支持的方法调用");
+    public override Task<long> LongCountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");
+    public override long LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr) => throw new NotSupportedException("不支持的方法调用");
+    public override Task<long> LongCountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");
+
+    public override TField Sum<TField>(Expression<Func<T, TField>> fieldExpr) => throw new NotSupportedException("不支持的方法调用");
+    public override Task<TField> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");
+    public override TField Avg<TField>(Expression<Func<T, TField>> fieldExpr) => throw new NotSupportedException("不支持的方法调用");
+    public override Task<TField> AvgAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");
+    public override TField Max<TField>(Expression<Func<T, TField>> fieldExpr) => throw new NotSupportedException("不支持的方法调用");
+    public override Task<TField> MaxAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");
+    public override TField Min<TField>(Expression<Func<T, TField>> fieldExpr) => throw new NotSupportedException("不支持的方法调用");
+    public override Task<TField> MinAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");
+
+    public override T First() => throw new NotSupportedException("不支持的方法调用");
+    public override Task<T> FirstAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");
+    public override List<T> ToList() => throw new NotSupportedException("不支持的方法调用");
+    public override Task<List<T>> ToListAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");
+    public override IPagedList<T> ToPageList() => throw new NotSupportedException("不支持的方法调用");
+    public override Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");
+    public override Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) => throw new NotSupportedException("不支持的方法调用");
+    public override Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector, CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");
     #endregion
 }
