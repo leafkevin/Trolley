@@ -256,18 +256,13 @@ public class MySqlCreateVisitor : CreateVisitor
         }
         return this.Evaluate(sqlSegment);
     }
-    public override IQueryVisitor CreateQueryVisitor(bool isCteQuery = false)
+    public override IQueryVisitor CreateQueryVisitor()
     {
         var queryVisiter = new MySqlQueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
         queryVisiter.IsMultiple = this.IsMultiple;
         queryVisiter.CommandIndex = this.CommandIndex;
+        queryVisiter.CteQueries = this.CteQueries;
         queryVisiter.IsUseIgnoreInto = this.IsUseIgnoreInto;
-        if (isCteQuery)
-        {
-            queryVisiter.CteTables = new();
-            queryVisiter.CteQueries = new();
-            queryVisiter.CteTableSegments = new();
-        }
         return queryVisiter;
     }
     public virtual void InitTableAlias(LambdaExpression lambdaExpr)
