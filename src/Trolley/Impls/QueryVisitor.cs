@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
@@ -34,7 +35,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     protected bool IsFromCommand { get; set; }
     protected bool IsUnion { get; set; }
 
-    protected List<TableSegment> IncludeSegments { get; set; }
     protected TableSegment LastIncludeSegment { get; set; }
 
     public bool IsRecursive { get; set; }
@@ -326,7 +326,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes)
     {
-        //this.UnionSql = null;
         this.TableAsStart = tableAsStart;
         foreach (var entityType in entityTypes)
         {
@@ -555,79 +554,128 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     private string BuildIncludeSql(Type targetType, Action<StringBuilder, Action<IOrmProvider, StringBuilder, object>> sqlBuilderInitializer)
     {
         var builder = new StringBuilder();
-        foreach (var includeSegment in this.IncludeSegments)
+        for (int i = 0; i < this.IncludeSegments.Count; i++)
         {
-            (var headSql, Action<IOrmProvider, StringBuilder, object> sqlInitializer) = this.BuildIncludeSqlGetter(targetType, includeSegment);
+            if (i > 0) builder.Append(';');
+            var includeSegment = this.IncludeSegments[i];
+            var rootPath = includeSegment.Path.Substring(0, 1);
+            var rootReaderField = this.ReaderFields.Find(f => f.Path == rootPath);
+            var firstMember = rootReaderField.TargetMember;
+
+            (var headSql, Action<IOrmProvider, StringBuilder, object> sqlInitializer) = this.BuildIncludeSqlGetter(targetType, firstMember, includeSegment);
             builder.Append(headSql);
             sqlBuilderInitializer.Invoke(builder, sqlInitializer);
             if (!string.IsNullOrEmpty(includeSegment.Filter))
                 builder.Append($" AND {includeSegment.Filter}");
-            builder.Append(';');
         }
         return builder.ToString();
     }
     public void SetIncludeValues<TTarget>(Type targetType, TTarget target, IDataReader reader)
     {
-        var deferredInitializers = new List<Action<object>>();
+        var deferredInitializers = new List<(object IncludeValues, Action<object> SetIncludeValues)>();
         foreach (var includeSegment in this.IncludeSegments)
         {
             var navigationType = includeSegment.FromMember.NavigationType;
             var includeValues = this.CreateIncludeValues(navigationType);
+            var rootPath = includeSegment.Path.Substring(0, 1);
+            var rootReaderField = this.ReaderFields.Find(f => f.Path == rootPath);
+            var firstMember = rootReaderField.TargetMember;
+
             while (reader.Read())
                 this.AddIncludeValue(navigationType, includeValues, reader);
-            deferredInitializers.Add(f => this.SetIncludeValueToTarget(targetType, includeSegment, f, includeValues));
+            deferredInitializers.Add((includeValues, f => this.SetIncludeValueToTarget(targetType, firstMember, includeSegment, f, includeValues)));
+        }
+        foreach (var deferredInitializer in deferredInitializers)
+        {
+            if (deferredInitializer.IncludeValues is ICollection collection && collection.Count > 0)
+                deferredInitializer.SetIncludeValues(target);
         }
         if (this.deferredRefIncludeValuesSetters != null)
-            deferredInitializers.AddRange(this.deferredRefIncludeValuesSetters);
-        deferredInitializers.ForEach(t => t.Invoke(target));
+        {
+            foreach (var deferredRefIncludeValuesSetter in this.deferredRefIncludeValuesSetters)
+                deferredRefIncludeValuesSetter(target);
+        }
         reader.NextResult();
     }
     public async Task SetIncludeValuesAsync<TTarget>(Type targetType, TTarget target, DbDataReader reader, CancellationToken cancellationToken)
     {
-        var deferredInitializers = new List<Action<object>>();
+        var deferredInitializers = new List<(object IncludeValues, Action<object> SetIncludeValues)>();
         foreach (var includeSegment in this.IncludeSegments)
         {
             var navigationType = includeSegment.FromMember.NavigationType;
             var includeValues = this.CreateIncludeValues(navigationType);
+            var rootPath = includeSegment.Path.Substring(0, 1);
+            var rootReaderField = this.ReaderFields.Find(f => f.Path == rootPath);
+            var firstMember = rootReaderField.TargetMember;
+
             while (await reader.ReadAsync(cancellationToken))
                 this.AddIncludeValue(navigationType, includeValues, reader);
-            deferredInitializers.Add(f => this.SetIncludeValueToTarget(targetType, includeSegment, f, includeValues));
+            deferredInitializers.Add((includeValues, f => this.SetIncludeValueToTarget(targetType, firstMember, includeSegment, f, includeValues)));
+        }
+        foreach (var deferredInitializer in deferredInitializers)
+        {
+            if (deferredInitializer.IncludeValues is ICollection collection && collection.Count > 0)
+                deferredInitializer.SetIncludeValues(target);
         }
         if (this.deferredRefIncludeValuesSetters != null)
-            deferredInitializers.AddRange(this.deferredRefIncludeValuesSetters);
-        deferredInitializers.ForEach(t => t.Invoke(target));
+        {
+            foreach (var deferredRefIncludeValuesSetter in this.deferredRefIncludeValuesSetters)
+                deferredRefIncludeValuesSetter(target);
+        }
         await reader.NextResultAsync(cancellationToken);
     }
     public void SetIncludeValues<TTarget>(Type targetType, List<TTarget> targets, IDataReader reader)
     {
-        var deferredInitializers = new List<Action<object>>();
+        var deferredInitializers = new List<(object IncludeValues, Action<object> SetIncludeValues)>();
         foreach (var includeSegment in this.IncludeSegments)
         {
             var navigationType = includeSegment.FromMember.NavigationType;
             var includeValues = this.CreateIncludeValues(navigationType);
+            var rootPath = includeSegment.Path.Substring(0, 1);
+            var rootReaderField = this.ReaderFields.Find(f => f.Path == rootPath);
+            var firstMember = rootReaderField.TargetMember;
+
             while (reader.Read())
                 this.AddIncludeValue(navigationType, includeValues, reader);
-            deferredInitializers.Add(f => this.SetIncludeValueToTarget(targetType, includeSegment, f, includeValues));
+            deferredInitializers.Add((includeValues, f => this.SetIncludeValueToTarget(targetType, firstMember, includeSegment, f, includeValues)));
+        }
+        foreach (var deferredInitializer in deferredInitializers)
+        {
+            if (deferredInitializer.IncludeValues is ICollection collection && collection.Count > 0)
+                targets.ForEach(f => deferredInitializer.SetIncludeValues(f));
         }
         if (this.deferredRefIncludeValuesSetters != null)
-            deferredInitializers.AddRange(this.deferredRefIncludeValuesSetters);
-        targets.ForEach(f => deferredInitializers.ForEach(t => t.Invoke(f)));
+        {
+            foreach (var deferredRefIncludeValuesSetter in this.deferredRefIncludeValuesSetters)
+                targets.ForEach(f => deferredRefIncludeValuesSetter(f));
+        }
         reader.NextResult();
     }
     public async Task SetIncludeValueAsync<TTarget>(Type targetType, List<TTarget> targets, DbDataReader reader, CancellationToken cancellationToken)
     {
-        var deferredInitializers = new List<Action<object>>();
+        var deferredInitializers = new List<(object IncludeValues, Action<object> SetIncludeValues)>();
         foreach (var includeSegment in this.IncludeSegments)
         {
             var navigationType = includeSegment.FromMember.NavigationType;
             var includeValues = this.CreateIncludeValues(navigationType);
+            var rootPath = includeSegment.Path.Substring(0, 1);
+            var rootReaderField = this.ReaderFields.Find(f => f.Path == rootPath);
+            var firstMember = rootReaderField.TargetMember;
+
             while (await reader.ReadAsync(cancellationToken))
                 this.AddIncludeValue(navigationType, includeValues, reader);
-            deferredInitializers.Add(f => this.SetIncludeValueToTarget(targetType, includeSegment, f, includeValues));
+            deferredInitializers.Add((includeValues, f => this.SetIncludeValueToTarget(targetType, firstMember, includeSegment, f, includeValues)));
+        }
+        foreach (var deferredInitializer in deferredInitializers)
+        {
+            if (deferredInitializer.IncludeValues is ICollection collection && collection.Count > 0)
+                targets.ForEach(f => deferredInitializer.SetIncludeValues(f));
         }
         if (this.deferredRefIncludeValuesSetters != null)
-            deferredInitializers.AddRange(this.deferredRefIncludeValuesSetters);
-        targets.ForEach(f => deferredInitializers.ForEach(t => t.Invoke(f)));
+        {
+            foreach (var deferredRefIncludeValuesSetter in this.deferredRefIncludeValuesSetters)
+                targets.ForEach(f => deferredRefIncludeValuesSetter(f));
+        }
         await reader.NextResultAsync(cancellationToken);
     }
     private object CreateIncludeValues(Type elementType)
@@ -658,17 +706,18 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             blockBodies.Add(Expression.Assign(typedListExpr, Expression.Convert(anonObjsExpr, listType)));
 
             var methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.To), new Type[] { typeof(IDataReader), typeof(string), typeof(IOrmProvider), typeof(IEntityMapProvider) });
+            methodInfo = methodInfo.MakeGenericMethod(elementType);
             var elementExpr = Expression.Call(methodInfo, readerExpr, dbKeyExpr, ormProviderExpr, mapProviderExpr);
             methodInfo = listType.GetMethod("Add", new Type[] { elementType });
-            var bodyExpr = Expression.Call(typedListExpr, methodInfo, elementExpr);
+            blockBodies.Add(Expression.Call(typedListExpr, methodInfo, elementExpr));
             return Expression.Lambda<Action<object, string, IDataReader, IOrmProvider, IEntityMapProvider>>(
-                bodyExpr, anonObjsExpr, dbKeyExpr, readerExpr, ormProviderExpr, mapProviderExpr).Compile();
+                Expression.Block(blockParameters, blockBodies), anonObjsExpr, dbKeyExpr, readerExpr, ormProviderExpr, mapProviderExpr).Compile();
         });
         typedReaderElementSetter.Invoke(includeValues, this.DbKey, reader, this.OrmProvider, this.MapProvider);
     }
-    private void SetIncludeValueToTarget(Type targetType, TableSegment includeSegment, object target, object includeValues)
+    private void SetIncludeValueToTarget(Type targetType, MemberInfo firstMember, TableSegment includeSegment, object target, object includeValues)
     {
-        var cacheKey = this.GetIncludeKey(targetType, includeSegment);
+        var cacheKey = this.GetIncludeKey(targetType, firstMember, includeSegment);
         var includeValuesSetter = targetIncludeValuesSetters.GetOrAdd(cacheKey, f =>
         {
             var targetExpr = Expression.Parameter(typeof(object), "target");
@@ -686,10 +735,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
             //order.Seller.Company.Products
             //var foreignKeyValue = target.Seller.Company.Id;
-            Expression parentExpr = targetExpr;
+            Expression parentExpr = Expression.PropertyOrField(typedTargetExpr, firstMember.Name);
             var memberName = includeSegment.FromMember.MemberName;
-            foreach (var memberInfo in includeSegment.ParentMemberVisits)
+            for (int i = 0; i < includeSegment.ParentMemberVisits.Count - 1; i++)
             {
+                var memberInfo = includeSegment.ParentMemberVisits[i];
                 parentExpr = Expression.PropertyOrField(parentExpr, memberInfo.Name);
             }
             var keyMember = includeSegment.FromTable.Mapper.KeyMembers[0];
@@ -706,23 +756,27 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var methodInfo = listType.GetMethod("FindAll", new Type[] { predicateType });
             var filterValuesExpr = Expression.Call(typedListExpr, methodInfo, predicateExpr);
 
+            var myIncludeValuesExpr = Expression.Variable(listType, "myIncludeValues");
+            blockParameters.Add(myIncludeValuesExpr);
+            blockBodies.Add(Expression.Assign(myIncludeValuesExpr, filterValuesExpr));
+
             //target.Seller.Company.Products = myIncludeValues;
             Expression setValueExpr = null;
             switch (includeSegment.FromMember.Member.MemberType)
             {
                 case MemberTypes.Field:
-                    setValueExpr = Expression.Assign(Expression.Field(parentExpr, memberName), filterValuesExpr);
+                    setValueExpr = Expression.Assign(Expression.Field(parentExpr, memberName), myIncludeValuesExpr);
                     break;
                 case MemberTypes.Property:
                     methodInfo = (includeSegment.FromMember.Member as PropertyInfo).GetSetMethod();
-                    setValueExpr = Expression.Call(parentExpr, methodInfo, filterValuesExpr);
+                    setValueExpr = Expression.Call(parentExpr, methodInfo, myIncludeValuesExpr);
                     break;
                 default: throw new NotSupportedException("目前只支持Field或是Property两种成员访问");
             }
 
-            //if(includeValues.Count>0)
+            //if(myIncludeValues.Count>0)
             //  target.Seller.Company.Products = myIncludeValues;
-            var greaterThanExpr = Expression.GreaterThan(Expression.Property(typedListExpr, "Count"), Expression.Constant(0));
+            var greaterThanExpr = Expression.GreaterThan(Expression.Property(myIncludeValuesExpr, "Count"), Expression.Constant(0));
             blockBodies.Add(Expression.IfThen(greaterThanExpr, setValueExpr));
             return Expression.Lambda<Action<object, object>>(Expression.Block(blockParameters, blockBodies), targetExpr, anonListExpr).Compile();
         });
@@ -789,7 +843,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             //在映射实体时，根据ParentIndex+FromMember值，设置到主表实体的属性中
             if (memberMapper.IsToOne)
             {
-                builder.Append("." + memberExpr.Member.Name);
                 this.Tables.Add(tableSegment = new TableSegment
                 {
                     TableType = TableType.Include,
@@ -807,13 +860,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 if (fromSegment.Mapper.KeyMembers.Count > 1)
                     throw new NotSupportedException($"导航属性表，暂时不支持多个主键字段，实体：{fromSegment.EntityType.FullName}");
-                builder.Append("." + memberExpr.Member.Name);
                 this.IncludeSegments ??= new();
                 this.IncludeSegments.Add(tableSegment = new TableSegment
                 {
                     TableType = TableType.Include,
-                    FromTable = fromSegment,
+                    JoinType = "LEFT JOIN",
+                    EntityType = entityType,
                     Mapper = entityMapper,
+                    FromTable = fromSegment,
                     FromMember = memberMapper,
                     Path = builder.ToString(),
                     ParentMemberVisits = memberVisits
@@ -824,9 +878,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         return tableSegment;
     }
-    private (string, Action<IOrmProvider, StringBuilder, object>) BuildIncludeSqlGetter(Type targetType, TableSegment includeSegment)
+    private (string, Action<IOrmProvider, StringBuilder, object>) BuildIncludeSqlGetter(Type targetType, MemberInfo firstMember, TableSegment includeSegment)
     {
-        var cacheKey = this.GetIncludeKey(targetType, includeSegment);
+        var cacheKey = this.GetIncludeKey(targetType, firstMember, includeSegment);
         return includeSqlGetterCache.GetOrAdd(cacheKey, f =>
         {
             var targetExpr = Expression.Parameter(typeof(object), "target");
@@ -839,10 +893,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             blockParameters.Add(typedTargetExpr);
             blockBodies.Add(Expression.Assign(typedTargetExpr, Expression.Convert(targetExpr, targetType)));
 
-            Expression parentExpr = typedTargetExpr;
             //target.Order.Seller.Company.Products
-            foreach (var memberInfo in includeSegment.ParentMemberVisits)
+            Expression parentExpr = Expression.PropertyOrField(typedTargetExpr, firstMember.Name);
+            for (int i = 0; i < includeSegment.ParentMemberVisits.Count - 1; i++)
             {
+                //取父亲对象的完整访问路径：target.Order.Seller.Company
+                var memberInfo = includeSegment.ParentMemberVisits[i];
                 parentExpr = Expression.PropertyOrField(parentExpr, memberInfo.Name);
             }
             var foreignKeyMember = includeSegment.FromTable.Mapper.KeyMembers[0];
@@ -851,14 +907,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             foreignKeyValueExpr = Expression.Convert(foreignKeyValueExpr, typeof(object));
             var methedInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetQuotedValue));
             var fieldTypeExpr = Expression.Constant(foreignKeyMember.MemberType);
-            foreignKeyValueExpr = Expression.Call(ormProviderExpr, methedInfo, fieldTypeExpr, parentExpr);
+            foreignKeyValueExpr = Expression.Call(ormProviderExpr, methedInfo, fieldTypeExpr, foreignKeyValueExpr);
             methedInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
             blockBodies.Add(Expression.Call(builderExpr, methedInfo, foreignKeyValueExpr));
 
-            var foreignKey = includeSegment.FromMember.ForeignKey;
-            var fields = RepositoryHelper.BuildFieldsSqlPart(this.OrmProvider, this.MapProvider, includeSegment.EntityType, includeSegment.EntityType, true);
+            var foreignKey = this.OrmProvider.GetFieldName(includeSegment.FromMember.ForeignKey);
+            var fields = RepositoryHelper.BuildFieldsSqlPart(this.OrmProvider, includeSegment.Mapper, includeSegment.EntityType, true);
             var tableName = this.OrmProvider.GetTableName(includeSegment.Mapper.TableName);
-            var headSql = $" SELECT {fields} FROM {tableName} WHERE {foreignKey} IN (";
+            var headSql = $"SELECT {fields} FROM {tableName} WHERE {foreignKey} IN (";
 
             var sqlInitializer = Expression.Lambda<Action<IOrmProvider, StringBuilder, object>>(Expression.Block(blockParameters, blockBodies), ormProviderExpr, builderExpr, targetExpr).Compile();
             return (headSql, sqlInitializer);
@@ -920,13 +976,16 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     var fieldName = sqlSegment.Value.ToString();
                     builder.Append(fieldName);
                     //此时，字段不能加别名，后面有可能还会有OrderBy操作，到最外层Select的时候用到Grouping时，再加别名
+                    var isNeedAlias = sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression
+                        || sqlSegment.IsMethodCall || sqlSegment.FromMember == null || sqlSegment.FromMember.Name != memberInfo.Name;
                     this.GroupFields.Add(new ReaderField
                     {
                         FieldType = ReaderFieldType.Field,
                         FromMember = sqlSegment.FromMember,
                         MemberMapper = sqlSegment.MemberMapper,
                         TargetMember = memberInfo,
-                        Body = fieldName
+                        Body = fieldName,
+                        IsNeedAlias = isNeedAlias
                     });
                     index++;
                 }
@@ -1252,7 +1311,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 {
                     var builder = new StringBuilder(rootTableSegment.AliasName);
                     var memberExprs = this.GetMemberExprs(memberExpr, out var parameterExpr);
-                    if (memberExprs.Count > 0)
+                    if (memberExprs.Count > 1)
                     {
                         while (memberExprs.TryPop(out var currentExpr))
                         {
@@ -1567,12 +1626,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var memberExpr = sqlSegment.Expression as MemberExpression;
         sqlSegment = this.VisitMemberAccess(sqlSegment);
         //实体类型成员访问，只有两种场景：主表的实体成员(Include子表访问)或是Grouping分组对象访问
-        if (sqlSegment.MemberType == ReaderFieldType.Entity)
+        if (sqlSegment.Value is ReaderField parentReaderField)
         {
-            var parentReaderField = sqlSegment.Value as ReaderField;
             foreach (var readerField in parentReaderField.ReaderFields)
             {
-                if (readerField.FromMember == null || readerField.FromMember.Name != readerField.TargetMember.Name)
+                if (readerField.IsNeedAlias)
                     readerField.Body += " AS " + readerField.TargetMember.Name;
             }
             return parentReaderField;
@@ -1757,7 +1815,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public Stack<MemberExpression> GetMemberExprs(MemberExpression memberExpr, out ParameterExpression parameterExpr)
     {
-        var currentExpr = memberExpr.Expression;
+        Expression currentExpr = memberExpr;
         parameterExpr = null;
         var memberExprs = new Stack<MemberExpression>();
         while (currentExpr != null)
@@ -1786,16 +1844,18 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         return memberExprs;
     }
-    private int GetIncludeKey(Type targetType, TableSegment includeSegment)
+    private int GetIncludeKey(Type targetType, MemberInfo firstMember, TableSegment includeSegment)
     {
         var hashCode = new HashCode();
         hashCode.Add(this.DbKey);
         hashCode.Add(this.OrmProvider);
         hashCode.Add(targetType);
-        hashCode.Add(includeSegment.ParentMemberVisits.Count);
+        hashCode.Add(includeSegment.ParentMemberVisits.Count + 1);
+        hashCode.Add(firstMember.GetMemberType());
+        hashCode.Add(firstMember.Name);
         foreach (var memberInfo in includeSegment.ParentMemberVisits)
         {
-            hashCode.Add(memberInfo.DeclaringType);
+            hashCode.Add(memberInfo.GetMemberType());
             hashCode.Add(memberInfo.Name);
         }
         hashCode.Add(includeSegment.FromMember.MemberName);

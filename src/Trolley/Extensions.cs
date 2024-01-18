@@ -425,7 +425,7 @@ public static class Extensions
                 Expression readerValueExpr = null;
                 ReaderField childReaderField = null;
                 var childIndex = 0;
-                var endIndex = index + (readerField.ReaderFields?.Count ?? 1);
+                var endIndex = index + readerField.ReaderFields.Count;
 
                 if (readerField.FieldType == ReaderFieldType.DeferredFields)
                 {

@@ -38,6 +38,7 @@ public class SqlVisitor : ISqlVisitor
     public OperationType LastWhereNodeType { get; set; } = OperationType.None;
     public char TableAsStart { get; set; }
     public List<ReaderField> GroupFields { get; set; }
+    public List<TableSegment> IncludeSegments { get; set; }
     public List<ICteQuery> CteQueries { get; set; }
 
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
@@ -522,11 +523,25 @@ public class SqlVisitor : ISqlVisitor
                     TargetMember = includedSegment.FromMember.Member,
                     Parent = parent,
                     ReaderFields = this.FlattenTableFields(includedSegment),
-                    Path = includedSegment.Path
+                    //更换path，方便后续Include成员赋值时，能够找到parent对象
+                    Path = includedSegment.Path.Replace(parent.TableSegment.Path, parent.Path)
                 };
                 readerFields.Add(readerField);
                 if (this.Tables.Exists(f => f.TableType == TableType.Include && f.FromTable == includedSegment))
                     this.AddIncludeTableReaderFields(readerField, readerFields);
+            }
+        }
+        if (this.IncludeSegments != null)
+        {
+            var manyIncludedSegments = this.IncludeSegments.FindAll(f => f.FromTable == parent.TableSegment);
+            if (manyIncludedSegments.Count > 0)
+            {
+                //目前，1:N关系只支持1级
+                foreach (var includedSegment in manyIncludedSegments)
+                {
+                    //更换path，方便后续Include成员赋值时，能够找到parent对象
+                    includedSegment.Path = includedSegment.Path.Replace(parent.TableSegment.Path, parent.Path);
+                }
             }
         }
     }

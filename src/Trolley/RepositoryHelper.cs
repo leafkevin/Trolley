@@ -243,10 +243,9 @@ public class RepositoryHelper
     //            Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, parameterNameExpr, fieldValueExpr).Compile();
     //    });
     //}
-    public static string BuildFieldsSqlPart(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type selectType, bool isSelect)
+    public static string BuildFieldsSqlPart(IOrmProvider ormProvider, EntityMap entityMapper, Type selectType, bool isSelect)
     {
         var index = 0;
-        var entityMapper = mapProvider.GetEntityMap(entityType);
         var memberInfos = selectType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
             .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
 
@@ -490,7 +489,7 @@ public class RepositoryHelper
         return commandInitializerCache.GetOrAdd(cacheKey, f =>
         {
             var entityMapper = mapProvider.GetEntityMap(entityType);
-            var fieldsSql = BuildFieldsSqlPart(ormProvider, mapProvider, entityType, entityType, true);
+            var fieldsSql = BuildFieldsSqlPart(ormProvider, entityMapper, entityType, true);
             var headSql = $"SELECT {fieldsSql} FROM {ormProvider.GetTableName(entityMapper.TableName)} WHERE ";
             return BuildWhereSqlParameters(dbKey, ormProvider, mapProvider, entityType, whereObjType, true, isMultiple, false, nameof(whereObj), headSql);
         });
@@ -503,7 +502,7 @@ public class RepositoryHelper
         return commandInitializerCache.GetOrAdd(cacheKey, f =>
         {
             var entityMapper = mapProvider.GetEntityMap(entityType);
-            var fieldsSql = BuildFieldsSqlPart(ormProvider, mapProvider, entityType, entityType, true);
+            var fieldsSql = BuildFieldsSqlPart(ormProvider, entityMapper, entityType, true);
             var headSql = $"SELECT {fieldsSql} FROM {ormProvider.GetTableName(entityMapper.TableName)} WHERE ";
             return BuildWhereSqlParameters(dbKey, ormProvider, mapProvider, entityType, whereObjType, false, isMultiple, false, nameof(whereObj), headSql);
         });

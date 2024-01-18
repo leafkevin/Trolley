@@ -40,6 +40,10 @@ public class ReaderField
     /// </summary>
     public ReaderField Parent { get; set; }
     /// <summary>
+    /// 实体类型字段中的子字段，判断是否需要AS别名，目前主要场景是Grouping对象中的ReaderFields
+    /// </summary>
+    public bool IsNeedAlias { get; set; }
+    /// <summary>
     /// 是否有后续的Include表，当前是主表ReaderField时且有Include表，此值为true
     /// </summary>
     public bool HasNextInclude { get; set; }

@@ -66,7 +66,6 @@ public class SqlSegment
     public Type TargetType { get; set; }
     public string ParameterName { get; set; }
     public TableSegment TableSegment { get; set; }
-    public ReaderFieldType MemberType { get; set; }
     public MemberInfo FromMember { get; set; }
     /// <summary>
     /// 当前是成员访问时，才有值，和FromMember是同一个栏位，是Mapper
