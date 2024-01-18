@@ -530,7 +530,7 @@ public class SqlVisitor : ISqlVisitor
             }
         }
     }
-    protected string BuildSelectSql(List<ReaderField> readerFields, bool isNeedAlias = false)
+    protected string BuildSelectSql(List<ReaderField> readerFields)
     {
         var builder = new StringBuilder();
         foreach (var readerField in readerFields)
@@ -539,12 +539,7 @@ public class SqlVisitor : ISqlVisitor
                 builder.Append(',');
             if (readerField.FieldType == ReaderFieldType.Entity)
                 builder.Append(this.BuildSelectSql(readerField.ReaderFields));
-            else
-            {
-                if (isNeedAlias && readerField.FromMember.Name != readerField.TargetMember.Name)
-                    readerField.Body += " AS " + this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
-                builder.Append(readerField.Body);
-            }
+            else builder.Append(readerField.Body);
         }
         return builder.ToString();
     }
@@ -1038,121 +1033,111 @@ public class SqlVisitor : ISqlVisitor
         }
         var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
         var fromQuery = new FromQuery(this.DbKey, this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
-        var queryObj = firstExpr.Evaluate(fromQuery) as IQuery;
-        while (callStack.TryPop(out var callExpr))
+        if (callStack.Count > 0)
         {
-            callExpr.Evaluate(queryObj);
+            while (callStack.TryPop(out var callExpr))
+            {
+                var methodInfo = callExpr.Method;
+                var genericArguments = methodInfo.GetGenericArguments();
+                LambdaExpression lambdaArgsExpr = null;
+                switch (callExpr.Method.Name)
+                {
+                    case "From":
+                        queryVisitor.From(this.Evaluate<char>(callExpr.Arguments[0]), this.Evaluate<string>(callExpr.Arguments[1]), genericArguments);
+                        break;
+                    //case "Union":
+                    //case "UnionAll":
+                    //    queryVisitor.Union(this.Evaluate<string>(callExpr.Arguments[0]));
+                    //    queryVisitor.From(this.Evaluate<char>(callExpr.Arguments[0]), genericArguments);
+                    //    break;
+                    case "InnerJoin":
+                    case "LeftJoin":
+                    case "RightJoin":
+                        var joinType = callExpr.Method.Name switch
+                        {
+                            "LeftJoin" => "LEFT JOIN",
+                            "RightJoin" => "RIGHT JOIN",
+                            _ => "INNER JOIN"
+                        };
+                        lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                        if (lambdaArgsExpr.Body.GetParameters(out var visitedParameters))
+                        {
+                            foreach (var tableAlias in this.TableAlias.Keys)
+                            {
+                                if (visitedParameters.Exists(f => f.Name == tableAlias))
+                                    queryVisitor.AddTable(this.TableAlias[tableAlias]);
+                            }
+                            lambdaArgsExpr = Expression.Lambda(lambdaArgsExpr.Body, visitedParameters);
+                        }
+                        queryVisitor.Join(joinType, genericArguments[0], lambdaArgsExpr);
+                        break;
+                    case "Where":
+                        lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                        queryVisitor.InitTableAlias(lambdaArgsExpr);
+                        if (lambdaArgsExpr.Body.GetParameters(out visitedParameters))
+                        {
+                            foreach (var tableAlias in this.TableAlias.Keys)
+                            {
+                                if (visitedParameters.Exists(f => f.Name == tableAlias))
+                                {
+                                    var tableSegment = this.TableAlias[tableAlias];
+                                    queryVisitor.AddAliasTable(tableAlias, tableSegment);
+                                }
+                            }
+                            lambdaArgsExpr = Expression.Lambda(lambdaArgsExpr.Body, visitedParameters);
+                        }
+                        queryVisitor.Where(lambdaArgsExpr, false);
+                        break;
+                    case "And":
+                        lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[1]);
+                        if (this.Evaluate<bool>(callExpr.Arguments[0]))
+                            queryVisitor.And(lambdaArgsExpr);
+                        break;
+                    case "GroupBy":
+                        lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                        queryVisitor.GroupBy(lambdaArgsExpr);
+                        break;
+                    case "Having":
+                        if (callExpr.Arguments.Count > 1 && this.Evaluate<bool>(callExpr.Arguments[0]))
+                        {
+                            lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[1]);
+                            queryVisitor.Having(lambdaArgsExpr);
+                        }
+                        else
+                        {
+                            lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                            queryVisitor.Having(lambdaArgsExpr);
+                        }
+                        break;
+                    case "OrderBy":
+                        lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                        queryVisitor.OrderBy("ASC", lambdaArgsExpr);
+                        break;
+                    case "OrderByDescending":
+                        lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                        queryVisitor.OrderBy("DESC", lambdaArgsExpr);
+                        break;
+                    case "Select":
+                    case "SelectAggregate":
+                        if (callExpr.Arguments[0].NodeType == ExpressionType.Constant)
+                            queryVisitor.Select(this.Evaluate<string>(callExpr.Arguments[0]));
+                        else
+                        {
+                            lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                            queryVisitor.Select(null, lambdaArgsExpr);
+                        }
+                        break;
+                    case "Distinct":
+                        queryVisitor.Distinct();
+                        break;
+                }
+            }
         }
-        var result = queryObj.Visitor.BuildSql(out _);
-        //TODO:CTE表场景有待处理
-        //if (!queryVisitor.Equals(queryObj.Visitor))
-        //{
-        //    queryObj.Visitor.CopyTo(queryVisitor);
-        //}
-        #region 注释
-        //var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
-        //queryVisitor.IsNeedAlias = this.IsNeedAlias;
-
-        //while (callStack.TryPop(out var callExpr))
-        //{
-        //    var genericArguments = callExpr.Method.GetGenericArguments();
-        //    LambdaExpression lambdaArgsExpr = null;
-        //    switch (callExpr.Method.Name)
-        //    {
-        //        case "From":
-        //            queryVisitor.From(this.Evaluate<char>(callExpr.Arguments[0]), genericArguments);
-        //            break;
-        //        case "Union":
-        //        case "UnionAll":
-        //            queryVisitor.Union("",)
-        //            queryVisitor.From(this.Evaluate<char>(callExpr.Arguments[0]), genericArguments);
-        //            break;
-        //        case "InnerJoin":
-        //        case "LeftJoin":
-        //        case "RightJoin":
-        //            var joinType = callExpr.Method.Name switch
-        //            {
-        //                "LeftJoin" => "LEFT JOIN",
-        //                "RightJoin" => "RIGHT JOIN",
-        //                _ => "INNER JOIN"
-        //            };
-        //            queryVisitor.IsNeedAlias = true;
-        //            lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-        //            if (lambdaArgsExpr.Body.GetParameters(out var visitedParameters))
-        //            {
-        //                foreach (var tableAlias in this.TableAlias.Keys)
-        //                {
-        //                    if (visitedParameters.Exists(f => f.Name == tableAlias))
-        //                        queryVisitor.AddTable(this.TableAlias[tableAlias]);
-        //                }
-        //                lambdaArgsExpr = Expression.Lambda(lambdaArgsExpr.Body, visitedParameters);
-        //            }
-        //            queryVisitor.Join(joinType, genericArguments[0], lambdaArgsExpr);
-        //            break;
-        //        case "Where":
-        //            lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-        //            queryVisitor.InitTableAlias(lambdaArgsExpr);
-        //            if (lambdaArgsExpr.Body.GetParameters(out visitedParameters))
-        //            {
-        //                queryVisitor.IsNeedAlias = true;
-        //                foreach (var tableAlias in this.TableAlias.Keys)
-        //                {
-        //                    if (visitedParameters.Exists(f => f.Name == tableAlias))
-        //                    {
-        //                        var tableSegment = this.TableAlias[tableAlias];
-        //                        queryVisitor.AddAliasTable(tableAlias, tableSegment);
-        //                    }
-        //                }
-        //                lambdaArgsExpr = Expression.Lambda(lambdaArgsExpr.Body, visitedParameters);
-        //            }
-        //            queryVisitor.Where(lambdaArgsExpr, false);
-        //            break;
-        //        case "And":
-        //            lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[1]);
-        //            if (this.Evaluate<bool>(callExpr.Arguments[0]))
-        //                queryVisitor.And(lambdaArgsExpr);
-        //            break;
-        //        case "GroupBy":
-        //            lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-        //            queryVisitor.GroupBy(lambdaArgsExpr);
-        //            break;
-        //        case "Having":
-        //            if (callExpr.Arguments.Count > 1 && this.Evaluate<bool>(callExpr.Arguments[0]))
-        //            {
-        //                lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[1]);
-        //                queryVisitor.Having(lambdaArgsExpr);
-        //            }
-        //            else
-        //            {
-        //                lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-        //                queryVisitor.Having(lambdaArgsExpr);
-        //            }
-        //            break;
-        //        case "OrderBy":
-        //            lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-        //            queryVisitor.OrderBy("ASC", lambdaArgsExpr);
-        //            break;
-        //        case "OrderByDescending":
-        //            lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-        //            queryVisitor.OrderBy("DESC", lambdaArgsExpr);
-        //            break;
-        //        case "Select":
-        //        case "SelectAggregate":
-        //            if (callExpr.Arguments[0].NodeType == ExpressionType.Constant)
-        //                queryVisitor.Select(this.Evaluate<string>(callExpr.Arguments[0]));
-        //            else
-        //            {
-        //                lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-        //                queryVisitor.Select(null, lambdaArgsExpr);
-        //            }
-        //            break;
-        //        case "Distinct":
-        //            queryVisitor.Distinct();
-        //            break;
-        //    }
-        //}      
-        //var result = queryVisitor.BuildSql(out _);
-        #endregion
+        else
+        {
+            int sdfsd = 0;
+        }
+        var result = queryVisitor.BuildSql(out _);
         return result;
     }
     public virtual string GetQuotedValue(SqlSegment sqlSegment)

@@ -599,8 +599,9 @@ public class Query<T> : QueryBase, IQuery<T>
     public ICteQuery<T> AsCteTable(string tableName)
     {
         var queryObj = new CteQuery<T>(this.DbContext, this.Visitor);
-        queryObj.Body = this.Visitor.BuildCteTableSql(tableName, out var isRecursive);
+        queryObj.Body = this.Visitor.BuildCteTableSql(tableName, out var readerFields, out var isRecursive);
         queryObj.TableName = tableName;
+        queryObj.ReaderFields = readerFields;
         queryObj.IsRecursive = isRecursive;
         return queryObj;
     }
@@ -620,7 +621,7 @@ public class CteQuery<T> : Query<T>, ICteQuery<T>
 {
     #region Properties
     public virtual string TableName { get; set; }
-    public virtual string Body { get; set; }
+    public virtual List<ReaderField> ReaderFields { get; set; }
     public virtual bool IsRecursive { get; set; }
     #endregion
 

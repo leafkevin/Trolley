@@ -12,7 +12,7 @@ public static class FasterEvaluator
     {
         return expression switch
         {
-            BinaryExpression binaryExpression => binaryExpression.Evaluate(),
+            //BinaryExpression binaryExpression => binaryExpression.Evaluate(),
             ConstantExpression constantExpression => constantExpression.Evaluate(),
             UnaryExpression unaryExpression => unaryExpression.Evaluate(),
             MethodCallExpression methodCallExpression => methodCallExpression.Evaluate(target),

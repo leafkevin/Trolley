@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Trolley.MySqlConnector;
 
@@ -35,15 +32,15 @@ public class MySqlQueryVisitor : QueryVisitor
         }
         builder.Append(") ");
         //有CTE表
-        if (this.CteQueries != null)
+        if (this.IsUseCteTable && this.CteQueries != null && this.CteQueries.Count > 0)
         {
             builder.Append("WITH ");
             if (this.IsRecursive)
                 builder.Append("RECURSIVE ");
-            for (int i = 0; i < this.CteTables.Count; i++)
+            for (int i = 0; i < this.CteQueries.Count; i++)
             {
                 if (i > 0) builder.AppendLine(",");
-                builder.Append(this.CteTables[i].Body);
+                builder.Append(this.CteQueries[i].Body);
                 builder.AppendLine();
             }
         }
@@ -59,7 +56,7 @@ public class MySqlQueryVisitor : QueryVisitor
         builder.Clear();
         //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以，要排序或是插入时候就排好序
         //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
-        this.AddSelectSqlTo(builder, this.ReaderFields);
+        builder.Append(this.BuildSelectSql(this.ReaderFields));
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -70,20 +67,14 @@ public class MySqlQueryVisitor : QueryVisitor
         string tableSql = null;
         if (this.Tables.Count > 0)
         {
-            index = 0;
             foreach (var tableSegment in this.Tables)
             {
                 string tableName = string.Empty;
-                if (tableSegment.TableType == TableType.CteSelfRef)
-                    tableName = this.OrmProvider.GetTableName(tableSegment.RefTableName);
-                else
-                {
-                    tableName = tableSegment.Body;
-                    if (string.IsNullOrEmpty(tableName))
-                        tableName = this.OrmProvider.GetTableName(tableSegment.Mapper.TableName);
-                }
+                tableName = tableSegment.Body;
+                if (string.IsNullOrEmpty(tableName))
+                    tableName = this.OrmProvider.GetTableName(tableSegment.Mapper.TableName);
 
-                if (index > 0)
+                if (builder.Length > 0)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
                     {
@@ -99,8 +90,6 @@ public class MySqlQueryVisitor : QueryVisitor
                     builder.Append(" " + tableSegment.SuffixRawSql);
                 if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                     builder.Append($" ON {tableSegment.OnExpr}");
-
-                index++;
             }
             tableSql = builder.ToString();
         }
@@ -139,6 +128,13 @@ public class MySqlQueryVisitor : QueryVisitor
             builder.Append($"{pageSql}");
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
+
+        //UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
+        if (this.IsUnion && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
+        {
+            builder.Insert(0, "SELECT * FROM (");
+            builder.Append($") a");
+        }
         return builder.ToString();
     }
 }

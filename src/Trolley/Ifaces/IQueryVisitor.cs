@@ -21,7 +21,7 @@ public interface IQueryVisitor : IDisposable
 
     string BuildSql(out List<ReaderField> readerFields);
     string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters);
-    string BuildCteTableSql(string tableName, out bool isRecursive);
+    string BuildCteTableSql(string tableName, out List<ReaderField> readerFields, out bool isRecursive);
     void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes);
     void From(Type targetType, IQuery subQueryObj);
     IQuery From(Type targetType, DbContext dbContext, Delegate subQueryGetter);
@@ -64,6 +64,7 @@ public interface IQueryVisitor : IDisposable
     void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, List<ReaderField> readerFields);
     TableSegment AddTable(TableSegment tableSegment);
     TableSegment AddTable(Type entityType, string joinType = "", TableType tableType = TableType.Entity, string body = null, List<ReaderField> readerFields = null);
+    void AddAliasTable(string tableAlias, TableSegment tableSegment);
     TableSegment InitTableAlias(LambdaExpression lambdaExpr);
     void Clear(bool isClearReaderFields = false);
     void CopyTo(IQueryVisitor visitor);

@@ -59,10 +59,6 @@ public class TableSegment
     /// </summary>
     public string Body { get; set; }
     /// <summary>
-    /// 自身引用时的表名，主要用在cte自身引用时的表名，如：WITH CteTableName (...) AS ...中的CteTableName
-    /// </summary>
-    public string RefTableName { get; set; }
-    /// <summary>
     /// 表后缀字符串，SqlServer在表名后，会接一个后缀字符串，如：select * from A WITH (UPDLOCK)
     /// </summary>
     public string SuffixRawSql { get; set; }
@@ -113,7 +109,6 @@ public class TableSegment
             FromMember = this.FromMember,
             Mapper = this.Mapper,
             Body = this.Body,
-            RefTableName = this.RefTableName,
             SuffixRawSql = this.SuffixRawSql,
             TableType = this.TableType,
             IsMaster = this.IsMaster,

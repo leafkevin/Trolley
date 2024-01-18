@@ -11,10 +11,6 @@ namespace Trolley;
 public class ReaderField
 {
     /// <summary>
-    /// 序号索引，当前字段在返回映射实体中的索引位置
-    /// </summary>
-    //public int Index { get; set; }
-    /// <summary>
     /// 字段类型
     /// </summary>
     public ReaderFieldType FieldType { get; set; }
@@ -48,10 +44,6 @@ public class ReaderField
     /// </summary>
     public bool HasNextInclude { get; set; }
     /// <summary>
-    /// 是否需要AS别名
-    /// </summary>
-    public bool IsNeedAlias { get; set; }
-    /// <summary>
     /// 实体表(真实表)或是子查询表的所有字段，FieldType为Entity或是AnonymousObject时有值
     /// </summary>
     public List<ReaderField> ReaderFields { get; set; }
@@ -64,15 +56,40 @@ public class ReaderField
     /// </summary>
     public bool IsTargetType { get; set; }
     /// <summary>
-    /// 当前字段类型，单个字段时使用
-    /// </summary>
-    public Type FieldTargetType { get; set; }
-    /// <summary>
     /// 最外层Select时，原参数访问的路径，如：.Select(x => new { Order = x, x.Seller.Company })中的x, x.Seller.Company
     /// 当有Include导航属性成员访问时，查找其主表在Select返回的实体中的属性值，构造延迟属性设置方法
     /// 此处获取Company表字段信息，在Order属性中已经存在了，直接取里面的值，不再查询数据库，只做延迟属性值设置
     /// </summary>
     public string Path { get; set; }
+
+    /// <summary>
+    /// CTE表被引用的时候才会使用克隆字段
+    /// </summary>
+    /// <returns></returns>
+    public ReaderField Clone()
+    {
+        List<ReaderField> readerFields = null;
+        if (this.ReaderFields != null)
+        {
+            readerFields = new();
+            this.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
+        }
+        return new ReaderField
+        {
+            FieldType = this.FieldType,
+            TableSegment = this.TableSegment,
+            ReaderFields = readerFields,
+            Body = this.Body,
+            DeferredDelegate = this.DeferredDelegate,
+            TargetMember = this.TargetMember,
+            FromMember = this.FromMember,
+            HasNextInclude = this.HasNextInclude,
+            IsTargetType = this.IsTargetType,
+            MemberMapper = this.MemberMapper,
+            Parent = this.Parent,
+            Path = this.Path
+        };
+    }
 }
 public enum ReaderFieldType : byte
 {

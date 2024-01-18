@@ -466,9 +466,9 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         var sql = this.Visitor.BuildSql(out var readerFields);
         var targetType = typeof(T);
         Func<IDataReader, object> readerGetter = null;
-        if (targetType.IsEntityType(out _))
-            readerGetter = reader => reader.To<T>(this.DbContext, readerFields);
-        else readerGetter = reader => reader.To<T>();
+        if (readerFields.Count == 1 && readerFields[0].FieldType == ReaderFieldType.Field)
+            readerGetter = reader => reader.To<T>();
+        else readerGetter = reader => reader.To<T>(this.DbContext, readerFields);
         IQueryVisitor queryVisitor = null;
         if (this.Visitor.HasIncludeTables())
             queryVisitor = this.Visitor;

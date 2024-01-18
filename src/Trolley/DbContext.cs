@@ -135,9 +135,9 @@ public sealed class DbContext
             var entityType = typeof(TResult);
             if (reader.Read())
             {
-                if (entityType.IsEntityType(out _))
-                    result = reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields);
-                else result = reader.To<TResult>();
+                if (readerFields.Count == 1 && readerFields[0].FieldType == ReaderFieldType.Field)
+                    result = reader.To<TResult>();
+                else result = reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields);
             }
             reader.Dispose();
 
@@ -183,9 +183,9 @@ public sealed class DbContext
             var entityType = typeof(TResult);
             if (await reader.ReadAsync(cancellationToken))
             {
-                if (entityType.IsEntityType(out _))
-                    result = reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields);
-                else result = reader.To<TResult>();
+                if (readerFields.Count == 1 && readerFields[0].FieldType == ReaderFieldType.Field)
+                    result = reader.To<TResult>();
+                else result = reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields);
             }
             await reader.DisposeAsync();
 
@@ -321,19 +321,20 @@ public sealed class DbContext
             this.Connection.Open();
             var behavior = CommandBehavior.SequentialAccess;
             reader = command.ExecuteReader(behavior);
+
             var entityType = typeof(TResult);
-            if (entityType.IsEntityType(out _))
+            if (readerFields.Count == 1 && readerFields[0].FieldType == ReaderFieldType.Field)
             {
                 while (reader.Read())
                 {
-                    result.Add(reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields));
+                    result.Add(reader.To<TResult>());
                 }
             }
             else
             {
                 while (reader.Read())
                 {
-                    result.Add(reader.To<TResult>());
+                    result.Add(reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields));
                 }
             }
             reader.Dispose();
@@ -379,18 +380,18 @@ public sealed class DbContext
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
 
             var entityType = typeof(TResult);
-            if (entityType.IsEntityType(out _))
+            if (readerFields.Count == 1 && readerFields[0].FieldType == ReaderFieldType.Field)
             {
-                while (await reader.ReadAsync(cancellationToken))
+                while (reader.Read())
                 {
-                    result.Add(reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields));
+                    result.Add(reader.To<TResult>());
                 }
             }
             else
             {
-                while (await reader.ReadAsync(cancellationToken))
+                while (reader.Read())
                 {
-                    result.Add(reader.To<TResult>());
+                    result.Add(reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields));
                 }
             }
             await reader.DisposeAsync();
@@ -444,18 +445,18 @@ public sealed class DbContext
 
             reader.NextResult();
             var entityType = typeof(TResult);
-            if (entityType.IsEntityType(out _))
+            if (readerFields.Count == 1 && readerFields[0].FieldType == ReaderFieldType.Field)
             {
                 while (reader.Read())
                 {
-                    result.Data.Add(reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields));
+                    result.Data.Add(reader.To<TResult>());
                 }
             }
             else
             {
                 while (reader.Read())
                 {
-                    result.Data.Add(reader.To<TResult>());
+                    result.Data.Add(reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields));
                 }
             }
             reader.Dispose();
@@ -505,18 +506,18 @@ public sealed class DbContext
 
             await reader.NextResultAsync(cancellationToken);
             var entityType = typeof(TResult);
-            if (entityType.IsEntityType(out _))
+            if (readerFields.Count == 1 && readerFields[0].FieldType == ReaderFieldType.Field)
             {
-                while (await reader.ReadAsync(cancellationToken))
+                while (reader.Read())
                 {
-                    result.Data.Add(reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields));
+                    result.Data.Add(reader.To<TResult>());
                 }
             }
             else
             {
-                while (await reader.ReadAsync(cancellationToken))
+                while (reader.Read())
                 {
-                    result.Data.Add(reader.To<TResult>());
+                    result.Data.Add(reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields));
                 }
             }
             await reader.DisposeAsync();
