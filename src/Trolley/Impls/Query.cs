@@ -52,14 +52,6 @@ public class QueryBase : IQueryBase
         this.Visitor.Select(fields);
         return new QueryAnonymousObject(this.Visitor);
     }
-    public virtual IQuery<TTarget> Select<TTarget>(string fields = "*")
-    {
-        if (string.IsNullOrEmpty(fields))
-            throw new ArgumentNullException(nameof(fields));
-
-        this.Visitor.Select(fields);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
-    }
     #endregion
 
     #region Count

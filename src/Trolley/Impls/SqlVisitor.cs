@@ -1031,7 +1031,6 @@ public class SqlVisitor : ISqlVisitor
     public virtual string VisitFromQuery(LambdaExpression lambdaExpr)
     {
         var currentExpr = lambdaExpr.Body;
-        Expression firstExpr = null;
         var callStack = new Stack<MethodCallExpression>();
         while (true)
         {
@@ -1040,7 +1039,7 @@ public class SqlVisitor : ISqlVisitor
 
             if (callExpr.Object.NodeType == ExpressionType.Parameter)
             {
-                firstExpr = callExpr;
+                callStack.Push(callExpr);
                 break;
             }
             callStack.Push(callExpr);
@@ -1048,6 +1047,7 @@ public class SqlVisitor : ISqlVisitor
         }
         var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
         var fromQuery = new FromQuery(this.DbKey, this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
+        var dbContext = fromQuery.dbContext;
         if (callStack.Count > 0)
         {
             while (callStack.TryPop(out var callExpr))
@@ -1058,13 +1058,21 @@ public class SqlVisitor : ISqlVisitor
                 switch (callExpr.Method.Name)
                 {
                     case "From":
-                        queryVisitor.From(this.Evaluate<char>(callExpr.Arguments[0]), this.Evaluate<string>(callExpr.Arguments[1]), genericArguments);
+                        char tableAsStart = 'a';
+                        string suffixRawSql = null;
+                        if (callExpr.Arguments.Count > 0)
+                            tableAsStart = this.Evaluate<char>(callExpr.Arguments[0]);
+                        if (callExpr.Arguments.Count > 1)
+                            suffixRawSql = this.Evaluate<string>(callExpr.Arguments[1]);
+                        queryVisitor.From(tableAsStart, suffixRawSql, genericArguments);
                         break;
-                    //case "Union":
-                    //case "UnionAll":
-                    //    queryVisitor.Union(this.Evaluate<string>(callExpr.Arguments[0]));
-                    //    queryVisitor.From(this.Evaluate<char>(callExpr.Arguments[0]), genericArguments);
-                    //    break;
+                    case "Union":
+                    case "UnionAll":
+                        var unionParameters = this.Evaluate(callExpr.Arguments[0]);
+                        if (unionParameters is Delegate subQueryGetter)
+                            queryVisitor.Union(" " + callExpr.Method.Name.ToUpper(), genericArguments[0], dbContext, subQueryGetter);
+                        else queryVisitor.Union(" " + callExpr.Method.Name.ToUpper(), genericArguments[0], unionParameters as IQuery);
+                        break;
                     case "InnerJoin":
                     case "LeftJoin":
                     case "RightJoin":
@@ -1133,24 +1141,51 @@ public class SqlVisitor : ISqlVisitor
                         queryVisitor.OrderBy("DESC", lambdaArgsExpr);
                         break;
                     case "Select":
+                        var funcType = typeof(Func<,>).MakeGenericType(genericArguments[0], genericArguments[0]);
+                        var parameterExpr = Expression.Parameter(genericArguments[0], "f");
+                        Expression predicateExpr = Expression.Lambda(funcType, parameterExpr, parameterExpr);
+                        if (callExpr.Arguments.Count > 0)
+                            predicateExpr = callExpr.Arguments[0];
+                        lambdaArgsExpr = this.EnsureLambda(predicateExpr);
+                        queryVisitor.Select(null, lambdaArgsExpr);
+                        break;
                     case "SelectAggregate":
-                        if (callExpr.Arguments[0].NodeType == ExpressionType.Constant)
-                            queryVisitor.Select(this.Evaluate<string>(callExpr.Arguments[0]));
-                        else
-                        {
-                            lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                            queryVisitor.Select(null, lambdaArgsExpr);
-                        }
+                        lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                        queryVisitor.Select(null, lambdaArgsExpr);
+                        break;
+                    case "SelectAnonymous":
+                        var fields = "*";
+                        if (callExpr.Arguments.Count > 0)
+                            fields = this.Evaluate<string>(callExpr.Arguments[0]);
+                        queryVisitor.Select(fields);
+                        break;
+                    case "SelectFlattenTo":
+                        lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                        queryVisitor.SelectFlattenTo(genericArguments[0], lambdaArgsExpr);
                         break;
                     case "Distinct":
                         queryVisitor.Distinct();
                         break;
+                    case "Skip":
+                        queryVisitor.Skip(this.Evaluate<int>(callExpr.Arguments[0]));
+                        break;
+                    case "Take":
+                        queryVisitor.Take(this.Evaluate<int>(callExpr.Arguments[0]));
+                        break;
+                    case "Page":
+                        queryVisitor.Page(this.Evaluate<int>(callExpr.Arguments[0]), this.Evaluate<int>(callExpr.Arguments[1]));
+                        break;
+                    //case "AsCteTable":
+                    //    var tableName = this.Evaluate<string>(callExpr.Arguments[0]);
+                    //    queryVisitor.BuildCteTableSql(tableName, out _, out _);
+                    //    break;
                 }
             }
         }
         else
         {
-            int sdfsd = 0;
+            //TODO:
+            //int sdfsd = 0;
         }
         var result = queryVisitor.BuildSql(out _);
         return result;

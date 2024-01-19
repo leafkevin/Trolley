@@ -7,8 +7,8 @@ namespace Trolley;
 public class FromQuery : IFromQuery
 {
     #region Fields
-    protected DbContext dbContext;
-    protected IQueryVisitor visitor;
+    protected internal DbContext dbContext;
+    protected internal IQueryVisitor visitor;
     #endregion
 
     #region Constructor
