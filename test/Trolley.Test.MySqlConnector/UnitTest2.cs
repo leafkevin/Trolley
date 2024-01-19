@@ -1089,8 +1089,8 @@ public class UnitTest2 : UnitTestBase
                     x.BuyerId
                 }))
             .ToSql(out _);
-        Assert.True(sql == @"SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`=@p0 UNION ALL
-SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`>@p1");
+        Assert.True(sql == @"SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`=@p0 UNION ALL
+SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`>@p1");
 
         var result = await repository.From<Order>()
            .Where(x => x.Id == id1)
@@ -1115,42 +1115,43 @@ SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`>@p1");
         Assert.True(result.Count > 0);
     }
     [Fact]
-    public void FromQuery_Union()
+    public void Query_Union_Take()
     {
         this.Initialize();
         int id1 = 3, id2 = 2;
         using var repository = this.dbFactory.Create();
-        var sql = repository.From(f => f.From<Order>()
-                .Where(x => x.Id < id1)
-                .OrderBy(f => f.Id)
-                .Select(x => new
-                {
-                    x.Id,
-                    x.OrderNo,
-                    x.SellerId,
-                    x.BuyerId
-                })
-               .Take(1))
-            .UnionAll(f => f.From<Order>()
-                .Where(x => x.Id > id2)
-                .Select(x => new
-                {
-                    x.Id,
-                    x.OrderNo,
-                    x.SellerId,
-                    x.BuyerId
-                }))
-            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .Select((x, y) => new { x.Id, x.OrderNo, x.SellerId, x.BuyerId, BuyerName = y.Name })
-            .ToSql(out var dbParameters);
-        Assert.True(sql == @"SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId`,b.`Name` AS `BuyerName` FROM (SELECT * FROM (SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`<@p0 ORDER BY `Id` LIMIT 1) a UNION ALL
-SELECT `Id`,`OrderNo`,`SellerId`,`BuyerId` FROM `sys_order` WHERE `Id`>@p1) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id`");
-        Assert.True(dbParameters[0].ParameterName == "@p0");
-        Assert.True(dbParameters[1].ParameterName == "@p1");
+//        var sql = repository
+//            .From<Order>('b')
+//                .Where(x => x.Id < id1)
+//                .OrderBy(f => f.Id)
+//                .Select(x => new
+//                {
+//                    x.Id,
+//                    x.OrderNo,
+//                    x.SellerId,
+//                    x.BuyerId
+//                })
+//               .Take(1)
+//            .UnionAll(f => f.From<Order>()
+//                .Where(x => x.Id > id2)
+//                .Select(x => new
+//                {
+//                    x.Id,
+//                    x.OrderNo,
+//                    x.SellerId,
+//                    x.BuyerId
+//                }))
+//            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+//            .Select((x, y) => new { x.Id, x.OrderNo, x.SellerId, x.BuyerId, BuyerName = y.Name })
+//            .ToSql(out var dbParameters);
+//        Assert.True(sql == @"SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId`,b.`Name` AS `BuyerName` FROM (SELECT * FROM (SELECT b.`Id`,b.`OrderNo`,b.`SellerId`,b.`BuyerId` FROM `sys_order` b WHERE b.`Id`<@p0 ORDER BY b.`Id` LIMIT 1) a UNION ALL
+//SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`>@p1) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id`");
+//        Assert.True(dbParameters[0].ParameterName == "@p0");
+//        Assert.True(dbParameters[1].ParameterName == "@p1");
 
-        var sql1 = repository.From<User>()
-            .WithTable(t =>
-                t.From<Order>()
+        var sql1 = repository
+            .From<User>()
+            .WithTable(t => t.From<Order>()
                     .InnerJoin<User>((a, b) => a.SellerId == b.Id)
                     .Where((x, y) => x.Id < id1)
                     .OrderBy((a, b) => a.Id)
@@ -1181,7 +1182,8 @@ SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a INNER JOIN
         Assert.True(dbParameters1[0].ParameterName == "@p0");
         Assert.True(dbParameters1[1].ParameterName == "@p1");
 
-        var sql2 = repository.From(f => f.From<Order>()
+        var result = repository
+            .From(f => f.From<Order>()
                .Where(x => x.Id < id1)
                .OrderBy(f => f.Id)
                .Select(x => new

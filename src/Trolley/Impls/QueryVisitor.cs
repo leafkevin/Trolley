@@ -346,61 +346,22 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public IQuery From(Type targetType, DbContext dbContext, Delegate subQueryGetter)
     {
         //可能是CTE表，也可能是子查询
-        var fromQuery = new FromQuery(dbContext, this);
+        IQueryVisitor queryVisitor = null;
+        if (this.Tables.Count > 0)
+            queryVisitor = this.CreateQueryVisitor();
+        else queryVisitor = this;
+        var fromQuery = new FromQuery(dbContext, queryVisitor);
         var subQueryObj = subQueryGetter.DynamicInvoke(fromQuery) as IQuery;
-        this.From(targetType, subQueryObj);
+        this.AddSubQueryTable(targetType, subQueryObj);
         return subQueryObj;
     }
-    //public IQuery FromWith(Type targetType, bool isFirst, IQuery cteQueryObj)
-    //    => this.FromWith(targetType, true, () => cteQueryObj);
-    //public IQuery FromWith(Type targetType, bool isFirst, DbContext dbContext, Delegate cteSubQueryGetter)
-    //{
-    //    return this.FromWith(targetType, true, () =>
-    //    {
-    //        var fromQuery = new FromQuery(dbContext, this);
-    //        if (isFirst) return cteSubQueryGetter.DynamicInvoke(fromQuery) as IQuery;
-
-    //        var parameters = new List<object> { fromQuery };
-    //        parameters.AddRange(this.CteQueries);
-    //        return cteSubQueryGetter.DynamicInvoke(parameters.ToArray()) as IQuery;
-    //    });
-    //}
-    //protected IQuery FromWith(Type targetType, bool isFirst, Func<IQuery> cteQueryObjGetter)
-    //{
-    //    //if (isFirst)
-    //    //{
-    //    //    this.CteTables = new();
-    //    //    this.CteQueries = new();
-    //    //    this.CteTableSegments = new();
-    //    //}
-    //    var cteQueryObj = cteQueryObjGetter();
-    //    var rawSql = cteQueryObj.Visitor.BuildSql(out var readerFields);
-    //    if (!this.Equals(cteQueryObj.Visitor))
-    //    {
-    //        cteQueryObj.Visitor.CopyTo(this);
-    //        cteQueryObj.Visitor.Dispose();
-    //    }
-    //    else if (isFirst) this.Clear();
-
-    //    TableSegment tableSegment = null;
-    //    if (this.SelfTableSegment == null)
-    //        tableSegment = this.AddCteTable(targetType, cteQueryObj, rawSql, readerFields);
-    //    tableSegment.Body = this.BuildCteTableSql(tableSegment.RefTableName, rawSql, readerFields);
-    //    //var builder = new StringBuilder();
-    //    //builder.Append("WITH ");
-    //    //if (this.IsRecursive)
-    //    //    builder.Append("RECURSIVE ");   
-    //    this.Tables.Add(tableSegment);
-    //    //this.UnionSql = null;
-    //    return cteQueryObj;
-    //}
     public void Union(string union, Type targetType, IQuery subQuery)
     {
         //解析第一个UNION子句，需要AS别名
         this.IsUnion = true;
         var rawSql = this.BuildSql(out var readerFields);
         //解析第二个UNION子句，不需要AS别名，如果有CTE表，也不生成CTE表SQL，只是引用CTE表名
-        subQuery.Visitor.IsUseFieldAlias = true;
+        subQuery.Visitor.IsUseFieldAlias = false;
         subQuery.Visitor.IsUseCteTable = false;
         rawSql += union + Environment.NewLine + subQuery.Visitor.BuildSql(out _);
         this.Clear();
@@ -425,8 +386,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsUseCteTable = false;
         var fromQuery = new FromQuery(dbContext, this);
         subQueryGetter.DynamicInvoke(fromQuery);
-        this.Clear();
         rawSql += union + Environment.NewLine + this.BuildSql(out _);
+        this.Clear();
         var tableSegment = this.AddTable(targetType, null, TableType.FromQuery, $"({rawSql})", readerFields);
         this.InitFromQueryReaderFields(tableSegment, readerFields);
         this.UnionSql = rawSql;
@@ -1663,12 +1624,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (this.UnionSql != null)
         {
             //有union操作的visitor，都是新New的，前面只有一个表
-            this.Tables[0].Body = this.UnionSql;
+            this.Tables[0].Body = $"({this.UnionSql})";
             this.UnionSql = null;
         }
         this.Tables.Add(tableSegment);
-        if (this.Tables.Count == 2 && this.Tables[0].ReaderFields != null)
-            this.InitFromQueryReaderFields(this.Tables[0], this.Tables[0].ReaderFields);
+        //if (this.Tables.Count == 2 && this.Tables[0].ReaderFields != null)
+        //    this.InitFromQueryReaderFields(this.Tables[0], this.Tables[0].ReaderFields);
         return tableSegment;
     }
     public virtual TableSegment AddTable(Type entityType, string joinType = "", TableType tableType = TableType.Entity, string body = null, List<ReaderField> readerFields = null)
@@ -1768,16 +1729,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public void CopyTo(IQueryVisitor visitor)
     {
-        if (this.DbParameters != null && this.DbParameters.Count > 0)
-        {
-            if (visitor.DbParameters == null || visitor.DbParameters.Count == 0)
-                visitor.DbParameters = this.DbParameters;
-            else
-            {
-                foreach (var dbParameter in this.DbParameters)
-                    visitor.DbParameters.Add(dbParameter);
-            }
-        }
         if (this.CteQueries == null || this.CteQueries.Count == 0)
             return;
         visitor.CteQueries ??= new();
