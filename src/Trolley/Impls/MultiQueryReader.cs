@@ -252,6 +252,7 @@ class MultiQueryReader : IMultiQueryReader
             }
             this.command.CommandText = builder.ToString();
             this.command.Parameters.Clear();
+            visitor.NextDbParameters.CopyTo(this.command.Parameters);
             using var includeReader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             foreach (var nextAfter in this.nextAfters)
             {
@@ -292,6 +293,7 @@ class MultiQueryReader : IMultiQueryReader
             }
             this.command.CommandText = builder.ToString();
             this.command.Parameters.Clear();
+            visitor.NextDbParameters.CopyTo(this.command.Parameters);
             if (this.command is not DbCommand dbCommand)
                 throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 

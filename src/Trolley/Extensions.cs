@@ -251,30 +251,6 @@ public static class Extensions
         }
         return ((Func<IDataReader, TEntity>)deserializer).Invoke(reader);
     }
-    public static object ReadTo(this IDataReader reader, string dbKey, Type entityType, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
-    {
-        var ormProviderType = ormProvider.GetType();
-        var isValueTuple = entityType.FullName.StartsWith("System.ValueTuple`");
-
-        int cacheKey = 0;
-        ConcurrentDictionary<int, Delegate> deserializerCache = null;
-        if (isValueTuple)
-        {
-            cacheKey = GetValueTupleReaderKey(entityType, dbKey, ormProviderType, reader);
-            deserializerCache = valueTupleReaderDeserializerCache;
-        }
-        else
-        {
-            cacheKey = GetTypeReaderKey(entityType, dbKey, ormProviderType, reader);
-            deserializerCache = typeReaderDeserializerCache;
-        }
-        if (!deserializerCache.TryGetValue(cacheKey, out var deserializer))
-        {
-            deserializer = CreateReaderDeserializer(ormProvider, mapProvider, reader, entityType, isValueTuple);
-            deserializerCache.TryAdd(cacheKey, deserializer);
-        }
-        return deserializer.DynamicInvoke(reader);
-    }
     /// <summary>
     /// 使用非SQL查询，返回的是可能包含Include对象，包含层次的实体对象
     /// </summary>
@@ -347,7 +323,18 @@ public static class Extensions
         }
         return false;
     }
-
+    public static void CopyTo(this IQuery subQuery, SqlVisitor visitor)
+    {
+        if (subQuery == null) return;
+        if (subQuery is ICteQuery cteQuery)
+        {
+            visitor.CteQueries ??= new();
+            if (!visitor.CteQueries.Contains(cteQuery))
+                visitor.CteQueries.Add(cteQuery);
+        }
+        else if (!subQuery.Visitor.Equals(visitor))
+            subQuery.Visitor.CopyTo(visitor);
+    }
 
     internal static void CopyTo(this IDataParameterCollection dbParameters, IDataParameterCollection other)
     {

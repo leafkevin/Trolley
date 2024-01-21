@@ -37,7 +37,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (isFirst)
         {
             this.Tables = new();
-            this.TableAlias = new();
+            this.TableAliases = new();
         }
         //clear
         else this.Clear();
@@ -480,7 +480,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public void Clear()
     {
         this.Tables?.Clear();
-        this.TableAlias?.Clear();
+        this.TableAliases?.Clear();
         this.ReaderFields?.Clear();
         this.WhereSql = null;
         this.IsFromQuery = false;
@@ -507,7 +507,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public void InitTableAlias(LambdaExpression lambdaExpr)
     {
-        this.TableAlias.Clear();
+        this.TableAliases.Clear();
         lambdaExpr.Body.GetParameterNames(out var parameters);
         if (parameters == null || parameters.Count == 0)
             return;
@@ -523,7 +523,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 index++;
                 continue;
             }
-            this.TableAlias.Add(parameterExpr.Name, this.Tables[index]);
+            this.TableAliases.Add(parameterExpr.Name, this.Tables[index]);
             index++;
         }
     }

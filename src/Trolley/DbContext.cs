@@ -145,6 +145,7 @@ public sealed class DbContext
             {
                 command.CommandText = sql;
                 command.Parameters.Clear();
+                visitor.NextDbParameters.CopyTo(command.Parameters);
                 reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
                 visitor.SetIncludeValues(entityType, result, reader);
             }
@@ -193,6 +194,7 @@ public sealed class DbContext
             {
                 command.CommandText = sql;
                 command.Parameters.Clear();
+                visitor.NextDbParameters.CopyTo(command.Parameters);
                 reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
                 await visitor.SetIncludeValuesAsync(entityType, result, reader, cancellationToken);
             }
@@ -343,6 +345,7 @@ public sealed class DbContext
             {
                 command.CommandText = sql;
                 command.Parameters.Clear();
+                visitor.NextDbParameters.CopyTo(command.Parameters);
                 reader = command.ExecuteReader(behavior);
                 visitor.SetIncludeValues(entityType, result, reader);
             }
@@ -400,6 +403,7 @@ public sealed class DbContext
             {
                 command.CommandText = sql;
                 command.Parameters.Clear();
+                visitor.NextDbParameters.CopyTo(command.Parameters);
                 reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
                 await visitor.SetIncludeValuesAsync(entityType, result, reader, cancellationToken);
             }
@@ -465,6 +469,7 @@ public sealed class DbContext
             {
                 command.CommandText = sql;
                 command.Parameters.Clear();
+                visitor.NextDbParameters.CopyTo(command.Parameters);
                 reader = command.ExecuteReader(behavior);
                 visitor.SetIncludeValues(entityType, result, reader);
             }
@@ -526,6 +531,7 @@ public sealed class DbContext
             {
                 command.CommandText = sql;
                 command.Parameters.Clear();
+                visitor.NextDbParameters.CopyTo(command.Parameters);
                 reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
                 await visitor.SetIncludeValuesAsync(entityType, result.Data, reader, cancellationToken);
             }

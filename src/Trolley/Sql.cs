@@ -51,23 +51,6 @@ public static class Sql
     //{
     //    throw new NotImplementedException();
     //}
-    /// <summary>
-    /// 参数化当前变量，常量不做参数化，当前值都将被参数化如：@p0,@p1等，本函数只用来解析，并不实现，用法：
-    /// <code>
-    /// string productNo="xxx";
-    /// using var repository = dbFactory.Create();
-    /// var result1 = await repository.QueryAsync&lt;Product&gt;(f =&gt; f.ProductNo.Contains(productNo.ToParameter()));
-    /// var result2 = await repository.QueryAsync&lt;Product&gt;(f =&gt; f.ProductNo.Contains("PN-001".ToParameter()));
-    /// </code>
-    /// </summary>
-    /// <typeparam name="T">原值类型</typeparam>
-    /// <param name="value">原值</param>
-    /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
-    //public static T ToParameter<T>(this T value)
-    //{
-    //    throw new NotImplementedException();
-    //}
     public static bool In<TElement>(TElement value, params TElement[] list)
     {
         throw new NotImplementedException();
@@ -76,31 +59,68 @@ public static class Sql
     {
         throw new NotImplementedException();
     }
+    public static bool In<TElement>(TElement value, IQuery<TElement> subQuery)
+    {
+        throw new NotImplementedException();
+    }
     public static bool In<TElement>(TElement value, Func<IFromQuery, IQuery<TElement>> subQuery)
     {
         throw new NotImplementedException();
     }
+    /// <summary>
+    /// 使用子查询构建Exists查询条件
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="subQuery">带有Where条件的子查询</param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public static bool Exists<T>(IQuery<T> subQuery)
+    {
+        throw new NotImplementedException();
+    }
+    /// <summary>
+    /// 使用子查询构建Exists查询条件
+    /// </summary>
+    /// <param name="subQuery"></param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
     public static bool Exists(Func<IFromQuery, IQueryAnonymousObject> subQuery)
     {
         throw new NotImplementedException();
     }
-    public static bool Exists<T>(Expression<Func<T, bool>> filter)
+    /// <summary>
+    /// 使用CTE表构建Exists查询条件
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="subQuery"></param>
+    /// <param name="predicate"></param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public static bool Exists<T>(ICteQuery<T> subQuery, Expression<Func<T, bool>> predicate)
     {
         throw new NotImplementedException();
     }
-    public static bool Exists<T1, T2>(Expression<Func<T1, T2, bool>> filter)
+    public static bool Exists<T>(Expression<Func<T, bool>> predicate)
     {
         throw new NotImplementedException();
     }
-    public static bool Exists<T1, T2, T3>(Expression<Func<T1, T2, T3, bool>> filter)
+    public static bool Exists<T1, T2>(Expression<Func<T1, T2, bool>> predicate)
     {
         throw new NotImplementedException();
     }
-    public static bool Exists<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, bool>> filter)
+    public static bool Exists<T1, T2, T3>(Expression<Func<T1, T2, T3, bool>> predicate)
     {
         throw new NotImplementedException();
     }
-    public static bool Exists<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, bool>> filter)
+    public static bool Exists<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, bool>> predicate)
+    {
+        throw new NotImplementedException();
+    }
+    public static bool Exists<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
+    {
+        throw new NotImplementedException();
+    }
+    public static bool Exists<T1, T2, T3, T4, T5, T6>(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
     {
         throw new NotImplementedException();
     }

@@ -21,11 +21,10 @@ public interface IGroupingAggregate<TGrouping> : IAggregateSelect
 public interface IGroupingQueryBase<TGrouping>
 {
     /// <summary>
-    /// 使用原始字段返回匿名查询结果，主要用在不关注结果类型的地方，比如：Sql.Exists语句，用于判断数据是否存在，用法：SelectAnonymous("*") 或是 SelectAnonymous("1")，
+    /// 使用原始字段*返回匿名查询结果，主要用在不关注结果类型的地方，如：Sql.Exists语句，用于判断数据是否存在
     /// </summary>
-    /// <param name="fields">原始字段字符串，默认值*</param>
     /// <returns>返回匿名查询对象</returns>
-    IQueryAnonymousObject SelectAnonymous(string fields = "*");
+    IQueryAnonymousObject SelectAnonymous();
     /// <summary>
     /// 使用分组后对象直接返回
     /// </summary>

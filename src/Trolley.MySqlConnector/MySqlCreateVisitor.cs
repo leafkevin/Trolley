@@ -267,7 +267,7 @@ public class MySqlCreateVisitor : CreateVisitor
     }
     public virtual void InitTableAlias(LambdaExpression lambdaExpr)
     {
-        this.TableAlias.Clear();
+        this.TableAliases.Clear();
         lambdaExpr.Body.GetParameters(out var parameters);
         if (parameters == null || parameters.Count == 0)
             return;
@@ -275,7 +275,7 @@ public class MySqlCreateVisitor : CreateVisitor
         {
             if (parameterExpr.Type == typeof(IMySqlCreateDuplicateKeyUpdate<>).MakeGenericType(this.Tables[0].EntityType))
                 continue;
-            this.TableAlias.TryAdd(parameterExpr.Name, this.Tables[0]);
+            this.TableAliases.TryAdd(parameterExpr.Name, this.Tables[0]);
         }
     }
     public void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)

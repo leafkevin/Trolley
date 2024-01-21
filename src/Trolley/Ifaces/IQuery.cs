@@ -50,6 +50,10 @@ public interface ICteQuery : IQuery
     /// CTE表主体SQL
     /// </summary>
     string Body { get; set; }
+    /// <summary>
+    /// 是否是递归CTE表
+    /// </summary>
+    bool IsRecursive { get; set; }
     #endregion
 }
 /// <summary>
@@ -90,9 +94,8 @@ public interface IQueryBase : IQuery
     /// <summary>
     /// 使用原始字段返回匿名查询结果，主要用在不关注结果类型的地方，比如：Sql.Exists语句，用于判断数据是否存在，用法：SelectAnonymous("*") 或是 SelectAnonymous("1")，
     /// </summary>
-    /// <param name="fields">原始字段字符串，默认值*</param>
     /// <returns>返回匿名查询对象</returns>
-    IQueryAnonymousObject SelectAnonymous(string fields = "*");
+    IQueryAnonymousObject SelectAnonymous();
     #endregion
 }
 /// <summary>

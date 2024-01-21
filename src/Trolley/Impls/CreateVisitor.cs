@@ -38,7 +38,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (isFirst)
         {
             this.Tables = new();
-            this.TableAlias = new();
+            this.TableAliases = new();
         }
         //clear
         else this.Clear();
@@ -307,8 +307,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     {
         var lambdaExpr = fieldsSelector as LambdaExpression;
         var entityMapper = this.Tables[0].Mapper;
-        this.TableAlias.Clear();
-        this.TableAlias.Add(lambdaExpr.Parameters[0].Name, this.Tables[0]);
+        this.TableAliases.Clear();
+        this.TableAliases.Add(lambdaExpr.Parameters[0].Name, this.Tables[0]);
         var fieldNames = new List<string>();
         switch (lambdaExpr.Body.NodeType)
         {
@@ -344,7 +344,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public void Clear()
     {
         this.Tables?.Clear();
-        this.TableAlias?.Clear();
+        this.TableAliases?.Clear();
         this.ReaderFields?.Clear();
         this.WhereSql = null;
         this.TableAsStart = 'a';

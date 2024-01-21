@@ -20,12 +20,9 @@ public class GroupingQueryBase<TGrouping> : IGroupingQueryBase<TGrouping>
     #endregion
 
     #region Select/SelectAnonymous
-    public IQueryAnonymousObject SelectAnonymous(string fields = "*")
+    public IQueryAnonymousObject SelectAnonymous()
     {
-        if (string.IsNullOrEmpty(fields))
-            throw new ArgumentNullException(nameof(fields));
-
-        this.Visitor.Select(fields, null);
+        this.Visitor.Select("*");
         return new QueryAnonymousObject(this.Visitor);
     }
     public IQuery<TGrouping> Select()

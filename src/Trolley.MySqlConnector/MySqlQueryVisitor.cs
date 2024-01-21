@@ -34,15 +34,19 @@ public class MySqlQueryVisitor : QueryVisitor
         //有CTE表
         if (this.IsUseCteTable && this.CteQueries != null && this.CteQueries.Count > 0)
         {
-            builder.Append("WITH ");
-            if (this.IsRecursive)
-                builder.Append("RECURSIVE ");
-            for (int i = 0; i < this.CteQueries.Count; i++)
+            bool isRecursive = false;
+            var cteQueries = this.FlattenRefCteTables(this.CteQueries);
+            for (int i = 0; i < cteQueries.Count; i++)
             {
                 if (i > 0) builder.AppendLine(",");
-                builder.Append(this.CteQueries[i].Body);
+                builder.Append(cteQueries[i].Body);
                 builder.AppendLine();
+                if (cteQueries[i].IsRecursive)
+                    isRecursive = true;
             }
+            if (isRecursive)
+                builder.Insert(0, "WITH RECURSIVE ");
+            else builder.Insert(0, "WITH ");
         }
         dbParameters = this.DbParameters;
         if (!string.IsNullOrEmpty(this.UnionSql))

@@ -232,7 +232,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     public void Clear()
     {
         this.Tables?.Clear();
-        this.TableAlias?.Clear();
+        this.TableAliases?.Clear();
         this.ReaderFields?.Clear();
         this.WhereSql = null; 
         this.IsFromQuery = false;

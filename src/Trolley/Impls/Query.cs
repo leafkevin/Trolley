@@ -44,15 +44,12 @@ public class QueryBase : IQueryBase
     #endregion
 
     #region Select	
-    public virtual IQueryAnonymousObject SelectAnonymous(string fields = "*")
+    public virtual IQueryAnonymousObject SelectAnonymous()
     {
-        if (string.IsNullOrEmpty(fields))
-            throw new ArgumentNullException(nameof(fields));
-
-        this.Visitor.Select(fields);
+        this.Visitor.Select("*");
         return new QueryAnonymousObject(this.Visitor);
     }
-    #endregion
+    #endregion   
 
     #region Count
     public virtual int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -438,6 +435,12 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
+    #region Exists
+    public virtual bool Exists(Expression<Func<T, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+    #endregion
+
     #region Count
     public virtual int Count<TField>(Expression<Func<T, TField>> fieldExpr)
     {
@@ -627,7 +630,6 @@ public class CteQuery<T> : Query<T>, ICteQuery<T>
     #region 不支持的方法
     public override IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector) => throw new NotSupportedException("不支持的方法调用");
     public override IIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null) => throw new NotSupportedException("不支持的方法调用");
-    public override IQueryAnonymousObject SelectAnonymous(string fields = "*") => throw new NotSupportedException("不支持的方法调用");
 
     public override int Count() => throw new NotSupportedException("不支持的方法调用");
     public override Task<int> CountAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");

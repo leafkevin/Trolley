@@ -16,8 +16,11 @@ public interface IQueryVisitor : IDisposable
     //List<TableSegment> CteTables { get; set; }
     List<ICteQuery> CteQueries { get; set; }
     IDataParameterCollection DbParameters { get; set; }
+    IDataParameterCollection NextDbParameters { get; set; }
     bool IsUseFieldAlias { get; set; }
     bool IsUseCteTable { get; set; }
+    public char TableAsStart { get; set; }
+    Dictionary<string, TableSegment> RefTableAliases { get; set; }
 
     string BuildSql(out List<ReaderField> readerFields);
     string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters);
@@ -45,7 +48,7 @@ public interface IQueryVisitor : IDisposable
     void SetIncludeValues<TTarget>(Type targetType, List<TTarget> targets, IDataReader reader);
     Task SetIncludeValueAsync<TTarget>(Type targetType, List<TTarget> targets, DbDataReader reader, CancellationToken cancellationToken);
 
-    void Where(Expression whereExpr, bool isClearTableAlias = true);
+    void Where(Expression whereExpr);
     void And(Expression whereExpr);
     void GroupBy(Expression expr);
     void OrderBy(string orderType, Expression expr);
@@ -64,8 +67,8 @@ public interface IQueryVisitor : IDisposable
     void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, List<ReaderField> readerFields);
     TableSegment AddTable(TableSegment tableSegment);
     TableSegment AddTable(Type entityType, string joinType = "", TableType tableType = TableType.Entity, string body = null, List<ReaderField> readerFields = null);
-    void AddAliasTable(string tableAlias, TableSegment tableSegment);
+    void RemoveTable(TableSegment tableSegment);
     TableSegment InitTableAlias(LambdaExpression lambdaExpr);
     void Clear(bool isClearReaderFields = false);
-    void CopyTo(IQueryVisitor visitor);
+    void CopyTo(SqlVisitor visitor);
 }
