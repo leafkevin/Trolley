@@ -792,7 +792,7 @@ public class UnitTest2 : UnitTestBase
                 t.From<OrderDetail>('b')
                  .GroupBy(a => a.OrderId)
                  .Having((x, a) => Sql.CountDistinct(a.ProductId) > 0)
-                 .SelectAnonymous("*")))
+                 .SelectAnonymous()))
             .GroupBy(f => new { f.Gender, f.CompanyId })
             .Select((t, a) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
             .ToSql(out _);
@@ -809,7 +809,7 @@ public class UnitTest2 : UnitTestBase
                  .Where((a, b, c) => a.BuyerId == x.Id && a.Id == b.OrderId && b.ProductId == c.Id && c.CompanyId == y.Id)
                  .GroupBy((a, b, c) => a.Id)
                  .Having((x, a, b, c) => Sql.CountDistinct(b.ProductId) > 0)
-                 .SelectAnonymous("*")))
+                 .SelectAnonymous()))
             .GroupBy((x, y) => new { x.Gender, x.CompanyId })
             .Select((t, a, b) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
             .ToSql(out _);
@@ -971,7 +971,7 @@ public class UnitTest2 : UnitTestBase
                     .Where((a, b) => a.BuyerId == t.Id && a.Id == b.OrderId)
                     .GroupBy((a, b) => a.Id)
                     .Having((x, a, b) => Sql.Count(b.Id) > 0)
-                    .SelectAnonymous("*")))
+                    .SelectAnonymous()))
             .GroupBy(f => new { f.Gender, f.CompanyId })
             .Select((x, y) => new { x.Grouping, UserTotal = x.CountDistinct(y.Id) })
             .ToList();
@@ -1406,7 +1406,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM MenuList a INNER JOIN MenuPageL
                 .UnionAllRecursive((x, self) => x.From<Menu>()
                     .InnerJoin(self, (a, b) => a.ParentId == b.Id)
                     .Select((a, b) => new { a.Id, a.Name, a.ParentId }))
-                .AsCteTable( "MenuList"))
+                .AsCteTable("MenuList"))
             .WithTable(f => f.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == 1)

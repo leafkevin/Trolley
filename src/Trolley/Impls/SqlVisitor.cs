@@ -273,7 +273,7 @@ public class SqlVisitor : ISqlVisitor
                 var rightType = rightSegment.GetExpectType(binaryExpr.Right);
                 if (leftType.IsEnum || rightType.IsEnum || leftType != rightType)
                 {
-                    if (calcOps.Contains(operators))
+                    if ((leftType.IsEnum || rightType.IsEnum) && calcOps.Contains(operators))
                         throw new NotSupportedException($"枚举类成员{leftSegment.MemberMapper.MemberName}对应的数据库类型为非数字类型，不能进行{operators}操作，可以使用=、<>、IN、EXISTS等操作来代替，表达式：{binaryExpr}");
 
                     //在调用GetQuotedValue方法前，确保左右两侧的类型一致，并都根据MemberMapper的映射类型表生成SQL语句                   
@@ -1337,20 +1337,29 @@ public class SqlVisitor : ISqlVisitor
     public List<ReaderField> FlattenTableFields(TableSegment tableSegment)
     {
         var targetFields = new List<ReaderField>();
-        foreach (var memberMapper in tableSegment.Mapper.MemberMaps)
+        if (tableSegment.Mapper != null)
         {
-            if (memberMapper.IsIgnore || memberMapper.IsNavigation
-                || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
-                continue;
-            targetFields.Add(new ReaderField
+            //Select参数时，Flatten实体表
+            foreach (var memberMapper in tableSegment.Mapper.MemberMaps)
             {
-                FieldType = ReaderFieldType.Field,
-                TableSegment = tableSegment,
-                FromMember = memberMapper.Member,
-                MemberMapper = memberMapper,
-                TargetMember = memberMapper.Member,
-                Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(memberMapper.FieldName)
-            });
+                if (memberMapper.IsIgnore || memberMapper.IsNavigation
+                    || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                    continue;
+                targetFields.Add(new ReaderField
+                {
+                    FieldType = ReaderFieldType.Field,
+                    TableSegment = tableSegment,
+                    FromMember = memberMapper.Member,
+                    MemberMapper = memberMapper,
+                    TargetMember = memberMapper.Member,
+                    Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(memberMapper.FieldName)
+                });
+            }
+        }
+        else
+        {
+            //Select参数时，Flatten子查询表
+            targetFields.AddRange(tableSegment.ReaderFields);
         }
         return targetFields;
     }
@@ -1486,6 +1495,7 @@ public class SqlVisitor : ISqlVisitor
             this.DbParameters.CopyTo(visitor.DbParameters);
         if (this.CteQueries == null || this.CteQueries.Count == 0)
             return;
+        if (this.Equals(visitor)) return;
         visitor.CteQueries ??= new();
         foreach (var cteQuery in this.CteQueries)
         {
@@ -1503,7 +1513,7 @@ public class SqlVisitor : ISqlVisitor
     {
         foreach (var cteQuery in fromCteQueries)
         {
-            if (cteQuery.Visitor.CteQueries != null)
+            if (cteQuery.Visitor.CteQueries != null && !this.Equals(cteQuery.Visitor))
                 this.AddRefCteTables(result, cteQuery.Visitor.CteQueries);
             if (!result.Contains(cteQuery))
                 result.Add(cteQuery);

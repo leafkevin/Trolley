@@ -331,9 +331,8 @@ public static class Extensions
             visitor.CteQueries ??= new();
             if (!visitor.CteQueries.Contains(cteQuery))
                 visitor.CteQueries.Add(cteQuery);
-        }
-        else if (!subQuery.Visitor.Equals(visitor))
-            subQuery.Visitor.CopyTo(visitor);
+        }       
+        subQuery.Visitor.CopyTo(visitor);
     }
 
     internal static void CopyTo(this IDataParameterCollection dbParameters, IDataParameterCollection other)
