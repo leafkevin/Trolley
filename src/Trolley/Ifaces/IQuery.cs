@@ -181,7 +181,7 @@ public interface IQuery<T> : IQueryBase
     ///         .Select(x =&gt; new { ... })
     ///     .UnionRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { ... })), "myCteTable") ...
+    ///         .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
     /// WITH RECURSIVE `myCteTable`(`Id`,`Name`,`ParentId`,`PageId`) AS 
     /// (
@@ -193,9 +193,8 @@ public interface IQuery<T> : IQueryBase
     /// <param name="subQuery">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Menu&gt;().Where(x =&gt; ... ).Select(x =&gt; new { ... })</code>
     /// </param>
-    /// <param name="cteTableName">CTE表名称</param>
     /// <returns>返回查询对象</returns>
-    ICteQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery, string cteTableName);
+    IQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery);
     /// <summary>
     /// 递归CTE子查询中的UnionAll操作，表达式subQuery中的第二参数是自身引用，用法：
     /// <code>
@@ -203,7 +202,7 @@ public interface IQuery<T> : IQueryBase
     ///         .Select(x =&gt; new { ... })
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { ... })), "myCteTable") ...
+    ///         .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
     /// WITH RECURSIVE `myCteTable`(`Id`,`Name`,`ParentId`,`PageId`) AS 
     /// (
@@ -214,9 +213,8 @@ public interface IQuery<T> : IQueryBase
     /// <param name="subQuery">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
     /// </param>
-    /// <param name="cteTableName">CTE表名称</param>
     /// <returns>返回查询对象</returns>
-    ICteQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery, string cteTableName);
+    IQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery);
     #endregion
 
     #region WithTable

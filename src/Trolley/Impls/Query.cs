@@ -142,23 +142,23 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Union(" UNION ALL", typeof(T), this.DbContext, subQuery);
         return this;
     }
-    public virtual ICteQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery, string cteTableName)
+    public virtual IQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
         var cteQuery = new CteQuery<T>(this);
-        this.Visitor.UnionRecursive(" UNION", this.DbContext, cteQuery, subQuery, cteTableName);
-        return cteQuery;
+        this.Visitor.UnionRecursive(" UNION", this.DbContext, cteQuery, subQuery);
+        return this;
     }
-    public virtual ICteQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery, string cteTableName)
+    public virtual IQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
         var cteQuery = new CteQuery<T>(this);
-        this.Visitor.UnionRecursive(" UNION ALL", this.DbContext, cteQuery, subQuery, cteTableName);
-        return cteQuery;
+        this.Visitor.UnionRecursive(" UNION ALL", this.DbContext, cteQuery, subQuery);
+        return this;
     }
     #endregion
 
@@ -598,12 +598,19 @@ public class Query<T> : QueryBase, IQuery<T>
         //防止重复创建对象
         if (this is ICteQuery<T> cteQueryObj)
             return cteQueryObj;
-
-        var queryObj = new CteQuery<T>(this.DbContext, this.Visitor);
-        queryObj.Body = this.Visitor.BuildCteTableSql(tableName, out var readerFields, out var isRecursive);
-        queryObj.TableName = tableName;
-        queryObj.ReaderFields = readerFields;
-        queryObj.IsRecursive = isRecursive;
+        ICteQuery<T> queryObj = null;
+        if (this.Visitor.SelfRefQueryObj != null)
+        {
+            queryObj = this.Visitor.SelfRefQueryObj as CteQuery<T>;
+            queryObj.Body = this.Visitor.BuildCteTableSql(tableName, out _, out _);
+        }
+        else
+        {
+            queryObj = new CteQuery<T>(this.DbContext, this.Visitor);
+            queryObj.Body = this.Visitor.BuildCteTableSql(tableName, out var readerFields, out _);
+            queryObj.TableName = tableName;
+            queryObj.ReaderFields = readerFields;
+        }
         return queryObj;
     }
     #endregion

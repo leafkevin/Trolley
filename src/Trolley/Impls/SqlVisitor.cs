@@ -42,7 +42,7 @@ public class SqlVisitor : ISqlVisitor
     public char TableAsStart { get; set; }
     public List<ReaderField> GroupFields { get; set; }
     public List<TableSegment> IncludeSegments { get; set; }
-    public List<ICteQuery> CteQueries { get; set; }
+    public List<ICteQuery> CteQueries { get; set; } = new();
 
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
@@ -1497,7 +1497,6 @@ public class SqlVisitor : ISqlVisitor
             return;
         if (this.Equals(visitor)) return;
         if (this.CteQueries.Equals(visitor.CteQueries)) return;
-        visitor.CteQueries ??= new();
         foreach (var cteQuery in this.CteQueries)
         {
             if (!visitor.CteQueries.Contains(cteQuery))
@@ -1514,10 +1513,10 @@ public class SqlVisitor : ISqlVisitor
     {
         foreach (var cteQuery in fromCteQueries)
         {
-            if (cteQuery.Visitor.CteQueries != null && !this.Equals(cteQuery.Visitor))
+            if (cteQuery.Visitor.CteQueries != null && !this.CteQueries.Equals(cteQuery.Visitor.CteQueries))
                 this.AddRefCteTables(result, cteQuery.Visitor.CteQueries);
             if (!result.Contains(cteQuery))
-                result.Add(cteQuery);            
+                result.Add(cteQuery);
         }
     }
     public virtual void Dispose()

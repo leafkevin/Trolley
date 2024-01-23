@@ -43,6 +43,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     /// </summary>
     public bool IsUseFieldAlias { get; set; } = true;
     public bool IsUseCteTable { get; set; } = true;
+    public ICteQuery SelfRefQueryObj { get; set; }
 
     public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
     {
@@ -309,6 +310,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         this.IsUseCteTable = false;
         isRecursive = this.IsRecursive;
+        if (this.SelfRefQueryObj != null)
+        {
+            var tempTableName = this.SelfRefQueryObj.TableName;
+            this.UnionSql = this.UnionSql.Replace(tempTableName, tableName);
+            this.SelfRefQueryObj.TableName = tableName;
+        }
         tableName = this.OrmProvider.GetTableName(tableName);
         var rawSql = this.BuildSql(out readerFields);
         var builder = new StringBuilder($"{tableName}(");
@@ -338,6 +345,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         builder.AppendLine(rawSql);
         builder.Append(')');
         this.IsUseCteTable = true;
+        this.SelfRefQueryObj = null;
         return builder.ToString();
     }
     public void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes)
@@ -360,24 +368,17 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public void From(Type targetType, IQuery subQueryObj)
         => this.AddSubQueryTable(targetType, subQueryObj);
-    public IQuery From(Type targetType, DbContext dbContext, Delegate subQueryGetter)
+    public void From(Type targetType, DbContext dbContext, Delegate subQueryGetter)
     {
         //可能是CTE表，也可能是子查询
-        IQueryVisitor queryVisitor = null;
-        bool isClear = false;
-        if (this.Tables.Count > 0)
-            queryVisitor = this.CreateQueryVisitor();
-        else
-        {
-            queryVisitor = this;
-            isClear = true;
-        }
+        var queryVisitor = this.CreateQueryVisitor();
         this.IsFromQuery = true;
         var fromQuery = new FromQuery(dbContext, queryVisitor);
         var subQueryObj = subQueryGetter.DynamicInvoke(fromQuery) as IQuery;
-        this.AddSubQueryTable(targetType, subQueryObj, isClear: isClear);
+        if (queryVisitor.IsRecursive && queryVisitor.SelfRefQueryObj != null)
+            throw new Exception("调用UnionRecursive/UnionAllRecursive方法后，必须调用AsCteTable方法，生成CTE表");
+        this.AddSubQueryTable(targetType, subQueryObj);
         this.IsFromQuery = false;
-        return subQueryObj;
     }
     public void Union(string union, Type targetType, IQuery subQuery)
     {
@@ -390,7 +391,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         if (subQuery is ICteQuery cteQuery)
         {
-            this.CteQueries ??= new();
             if (!this.CteQueries.Contains(cteQuery))
                 this.CteQueries.Add(cteQuery);
             rawSql += union + Environment.NewLine + $"SELECT * FROM {this.OrmProvider.GetTableName(cteQuery.TableName)}";
@@ -423,7 +423,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         if (subQuery is ICteQuery cteQuery)
         {
-            this.CteQueries ??= new();
             if (!this.CteQueries.Contains(cteQuery))
                 this.CteQueries.Add(cteQuery);
             rawSql += union + Environment.NewLine + $"SELECT * FROM {this.OrmProvider.GetTableName(cteQuery.TableName)}";
@@ -440,24 +439,28 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.UnionSql = rawSql;
         this.IsUnion = false;
     }
-    public void UnionRecursive(string union, DbContext dbContext, ICteQuery selfQueryObj, Delegate subQueryGetter, string cteTableName)
+    public void UnionRecursive(string union, DbContext dbContext, ICteQuery selfQueryObj, Delegate subQueryGetter)
     {
         this.IsUnion = true;
         this.IsRecursive = true;
         var rawSql = this.BuildSql(out var readerFields);
         this.Clear();
         this.IsUseCteTable = false;
-        var fromQuery = new FromQuery(dbContext, this);
+
         //此时产生的queryObj是一个新的对象，只能用于解析sql，与传进来的queryObj不是同一个对象，舍弃
         //临时产生一个随机表名，在后面的AsCteTable时，再做替换
-        selfQueryObj.TableName = cteTableName;
+        var tempTableName = $"__{Guid.NewGuid()}__";
+        selfQueryObj.TableName = tempTableName;
         selfQueryObj.ReaderFields = readerFields;
         selfQueryObj.IsRecursive = true;
+        this.SelfRefQueryObj = selfQueryObj;
+
+        var fromQuery = new FromQuery(dbContext, this);
         var subQuery = subQueryGetter.DynamicInvoke(fromQuery, selfQueryObj) as IQuery;
         rawSql += union + Environment.NewLine + subQuery.Visitor.BuildSql(out _);
         //先放到UnionSql中，在AsCteTable方法中，BuildCteTableSql时能得到这个SQL
         this.UnionSql = rawSql;
-        selfQueryObj.Body = this.BuildCteTableSql(cteTableName, out _, out _);
+        //selfQueryObj.Body = this.BuildCteTableSql(cteTableName, out _, out _);
         this.IsUnion = false;
     }
     public void Join(string joinType, Expression joinOn)
@@ -1745,11 +1748,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             readerFields = new();
             cteQuery.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
-            //只有在构建递归CTE表和Join CTE表两个场景，不需要添加CteQueries，其他场景都需要添加
-            if (!this.IsRecursive)
-                subQuery.CopyTo(this);
             tableType = TableType.CteSelfRef;
             body = this.OrmProvider.GetTableName(cteQuery.TableName);
+            //所有调用的地方，当前visitor与subQuery.Visitor不是同一对象
+            if (!this.CteQueries.Contains(cteQuery))
+                this.CteQueries.Add(cteQuery);
         }
         else body = $"({subQuery.Visitor.BuildSql(out readerFields)})";
         if (isClear) this.Clear();

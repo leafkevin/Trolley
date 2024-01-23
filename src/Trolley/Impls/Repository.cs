@@ -103,7 +103,8 @@ public class Repository : IRepository
     public virtual IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery)
     {
         var visitor = this.CreateQueryVisitor();
-        return visitor.From(typeof(T), this.DbContext, subQuery) as IQuery<T>;
+        visitor.From(typeof(T), this.DbContext, subQuery);
+        return this.OrmProvider.NewQuery<T>(this.DbContext, visitor);
     }
     #endregion
 

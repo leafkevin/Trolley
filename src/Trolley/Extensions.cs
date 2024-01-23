@@ -328,10 +328,9 @@ public static class Extensions
         if (subQuery == null) return;
         if (subQuery is ICteQuery cteQuery)
         {
-            visitor.CteQueries ??= new();
             if (!visitor.CteQueries.Contains(cteQuery))
                 visitor.CteQueries.Add(cteQuery);
-        }       
+        }
         subQuery.Visitor.CopyTo(visitor);
     }
 

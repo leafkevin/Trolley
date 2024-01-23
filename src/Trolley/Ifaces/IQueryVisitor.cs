@@ -15,6 +15,8 @@ public interface IQueryVisitor : IDisposable
     int CommandIndex { get; set; }
     //List<TableSegment> CteTables { get; set; }
     List<ICteQuery> CteQueries { get; set; }
+    ICteQuery SelfRefQueryObj { get; set; }
+    bool IsRecursive { get; set; }
     IDataParameterCollection DbParameters { get; set; }
     IDataParameterCollection NextDbParameters { get; set; }
     bool IsUseFieldAlias { get; set; }
@@ -27,11 +29,11 @@ public interface IQueryVisitor : IDisposable
     string BuildCteTableSql(string tableName, out List<ReaderField> readerFields, out bool isRecursive);
     void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes);
     void From(Type targetType, IQuery subQueryObj);
-    IQuery From(Type targetType, DbContext dbContext, Delegate subQueryGetter);
+    void From(Type targetType, DbContext dbContext, Delegate subQueryGetter);
 
     void Union(string union, Type targetType, IQuery subQuery);
     void Union(string union, Type targetType, DbContext dbContext, Delegate subQueryGetter);
-    void UnionRecursive(string union, DbContext dbContext, ICteQuery subQueryObj, Delegate selfSubQueryGetter, string cteTableName);
+    void UnionRecursive(string union, DbContext dbContext, ICteQuery subQueryObj, Delegate selfSubQueryGetter);
 
     public void Join(string joinType, Expression joinOn);
     void Join(string joinType, Type newEntityType, Expression joinOn);
