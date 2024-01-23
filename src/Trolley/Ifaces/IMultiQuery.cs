@@ -118,20 +118,20 @@ public interface IMultiQuery<T> : IMultiQueryBase
     ///         .Select(x =&gt; new { ... })
     ///     .UnionRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { ... }))) ...
+    ///         .Select((a, b) =&gt; new { ... })), "myCteTable") ...
     /// SQL:
-    /// WITH RECURSIVE MyCte1(Id,Name,ParentId,PageId) AS 
+    /// WITH RECURSIVE `myCteTable`(`Id`,`Name`,`ParentId`,`PageId`) AS 
     /// (
-    /// SELECT ... FROM `sys_menu` WHERE `Id`=1 UNION
-    /// SELECT ... FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id` ...
+    /// SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION
+    /// SELECT ... FROM `sys_menu` a INNER JOIN `myCteTable` b ON a.`ParentId`=b.`Id` ...
     /// ) ...
-    /// </code>
     /// </summary>
     /// <param name="subQuery">子查询，需要有Select语句，如：
-    /// <code>f.From&lt;Menu&gt;().Where(x =&gt; ... ).Select(x =&gt; new { ... })</code>
+    /// <code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
     /// </param>
+    /// <param name="cteTableName">CTE表名称</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UnionRecursive(Func<IFromQuery, IMultiQuery<T>, IQuery<T>> subQuery);
+    IMultiQuery<T> UnionRecursive(Func<IFromQuery, IMultiQuery<T>, IQuery<T>> subQuery, string cteTableName);
     /// <summary>
     /// 递归CTE子查询中的UnionAll操作，表达式subQuery中的第二参数是自身引用，用法：
     /// <code>
@@ -139,19 +139,20 @@ public interface IMultiQuery<T> : IMultiQueryBase
     ///         .Select(x =&gt; new { ... })
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { ... }))) ...
+    ///         .Select((a, b) =&gt; new { ... })), "myCteTable") ...
     /// SQL:
-    /// WITH RECURSIVE MyCte1(Id,Name,ParentId,PageId) AS 
+    /// WITH RECURSIVE `myCteTable`(`Id`,`Name`,`ParentId`,`PageId`) AS 
     /// (
-    /// SELECT ... FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    /// SELECT ... FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id` ...
+    /// SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
+    /// SELECT ... FROM `sys_menu` a INNER JOIN `myCteTable` b ON a.`ParentId`=b.`Id` ...
     /// ) ...
     /// </summary>
     /// <param name="subQuery">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
     /// </param>
+    /// <param name="cteTableName">CTE表名称</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UnionAllRecursive(Func<IFromQuery, IMultiQuery<T>, IQuery<T>> subQuery);
+    IMultiQuery<T> UnionAllRecursive(Func<IFromQuery, IMultiQuery<T>, IQuery<T>> subQuery, string cteTableName);
     #endregion
 
     #region WithTable

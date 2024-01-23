@@ -31,7 +31,7 @@ public interface IQueryVisitor : IDisposable
 
     void Union(string union, Type targetType, IQuery subQuery);
     void Union(string union, Type targetType, DbContext dbContext, Delegate subQueryGetter);
-    void UnionRecursive(string union, Type targetType, DbContext dbContext, IQuery subQueryObj, Delegate selfSubQueryGetter);
+    void UnionRecursive(string union, DbContext dbContext, ICteQuery subQueryObj, Delegate selfSubQueryGetter, string cteTableName);
 
     public void Join(string joinType, Expression joinOn);
     void Join(string joinType, Type newEntityType, Expression joinOn);

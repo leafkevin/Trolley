@@ -96,14 +96,13 @@ public class Repository : IRepository
     #region From SubQuery
     public virtual IQuery<T> From<T>(IQuery<T> subQuery)
     {
-        var visitor = subQuery.Visitor;
+        var visitor = this.CreateQueryVisitor();
         visitor.From(typeof(T), subQuery);
-        return subQuery;
+        return this.OrmProvider.NewQuery<T>(this.DbContext, visitor);
     }
-
     public virtual IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery)
     {
-        var visitor = this.CreateQueryVisitor('a');
+        var visitor = this.CreateQueryVisitor();
         return visitor.From(typeof(T), this.DbContext, subQuery) as IQuery<T>;
     }
     #endregion
@@ -1080,7 +1079,7 @@ public class Repository : IRepository
         GC.SuppressFinalize(this);
     }
     ~Repository() => this.Dispose();
-    private IQueryVisitor CreateQueryVisitor(char tableAsStart)
+    private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
         => this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.isParameterized, tableAsStart);
     #endregion
 }

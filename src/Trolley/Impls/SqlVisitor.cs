@@ -1496,10 +1496,11 @@ public class SqlVisitor : ISqlVisitor
         if (this.CteQueries == null || this.CteQueries.Count == 0)
             return;
         if (this.Equals(visitor)) return;
+        if (this.CteQueries.Equals(visitor.CteQueries)) return;
         visitor.CteQueries ??= new();
         foreach (var cteQuery in this.CteQueries)
         {
-            if (visitor.CteQueries.Contains(cteQuery))
+            if (!visitor.CteQueries.Contains(cteQuery))
                 visitor.CteQueries.Add(cteQuery);
         }
     }
@@ -1516,7 +1517,7 @@ public class SqlVisitor : ISqlVisitor
             if (cteQuery.Visitor.CteQueries != null && !this.Equals(cteQuery.Visitor))
                 this.AddRefCteTables(result, cteQuery.Visitor.CteQueries);
             if (!result.Contains(cteQuery))
-                result.Add(cteQuery);
+                result.Add(cteQuery);            
         }
     }
     public virtual void Dispose()

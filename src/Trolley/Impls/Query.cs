@@ -142,21 +142,23 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Union(" UNION ALL", typeof(T), this.DbContext, subQuery);
         return this;
     }
-    public virtual IQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
+    public virtual ICteQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery, string cteTableName)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        this.Visitor.UnionRecursive(" UNION", typeof(T), this.DbContext, this, subQuery);
-        return this;
+        var cteQuery = new CteQuery<T>(this);
+        this.Visitor.UnionRecursive(" UNION", this.DbContext, cteQuery, subQuery, cteTableName);
+        return cteQuery;
     }
-    public virtual IQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
+    public virtual ICteQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery, string cteTableName)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        this.Visitor.UnionRecursive(" UNION ALL", typeof(T), this.DbContext, this, subQuery);
-        return this;
+        var cteQuery = new CteQuery<T>(this);
+        this.Visitor.UnionRecursive(" UNION ALL", this.DbContext, cteQuery, subQuery, cteTableName);
+        return cteQuery;
     }
     #endregion
 
@@ -593,6 +595,10 @@ public class Query<T> : QueryBase, IQuery<T>
     #region AsCteTable
     public ICteQuery<T> AsCteTable(string tableName)
     {
+        //防止重复创建对象
+        if (this is ICteQuery<T> cteQueryObj)
+            return cteQueryObj;
+
         var queryObj = new CteQuery<T>(this.DbContext, this.Visitor);
         queryObj.Body = this.Visitor.BuildCteTableSql(tableName, out var readerFields, out var isRecursive);
         queryObj.TableName = tableName;

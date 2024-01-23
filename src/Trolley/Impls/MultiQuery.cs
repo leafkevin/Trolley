@@ -104,20 +104,22 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         this.Visitor.Union(" UNION ALL", typeof(T), this.DbContext, subQuery);
         return this;
     }
-    public IMultiQuery<T> UnionRecursive(Func<IFromQuery, IMultiQuery<T>, IQuery<T>> subQuery)
+    public IMultiQuery<T> UnionRecursive(Func<IFromQuery, IMultiQuery<T>, IQuery<T>> subQuery, string cteTableName)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        this.Visitor.UnionRecursive(" UNION", typeof(T), this.DbContext, this, subQuery);
+        var cteQuery = new CteQuery<T>(this);
+        this.Visitor.UnionRecursive(" UNION", this.DbContext, cteQuery, subQuery, cteTableName);
         return this;
     }
-    public IMultiQuery<T> UnionAllRecursive(Func<IFromQuery, IMultiQuery<T>, IQuery<T>> subQuery)
+    public IMultiQuery<T> UnionAllRecursive(Func<IFromQuery, IMultiQuery<T>, IQuery<T>> subQuery, string cteTableName)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        this.Visitor.UnionRecursive(" UNION ALL", typeof(T), this.DbContext, this, subQuery);
+        var cteQuery = new CteQuery<T>(this);
+        this.Visitor.UnionRecursive(" UNION ALL", this.DbContext, cteQuery, subQuery, cteTableName);
         return this;
     }
     #endregion    
