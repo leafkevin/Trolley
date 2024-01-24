@@ -20,6 +20,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     private static ConcurrentDictionary<Type, Action<object, string, IDataReader, IOrmProvider, IEntityMapProvider>> typedReaderElementSetters = new();
     private static ConcurrentDictionary<int, Action<object, object>> targetIncludeValuesSetters = new();
     private static ConcurrentDictionary<int, Action<object>> targetRefIncludeValuesSetters = new();
+    private bool isDisposed;
 
     protected List<CommandSegment> deferredSegments = new();
     protected List<Action<object>> deferredRefIncludeValuesSetters = null;
@@ -1829,7 +1830,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public override void Dispose()
     {
-        base.Dispose();
+        if (this.isDisposed)
+            return;
+        this.isDisposed = true;
 
         this.UnionSql = null;
         this.GroupBySql = null;
@@ -1840,6 +1843,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.deferredRefIncludeValuesSetters = null;
         this.LastIncludeSegment = null;
         this.SelfRefQueryObj = null;
+
+        base.Dispose();
     }
     protected void InitFromQueryReaderFields(TableSegment tableSegment, List<ReaderField> readerFields)
     {

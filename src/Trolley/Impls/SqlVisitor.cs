@@ -13,6 +13,7 @@ public class SqlVisitor : ISqlVisitor
 {
     private static ConcurrentDictionary<int, Func<object, object>> memberGetterCache = new();
     private static string[] calcOps = new string[] { ">", ">=", "<", "<=", "+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>" };
+    private bool isDisposed;
 
     public string DbKey { get; set; }
     public IDataParameterCollection DbParameters { get; set; }
@@ -1526,6 +1527,10 @@ public class SqlVisitor : ISqlVisitor
     }
     public virtual void Dispose()
     {
+        if (this.isDisposed)
+            return;
+        this.isDisposed = true;
+
         this.ParameterPrefix = null;
         this.Tables = null;
         this.TableAliases = null;
@@ -1534,19 +1539,23 @@ public class SqlVisitor : ISqlVisitor
         this.WhereSql = null;
         this.GroupFields = null;
         this.IncludeSegments = null;
-        foreach (var refQueryObj in this.RefQueries)
-        {
-            //CTE表先保留，后续可能会被用到
-            if (refQueryObj is ICteQuery)
-                continue;
-            refQueryObj.Visitor.Dispose();
-        }
-        this.RefQueries = null;
+
         this.DbKey = null;
         this.DbParameters = null;
         this.NextDbParameters = null;
         this.OrmProvider = null;
         this.MapProvider = null;
+
+        var removedQueries = this.RefQueries.FindAll(f => f is not ICteQuery);
+        while (removedQueries.Count > 0)
+        {
+            var refQueryObj = removedQueries[0];
+            //CTE表先保留，后续可能会被用到
+            this.RefQueries.Remove(refQueryObj);
+            removedQueries.RemoveAt(0);
+            refQueryObj.Visitor.Dispose();
+        }
+        this.RefQueries = null;
     }
 
     private List<ConditionExpression> VisitLogicBinaryExpr(Expression conditionExpr)

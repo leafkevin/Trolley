@@ -160,6 +160,7 @@ public sealed class DbContext
             reader?.Close();
             command.Dispose();
             if (isNeedClose) this.Close();
+            visitor.Dispose();
         }
         if (exception != null) throw exception;
         return result;
@@ -210,6 +211,7 @@ public sealed class DbContext
                 await reader.DisposeAsync();
             await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
+            visitor.Dispose();
         }
         if (exception != null) throw exception;
         return result;
@@ -360,6 +362,7 @@ public sealed class DbContext
             reader?.Dispose();
             command.Dispose();
             if (isNeedClose) this.Close();
+            visitor.Dispose();
         }
         if (exception != null) throw exception;
         return result;
@@ -419,6 +422,7 @@ public sealed class DbContext
                 await reader.DisposeAsync();
             await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
+            visitor.Dispose();
         }
         if (exception != null) throw exception;
         return result;
@@ -484,6 +488,7 @@ public sealed class DbContext
             reader?.Dispose();
             command.Dispose();
             if (isNeedClose) this.Close();
+            visitor.Dispose();
         }
         if (exception != null) throw exception;
         return result;
@@ -547,6 +552,7 @@ public sealed class DbContext
                 await reader.DisposeAsync();
             await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
+            visitor.Dispose();
         }
         if (exception != null) throw exception;
         return result;

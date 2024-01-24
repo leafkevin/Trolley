@@ -301,8 +301,8 @@ public class UnitTest2 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         var sql = repository.From<User, Order, OrderDetail>()
-                 .InnerJoin((a, b, c) => a.Id == b.BuyerId)
-                 .LeftJoin((a, b, c) => b.Id == c.OrderId)
+            .InnerJoin((a, b, c) => a.Id == b.BuyerId)
+            .LeftJoin((a, b, c) => b.Id == c.OrderId)
             .Select((a, b, c) => new { OrderId = b.Id, b.OrderNo, b.Disputes, b.BuyerId, Buyer = a, TotalAmount = Sql.Sum(c.Amount) })
             .ToSql(out _);
         Assert.True(sql == "SELECT b.`Id` AS `OrderId`,b.`OrderNo`,b.`Disputes`,b.`BuyerId`,a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,SUM(c.`Amount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` LEFT JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId`");
@@ -1626,203 +1626,212 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `sys_pa
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
     }
-    //    [Fact]
-    //    public async void Query_WithNextCte()
-    //    {
-    //        this.Initialize();
-    //        int rootId = 1;
-    //        using var repository = dbFactory.Create();
-    //        var myCteTable1 = repository
-    //            .From<Menu>()
-    //                .Where(x => x.Id == rootId)
-    //                .Select(x => new { x.Id, x.Name, x.ParentId })
-    //            .UnionAllRecursive((x, self) => x.From<Menu>()
-    //                .InnerJoin(self, (a, b) => a.ParentId == b.Id)
-    //                .Select((a, b) => new { a.Id, a.Name, a.ParentId }))
-    //            .AsCteTable("myCteTable1");
-    //        var myCteTable2 = repository
-    //            .From<Page, Menu>()
-    //                .Where((a, b) => a.Id == b.PageId)
-    //                .Select((x, y) => new { y.Id, y.ParentId, x.Url })
-    //            .UnionAll(x => x.From<Menu>()
-    //                .InnerJoin<Page>((a, b) => a.PageId == b.Id)
-    //                .Select((x, y) => new { x.Id, x.ParentId, y.Url }))
-    //            .AsCteTable("myCteTable2");
+    [Fact]
+    public async void Query_WithNextCte()
+    {
+        this.Initialize();
+        int rootId = 1;
+        using var repository = dbFactory.Create();
+        var myCteTable1 = repository
+            .From<Menu>()
+                .Where(x => x.Id == rootId)
+                .Select(x => new { x.Id, x.Name, x.ParentId })
+            .UnionAllRecursive((x, self) => x.From<Menu>()
+                .InnerJoin(self, (a, b) => a.ParentId == b.Id)
+                .Select((a, b) => new { a.Id, a.Name, a.ParentId }))
+            .AsCteTable("myCteTable1");
+        var myCteTable2 = repository
+            .From<Page, Menu>()
+                .Where((a, b) => a.Id == b.PageId)
+                .Select((x, y) => new { y.Id, y.ParentId, x.Url })
+            .UnionAll(x => x.From<Menu>()
+                .InnerJoin<Page>((a, b) => a.PageId == b.Id)
+                .Select((x, y) => new { x.Id, x.ParentId, y.Url }))
+            .AsCteTable("myCteTable2");
 
-    //        var sql = repository
-    //            .From(myCteTable2)
-    //            .InnerJoin(myCteTable1, (a, b) => a.Id == b.Id)
-    //            .Select((a, b) => new { a.Id, b.Name, a.ParentId, a.Url })
-    //            .ToSql(out _);
-    //        Assert.True(sql == @"WITH RECURSIVE `myCteTable2`(`Id`,`ParentId`,`Url`) AS 
-    //(
-    //SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b.`PageId` UNION ALL
-    //SELECT a.`Id`,a.`ParentId`,b.`Url` FROM `sys_menu` a INNER JOIN `sys_page` b ON a.`PageId`=b.`Id`
-    //),
-    //`myCteTable1`(`Id`,`Name`,`ParentId`) AS 
-    //(
-    //SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a WHERE a.`Id`=@p0 UNION ALL
-    //SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `myCteTable1` b ON a.`ParentId`=b.`Id`
-    //)
-    //SELECT a.`Id`,b.`Name`,a.`ParentId`,a.`Url` FROM `myCteTable2` a INNER JOIN `myCteTable1` b ON a.`Id`=b.`Id`");
+        var sql = repository
+            .From(myCteTable2)
+            .InnerJoin(myCteTable1, (a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, b.Name, a.ParentId, a.Url })
+            .ToSql(out _);
+        Assert.True(sql == @"WITH RECURSIVE `myCteTable2`(`Id`,`ParentId`,`Url`) AS 
+(
+SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b.`PageId` UNION ALL
+SELECT a.`Id`,a.`ParentId`,b.`Url` FROM `sys_menu` a INNER JOIN `sys_page` b ON a.`PageId`=b.`Id`
+),
+`myCteTable1`(`Id`,`Name`,`ParentId`) AS 
+(
+SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a WHERE a.`Id`=@p0 UNION ALL
+SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `myCteTable1` b ON a.`ParentId`=b.`Id`
+)
+SELECT a.`Id`,b.`Name`,a.`ParentId`,a.`Url` FROM `myCteTable2` a INNER JOIN `myCteTable1` b ON a.`Id`=b.`Id`");
 
-    //        var menuList = repository
-    //            .From<Menu>()
-    //                .Where(x => x.Id == rootId.ToParameter("@RootId"))
-    //                .Select(x => new { x.Id, x.Name, x.ParentId })
-    //            .UnionAllRecursive((x, y) => x.From<Menu>()
-    //                .InnerJoin(y, (a, b) => a.ParentId == b.Id)
-    //                .Select((a, b) => new { a.Id, a.Name, a.ParentId }))
-    //            .AsCteTable("MenuList");
+        var menuList = repository
+            .From<Menu>()
+                .Where(x => x.Id == rootId.ToParameter("@RootId"))
+                .Select(x => new { x.Id, x.Name, x.ParentId })
+            .UnionAllRecursive((x, y) => x.From<Menu>()
+                .InnerJoin(y, (a, b) => a.ParentId == b.Id)
+                .Select((a, b) => new { a.Id, a.Name, a.ParentId }))
+            .AsCteTable("MenuList");
 
-    //        //        int pageId = 1;
-    //        //        sql = repository
-    //        //            .From(menuList)
-    //        //            .WithTable(x => x.From<Page>()
-    //        //                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
-    //        //                    .Where((a, b) => a.Id == pageId)
-    //        //                    .Select((x, y) => new { y.Id, x.Url })
-    //        //                .UnionAll(x => x.From<Page>()//.WithTable(self)
-    //        //                    .InnerJoin(menuList, (a, b) => a.Id == b.Id)
-    //        //                    .Where((a, b) => a.Id > pageId)
-    //        //                    .Select((x, y) => new { y.Id, x.Url })))
-    //        //            .InnerJoin((a, b) => a.Id == b.Id)
-    //        //            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-    //        //            .ToSql(out _);
+        int pageId = 1;
+        sql = repository
+            .From(menuList)
+            .WithTable(x => x.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id == pageId)
+                    .Select((x, y) => new { y.Id, x.Url })
+                .UnionAll(x => x.From<Page>()//.WithTable(self)
+                    .InnerJoin(menuList, (a, b) => a.Id == b.Id)
+                    .Where((a, b) => a.Id > pageId)
+                    .Select((x, y) => new { y.Id, x.Url })))
+            .InnerJoin((a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+            .ToSql(out _);
+        Assert.True(sql == @"WITH RECURSIVE `MenuList`(`Id`,`Name`,`ParentId`) AS 
+(
+SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a WHERE a.`Id`=@RootId UNION ALL
+SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`Id`
+)
+SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN (SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=@p1 UNION ALL
+SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id` WHERE a.`Id`>@p2) b ON a.`Id`=b.`Id`");
 
-    //        //        Assert.True(sql == @"WITH RECURSIVE `MenuList`(`Id`,`Name`,`ParentId`) AS 
-    //        //(
-    //        //SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a WHERE a.`Id`=@RootId UNION ALL
-    //        //SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`Id`
-    //        //)
-    //        //SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN (SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=@p1 UNION ALL
-    //        //SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id` WHERE a.`Id`>@p2) b ON a.`Id`=b.`Id`");
+        sql = repository
+            .From(menuList)
+            .WithTable(x => x.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id == pageId)
+                    .Select((x, y) => new { y.Id, x.Url })
+                .UnionAll(x => x.From<Page>()//.WithTable(self)
+                    .InnerJoin(menuList, (a, b) => a.Id == b.Id)
+                    .Where((a, b) => a.Id > pageId)
+                    .Select((x, y) => new { y.Id, x.Url }))
+                .AsCteTable("MenuPageList"))
+            .InnerJoin((a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+            .ToSql(out _);
+        Assert.True(sql == @"WITH RECURSIVE `MenuList`(`Id`,`Name`,`ParentId`) AS 
+(
+SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a WHERE a.`Id`=@RootId UNION ALL
+SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`Id`
+),
+`MenuPageList`(`Id`,`Url`) AS 
+(
+SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=@p1 UNION ALL
+SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id` WHERE a.`Id`>@p2
+)
+SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `MenuPageList` b ON a.`Id`=b.`Id`");
 
-    //        //        sql = repository
-    //        //            .From(menuList)
-    //        //            .WithTable(x => x
-    //        //                .From<Page>()
-    //        //                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
-    //        //                    .Where((a, b) => a.Id == 1)
-    //        //                    .Select((x, y) => new { y.Id, x.Url })
-    //        //                .UnionAll(x => x.From<Page>()//.WithTable(self)
-    //        //                    .InnerJoin(menuList, (a, b) => a.Id == b.Id)
-    //        //                    .Where((a, b) => a.Id > 1)
-    //        //                    .Select((x, y) => new { y.Id, x.Url }))
-    //        //                .AsCteTable("MenuPageList"))
-    //        //            .InnerJoin((a, b) => a.Id == b.Id)
-    //        //            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-    //        //            .ToSql(out _);
+        var result = await repository
+            .From(menuList)
+            .WithTable(x => x.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id == pageId)
+                    .Select((x, y) => new { y.Id, x.Url })
+                .UnionAll(x => x.From<Page>()//.WithTable(self)
+                    .InnerJoin(menuList, (a, b) => a.Id == b.Id)
+                    .Where((a, b) => a.Id > pageId)
+                    .Select((x, y) => new { y.Id, x.Url }))
+                .AsCteTable("MenuPageList"))
+            .InnerJoin((a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+            .ToListAsync();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
+    }
+    [Fact]
+    public async void Query_WithTable()
+    {
+        using var repository = dbFactory.Create();
+        var sql = repository.From<Menu>()
+             .WithTable(f => f.From<Page, Menu>('c')
+                 .Where((a, b) => a.Id == b.PageId)
+                 .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
+             .Where((a, b) => a.Id == b.Id)
+             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+             .ToSql(out _);
+        Assert.True(sql == @"SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `sys_menu` a,(SELECT d.`Id`,d.`ParentId`,c.`Url` FROM `sys_page` c,`sys_menu` d WHERE c.`Id`=d.`PageId`) b WHERE a.`Id`=b.`Id`");
 
-    //        //        var result = await repository
-    //        //            .From(menuList)
-    //        //            .WithTable(x => x
-    //        //                .From<Page>()
-    //        //                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
-    //        //                    .Where((a, b) => a.Id == 1)
-    //        //                    .Select((x, y) => new { y.Id, x.Url })
-    //        //                .UnionAll(x => x.From<Page>()//.WithTable(self)
-    //        //                    .InnerJoin(menuList, (a, b) => a.Id == b.Id)
-    //        //                    .Where((a, b) => a.Id > 1)
-    //        //                    .Select((x, y) => new { y.Id, x.Url })))
-    //        //            .InnerJoin((a, b) => a.Id == b.Id)
-    //        //            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-    //        //            .ToListAsync();
-    //        //        Assert.NotNull(result);
-    //        //        Assert.True(result.Count > 0);
-    //    }
-    //    [Fact]
-    //    public async void Query_WithTable()
-    //    {
-    //        using var repository = dbFactory.Create();
-    //        var sql = repository.From<Menu>()
-    //             .WithTable(f => f.From<Page, Menu>('c')
-    //                 .Where((a, b) => a.Id == b.PageId)
-    //                 .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
-    //             .Where((a, b) => a.Id == b.Id)
-    //             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-    //             .ToSql(out _);
-    //        Assert.True(sql == @"SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `sys_menu` a,(SELECT d.`Id`,d.`ParentId`,c.`Url` FROM `sys_page` c,`sys_menu` d WHERE c.`Id`=d.`PageId`) b WHERE a.`Id`=b.`Id`");
+        int menuId = 1;
+        int pageId = 1;
+        int pageId2 = 1;
+        sql = repository
+            .From(f => f.From<Menu>()
+                    .Where(x => x.Id == menuId)
+                    .Select(x => new { x.Id, x.Name, x.ParentId })
+                .UnionAllRecursive((x, y) => x.From<Menu>()
+                    .InnerJoin(y, (a, b) => a.ParentId == b.Id)
+                    .Select((a, b) => new { a.Id, a.Name, a.ParentId }))
+                .AsCteTable("myCteTable1"))
+            .WithTable(f => f.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id == pageId)
+                    .Select((x, y) => new { y.Id, x.Url })
+                .UnionAll(x => x.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id > pageId2)
+                    .Select((x, y) => new { y.Id, x.Url }))
+                .AsCteTable("myCteTable2"))
+            .InnerJoin((a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+            .ToSql(out var dbParameters);
+        Assert.True(sql == @"WITH RECURSIVE `myCteTable1`(`Id`,`Name`,`ParentId`) AS 
+(
+SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a WHERE a.`Id`=@p0 UNION ALL
+SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `myCteTable1` b ON a.`ParentId`=b.`Id`
+),
+`myCteTable2`(`Id`,`Url`) AS 
+(
+SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=@p1 UNION ALL
+SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`>@p2
+)
+SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myCteTable2` b ON a.`Id`=b.`Id`");
 
-    //        int menuId = 1;
-    //        int pageId = 1;
-    //        int pageId2 = 1;
-    //        sql = repository
-    //            .From(f => f.From<Menu>()
-    //                    .Where(x => x.Id == menuId)
-    //                    .Select(x => new { x.Id, x.Name, x.ParentId })
-    //                .UnionAllRecursive((x, y) => x.From<Menu>()
-    //                    .InnerJoin(y, (a, b) => a.ParentId == b.Id)
-    //                    .Select((a, b) => new { a.Id, a.Name, a.ParentId }))
-    //                .AsCteTable("myCteTable1"))
-    //            .WithTable(f => f.From<Page>()
-    //                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
-    //                    .Where((a, b) => a.Id == pageId)
-    //                    .Select((x, y) => new { y.Id, x.Url })
-    //                .UnionAll(x => x.From<Page>()
-    //                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
-    //                    .Where((a, b) => a.Id > pageId2)
-    //                    .Select((x, y) => new { y.Id, x.Url }))
-    //                .AsCteTable("myCteTable2"))
-    //            .InnerJoin((a, b) => a.Id == b.Id)
-    //            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-    //            .ToSql(out var dbParameters);
-    //        Assert.True(sql == @"WITH RECURSIVE `myCteTable1`(`Id`,`Name`,`ParentId`) AS 
-    //(
-    //SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a WHERE a.`Id`=@p0 UNION ALL
-    //SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `myCteTable1` b ON a.`ParentId`=b.`Id`
-    //),
-    //`myCteTable2`(`Id`,`Url`) AS 
-    //(
-    //SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=@p1 UNION ALL
-    //SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`>@p2
-    //)
-    //SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myCteTable2` b ON a.`Id`=b.`Id`");
+        var result = await repository
+            .From(f => f.From<Menu>()
+                    .Where(x => x.Id == menuId)
+                    .Select(x => new { x.Id, x.Name, x.ParentId })
+                .UnionAllRecursive((x, y) => x.From<Menu>()
+                    .InnerJoin(y, (a, b) => a.ParentId == b.Id)
+                    .Select((a, b) => new { a.Id, a.Name, a.ParentId }))
+                .AsCteTable("myCteTable1"))
+            .WithTable(f => f.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id == pageId)
+                    .Select((x, y) => new { y.Id, x.Url })
+                .UnionAll(x => x.From<Page>()
+                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
+                    .Where((a, b) => a.Id > pageId2)
+                    .Select((x, y) => new { y.Id, x.Url }))
+                .AsCteTable("myCteTable2"))
+            .InnerJoin((a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+           .ToListAsync();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
 
-    //        var result = await repository
-    //            .From(f => f.From<Menu>()
-    //                    .Where(x => x.Id == menuId)
-    //                    .Select(x => new { x.Id, x.Name, x.ParentId })
-    //                .UnionAllRecursive((x, y) => x.From<Menu>()
-    //                    .InnerJoin(y, (a, b) => a.ParentId == b.Id)
-    //                    .Select((a, b) => new { a.Id, a.Name, a.ParentId }))
-    //                .AsCteTable("myCteTable1"))
-    //            .WithTable(f => f.From<Page>()
-    //                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
-    //                    .Where((a, b) => a.Id == pageId)
-    //                    .Select((x, y) => new { y.Id, x.Url })
-    //                .UnionAll(x => x.From<Page>()
-    //                    .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
-    //                    .Where((a, b) => a.Id > pageId2)
-    //                    .Select((x, y) => new { y.Id, x.Url }))
-    //                .AsCteTable("myCteTable2"))
-    //            .InnerJoin((a, b) => a.Id == b.Id)
-    //            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-    //           .ToListAsync();
-    //        Assert.NotNull(result);
-    //        Assert.True(result.Count > 0);
+        var result1 = repository.From<Order, OrderDetail>()
+            .InnerJoin((x, y) => x.Id == y.OrderId)
+            .Include((x, y) => x.Buyer)
+            .Where((a, b) => a.Id == b.OrderId)
+            .Select((a, b) => new { Order = a, a.BuyerId, DetailId = b.Id, b.Price, b.Quantity, b.Amount })
+            .ToList();
+        Assert.True(result1.Count > 0);
+        Assert.NotNull(result1[0].Order);
+        Assert.NotNull(result1[0].Order.Buyer);
 
-    //        var result1 = repository.From<Order, OrderDetail>()
-    //            .InnerJoin((x, y) => x.Id == y.OrderId)
-    //            .Include((x, y) => x.Buyer)
-    //            .Where((a, b) => a.Id == b.OrderId)
-    //            .Select((a, b) => new { Order = a, a.BuyerId, DetailId = b.Id, b.Price, b.Quantity, b.Amount })
-    //            .ToList();
-    //        Assert.True(result1.Count > 0);
-    //        Assert.NotNull(result1[0].Order);
-    //        Assert.NotNull(result1[0].Order.Buyer);
-
-    //        var sql1 = repository.From(f => f.From<Order, OrderDetail, User>()
-    //                .Where((a, b, c) => a.Id == b.OrderId && a.BuyerId == c.Id && c.Age > 20)
-    //                .GroupBy((a, b, c) => new { OrderId = a.Id, a.BuyerId })
-    //                .Having((x, a, b, c) => x.Sum(b.Amount) > 500)
-    //                .Select((x, a, b, c) => new { x.Grouping.OrderId, x.Grouping.BuyerId, TotalAmount = x.Sum(b.Amount) }))
-    //            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-    //            .InnerJoin<Order>((a, b, c) => a.OrderId == c.Id)
-    //            .Select((a, b, c) => new { a.OrderId, a.BuyerId, Buyer = b, Order = c, a.TotalAmount })
-    //            .ToSql(out _);
-    //        Assert.True(sql1 == "SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,c.`Id`,c.`OrderNo`,c.`ProductCount`,c.`TotalAmount`,c.`BuyerId`,c.`BuyerSource`,c.`SellerId`,c.`Products`,c.`Disputes`,c.`IsEnabled`,c.`CreatedAt`,c.`CreatedBy`,c.`UpdatedAt`,c.`UpdatedBy`,a.`TotalAmount` FROM (SELECT a.`Id` AS `OrderId`,a.`BuyerId`,SUM(b.`Amount`) AS `TotalAmount` FROM `sys_order` a,`sys_order_detail` b,`sys_user` c WHERE a.`Id`=b.`OrderId` AND a.`BuyerId`=c.`Id` AND c.`Age`>20 GROUP BY a.`Id`,a.`BuyerId` HAVING SUM(b.`Amount`)>500) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` INNER JOIN `sys_order` c ON a.`OrderId`=c.`Id`");
-    //    }
+        var sql1 = repository.From(f => f.From<Order, OrderDetail, User>()
+                .Where((a, b, c) => a.Id == b.OrderId && a.BuyerId == c.Id && c.Age > 20)
+                .GroupBy((a, b, c) => new { OrderId = a.Id, a.BuyerId })
+                .Having((x, a, b, c) => x.Sum(b.Amount) > 500)
+                .Select((x, a, b, c) => new { x.Grouping.OrderId, x.Grouping.BuyerId, TotalAmount = x.Sum(b.Amount) }))
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .InnerJoin<Order>((a, b, c) => a.OrderId == c.Id)
+            .Select((a, b, c) => new { a.OrderId, a.BuyerId, Buyer = b, Order = c, a.TotalAmount })
+            .ToSql(out _);
+        Assert.True(sql1 == "SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,c.`Id`,c.`OrderNo`,c.`ProductCount`,c.`TotalAmount`,c.`BuyerId`,c.`BuyerSource`,c.`SellerId`,c.`Products`,c.`Disputes`,c.`IsEnabled`,c.`CreatedAt`,c.`CreatedBy`,c.`UpdatedAt`,c.`UpdatedBy`,a.`TotalAmount` FROM (SELECT a.`Id` AS `OrderId`,a.`BuyerId`,SUM(b.`Amount`) AS `TotalAmount` FROM `sys_order` a,`sys_order_detail` b,`sys_user` c WHERE a.`Id`=b.`OrderId` AND a.`BuyerId`=c.`Id` AND c.`Age`>20 GROUP BY a.`Id`,a.`BuyerId` HAVING SUM(b.`Amount`)>500) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` INNER JOIN `sys_order` c ON a.`OrderId`=c.`Id`");
+    }
     [Fact]
     public void SelectFlattenTo()
     {
