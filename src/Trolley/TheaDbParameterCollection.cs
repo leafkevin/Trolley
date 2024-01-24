@@ -62,7 +62,7 @@ public class TheaDbParameterCollection : IDataParameterCollection
 
         var index = this.Count;
         if (!this.namedIndices.TryAdd(dbParameter.ParameterName, index))
-            throw new Exception($"参数{dbParameter.ParameterName}已存在");
+            throw new Exception($"参数{dbParameter.ParameterName}已存在，请考虑使用ToParameter方法，更改子查询或是CTE子句中的参数名，避免参数名重复，如：.Where(f => f.Id > orderId.ToParameter(\"@OrderId\"))");
         this.parameters.Add(dbParameter);
         return index;
     }

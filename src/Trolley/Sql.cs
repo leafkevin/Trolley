@@ -28,6 +28,18 @@ public static class Sql
     public static bool IsNull<TField>(this TField field)
         => throw new NotImplementedException();
     /// <summary>
+    /// 更改参数名称，在子查询或是CTE子句中使用参数会有与主查询SQL中参数名相同，可以使用此方法更改参数名，避免参数名重复
+    /// </summary>
+    /// <typeparam name="T">变量类型</typeparam>
+    /// <param name="value">变量值</param>
+    /// <param name="parameterName">参数名称</param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public static T ToParameter<T>(this T value, string parameterName)
+    {
+        throw new NotImplementedException();
+    }
+    /// <summary>
     /// 数据分组后，把字段field的多行数据，用separator字符分割拼接在一起，行转列操作
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>

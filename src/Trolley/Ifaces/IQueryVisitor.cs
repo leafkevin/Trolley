@@ -13,11 +13,16 @@ public interface IQueryVisitor : IDisposable
 {
     bool IsMultiple { get; set; }
     int CommandIndex { get; set; }
-    //List<TableSegment> CteTables { get; set; }
-    List<ICteQuery> CteQueries { get; set; }
+    /// <summary>
+    /// 在SQL查询中，引用到子查询或是CTE表对象，防止重复添加参数，同时也为了解析CTE表引用SQL
+    /// </summary>
+    List<IQuery> RefQueries { get; set; }
     ICteQuery SelfRefQueryObj { get; set; }
     bool IsRecursive { get; set; }
     IDataParameterCollection DbParameters { get; set; }
+    /// <summary>
+    /// IncludeMany表，第二次执行时的参数列表，通常是Filter中使用的参数
+    /// </summary>
     IDataParameterCollection NextDbParameters { get; set; }
     bool IsUseFieldAlias { get; set; }
     bool IsUseCteTable { get; set; }
@@ -72,5 +77,4 @@ public interface IQueryVisitor : IDisposable
     void RemoveTable(TableSegment tableSegment);
     TableSegment InitTableAlias(LambdaExpression lambdaExpr);
     void Clear(bool isClearReaderFields = false);
-    void CopyTo(SqlVisitor visitor);
 }

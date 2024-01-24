@@ -261,7 +261,7 @@ public class MySqlCreateVisitor : CreateVisitor
         var queryVisiter = new MySqlQueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
         queryVisiter.IsMultiple = this.IsMultiple;
         queryVisiter.CommandIndex = this.CommandIndex;
-        queryVisiter.CteQueries = this.CteQueries;
+        queryVisiter.RefQueries = this.RefQueries;
         queryVisiter.IsUseIgnoreInto = this.IsUseIgnoreInto;
         return queryVisiter;
     }

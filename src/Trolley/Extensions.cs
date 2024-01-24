@@ -325,13 +325,13 @@ public static class Extensions
     }
     public static void CopyTo(this IQuery subQuery, SqlVisitor visitor)
     {
-        if (subQuery == null) return;
-        if (subQuery is ICteQuery cteQuery)
-        {
-            if (!visitor.CteQueries.Contains(cteQuery))
-                visitor.CteQueries.Add(cteQuery);
-        }
-        subQuery.Visitor.CopyTo(visitor);
+        if (subQuery == null || visitor.Equals(subQuery.Visitor)) return;
+        if (!visitor.RefQueries.Contains(subQuery))
+            visitor.RefQueries.Add(subQuery);
+        if (visitor.DbParameters.Equals(subQuery.Visitor.DbParameters))
+            return;
+        if (subQuery.Visitor.DbParameters.Count > 0)
+            subQuery.Visitor.DbParameters.CopyTo(visitor.DbParameters);
     }
 
     internal static void CopyTo(this IDataParameterCollection dbParameters, IDataParameterCollection other)
@@ -410,7 +410,10 @@ public static class Extensions
                 Expression readerValueExpr = null;
                 ReaderField childReaderField = null;
                 var childIndex = 0;
-                var endIndex = index + readerField.ReaderFields.Count;
+                var endIndex = index;
+                //当无参数的Deferred函数调用，ReaderFields的值为null，也没有从数据库读取字段，count=0
+                if (readerField.ReaderFields != null)
+                    endIndex += readerField.ReaderFields.Count;
 
                 if (readerField.FieldType == ReaderFieldType.DeferredFields)
                 {
@@ -422,6 +425,7 @@ public static class Extensions
                     }
                     Expression executeExpr = null;
                     List<Expression> argsExprs = null;
+
                     if (endIndex > index)
                     {
                         argsExprs = new List<Expression>();

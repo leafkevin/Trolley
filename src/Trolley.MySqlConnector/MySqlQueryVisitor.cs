@@ -32,10 +32,10 @@ public class MySqlQueryVisitor : QueryVisitor
         }
         builder.Append(") ");
         //有CTE表
-        if (this.IsUseCteTable && this.CteQueries != null && this.CteQueries.Count > 0)
+        if (this.IsUseCteTable && this.RefQueries != null && this.RefQueries.Count > 0)
         {
             bool isRecursive = false;
-            var cteQueries = this.FlattenRefCteTables(this.CteQueries);
+            var cteQueries = this.FlattenRefCteTables(this.RefQueries);
             for (int i = 0; i < cteQueries.Count; i++)
             {
                 if (i > 0) builder.AppendLine(",");

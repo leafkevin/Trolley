@@ -42,7 +42,7 @@ public class SqlVisitor : ISqlVisitor
     public char TableAsStart { get; set; }
     public List<ReaderField> GroupFields { get; set; }
     public List<TableSegment> IncludeSegments { get; set; }
-    public List<ICteQuery> CteQueries { get; set; } = new();
+    public List<IQuery> RefQueries { get; set; } = new();
 
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
@@ -555,9 +555,20 @@ public class SqlVisitor : ISqlVisitor
         {
             if (builder.Length > 0)
                 builder.Append(',');
-            if (readerField.FieldType == ReaderFieldType.Entity)
-                builder.Append(this.BuildSelectSql(readerField.ReaderFields));
-            else builder.Append(readerField.Body);
+            switch (readerField.FieldType)
+            {
+                case ReaderFieldType.Entity:
+                    builder.Append(this.BuildSelectSql(readerField.ReaderFields));
+                    break;
+                case ReaderFieldType.DeferredFields:
+                    if (readerField.ReaderFields == null)
+                        continue;
+                    builder.Append(readerField.Body);
+                    break;
+                default:
+                    builder.Append(readerField.Body);
+                    break;
+            }
         }
         return builder.ToString();
     }
@@ -672,6 +683,11 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.Null });
                     sqlSegment = this.VisitAndDeferred(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 }
+                break;
+            case "ToParameter":
+                sqlSegment.IsParameterized = true;
+                sqlSegment.ParameterName = this.Evaluate<string>(methodCallExpr.Arguments[1]);
+                sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 break;
             case "In":
                 var elementType = methodCallExpr.Method.GetGenericArguments()[0];
@@ -1227,11 +1243,18 @@ public class SqlVisitor : ISqlVisitor
                 this.NextDbParameters ??= new TheaDbParameterCollection();
                 dbParameters = this.NextDbParameters;
             }
-            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + dbParameters.Count.ToString();
+            var parameterName = sqlSegment.ParameterName ?? this.OrmProvider.ParameterPrefix + this.ParameterPrefix + dbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
             if (sqlSegment.MemberMapper != null)
                 this.OrmProvider.AddDbParameter(this.DbKey, dbParameters, sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
             else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value));
+
+            //清空指定的参数化名称
+            if (sqlSegment.IsParameterized)
+            {
+                sqlSegment.ParameterName = null;
+                sqlSegment.IsParameterized = false;
+            }
 
             sqlSegment.Value = parameterName;
             sqlSegment.HasParameter = true;
@@ -1285,7 +1308,7 @@ public class SqlVisitor : ISqlVisitor
         var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
         queryVisiter.IsMultiple = this.IsMultiple;
         queryVisiter.CommandIndex = this.CommandIndex;
-        queryVisiter.CteQueries = this.CteQueries;
+        queryVisiter.RefQueries = this.RefQueries;
         return queryVisiter;
     }
     /// <summary>
@@ -1485,38 +1508,20 @@ public class SqlVisitor : ISqlVisitor
         if (memberExpr == null) return false;
         return memberExpr.Member.Name == "Grouping" && typeof(IAggregateSelect).IsAssignableFrom(memberExpr.Member.DeclaringType);
     }
-    /// <summary>
-    /// 用在直接访问IQuery子查询时，并且IQuery子查询的Visitor与当前的Visitor不相等的情况
-    /// </summary>
-    /// <param name="visitor"></param>
-    public void CopyTo(SqlVisitor visitor)
-    {
-        if (!this.DbParameters.Equals(visitor.DbParameters) && this.DbParameters.Count > 0)
-            this.DbParameters.CopyTo(visitor.DbParameters);
-        if (this.CteQueries == null || this.CteQueries.Count == 0)
-            return;
-        if (this.Equals(visitor)) return;
-        if (this.CteQueries.Equals(visitor.CteQueries)) return;
-        foreach (var cteQuery in this.CteQueries)
-        {
-            if (!visitor.CteQueries.Contains(cteQuery))
-                visitor.CteQueries.Add(cteQuery);
-        }
-    }
-    public List<ICteQuery> FlattenRefCteTables(List<ICteQuery> cteQueries)
+    public List<ICteQuery> FlattenRefCteTables(List<IQuery> cteQueries)
     {
         var result = new List<ICteQuery>();
-        this.AddRefCteTables(result, cteQueries);
+        AddRefCteTables(result, cteQueries);
         return result;
     }
-    private void AddRefCteTables(List<ICteQuery> result, List<ICteQuery> fromCteQueries)
+    private void AddRefCteTables(List<ICteQuery> result, List<IQuery> fromCteQueries)
     {
-        foreach (var cteQuery in fromCteQueries)
+        foreach (var subQueryObj in fromCteQueries)
         {
-            if (cteQuery.Visitor.CteQueries != null && !this.CteQueries.Equals(cteQuery.Visitor.CteQueries))
-                this.AddRefCteTables(result, cteQuery.Visitor.CteQueries);
-            if (!result.Contains(cteQuery))
-                result.Add(cteQuery);
+            if (subQueryObj.Visitor.RefQueries.Count > 0 && !fromCteQueries.Equals(subQueryObj.Visitor.RefQueries))
+                this.AddRefCteTables(result, subQueryObj.Visitor.RefQueries);
+            if (!result.Contains(subQueryObj) && subQueryObj is ICteQuery cteQueryObj)
+                result.Add(cteQueryObj);
         }
     }
     public virtual void Dispose()
@@ -1524,12 +1529,22 @@ public class SqlVisitor : ISqlVisitor
         this.ParameterPrefix = null;
         this.Tables = null;
         this.TableAliases = null;
+        this.RefTableAliases = null;
         this.ReaderFields = null;
         this.WhereSql = null;
         this.GroupFields = null;
-
+        this.IncludeSegments = null;
+        foreach (var refQueryObj in this.RefQueries)
+        {
+            //CTE表先保留，后续可能会被用到
+            if (refQueryObj is ICteQuery)
+                continue;
+            refQueryObj.Visitor.Dispose();
+        }
+        this.RefQueries = null;
         this.DbKey = null;
         this.DbParameters = null;
+        this.NextDbParameters = null;
         this.OrmProvider = null;
         this.MapProvider = null;
     }
