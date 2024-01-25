@@ -43,25 +43,9 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                 index++;
             }
         }
-        if (!string.IsNullOrEmpty(this.WhereSql) || (this.WhereFields != null && this.WhereFields.Count > 0))
-            builder.Append(" WHERE ");
-        bool hasWhere = false;
-        if (this.WhereFields != null && this.WhereFields.Count > 0)
-        {
-            index = 0;
-            foreach (var whereField in this.WhereFields)
-            {
-                if (index > 0) builder.Append(" AND ");
-                if (this.IsNeedTableAlias) builder.Append($"{aliasName}");
-                builder.Append($"{whereField.Fields}={whereField.Values}");
-                index++;
-            }
-            hasWhere = true;
-        }
         if (!string.IsNullOrEmpty(this.WhereSql))
         {
-            if (hasWhere)
-                builder.Append(" AND ");
+            builder.Append(" WHERE ");
             builder.Append(this.WhereSql);
         }
         return builder.ToString();

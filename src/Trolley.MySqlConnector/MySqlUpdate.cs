@@ -22,17 +22,4 @@ public class MySqlUpdate<TEntity> : Update<TEntity>, IMySqlUpdate<TEntity>
         return new UpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
     }
     #endregion
-
-    #region FromWith CTE
-    public IUpdateFrom<TEntity, TSource> FromWith<TSource>(IQuery<TSource> subQuery)
-    {
-        this.Visitor.From(typeof(TSource));
-        return new UpdateFrom<TEntity, TSource>(this.DbContext, this.Visitor);
-    }
-    public IUpdateFrom<TEntity, TSource> FromWith<TSource>(Func<IFromQuery, IQuery<TSource>> subQuery)
-    {
-        this.Visitor.From(typeof(TSource));
-        return new UpdateFrom<TEntity, TSource>(this.DbContext, this.Visitor);
-    }
-    #endregion
 }

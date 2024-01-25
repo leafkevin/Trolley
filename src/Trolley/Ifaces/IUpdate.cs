@@ -20,18 +20,18 @@ public interface IUpdate<TEntity>
 
     #region Set
     /// <summary>
-    /// 使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，用法：
-    /// <code>.Set(new { Id = 1, Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id);  SQL: SET `Name`=@Name,SourceType=@SourceType WHERE `Id`=@kId
-    /// .Set(new User { Id = 1, ... })  SQL: SET ... //只更新部分字段，可以使用OnlyFields方法，忽略部分字段，可以使用IgnoreFields方法</code>
+    /// 部分字段更新，updateObj对象中除主键、OnlyFields、IgnoreFields方法筛选后的剩下所有字段都将参与更新，匿名、命名对象都可以，需要配合where条件使用，用法：
+    /// <code>.Set(new { Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id = 1); .Set(new User { Name = "kevin", SourceType = null });
+    /// SQL: SET `Name`=@Name,SourceType=@SourceType WHERE `Id`=@kId</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
     /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新，可以是字典或是匿名对象或是现有命名对象</param>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> Set<TUpdateObj>(TUpdateObj updateObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，为false不做更新，用法：
-    /// <code>.Set(true, new { Id = 1, Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id);  SQL: SET `Name`=@Name,SourceType=@SourceType WHERE `Id`=@kId
-    /// .Set(true, new User { Id = 1, ... })  SQL: SET ... //只更新部分字段，可以使用OnlyFields方法，忽略部分字段，可以使用IgnoreFields方法</code>
+    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中除主键、OnlyFields、IgnoreFields方法筛选后的剩下所有字段都将参与更新，匿名、命名对象都可以，需要配合where条件使用，为false不更新，用法：
+    /// <code>.Set(true, new { Id = 1, Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id = 1); .Set(true, new User { Name = "kevin", SourceType = null });
+    /// SQL: SET `Name`=@Name,SourceType=@SourceType WHERE `Id`=@kId</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
     /// <param name="condition">判断条件</param>
@@ -39,49 +39,26 @@ public interface IUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj);
     /// <summary>
-    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，用法：
-    /// <code>
-    /// var parameter = new OrderInfo { ... };
-    /// repository.Update&lt;Order&gt;()
-    ///     .Set(f => new
-    ///     {
-    ///         parameter.TotalAmount, //直接赋值，使用同名变量
-    ///         Products = this.GetProducts(), //直接赋值，使用本地函数
-    ///         BuyerId = DBNull.Value, //直接赋值 NULL
-    ///         Disputes = new Dispute { ... } //直接赋值，实体对象由TypeHandler处理
-    ///     }) ...
-    /// private int[] GetProducts() => new int[] { 1, 2, 3 };
-    /// SQL: UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`Disputes`=@Disputes ...
-    /// </code>
+    /// 部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，支持New、MemberInit表达式访问，用法：
+    /// <code>.Set(f => new { Description = DBNull.Value, Price = f.Price + 50 ... }) 或.Set(f => new Product { Description = DBNull.Value, Price = f.Price + 50 ... })
+    /// SQL: UPDATE `sys_product` SET `Description`=NULL,`Price`=Price+50,`Field`=@Field ...</code>
     /// </summary>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="fieldsAssignment">更新字段表达式，一个或是多个字段成员访问表达式，同名字段省略赋值字段，如：parameter.TotalAmount</param>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
-    /// <code>
-    /// var parameter = new OrderInfo { ... };
-    /// repository.Update&lt;Order&gt;()
-    ///     .Set(true, f => new
-    ///     {
-    ///         parameter.TotalAmount, //直接赋值，使用同名变量
-    ///         Products = this.GetProducts(), //直接赋值，使用本地函数
-    ///         BuyerId = DBNull.Value, //直接赋值 NULL
-    ///         Disputes = new Dispute { ... } //直接赋值，实体对象由TypeHandler处理
-    ///     }) ...
-    /// private int[] GetProducts() => new int[] { 1, 2, 3 };
-    /// SQL: UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`Disputes`=@Disputes ...
-    /// </code>
+    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，支持New、MemberInit表达式访问，如果为false，则不生成更新语句，用法：
+    /// <code>.Set(true, f => new { Description = DBNull.Value, Price = f.Price + 50 ... }) 或.Set(true, f => new Product { Description = DBNull.Value, Price = f.Price + 50 ... })
+    /// SQL: UPDATE `sys_product` SET `Description`=NULL,`Price`=Price+50,`Field`=@Field ...</code>
     /// </summary>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="condition">更新条件</param>
-    /// <param name="fieldsAssignment">更新字段表达式，一个或是多个字段成员访问表达式，同名字段省略赋值字段，如：parameter.TotalAmount</param>
+    /// <param name="fieldsAssignment">更新字段表达式，一个或是多个字段成员访问表达式</param>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，用法：
-    /// <code>.Set(x =&gt; x.OrderNo, "ON_111")</code>
+    /// 单字段更新，使用固定值fieldValue进行单字段更新，用法：<code>.Set(x =&gt; x.OrderNo, "ON_111")</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
     /// <param name="fieldSelector">筛选单个字段表达式，只能筛选一个字段</param>
@@ -89,7 +66,7 @@ public interface IUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，用法：
+    /// 判断condition布尔值，如果为true，使用固定值fieldValue进行单字段更新，否则不生成更新语句，用法：
     /// <code>.Set(true, x =&gt; x.OrderNo, "ON_111")</code>
     /// </summary>
     /// <typeparam name="TField">更新字段类型</typeparam>
@@ -177,11 +154,12 @@ public interface IUpdate<TEntity>
 
     #region WithBulk
     /// <summary>
-    /// 使用集合对象updateObjs部分字段批量更新，updateObjs对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，需要配合where条件使用。支持分批次更新，更新条数超过设置的bulkCount值，将在下次更新，直到所有数据更新完毕，bulkCount默认500，用法：
+    /// 使用集合对象updateObjs部分字段批量更新，根据主键字段更新，updateObjs对象中除主键、OnlyFields、IgnoreFields方法筛选后的剩下所有字段都将参与更新。支持分批次更新，更新条数超过设置的bulkCount值，将在下次更新，直到所有数据更新完毕，bulkCount默认500，
+    /// 可以继续使用Set、OnlyFields、IgnoreFields等方法，用法：
     /// <code>
     /// var updateObjs = new Order[]{ ... ...};
-    /// .WithBulk(updateObjs).Where(f =&gt; f.Id) ...
-    /// SQL: UPDATE `sys_order` SET ... WHERE `Id`=@kId0;UPDATE `sys_order` SET .. WHERE `Id`=@kId1; ...
+    /// .WithBulk(updateObjs).Set(new { Name = "kevin"}).IgnoreFields(...) ...
+    /// SQL: UPDATE `sys_order` SET ...Name=@Name0 WHERE `Id`=@kId0;UPDATE `sys_order` SET ...Name=@Name1 WHERE `Id`=@kId1; ...
     /// </code>
     /// </summary>
     /// <typeparam name="TUpdateObj">要更新的字段类型</typeparam>
@@ -238,8 +216,8 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
     #region Set
     /// <summary>
     /// 使用更新对象updateObj部分字段更新，updateObj对象中除OnlyFields、IgnoreFields、Where方法筛选外的所有字段都将参与更新，单对象更新，需要配合where条件使用，用法：
-    /// <code>.Set(new { Id = 1, Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id);  SQL: SET `Name`=@Name,SourceType=@SourceType WHERE `Id`=@kId
-    /// .Set(new User { Id = 1, ... })  SQL: SET ... //只更新部分字段，可以使用OnlyFields方法，忽略部分字段，可以使用IgnoreFields方法</code>
+    /// <code>.Set(new { Id = 1, Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id); .Set(new User { Id = 2, Name = "kevin", SourceType = null }).Where(f =&gt; f.Id);  
+    /// SQL: SET `Name`=@Name,SourceType=@SourceType WHERE `Id`=@kId </code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
     /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新，可以是字典或是匿名对象或是现有命名对象</param>
@@ -432,13 +410,6 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// <param name="whereObj">where条件对象，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不能为null</param>
     /// <returns>返回更新对象</returns>
     IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj);
-    /// <summary>
-    /// 使用whereExpr表达式生成where条件，配合Set<TUpdateObj>(TUpdateObj updateObj)、SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500)方法使用，用法：.Where(f =&gt; f.Id); .Where(f =&gt; new { f.OrderNo, f.ProductId });
-    /// </summary>
-    /// <typeparam name="TWhereObj">字段类型</typeparam>
-    /// <param name="whereExpr">where条件选择字段表达式，支持MemberAccess、New或MemberInit类型表达式</param>
-    /// <returns>返回更新对象</returns>
-    IContinuedUpdate<TEntity> Where<TWhereObj>(Expression<Func<TEntity, TWhereObj>> whereExpr);
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>

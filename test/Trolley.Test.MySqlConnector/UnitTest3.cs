@@ -81,22 +81,18 @@ public class UnitTest3 : UnitTestBase
            .Select((x, f) => new
            {
                Id = x.Grouping,
-               TotalAmount = x.Sum(f.Amount) + 50
+               Amount = x.Sum(f.Amount) + 50
            })
            .ToListAsync();
-        repository.BeginTransaction();
         var sql = repository.Update<OrderDetail>()
             .SetBulk(parameters)
             .ToSql(out var dbParameters);
-        Assert.True(sql == "");
+        Assert.True(sql == "UPDATE `sys_order_detail` SET `Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Amount`=@Amount2 WHERE `Id`=@kId2");
         Assert.True(dbParameters.Count == parameters.Count * 2);
-        int i = 0;
-        while (i < parameters.Count)
+        for (int i = 0; i < parameters.Count; i++)
         {
-            Assert.True(dbParameters[i].ParameterName == "TotalAmount");
-            Assert.True((double)dbParameters[i].Value == parameters[i].TotalAmount);
-            Assert.True(dbParameters[i + 1].ParameterName == "Id");
-            i = i + 2;
+            Assert.True(dbParameters[i * 2].ParameterName == $"@Amount{i}");
+            Assert.True(dbParameters[i * 2 + 1].ParameterName == $"@kId{i}");
         }
     }
     [Fact]
@@ -114,6 +110,23 @@ public class UnitTest3 : UnitTestBase
             UpdatedAt = f.UpdatedAt.AddDays(1)
         })
         .ToList();
+        var sql = repository.Update<OrderDetail>()
+            .SetBulk(parameters)
+            .OnlyFields(f => new
+            {
+                f.Price,
+                f.Quantity
+            })
+            .ToSql(out var dbParameters);
+        Assert.True(sql == "UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price5,`Quantity`=@Quantity5 WHERE `Id`=@kId5;UPDATE `sys_order_detail` SET `Price`=@Price6,`Quantity`=@Quantity6 WHERE `Id`=@kId6");
+        Assert.True(dbParameters.Count == parameters.Count * 3);
+        for (int i = 0; i < parameters.Count; i++)
+        {
+            Assert.True(dbParameters[i * 3].ParameterName == $"@Price{i}");
+            Assert.True(dbParameters[i * 3 + 1].ParameterName == $"@Quantity{i}");
+            Assert.True(dbParameters[i * 3 + 2].ParameterName == $"@kId{i}");
+        }
+
         var result = repository.Update<OrderDetail>()
             .SetBulk(parameters)
             .OnlyFields(f => new
@@ -147,6 +160,20 @@ public class UnitTest3 : UnitTestBase
             UpdatedAt = f.UpdatedAt.AddDays(1)
         })
         .ToList();
+        var sql = repository.Update<OrderDetail>()
+            .SetBulk(parameters)
+            .IgnoreFields(f => f.Price)
+            .ToSql(out var dbParameters);
+        Assert.True(sql == "UPDATE `sys_order_detail` SET `Quantity`=@Quantity0,`Amount`=@Amount0,`UpdatedAt`=@UpdatedAt0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Quantity`=@Quantity1,`Amount`=@Amount1,`UpdatedAt`=@UpdatedAt1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Quantity`=@Quantity2,`Amount`=@Amount2,`UpdatedAt`=@UpdatedAt2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Quantity`=@Quantity3,`Amount`=@Amount3,`UpdatedAt`=@UpdatedAt3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Quantity`=@Quantity4,`Amount`=@Amount4,`UpdatedAt`=@UpdatedAt4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Quantity`=@Quantity5,`Amount`=@Amount5,`UpdatedAt`=@UpdatedAt5 WHERE `Id`=@kId5;UPDATE `sys_order_detail` SET `Quantity`=@Quantity6,`Amount`=@Amount6,`UpdatedAt`=@UpdatedAt6 WHERE `Id`=@kId6");
+        Assert.True(dbParameters.Count == parameters.Count * 4);
+        for (int i = 0; i < parameters.Count; i++)
+        {
+            Assert.True(dbParameters[i * 4].ParameterName == $"@Quantity{i}");
+            Assert.True(dbParameters[i * 4 + 1].ParameterName == $"@Amount{i}");
+            Assert.True(dbParameters[i * 4 + 2].ParameterName == $"@UpdatedAt{i}");
+            Assert.True(dbParameters[i * 4 + 3].ParameterName == $"@kId{i}");
+        }
+
         var result = repository.Update<OrderDetail>()
             .SetBulk(parameters)
             .IgnoreFields(f => f.Price)
@@ -158,6 +185,46 @@ public class UnitTest3 : UnitTestBase
         {
             Assert.True(updatedDetails[i].Price != parameters[i].Price);
             Assert.True(updatedDetails[i].Quantity == parameters[i].Quantity);
+            Assert.True(updatedDetails[i].Amount == parameters[i].Amount);
+            Assert.True(updatedDetails[i].UpdatedAt == parameters[i].UpdatedAt);
+            Assert.True(updatedDetails[i].Id == parameters[i].Id);
+        }
+    }
+    [Fact]
+    public async void Update_SetBulk_SetFields()
+    {
+        Initialize();
+        using var repository = dbFactory.Create();
+        var orderDetails = await repository.From<OrderDetail>().ToListAsync();
+        var parameters = orderDetails.Select(f => new
+        {
+            f.Id,
+            Amount = f.Amount + 50,
+            UpdatedAt = f.UpdatedAt.AddDays(1)
+        })
+        .ToList();
+        var sql = repository.Update<OrderDetail>()
+            .SetBulk(parameters)
+            .Set(f => f.ProductId, 3)
+            .Set(new { Quantity = 5 })
+            .Set(f => new { Price = f.Price + 10 })
+            .ToSql(out var dbParameters);
+        Assert.True(sql == "");
+        Assert.True(dbParameters.Count == 7);
+
+        var result = repository.Update<OrderDetail>()
+            .SetBulk(parameters)
+            .Set(f => f.ProductId, 3)
+            .Set(new { Price = 200, Quantity = 5 })
+            .IgnoreFields(f => f.Price)
+            .Execute();
+        var updatedDetails = await repository.QueryAsync<OrderDetail>();
+        repository.Commit();
+        Assert.True(result == parameters.Count);
+        for (int i = 0; i < parameters.Count; i++)
+        {
+            Assert.True(updatedDetails[i].ProductId == 3);
+            Assert.True(updatedDetails[i].Quantity == 5);
             Assert.True(updatedDetails[i].Amount == parameters[i].Amount);
             Assert.True(updatedDetails[i].UpdatedAt == parameters[i].UpdatedAt);
         }

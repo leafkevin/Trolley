@@ -841,9 +841,9 @@ public class RepositoryHelper
                     || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                     continue;
 
-                if (ignoreFieldNames != null && ignoreFieldNames.Contains((memberInfo.Name)))
+                if (ignoreFieldNames != null && ignoreFieldNames.Contains(memberInfo.Name))
                     continue;
-                if (onlyFieldNames != null && !onlyFieldNames.Contains((memberInfo.Name)))
+                if (onlyFieldNames != null && !onlyFieldNames.Contains(memberInfo.Name))
                     continue;
 
                 if (index > 0) blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(",")));
@@ -1366,9 +1366,9 @@ public class RepositoryHelper
                     || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                     continue;
 
-                if (ignoreFieldNames != null && ignoreFieldNames.Contains((memberInfo.Name)))
+                if (ignoreFieldNames != null && ignoreFieldNames.Contains(memberInfo.Name))
                     continue;
-                if (onlyFieldNames != null && !onlyFieldNames.Contains((memberInfo.Name)))
+                if (onlyFieldNames != null && !onlyFieldNames.Contains(memberInfo.Name))
                     continue;
 
                 if (index > 0) blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(",")));
@@ -1424,8 +1424,7 @@ public class RepositoryHelper
         {
             var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
             var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-            var updateFieldsExpr = Expression.Parameter(typeof(List<FieldsSegment>), "updateFields");
-            var whereFieldsExpr = Expression.Parameter(typeof(List<FieldsSegment>), "whereFields");
+            var updateFieldsExpr = Expression.Parameter(typeof(List<string>), "updateFields");
             var updateObjExpr = Expression.Parameter(typeof(object), "updateObj");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
@@ -1477,8 +1476,9 @@ public class RepositoryHelper
                 loopBodies.Add(Expression.Assign(itemKeyExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Key))));
                 loopBodies.Add(Expression.Assign(fieldValueExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Value))));
 
-                var fieldNameExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.FieldName));
+                Expression fieldNameExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.FieldName));
                 var getFieldNameMethodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetFieldName));
+                fieldNameExpr = Expression.Call(ormProviderExpr, getFieldNameMethodInfo, fieldNameExpr);
 
                 //var parameterName = ormProvider.ParameterPrefix + itemKey + multiMark;
                 Expression myParameterNameExpr = Expression.Constant(ormProvider.ParameterPrefix);
@@ -1487,34 +1487,8 @@ public class RepositoryHelper
                 else myParameterNameExpr = Expression.Call(concatMethodInfo1, myParameterNameExpr, itemKeyExpr);
                 blockBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
 
-                //if (isWhereKey)
-                //{
-                //    //var fieldsSegment = new FieldsSegment { Fields = ormProvider.GetFieldName(memberMapper.FieldName), Values = parameterName }
-                //    //if(memberMapper.IsKey) whereFields.Add(fieldsSegment);
-                //    //else updateFields.Add(fieldsSegment);
-                //    var fieldsSegmentExpr = Expression.Variable(typeof(FieldsSegment));
-                //    blockParameters.Add(fieldsSegmentExpr);
-                //    var fieldsNameExpr = Expression.Call(ormProviderExpr, getFieldNameMethodInfo, fieldNameExpr);
-                //    loopBodies.Add(Expression.Call(fieldsSegmentExpr, setFieldsMethodInfo, fieldsNameExpr));
-                //    loopBodies.Add(Expression.Call(fieldsSegmentExpr, setValuesMethodInfo, parameterNameExpr));
-                //    var ifAddExpr = Expression.Call(whereFieldsExpr, addMethodInfo, fieldsSegmentExpr);
-                //    var elseAddExpr = Expression.Call(updateFieldsExpr, addMethodInfo, fieldsSegmentExpr);
-
-                //    var isKeyExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.IsKey));
-                //    loopBodies.Add(Expression.IfThenElse(isKeyExpr, ifAddExpr, elseAddExpr));
-                //}
-                //else
-                //{
-                //updateFields.Add(new FieldsSegment { Fields = ormProvider.GetFieldName(memberMapper.FieldName), Values = parameterName });
-                var fieldsExpr = Expression.Call(ormProviderExpr, methodInfo, fieldNameExpr);
-                var fieldsSegmentExpr = Expression.Variable(typeof(FieldsSegment));
-                blockParameters.Add(fieldsSegmentExpr);
-
-                var fieldsNameExpr = Expression.Call(ormProviderExpr, getFieldNameMethodInfo, fieldNameExpr);
-                loopBodies.Add(Expression.Call(fieldsSegmentExpr, setFieldsMethodInfo, fieldsNameExpr));
-                loopBodies.Add(Expression.Call(fieldsSegmentExpr, setValuesMethodInfo, parameterNameExpr));
-                loopBodies.Add(Expression.Call(updateFieldsExpr, addMethodInfo, fieldsSegmentExpr));
-                //}
+                //updateFields.Add(ormProvider.GetFieldName(memberMapper.FieldName) + "=" + parameterName });
+                loopBodies.Add(Expression.Call(concatMethodInfo2, fieldNameExpr, Expression.Constant("="), parameterNameExpr));
 
                 //ormProvider.AddDbParameter(dbKey, dbParameters, memberMapper, parameterName, fieldValue);
                 methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.AddDbParameter));
@@ -1530,6 +1504,7 @@ public class RepositoryHelper
             {
                 ParameterExpression parameterNameExpr = null;
                 var typedUpdateObjExpr = Expression.Parameter(updateObjType, "typeUpdateObj");
+                blockParameters.Add(typedUpdateObjExpr);
                 blockBodies.Add(Expression.Assign(typedUpdateObjExpr, Expression.Convert(updateObjExpr, updateObjType)));
                 if (hasSuffix)
                 {
@@ -1546,37 +1521,25 @@ public class RepositoryHelper
                         || memberMapper.IsIgnore || memberMapper.IsNavigation
                         || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                         continue;
-                    //if (!isWhereKey && memberMapper.IsKey) continue;
-                    if (ignoreFieldNames != null && ignoreFieldNames.Contains((memberInfo.Name)))
+                    if (memberMapper.IsKey) continue;
+                    if (ignoreFieldNames != null && ignoreFieldNames.Contains(memberInfo.Name))
                         continue;
-                    if (onlyFieldNames != null && !onlyFieldNames.Contains((memberInfo.Name)))
+                    if (onlyFieldNames != null && !onlyFieldNames.Contains(memberInfo.Name))
                         continue;
-
-                    if (index > 0) blockBodies.Add(Expression.Call(updateFieldsExpr, appendMethodInfo, Expression.Constant(",")));
 
                     var parameterName = ormProvider.ParameterPrefix + memberMapper.MemberName;
                     Expression myParameterNameExpr = Expression.Constant(parameterName);
-                    Expression fieldsSegmentExpr = null;
+                    Expression setFieldExpr = null;
                     if (hasSuffix)
                     {
                         myParameterNameExpr = Expression.Call(concatMethodInfo1, myParameterNameExpr, suffixExpr);
                         blockBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
+                        setFieldExpr = Expression.Constant(ormProvider.GetFieldName(memberMapper.FieldName) + "=");
+                        setFieldExpr = Expression.Call(concatMethodInfo1, setFieldExpr, parameterNameExpr);
                         myParameterNameExpr = parameterNameExpr;
-
-                        fieldsSegmentExpr = Expression.Variable(typeof(FieldsSegment));
-                        var fieldNameExpr = Expression.Constant(ormProvider.GetFieldName(memberMapper.FieldName));
-                        blockBodies.Add(Expression.Call(fieldsSegmentExpr, setFieldsMethodInfo, fieldNameExpr));
-                        blockBodies.Add(Expression.Call(fieldsSegmentExpr, setValuesMethodInfo, parameterNameExpr));
                     }
-                    else fieldsSegmentExpr = Expression.Constant(new FieldsSegment
-                    {
-                        Fields = ormProvider.GetFieldName(memberMapper.FieldName),
-                        Values = parameterName
-                    });
-                    //if (isWhereKey && memberMapper.IsKey)
-                    //    blockBodies.Add(Expression.Call(whereFieldsExpr, addMethodInfo, fieldsSegmentExpr));
-                    //else
-                    blockBodies.Add(Expression.Call(updateFieldsExpr, addMethodInfo, fieldsSegmentExpr));
+                    else setFieldExpr = Expression.Constant(ormProvider.GetFieldName(memberMapper.FieldName) + "=" + parameterName);
+                    blockBodies.Add(Expression.Call(updateFieldsExpr, addMethodInfo, setFieldExpr));
 
                     var fieldValueExpr = Expression.PropertyOrField(typedUpdateObjExpr, memberMapper.MemberName);
                     AddValueParameter(dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueExpr, memberMapper, blockParameters, blockBodies);
@@ -1585,10 +1548,10 @@ public class RepositoryHelper
             }
 
             object result = null;
-            if (hasSuffix) result = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, List<FieldsSegment>, List<FieldsSegment>, object, string>>(
-                Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, updateFieldsExpr, whereFieldsExpr, updateObjExpr, suffixExpr).Compile();
-            else result = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, List<FieldsSegment>, List<FieldsSegment>, object>>(
-                Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, updateFieldsExpr, whereFieldsExpr, updateObjExpr).Compile();
+            if (hasSuffix) result = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, List<string>, object, string>>(
+                Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, updateFieldsExpr, updateObjExpr, suffixExpr).Compile();
+            else result = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, List<string>, object>>(
+                Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, updateFieldsExpr, updateObjExpr).Compile();
             return result;
         });
     }

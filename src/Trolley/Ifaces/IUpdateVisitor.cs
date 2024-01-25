@@ -53,6 +53,6 @@ public interface IUpdateVisitor : IDisposable
     IUpdateVisitor SetBulk(IEnumerable updateObjs, int bulkCount);
     (IEnumerable, int, Action<StringBuilder, object, string>) BuildSetBulk(IDbCommand command);
     IUpdateVisitor WhereWith(object whereObj);
-    IUpdateVisitor Where(Expression whereExpr, bool isWhereObj = false);
+    IUpdateVisitor Where(Expression whereExpr);
     IUpdateVisitor And(Expression whereExpr);
 }

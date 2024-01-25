@@ -282,7 +282,6 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
             {
                 if (index > 0) sqlBuilder.Append(';');
                 commandInitializer.Invoke(sqlBuilder, updateObj, index.ToString());
-
                 if (index >= bulkCount)
                 {
                     sql = sqlBuilder.ToString();
@@ -402,7 +401,7 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     {
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
-        if (fieldsSelector.Body.NodeType != ExpressionType.New && fieldsSelector.Body.NodeType != ExpressionType.MemberInit)
+        if (fieldsSelector.Body.NodeType != ExpressionType.MemberAccess && fieldsSelector.Body.NodeType != ExpressionType.New && fieldsSelector.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelector)},只支持MemberAccess、New或MemberInit类型表达式");
 
         this.Visitor.IgnoreFields(fieldsSelector);
@@ -437,15 +436,6 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
         this.Visitor.WhereWith(whereObj);
-        this.hasWhere = true;
-        return this;
-    }
-    public IContinuedUpdate<TEntity> Where<TWhereObj>(Expression<Func<TEntity, TWhereObj>> whereExpr)
-    {
-        if (whereExpr == null)
-            throw new ArgumentNullException(nameof(whereExpr));
-
-        this.Visitor.Where(whereExpr, true);
         this.hasWhere = true;
         return this;
     }

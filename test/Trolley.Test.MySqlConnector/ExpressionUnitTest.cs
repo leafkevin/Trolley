@@ -38,6 +38,12 @@ public class ExpressionUnitTest : UnitTestBase
             .ToSql(out var dbParameters);
         Assert.True(sql == "SELECT (COALESCE(a.`Name`,'NoName')) AS `HasName` FROM `sys_user` a WHERE a.`Name` LIKE CONCAT('%',@p0,'%')");
         Assert.True(dbParameters[0].Value.ToString() == firstName);
+
+        sql = repository.From<User>()
+            .Where(f => (f.Name ?? f.Id.ToString()) == "kevin")
+            .Select(f => f.Id)
+            .ToSql(out dbParameters);
+        Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE (COALESCE(a.`Name`,CAST(a.`Id` AS CHAR)))='kevin'");
     }
     [Fact]
     public void Conditional()
