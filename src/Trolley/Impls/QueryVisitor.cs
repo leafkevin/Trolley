@@ -1328,13 +1328,22 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     this.GroupFields.ForEach(f => groupFields.Add(f));
                 }
                 else groupFields = this.GroupFields;
-                return sqlSegment.Change(new ReaderField
+                if (groupFields.Count > 1)
                 {
-                    FieldType = ReaderFieldType.Entity,
-                    FromMember = memberInfo,
-                    TargetMember = memberInfo,
-                    ReaderFields = groupFields
-                });
+                    return sqlSegment.Change(new ReaderField
+                    {
+                        FieldType = ReaderFieldType.Entity,
+                        FromMember = memberInfo,
+                        TargetMember = memberInfo,
+                        ReaderFields = groupFields
+                    });
+                }
+                //分组对象为单个字段，要返回单个字段，防止后面Reader处理实体时候报错
+                var readerField = groupFields[0];
+                sqlSegment.FromMember = readerField.FromMember;
+                sqlSegment.MemberMapper = readerField.MemberMapper;
+                sqlSegment.Value = readerField.Body;
+                return sqlSegment;
             }
             if (this.IsGroupingMember(memberExpr.Expression as MemberExpression))
             {

@@ -606,7 +606,7 @@ public class Repository : IRepository
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
-        if (exception == null) throw exception;
+        if (exception != null) throw exception;
         return result;
     }
     #endregion

@@ -62,7 +62,8 @@ public class UnitTest3 : UnitTestBase
             })
             .ToListAsync();
         var count = await repository.UpdateAsync<Order>(parameters);
-        var orders = await repository.QueryAsync<Order>(f => parameters.Exists(t => t.Id == f.Id));
+        var ids = parameters.Select(f => f.Id).ToList();
+        var orders = await repository.QueryAsync<Order>(f => ids.Contains(f.Id));
         Assert.True(count > 0);
         Assert.True(parameters.Count == orders.Count);
         for (int i = 0; i < orders.Count; i++)

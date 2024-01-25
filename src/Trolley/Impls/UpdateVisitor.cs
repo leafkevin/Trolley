@@ -186,10 +186,17 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         int tableIndex = this.TableAsStart + this.Tables.Count;
         for (int i = 0; i < entityTypes.Length; i++)
         {
+            var aliasName = $"{(char)(tableIndex + i)}";
+            var entityType = entityTypes[i];
+            var mapper = this.MapProvider.GetEntityMap(entityType);
             this.Tables.Add(new TableSegment
             {
-                EntityType = entityTypes[i],
-                AliasName = $"{(char)(tableIndex + i)}"
+                TableType = TableType.Entity,
+                EntityType = entityType,
+                Mapper = mapper,
+                AliasName = aliasName,
+                Path = aliasName,
+                IsMaster = true
             });
         }
         return this;
@@ -199,11 +206,16 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.IsNeedTableAlias = true;
         this.IsJoin = true;
         var lambdaExpr = joinOn as LambdaExpression;
+        var aliasName = $"{(char)(this.TableAsStart + this.Tables.Count)}";
         var joinTable = new TableSegment
         {
+            TableType = TableType.Entity,
             EntityType = entityType,
-            AliasName = $"{(char)('a' + this.Tables.Count)}",
-            JoinType = joinType
+            Mapper = this.MapProvider.GetEntityMap(entityType),
+            AliasName = aliasName,
+            JoinType = joinType,
+            Path = aliasName,
+            IsMaster = true
         };
         this.Tables.Add(joinTable);
         this.InitTableAlias(lambdaExpr);

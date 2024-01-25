@@ -47,17 +47,7 @@ public class MemberMap
         this.Member = memberInfo;
         this.FieldName = $"{fieldPrefix}{memberInfo.Name}";
         this.MemberName = memberInfo.Name;
-        switch (memberInfo.MemberType)
-        {
-            case MemberTypes.Field:
-                var fieldInfo = memberInfo as FieldInfo;
-                this.MemberType = fieldInfo.FieldType;
-                break;
-            case MemberTypes.Property:
-                var propertyInfo = memberInfo as PropertyInfo;
-                this.MemberType = propertyInfo.PropertyType;
-                break;
-        }
+        this.MemberType = memberInfo.GetMemberType();
     }
     public MemberMap Clone(EntityMap parent, string fieldPrefix, MemberInfo memberInfo)
     {
@@ -66,17 +56,7 @@ public class MemberMap
         result.Member = memberInfo;
         result.FieldName = this.FieldName;
         result.MemberName = memberInfo.Name;
-        switch (memberInfo.MemberType)
-        {
-            case MemberTypes.Field:
-                var fieldInfo = memberInfo as FieldInfo;
-                result.MemberType = fieldInfo.FieldType;
-                break;
-            case MemberTypes.Property:
-                var propertyInfo = memberInfo as PropertyInfo;
-                result.MemberType = propertyInfo.PropertyType;
-                break;
-        }
+        result.MemberType = memberInfo.GetMemberType();
         result.NativeDbType = this.NativeDbType;
         result.TypeHandler = this.TypeHandler;
         return result;
