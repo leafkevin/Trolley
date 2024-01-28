@@ -1,46 +1,47 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Net.Http.Headers;
 
 namespace Trolley;
 
-public class OrmDbFactory : IOrmDbFactory
+public sealed class OrmDbFactory : IOrmDbFactory
 {
     private OrmDbFactoryOptions options;
-    private TheaDatabase defaultDatabase;
-    private Dictionary<OrmProviderType, IOrmProvider> typedOrmProviders;
-    private ConcurrentDictionary<Type, IOrmProvider> ormProviders;
-    private ConcurrentDictionary<string, TheaDatabase> databases;
-    private ConcurrentDictionary<Type, IEntityMapProvider> mapProviders;
-    private ConcurrentDictionary<Type, ITypeHandler> typeHandlers;
+    private TenantDatabase defaultDatabase;
+    private ConcurrentDictionary<string, string> connStrings = new();
+    private Dictionary<OrmProviderType, IOrmProvider> typedOrmProviders = new();
+    private ConcurrentDictionary<Type, IOrmProvider> ormProviders = new();
+    private ConcurrentDictionary<string, TenantDatabase> databases = new();
+    private ConcurrentDictionary<Type, IEntityMapProvider> mapProviders = new();
 
-    public virtual ICollection<TheaDatabase> Databases => this.databases?.Values;
-    public virtual ICollection<ITypeHandler> TypeHandlers => this.typeHandlers?.Values;
+    public ICollection<TenantDatabase> Databases => this.databases.Values;
+    public ICollection<IOrmProvider> OrmProviders => this.ormProviders.Values;
+    public ICollection<IEntityMapProvider> MapProviders => this.mapProviders.Values;
 
-    public virtual void AddDatabase(TheaDatabase database)
+    public void Register(string dbKey, string connectionString, Type ormProviderType, bool isDefault)
     {
-        if (database == null) throw new ArgumentNullException(nameof(database));
-        if (!this.databases.TryAdd(database.DbKey, database))
-            throw new Exception($"dbKey:{database.DbKey}数据库已经添加");
-        if (database.IsDefault) this.defaultDatabase = database;
-    }
-    public virtual void AddTypeHandler(ITypeHandler typeHandler)
-    {
-        if (typeHandler == null)
-            throw new ArgumentNullException(nameof(typeHandler));
+        if (string.IsNullOrEmpty(dbKey)) throw new ArgumentNullException(nameof(dbKey));
+        if (string.IsNullOrEmpty(connectionString)) throw new ArgumentNullException(nameof(connectionString));
+        if (ormProviderType == null) throw new ArgumentNullException(nameof(ormProviderType));
 
-        this.typeHandlers.TryAdd(typeHandler.GetType(), typeHandler);
-    }
-    public virtual bool TryGetTypeHandler(Type handlerType, out ITypeHandler typeHandler)
-    {
-        if (handlerType == null)
-            throw new ArgumentNullException(nameof(handlerType));
+        TenantDatabase database = null;
+        if (!this.databases.TryAdd(dbKey, database = new TenantDatabase
+        {
+            DbKey = dbKey,
+            ConnectionString = connectionString,
+            IsDefault = isDefault,
+            OrmProviderType = ormProviderType
+        })) throw new Exception($"dbKey:{database.DbKey}数据库已经添加");
 
-        return this.typeHandlers.TryGetValue(handlerType, out typeHandler);
+        if (isDefault) this.defaultDatabase = database;
+        if (!this.ormProviders.ContainsKey(ormProviderType))
+        {
+            var ormProvider = Activator.CreateInstance(ormProviderType) as IOrmProvider;
+            if (this.ormProviders.TryAdd(ormProviderType, ormProvider))
+                this.typedOrmProviders.TryAdd(ormProvider.OrmProviderType, ormProvider);
+        }
     }
-
-    public virtual void AddOrmProvider(IOrmProvider ormProvider)
+    public void AddOrmProvider(IOrmProvider ormProvider)
     {
         if (ormProvider == null)
             throw new ArgumentNullException(nameof(ormProvider));
@@ -49,16 +50,16 @@ public class OrmDbFactory : IOrmDbFactory
         if (this.ormProviders.TryAdd(ormProviderType, ormProvider))
             this.typedOrmProviders.TryAdd(ormProvider.OrmProviderType, ormProvider);
     }
-    public virtual bool TryGetOrmProvider(Type ormProviderType, out IOrmProvider ormProvider)
+    public bool TryGetOrmProvider(Type ormProviderType, out IOrmProvider ormProvider)
     {
         if (ormProviderType == null)
             throw new ArgumentNullException(nameof(ormProviderType));
 
         return this.ormProviders.TryGetValue(ormProviderType, out ormProvider);
     }
-    public virtual bool TryGetOrmProvider(OrmProviderType ormProviderType, out IOrmProvider ormProvider)
+    public bool TryGetOrmProvider(OrmProviderType ormProviderType, out IOrmProvider ormProvider)
         => this.typedOrmProviders.TryGetValue(ormProviderType, out ormProvider);
-    public virtual void AddMapProvider(Type ormProviderType, IEntityMapProvider entityMapProvider)
+    public void AddMapProvider(Type ormProviderType, IEntityMapProvider entityMapProvider)
     {
         if (ormProviderType == null)
             throw new ArgumentNullException(nameof(ormProviderType));
@@ -67,26 +68,26 @@ public class OrmDbFactory : IOrmDbFactory
 
         this.mapProviders.TryAdd(ormProviderType, entityMapProvider);
     }
-    public virtual bool TryGetMapProvider(Type ormProviderType, out IEntityMapProvider entityMapProvider)
+    public bool TryGetMapProvider(Type ormProviderType, out IEntityMapProvider entityMapProvider)
     {
         if (ormProviderType == null)
             throw new ArgumentNullException(nameof(ormProviderType));
 
         return this.mapProviders.TryGetValue(ormProviderType, out entityMapProvider);
     }
-    public virtual TheaDatabase GetDatabase(string dbKey = null)
+    public TenantDatabase GetDatabase(string dbKey = null)
     {
         if (string.IsNullOrEmpty(dbKey))
         {
             if (this.defaultDatabase == null)
-                throw new Exception($"未配置默认数据库连接串");
+                throw new Exception($"未配置默认数据库");
             return this.defaultDatabase;
         }
         if (!this.databases.TryGetValue(dbKey, out var database))
-            throw new Exception($"dbKey:{dbKey}未配置任何数据库连接串");
+            throw new Exception($"未配置dbKey:{dbKey}的数据库");
         return database;
     }
-    //public virtual IRepository Create(string dbKey = null, string tenantId = null)
+    //public  IRepository Create(string dbKey = null, string tenantId = null)
     //{
     //    var database = this.GetDatabase(dbKey);
     //    if (!this.TryGetOrmProvider(database.OrmProviderType, out var ormProvider))
@@ -102,56 +103,42 @@ public class OrmDbFactory : IOrmDbFactory
     //    };
     //    return new Repository(dbKey, connection, ormProvider, mapProvider).With(this.options);
     //}
-    public virtual IRepository CreateRepository(string dbKey = null, string tenantId = null)
+
+
+    public IRepository CreateRepository(string dbKey = null)
     {
         var database = this.GetDatabase(dbKey);
-        if (!this.TryGetOrmProvider(database.OrmProviderType, out var ormProvider))
-            throw new Exception($"未注册类型为{database.OrmProviderType.FullName}的OrmProvider");
-        var tenantDatabase = database.GetTenantDatabase(tenantId);
-        if (!this.TryGetMapProvider(database.OrmProviderType, out var mapProvider))
-            throw new Exception($"未注册Key为{database.OrmProviderType.FullName}的EntityMapProvider");
-        var myDbKey = dbKey ?? database.DbKey;
-        var connection = new TheaConnection
-        {
-            DbKey = myDbKey,
-            ConnectionString = tenantDatabase.ConnectionString,
-            BaseConnection = ormProvider.CreateConnection(tenantDatabase.ConnectionString),
-            OrmProvider = ormProvider
-        };
+        var ormProviderType = database.OrmProviderType;
+        if (!this.TryGetOrmProvider(ormProviderType, out var ormProvider))
+            throw new Exception($"未注册类型为{ormProviderType.FullName}的OrmProvider");
+        if (!this.TryGetMapProvider(ormProviderType, out var mapProvider))
+            throw new Exception($"未注册Key为{ormProviderType.FullName}的EntityMapProvider");
         var dbContext = new DbContext
         {
-            DbKey = myDbKey,
-            Connection = connection,
+            DbKey = dbKey ?? database.DbKey,
+            ConnectionString = database.ConnectionString,
             OrmProvider = ormProvider,
             MapProvider = mapProvider,
-            Timeout = this.options?.Timeout ?? 30,
+            CommandTimeout = this.options?.Timeout ?? 30,
             IsParameterized = this.options?.IsParameterized ?? false
         };
         return ormProvider.CreateRepository(dbContext);
     }
-    public void With(OrmDbFactoryOptions options) => this.options = options;
-    public void Build(Type ormProviderType)
+    internal void With(Action<OrmDbFactoryOptions> optionsInitializer)
     {
-        if (!this.TryGetOrmProvider(ormProviderType, out var ormProvider))
-            throw new Exception($"未注册类型为{ormProviderType.FullName}的OrmProvider");
-        if (!this.TryGetMapProvider(ormProviderType, out var mapProvider))
-            throw new Exception($"请调用IOrmDbFactory.Configure(Type ormProviderType, IModelConfiguration configuration)后，再Build实体映射");
-        mapProvider.Build(ormProvider);
+        if (optionsInitializer == null)
+            throw new ArgumentNullException(nameof(optionsInitializer));
+        this.options = new OrmDbFactoryOptions();
+        optionsInitializer.Invoke(this.options);
     }
-    internal void Initialize(OrmDbFactoryOptions options, TheaDatabase defaultDatabase, List<Type> ormProviderTypes, ConcurrentDictionary<string, TheaDatabase> databases,
-        ConcurrentDictionary<Type, IEntityMapProvider> mapProviders, ConcurrentDictionary<Type, ITypeHandler> typeHandlers)
+    internal IOrmDbFactory Build()
     {
-        this.options = options;
-        this.defaultDatabase = defaultDatabase;
-        this.ormProviders = new();
-        this.typedOrmProviders = new();
-        ormProviderTypes.ForEach(f =>
+        foreach (var ormProviderType in this.ormProviders.Keys)
         {
-            var ormProvider = Activator.CreateInstance(f) as IOrmProvider;
-            this.AddOrmProvider(ormProvider);
-        });
-        this.databases = databases;
-        this.mapProviders = mapProviders;
-        this.typeHandlers = typeHandlers;
+            if (!this.TryGetMapProvider(ormProviderType, out var mapProvider))
+                this.AddMapProvider(ormProviderType, new EntityMapProvider { OrmProviderType = ormProviderType });
+            mapProvider.Build(this.ormProviders[ormProviderType]);
+        }
+        return this;
     }
 }

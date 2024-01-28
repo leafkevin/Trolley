@@ -33,12 +33,7 @@ namespace Trolley;
 /// </summary>
 public interface ITypeHandler
 {
-    object Parse(IOrmProvider ormProvider, Type TargetType, object value);
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="ormProvider"></param>
-    /// <param name="value"></param>
-    /// <returns></returns>
-    object ToFieldValue(IOrmProvider ormProvider, object value);
+    object Parse(IOrmProvider ormProvider, Type targetType, object value);
+    object ToFieldValue(IOrmProvider ormProvider, Type expectType, object value);
+    string GetQuotedValue(IOrmProvider ormProvider, Type expectType, object value);
 }

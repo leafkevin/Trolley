@@ -13,7 +13,7 @@ public class MemberMap
     public bool IsAutoIncrement { get; set; }
     public string FieldName { get; set; }
     public object NativeDbType { get; set; }
-    public Type DbDefaultType { get; set; }
+    public Type DbFieldType { get; set; }
     public int Length { get; set; }
     public bool IsIgnore { get; set; }
     public bool IsRequired { get; set; }

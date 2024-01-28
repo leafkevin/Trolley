@@ -97,9 +97,9 @@ public class EntityBuilder<TEntity> where TEntity : class
         memberMapper.MapType = typeof(TElement);
         return new Navigation<TElement>(memberMapper);
     }
-    public virtual EntityBuilder<TEntity> WithSharding(Expression<Action<ShardingStrategyBuilder<TEntity>>> shardingBuilder)
+    public virtual EntityBuilder<TEntity> WithSharding(Action<ShardingTableStrategyBuilder<TEntity>> shardingInitializer)
     {
-
+        //TODO:
         return this;
     }
 }

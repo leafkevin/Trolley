@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using Trolley.MySqlConnector;
 
 namespace Trolley;
 
@@ -11,7 +10,7 @@ public delegate SqlSegment MethodCallSqlFormatter(ISqlVisitor visitor, Expressio
 
 public enum OrmProviderType
 {
-    Normal,
+    Basic,
     MySql,
     SqlServer,
     PostgreSql,
@@ -23,6 +22,7 @@ public interface IOrmProvider
     OrmProviderType OrmProviderType { get; }
     string ParameterPrefix { get; }
     Type NativeDbTypeType { get; }
+    ICollection<ITypeHandler> TypeHandlers { get; }
     IDbConnection CreateConnection(string connectionString);
     IDbDataParameter CreateParameter(string parameterName, object value);
     IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
@@ -169,7 +169,7 @@ public interface IOrmProvider
     string GetIdentitySql(Type entityType);
     string CastTo(Type type, object value);
     string GetQuotedValue(Type expectType, object value);
-    //object ToFieldValue(MemberMap memberMapper, object fieldValue);
+    ITypeHandler GetTypeHandler(Type targetType, Type fieldType, bool isRequired);
     string GetBinaryOperator(ExpressionType nodeType);
     bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
     bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);

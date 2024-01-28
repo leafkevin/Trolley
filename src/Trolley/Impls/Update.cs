@@ -156,7 +156,7 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
                         command.CommandText = sqlBuilder.ToString();
                         if (isFirst)
                         {
-                            this.DbContext.Connection.Open();
+                            this.DbContext.Open();
                             isFirst = false;
                         }
                         result += command.ExecuteNonQuery();
@@ -170,7 +170,7 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
                 if (index > 0)
                 {
                     command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) this.DbContext.Connection.Open();
+                    if (isFirst) this.DbContext.Open();
                     result += command.ExecuteNonQuery();
                 }
             }
@@ -180,7 +180,7 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
                     throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
 
                 this.Visitor.BuildCommand(command);
-                this.DbContext.Connection.Open();
+                this.DbContext.Open();
                 result = command.ExecuteNonQuery();
             }
         }
@@ -220,7 +220,7 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
                         command.CommandText = sqlBuilder.ToString();
                         if (isFirst)
                         {
-                            await this.DbContext.Connection.OpenAsync(cancellationToken);
+                            await this.DbContext.OpenAsync(cancellationToken);
                             isFirst = false;
                         }
                         result += await command.ExecuteNonQueryAsync(cancellationToken);
@@ -234,7 +234,7 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
                 if (index > 0)
                 {
                     command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) await this.DbContext.Connection.OpenAsync(cancellationToken);
+                    if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
                     result += await command.ExecuteNonQueryAsync(cancellationToken);
                 }
             }
@@ -244,7 +244,7 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
                     throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
 
                 this.Visitor.BuildCommand(command);
-                await this.DbContext.Connection.OpenAsync(cancellationToken);
+                await this.DbContext.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
             }
         }

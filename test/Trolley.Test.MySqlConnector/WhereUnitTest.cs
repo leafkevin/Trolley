@@ -13,12 +13,8 @@ public class WhereUnitTest : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<MySqlProvider>("fengling", true, f =>
-            {
-                f.Add("Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true);
-            })
-            .AddTypeHandler<JsonTypeHandler>()
-            .Configure<MySqlProvider, ModelConfiguration>();
+            .Register<MySqlProvider>("fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true)
+            .Configure<MySqlProvider, MySqlModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();

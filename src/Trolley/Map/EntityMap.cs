@@ -97,10 +97,10 @@ public class EntityMap
                 if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                     throw new Exception($"类{this.EntityType.FullName}的成员{memberInfo.Name}不是值类型，未配置为导航属性也没有配置TypeHandler，也不是忽略成员");
             }
-            //生成默认的数据库映射类型
             if (memberMapper.NativeDbType == null)
             {
-                if (!memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler != null)
+                //没有配置，就生成默认的数据库映射类型
+                if (!memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                     memberMapper.NativeDbType = ormProvider.GetNativeDbType(memberMapper.MemberType);
             }
             else
@@ -114,7 +114,9 @@ public class EntityMap
                 //}
             }
             if (memberMapper.NativeDbType != null)
-                memberMapper.DbDefaultType = ormProvider.MapDefaultType(memberMapper.NativeDbType);
+                memberMapper.DbFieldType = ormProvider.MapDefaultType(memberMapper.NativeDbType);
+            if (!memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
+                memberMapper.TypeHandler = ormProvider.GetTypeHandler(memberMapper.MemberType, memberMapper.DbFieldType, memberMapper.IsRequired);
         }
         if (this.memberMaps.Count > 0)
         {

@@ -298,7 +298,7 @@ public class Repository : IRepository
                         command.CommandText = sqlBuilder.ToString();
                         if (isFirst)
                         {
-                            this.DbContext.Connection.Open();
+                            this.DbContext.Open();
                             isFirst = false;
                         }
                         result += command.ExecuteNonQuery();
@@ -313,7 +313,7 @@ public class Repository : IRepository
                 if (index > 0)
                 {
                     command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) this.DbContext.Connection.Open();
+                    if (isFirst) this.DbContext.Open();
                     result = command.ExecuteNonQuery();
                 }
                 sqlBuilder.Clear();
@@ -370,7 +370,7 @@ public class Repository : IRepository
                         command.CommandText = sqlBuilder.ToString();
                         if (isFirst)
                         {
-                            await this.DbContext.Connection.OpenAsync(cancellationToken);
+                            await this.DbContext.OpenAsync(cancellationToken);
                             isFirst = false;
                         }
                         result += await command.ExecuteNonQueryAsync(cancellationToken);
@@ -385,7 +385,7 @@ public class Repository : IRepository
                 if (index > 0)
                 {
                     command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) await this.DbContext.Connection.OpenAsync(cancellationToken);
+                    if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(cancellationToken);
                 }
                 sqlBuilder.Clear();
@@ -394,7 +394,7 @@ public class Repository : IRepository
             {
                 var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjs, null, null, false);
                 command.CommandText = commandInitializer.Invoke(command.Parameters, OrmProvider, insertObjs);
-                await this.DbContext.Connection.OpenAsync(cancellationToken);
+                await this.DbContext.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
             }
         }
@@ -500,7 +500,7 @@ public class Repository : IRepository
                         command.CommandText = sqlBuilder.ToString();
                         if (isFirst)
                         {
-                            this.DbContext.Connection.Open();
+                            this.DbContext.Open();
                             isFirst = false;
                         }
                         result += command.ExecuteNonQuery();
@@ -514,7 +514,7 @@ public class Repository : IRepository
                 if (index > 0)
                 {
                     command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) this.DbContext.Connection.Open();
+                    if (isFirst) this.DbContext.Open();
                     result += command.ExecuteNonQuery();
                 }
                 sqlBuilder.Clear();
@@ -523,7 +523,7 @@ public class Repository : IRepository
             {
                 var commandInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjs, null, null);
                 command.CommandText = commandInitializer.Invoke(command.Parameters, this.OrmProvider, updateObjs);
-                this.DbContext.Connection.Open();
+                this.DbContext.Open();
                 result = command.ExecuteNonQuery();
             }
         }
@@ -569,7 +569,7 @@ public class Repository : IRepository
                         command.CommandText = sqlBuilder.ToString();
                         if (isFirst)
                         {
-                            await this.DbContext.Connection.OpenAsync(cancellationToken);
+                            await this.DbContext.OpenAsync(cancellationToken);
                             isFirst = false;
                         }
                         result += await command.ExecuteNonQueryAsync(cancellationToken);
@@ -583,7 +583,7 @@ public class Repository : IRepository
                 if (index > 0)
                 {
                     command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) await this.DbContext.Connection.OpenAsync(cancellationToken);
+                    if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
                     result += await command.ExecuteNonQueryAsync(cancellationToken);
                 }
                 sqlBuilder.Clear();
@@ -592,7 +592,7 @@ public class Repository : IRepository
             {
                 var commandInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjs, null, null);
                 command.CommandText = commandInitializer.Invoke(command.Parameters, this.OrmProvider, updateObjs);
-                await this.DbContext.Connection.OpenAsync(cancellationToken);
+                await this.DbContext.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
             }
         }
@@ -656,7 +656,7 @@ public class Repository : IRepository
                 var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
                 command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, whereKeys);
             }
-            this.DbContext.Connection.Open();
+            this.DbContext.Open();
             result = command.ExecuteNonQuery();
         }
         catch (Exception ex)
@@ -714,7 +714,7 @@ public class Repository : IRepository
                 var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
                 command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, whereKeys);
             }
-            await this.DbContext.Connection.OpenAsync(cancellationToken);
+            await this.DbContext.OpenAsync(cancellationToken);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch (Exception ex)
@@ -816,7 +816,7 @@ public class Repository : IRepository
             using var multiQuery = new MultipleQuery(this.DbContext, command);
             subQueries.Invoke(multiQuery);
             command.CommandText = multiQuery.BuildSql(out var readerAfters);
-            this.DbContext.Connection.Open();
+            this.DbContext.Open();
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             result = new MultiQueryReader(command, reader, readerAfters, isNeedClose);
         }
@@ -849,7 +849,7 @@ public class Repository : IRepository
             using var multiQuery = new MultipleQuery(this.DbContext, command);
             subQueries.Invoke(multiQuery);
             command.CommandText = multiQuery.BuildSql(out var readerAfters);
-            await this.DbContext.Connection.OpenAsync(cancellationToken);
+            await this.DbContext.OpenAsync(cancellationToken);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             result = new MultiQueryReader(command, reader, readerAfters, isNeedClose);
         }
@@ -921,7 +921,7 @@ public class Repository : IRepository
                 commandIndex++;
             }
             command.CommandText = sqlBuilder.ToString();
-            this.DbContext.Connection.Open();
+            this.DbContext.Open();
             result = command.ExecuteNonQuery();
         }
         catch (Exception ex)
@@ -987,7 +987,7 @@ public class Repository : IRepository
                 commandIndex++;
             }
             command.CommandText = sqlBuilder.ToString();
-            await this.DbContext.Connection.OpenAsync(cancellationToken);
+            await this.DbContext.OpenAsync(cancellationToken);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch (Exception ex)
@@ -1006,11 +1006,21 @@ public class Repository : IRepository
     #endregion
 
     #region Others
+    public IRepository UseTenant<TTenantId>(TTenantId tenantId)
+    {
+
+        return this;
+    }
+    //public IRepository UseSharding (  tenantId)
+    //{
+
+    //    return this;
+    //}
     public virtual void Close() => this.Dispose();
     public virtual async Task CloseAsync() => await this.DisposeAsync();
     public virtual IRepository Timeout(int timeout)
     {
-        this.DbContext.Connection.CommandTimeout = timeout;
+        this.DbContext.CommandTimeout = timeout;
         return this;
     }
     public virtual IRepository WithParameterized(bool isParameterized = true)
@@ -1022,19 +1032,12 @@ public class Repository : IRepository
     {
         if (options == null) return this;
         this.DbContext.IsParameterized = options.IsParameterized;
-        this.DbContext.Connection.CommandTimeout = options.Timeout;
+        this.DbContext.CommandTimeout = options.Timeout;
         return this;
     }
-    public virtual void BeginTransaction()
-    {
-        this.DbContext.Connection.Open();
-        this.DbContext.Transaction = this.DbContext.Connection.BeginTransaction();
-    }
+    public virtual void BeginTransaction() => this.DbContext.BeginTransaction();
     public virtual async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
-    {
-        await this.DbContext.Connection.OpenAsync(cancellationToken);
-        this.DbContext.Transaction = await this.DbContext.Connection.BeginTransactionAsync(cancellationToken);
-    }
+        => await this.DbContext.BeginTransactionAsync(cancellationToken);
     public virtual void Commit()
     {
         this.Transaction?.Commit();

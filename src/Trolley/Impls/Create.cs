@@ -147,7 +147,7 @@ public class Created<TEntity> : ICreated<TEntity>
                         command.CommandText = sqlBuilder.ToString();
                         if (isFirst)
                         {
-                            this.DbContext.Connection.Open();
+                            this.DbContext.Open();
                             isFirst = false;
                         }
                         result += command.ExecuteNonQuery();
@@ -162,7 +162,7 @@ public class Created<TEntity> : ICreated<TEntity>
                 if (index > 0)
                 {
                     command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) this.DbContext.Connection.Open();
+                    if (isFirst) this.DbContext.Open();
                     result += command.ExecuteNonQuery();
                 }
                 sqlBuilder.Clear();
@@ -211,7 +211,7 @@ public class Created<TEntity> : ICreated<TEntity>
                         command.CommandText = sqlBuilder.ToString();
                         if (isFirst)
                         {
-                            await this.DbContext.Connection.OpenAsync(cancellationToken);
+                            await this.DbContext.OpenAsync(cancellationToken);
                             isFirst = false;
                         }
                         result += await command.ExecuteNonQueryAsync(cancellationToken);
@@ -226,7 +226,7 @@ public class Created<TEntity> : ICreated<TEntity>
                 if (index > 0)
                 {
                     command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) await this.DbContext.Connection.OpenAsync(cancellationToken);
+                    if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
                     result += await command.ExecuteNonQueryAsync(cancellationToken);
                 }
                 sqlBuilder.Clear();

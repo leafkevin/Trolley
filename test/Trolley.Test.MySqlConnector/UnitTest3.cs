@@ -16,15 +16,11 @@ public class UnitTest3 : UnitTestBase
     {
         this.logger = logger;
         var services = new ServiceCollection();
-        services.AddSingleton(f =>
+        services.AddSingleton(t =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<MySqlProvider>("fengling", true, f =>
-            {
-                f.Add("Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true);
-            })
-            .AddTypeHandler<JsonTypeHandler>()
-            .Configure<MySqlProvider, ModelConfiguration>();
+            .Register<MySqlProvider>("fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true)
+            .Configure<MySqlProvider, MySqlModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
@@ -751,8 +747,8 @@ public class UnitTest3 : UnitTestBase
             .ToSql(out var parameters1);
         Assert.True(sql1 == "UPDATE `sys_user` SET `Gender`=@Gender WHERE `Id`=@kId");
         Assert.True(parameters1[0].ParameterName == "@Gender");
-        Assert.True(parameters1[0].Value.GetType() == typeof(sbyte));
-        Assert.True((sbyte)parameters1[0].Value == (sbyte)Gender.Male);
+        Assert.True(parameters1[0].Value.GetType() == typeof(byte));
+        Assert.True((byte)parameters1[0].Value == (byte)Gender.Male);
 
         var sql2 = repository.Update<User>()
             .Set(f => new { Gender = Gender.Male })
@@ -760,8 +756,8 @@ public class UnitTest3 : UnitTestBase
             .ToSql(out var parameters2);
         Assert.True(sql2 == "UPDATE `sys_user` SET `Gender`=@p0 WHERE `Id`=1");
         Assert.True(parameters2[0].ParameterName == "@p0");
-        Assert.True(parameters2[0].Value.GetType() == typeof(sbyte));
-        Assert.True((sbyte)parameters2[0].Value == (sbyte)Gender.Male);
+        Assert.True(parameters2[0].Value.GetType() == typeof(byte));
+        Assert.True((byte)parameters2[0].Value == (byte)Gender.Male);
 
         var sql4 = repository.Update<Company>()
              .Set(new { Nature = CompanyNature.Internet })

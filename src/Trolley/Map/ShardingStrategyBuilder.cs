@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 namespace Trolley;
 
 public delegate string NameShardingStrategy(string orgTableName);
+public delegate string TenantShardingStrategy<TTenantId>(string orgTableName, TTenantId tenantId);
 public delegate string FieldShardingStrategy<TEntity>(string orgTableName, TEntity table);
 public delegate string TimeShardingStrategy(string orgTableName, DateTime dateTime);
 public delegate string TimeRangeShardingStrategy(string orgTableName, DateTime beginTime, DateTime endTime);
@@ -17,12 +18,22 @@ public class ShardingStrategyBuilder<TEntity>
     public ShardingStrategyBuilder(string orgTableName)
         => this.OrgTableName = orgTableName;
 
-    public ShardingStrategyBuilder<TEntity> WithNameRule(Expression<NameShardingStrategy> shardingStrategy)
+    public ShardingStrategyBuilder<TEntity> UseTable(NameShardingStrategy tableNameGetter)
     {
         //this.strategyRule = shardingStrategy;
         return this;
     }
-    public ShardingStrategyBuilder<TEntity> WithTimeRule(Expression<TimeShardingStrategy> shardingStrategy)
+    public ShardingStrategyBuilder<TEntity> UseTenant<TTenantId>(TenantShardingStrategy<TTenantId> tableNameGetter)
+    {
+        //this.strategyRule = shardingStrategy;
+        return this;
+    }
+    public ShardingStrategyBuilder<TEntity> UseTenant (TenantShardingStrategy<TEntity> tableNameGetter)
+    {
+        //this.strategyRule = shardingStrategy;
+        return this;
+    }
+    public ShardingStrategyBuilder<TEntity> WithParameter<TParameter>(ParameterShardingStrategy<TParameter> tableNameGetter)
     {
         return this;
     }

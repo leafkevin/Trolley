@@ -36,6 +36,11 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     IDbTransaction Transaction { get; }
     #endregion
 
+    public IRepository UseShardingRule()
+    {
+        return this;
+    }
+
     #region From
     /// <summary>
     /// 从表T中查询数据，用法：
@@ -588,5 +593,5 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <param name="isParameterized">是否参数化</param>
     /// <returns>返回仓储对象</returns>
     IRepository WithParameterized(bool isParameterized = true);
-    #endregion
+    #endregion 
 }

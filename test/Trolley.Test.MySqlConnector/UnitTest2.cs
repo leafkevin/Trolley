@@ -14,16 +14,48 @@ public class UnitTest2 : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<MySqlProvider>("fengling", true, f =>
+            .Register<MySqlProvider>("fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true)
+            .Register<MySqlProvider>("fengling_tenant1", "Server=localhost;Database=fengling_tenant1;Uid=root;password=123456;charset=utf8mb4;", false)
+            .Register<MySqlProvider>("fengling_tenant2", "Server=localhost;Database=fengling_tenant2;Uid=root;password=123456;charset=utf8mb4;", false)
+            .UseSharding(s =>
             {
-                f.Add("Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true);
+                s.UseDbKey(() =>
+                {
+                    //可以硬编码分库，也可以使用redis，映射表... 其他方式等
+                    var passport = f.GetService<IPassport>();
+                    return passport.TenantId switch
+                    {
+                        200 => "fengling_tenant1",
+                        300 => "fengling_tenant2",
+                        _ => "fengling"
+                    };
+                });
+                //可以指定数据库指定表分表，也可以所有数据库都分表，未指定的表不分表，可以按照时间、租户、依赖字段... 等分表
+                //.UseTable<User>(t => t.DependOn(d => ObjectId.Parse(d.Id).Timestamp, (origName, timestamp) => $"{origName}_{timestamp}"))
+                //.UseTableIf<Order>(dbKey => dbKey == "fengling", t => t.DependOn(d => d.TenantId, (origName, tenantId) => $"{origName}_{tenantId}").UseCrud(true))
+                //按照租户+时间yyyy-MM分表，依赖Id字段，可以Get/Insert/Update/Delete操作，是可以确定
+                //.UseTableIf<Order>(dbKey => dbKey == "fengling", t => t
+                //    .DependOn(d => new { d.TenantId, d.Id }, (origName, value) => $"{origName}_{value.TenantId}_{new DateTime(ObjectId.Parse(value.Id).Timestamp):yyyyMM}")
+                //    .UseCrud(true))
+                //按照租户+时间yyyy-MM分表，依赖CreatedAt字段，只可以Query操作
+                //.UseTableIf<Order>(dbKey => dbKey == "fengling", t => t
+                //    .DependOn(d => new { d.TenantId, d.CreatedAt }, (origName, value) => $"{origName}_{value.TenantId}_{value.CreatedAt:yyyyMM}")
+                //    .OnlyQuery(true))
+
+                //.UseTableIf<OrderDetail>(dbKey => dbKey == "fengling", t => t
+                //    .DependOn(d => d.TenantId, (origName, tenantId) => $"{origName}_{tenantId}")
+                //    .UseCrud(false))
+                //.Build();
             })
-            .AddTypeHandler<JsonTypeHandler>()
-            .Configure<MySqlProvider, ModelConfiguration>();
+            .Configure<MySqlProvider, MySqlModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
         this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+    }
+    public interface IPassport
+    {
+        public int TenantId { get; set; }
     }
     [Fact]
     public async void QueryFirst()
@@ -70,7 +102,7 @@ public class UnitTest2 : UnitTestBase
     public async void QueryPage()
     {
         Initialize();
-        using var repository = dbFactory.Create();
+        using var repository = dbFactory.Create("22");
         var result = repository.From<OrderDetail>()
             .Where(f => f.ProductId == 1)
             .OrderByDescending(f => f.CreatedAt)

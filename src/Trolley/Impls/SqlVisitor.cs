@@ -385,10 +385,10 @@ public class SqlVisitor : ISqlVisitor
                 }
                 //.NET枚举类型总是解析成对应的UnderlyingType数值类型，如：a.Gender ?? Gender.Male == Gender.Male
                 //如果枚举类型对应的数据库类型是字符串就会有问题，需要把数字变为枚举，再把枚举的名字字符串完成后续操作。
-                if (memberMapper != null && memberMapper.MemberType.IsEnumType(out var expectType, out _) && memberMapper.DbDefaultType == typeof(string))
+                if (memberMapper != null && memberMapper.MemberType.IsEnumType(out var expectType, out _) && memberMapper.DbFieldType == typeof(string))
                 {
                     sqlSegment.ExpectType = expectType;
-                    sqlSegment.TargetType = memberMapper.DbDefaultType;
+                    sqlSegment.TargetType = memberMapper.DbFieldType;
                 }
                 return sqlSegment;
             }

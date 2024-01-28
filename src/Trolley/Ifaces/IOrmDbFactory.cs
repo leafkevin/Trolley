@@ -5,16 +5,16 @@ namespace Trolley;
 
 public interface IOrmDbFactory
 {
-    ICollection<TheaDatabase> Databases { get; }
-    ICollection<ITypeHandler> TypeHandlers { get; }
+    ICollection<TenantDatabase> Databases { get; }
+    ICollection<IOrmProvider> OrmProviders { get; }
+    ICollection<IEntityMapProvider> MapProviders { get; }
 
+    void Register(string dbKey, string connectionString, Type ormProviderType, bool isDefault);
     void AddOrmProvider(IOrmProvider ormProvider);
     bool TryGetOrmProvider(Type ormProviderType, out IOrmProvider ormProvider);
     bool TryGetOrmProvider(OrmProviderType ormProviderType, out IOrmProvider ormProvider);
     void AddMapProvider(Type ormProviderType, IEntityMapProvider mapProvider);
     bool TryGetMapProvider(Type ormProviderType, out IEntityMapProvider mapProvider);
-    void AddTypeHandler(ITypeHandler typeHandler);
-    bool TryGetTypeHandler(Type handlerType, out ITypeHandler typeHandler);
-    TheaDatabase GetDatabase(string dbKey = null);
-    IRepository CreateRepository(string dbKey = null, string tenantId = null);
+    TenantDatabase GetDatabase(string dbKey = null);
+    IRepository CreateRepository(string dbKey = null);
 }

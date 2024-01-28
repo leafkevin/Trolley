@@ -1,5 +1,6 @@
 ﻿using MySqlConnector;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
@@ -13,9 +14,12 @@ public partial class MySqlProvider : BaseOrmProvider
     private static Dictionary<object, Type> defaultMapTypes = new();
     private static Dictionary<Type, object> defaultDbTypes = new();
     private static Dictionary<Type, string> castTos = new();
+    protected readonly ConcurrentDictionary<Type, ITypeHandler> typeHandlers = new();
 
     public override OrmProviderType OrmProviderType => OrmProviderType.MySql;
     public override Type NativeDbTypeType => typeof(MySqlDbType);
+    public override ICollection<ITypeHandler> TypeHandlers => this.typeHandlers.Values;
+
     static MySqlProvider()
     {
         defaultMapTypes[MySqlDbType.Bit] = typeof(bool);
@@ -124,6 +128,7 @@ public partial class MySqlProvider : BaseOrmProvider
         castTos[typeof(DateOnly?)] = "DATE";
         castTos[typeof(TimeOnly?)] = "TIME";
     }
+    public MySqlProvider() => this.RegisterTypeHandlers();
     public override IDbConnection CreateConnection(string connectionString)
         => new MySqlConnection(connectionString);
     public override IDbDataParameter CreateParameter(string parameterName, object value)
@@ -150,6 +155,211 @@ public partial class MySqlProvider : BaseOrmProvider
     }
     public override string CastTo(Type type, object value)
         => $"CAST({value} AS {castTos[type]})";
+
+    public virtual void RegisterTypeHandlers()
+    {
+        this.AddTypeHandler(new BooleanAsIntTypeHandler());
+        this.AddTypeHandler(new NullableBooleanAsIntTypeHandler());
+
+        this.AddTypeHandler(new NumberTypeHandler());
+        this.AddTypeHandler(new NullableNumberTypeHandler());
+
+        this.AddTypeHandler(new EnumTypeHandler());
+        this.AddTypeHandler(new NullableEnumTypeHandler());
+        this.AddTypeHandler(new EnumAsStringTypeHandler());
+        this.AddTypeHandler(new NullableEnumAsStringTypeHandler());
+
+        this.AddTypeHandler(new StringTypeHandler());
+        this.AddTypeHandler(new NullableStringTypeHandler());
+
+        this.AddTypeHandler(new DateTimeOffsetTypeHandler());
+        this.AddTypeHandler(new NullableDateTimeOffsetTypeHandler());
+
+        this.AddTypeHandler(new DateTimeTypeHandler());
+        this.AddTypeHandler(new NullableDateTimeTypeHandler());
+        this.AddTypeHandler(new DateTimeAsStringTypeHandler());
+        this.AddTypeHandler(new NullableDateTimeAsStringTypeHandler());
+
+        this.AddTypeHandler(new DateOnlyTypeHandler());
+        this.AddTypeHandler(new NullableDateOnlyTypeHandler());
+        this.AddTypeHandler(new DateOnlyAsStringTypeHandler());
+        this.AddTypeHandler(new NullableDateOnlyAsStringTypeHandler());
+
+        this.AddTypeHandler(new TimeSpanTypeHandler());
+        this.AddTypeHandler(new NullableTimeSpanTypeHandler());
+        this.AddTypeHandler(new TimeSpanAsLongTypeHandler());
+        this.AddTypeHandler(new NullableTimeSpanAsLongTypeHandler());
+
+        this.AddTypeHandler(new TimeOnlyTypeHandler());
+        this.AddTypeHandler(new NullableTimeOnlyTypeHandler());
+        this.AddTypeHandler(new TimeOnlyAsLongTypeHandler());
+        this.AddTypeHandler(new NullableTimeOnlyAsLongTypeHandler());
+
+        this.AddTypeHandler(new GuidTypeHandler());
+        this.AddTypeHandler(new NullableGuidTypeHandler());
+        this.AddTypeHandler(new GuidAsStringTypeHandler());
+        this.AddTypeHandler(new NullableGuidAsStringTypeHandler());
+
+        this.AddTypeHandler(new JsonTypeHandler());
+        this.AddTypeHandler(new ToStringTypeHandler());
+    }
+    public override void AddTypeHandler(ITypeHandler typeHandler)
+        => this.typeHandlers.TryAdd(typeHandler.GetType(), typeHandler);
+    public override ITypeHandler GetTypeHandler(Type targetType, Type fieldType, bool isRequired)
+    {
+        Type handlerType = null;
+        if (targetType.IsNullableType(out var underlyingType))
+        {
+            if (underlyingType.IsEnumType(out var enumUnderlyingType))
+            {
+                if (fieldType == typeof(string))
+                    handlerType = typeof(NullableEnumAsStringTypeHandler);
+                else handlerType = typeof(NullableEnumTypeHandler);
+            }
+            else if (underlyingType == typeof(Guid))
+            {
+                if (fieldType == typeof(string))
+                    handlerType = typeof(NullableGuidAsStringTypeHandler);
+                else handlerType = typeof(NullableGuidTypeHandler);
+            }
+            else if (underlyingType == typeof(DateTimeOffset))
+                handlerType = typeof(NullableDateTimeOffsetTypeHandler);
+            else if (underlyingType == typeof(DateOnly))
+            {
+                if (fieldType == typeof(string))
+                    handlerType = typeof(NullableDateOnlyAsStringTypeHandler);
+                else handlerType = typeof(NullableDateOnlyTypeHandler);
+            }
+            else if (underlyingType == typeof(TimeSpan))
+            {
+                if (fieldType == typeof(long))
+                    handlerType = typeof(NullableTimeSpanAsLongTypeHandler);
+                else handlerType = typeof(NullableTimeSpanTypeHandler);
+            }
+            else if (underlyingType == typeof(TimeOnly))
+            {
+                if (fieldType == typeof(long))
+                    handlerType = typeof(NullableTimeOnlyAsLongTypeHandler);
+                else handlerType = typeof(NullableTimeOnlyTypeHandler);
+            }
+            else
+            {
+                switch (Type.GetTypeCode(underlyingType))
+                {
+                    case TypeCode.Boolean:
+                        handlerType = typeof(NullableBooleanAsIntTypeHandler);
+                        break;
+                    case TypeCode.Byte:
+                    case TypeCode.SByte:
+                    case TypeCode.Int16:
+                    case TypeCode.UInt16:
+                    case TypeCode.Int32:
+                    case TypeCode.UInt32:
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                    case TypeCode.Single:
+                    case TypeCode.Double:
+                    case TypeCode.Decimal:
+                        handlerType = typeof(NullableNumberTypeHandler);
+                        break;
+                    case TypeCode.Char:
+                        handlerType = typeof(NullableStringTypeHandler);
+                        break;
+                    case TypeCode.DateTime:
+                        if (fieldType == typeof(string))
+                            handlerType = typeof(NullableDateTimeAsStringTypeHandler);
+                        else handlerType = typeof(NullableDateTimeTypeHandler);
+                        break;
+                    case TypeCode.Object:
+                        if (fieldType == typeof(string))
+                            handlerType = typeof(JsonTypeHandler);
+                        break;
+                    default:
+                        handlerType = typeof(ToStringTypeHandler);
+                        break;
+                }
+            }
+        }
+        else
+        {
+            if (underlyingType.IsEnumType(out var enumUnderlyingType))
+            {
+                if (fieldType == typeof(string))
+                    handlerType = typeof(EnumAsStringTypeHandler);
+                else handlerType = typeof(EnumTypeHandler);
+            }
+            else if (underlyingType == typeof(Guid))
+            {
+                if (fieldType == typeof(string))
+                    handlerType = typeof(GuidAsStringTypeHandler);
+                else handlerType = typeof(GuidTypeHandler);
+            }
+            else if (underlyingType == typeof(DateTimeOffset))
+                handlerType = typeof(DateTimeOffsetTypeHandler);
+            else if (underlyingType == typeof(DateOnly))
+            {
+                if (fieldType == typeof(string))
+                    handlerType = typeof(DateOnlyAsStringTypeHandler);
+                else handlerType = typeof(DateOnlyTypeHandler);
+            }
+            else if (underlyingType == typeof(TimeSpan))
+            {
+                if (fieldType == typeof(long))
+                    handlerType = typeof(TimeSpanAsLongTypeHandler);
+                else handlerType = typeof(TimeSpanTypeHandler);
+            }
+            else if (underlyingType == typeof(TimeOnly))
+            {
+                if (fieldType == typeof(long))
+                    handlerType = typeof(TimeOnlyAsLongTypeHandler);
+                else handlerType = typeof(TimeOnlyTypeHandler);
+            }
+            else
+            {
+                switch (Type.GetTypeCode(underlyingType))
+                {
+                    case TypeCode.Boolean:
+                        handlerType = typeof(BooleanAsIntTypeHandler);
+                        break;
+                    case TypeCode.Byte:
+                    case TypeCode.SByte:
+                    case TypeCode.Int16:
+                    case TypeCode.UInt16:
+                    case TypeCode.Int32:
+                    case TypeCode.UInt32:
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                    case TypeCode.Single:
+                    case TypeCode.Double:
+                    case TypeCode.Decimal:
+                        handlerType = typeof(NumberTypeHandler);
+                        break;
+                    case TypeCode.Char:
+                        handlerType = typeof(StringTypeHandler);
+                        break;
+                    case TypeCode.String:
+                        if (isRequired) handlerType = typeof(StringTypeHandler);
+                        else handlerType = typeof(NullableStringTypeHandler);
+                        break;
+                    case TypeCode.DateTime:
+                        if (fieldType == typeof(string))
+                            handlerType = typeof(DateTimeAsStringTypeHandler);
+                        else handlerType = typeof(DateTimeTypeHandler);
+                        break;
+                    case TypeCode.Object:
+                        if (fieldType == typeof(string))
+                            handlerType = typeof(JsonTypeHandler);
+                        break;
+                    default:
+                        handlerType = typeof(ToStringTypeHandler);
+                        break;
+                }
+            }
+        }
+        if (this.typeHandlers.TryGetValue(handlerType, out var typeHandler))
+            return typeHandler;
+        return null;
+    }
     public override string GetQuotedValue(Type expectType, object value)
     {
         if (expectType == typeof(TimeSpan) && value is TimeSpan timeSpan)

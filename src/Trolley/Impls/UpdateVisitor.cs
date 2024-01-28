@@ -697,7 +697,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.UpdateFields.Add(this.OrmProvider.GetFieldName(memberMapper.FieldName) + "=NULL");
             return;
         }
-        string fieldValue = sqlSegment.Value.ToString();
+        object fieldValue = sqlSegment.Value;
         if (sqlSegment.IsConstant || sqlSegment.IsVariable)
         {
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();

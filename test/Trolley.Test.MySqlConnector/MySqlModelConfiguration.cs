@@ -4,13 +4,13 @@ using System.Data;
 
 namespace Trolley.Test.MySqlConnector;
 
-class ModelConfiguration : IModelConfiguration
+class MySqlModelConfiguration : IModelConfiguration
 {
     public void OnModelCreating(ModelBuilder builder)
     {
         builder.Entity<User>(f =>
         {
-            f.ToTable("sys_user").Key(t => t.Id).WithSharding(s => s.WithNameRule(n => $"{s.OrgTableName}_{DateTime.Now:yyyyMM}"));
+            f.ToTable("sys_user").Key(t => t.Id).WithSharding(s => s.DependOn(d => d.Id, (origName, id) => $"{origName}_{id}").UseCrud(false));
             f.Member(t => t.Id).Field(nameof(User.Id)).NativeDbType(MySqlDbType.Int32).Required();
             f.Member(t => t.Name).Field(nameof(User.Name)).NativeDbType(MySqlDbType.VarChar);
             f.Member(t => t.Gender).Field(nameof(User.Gender)).NativeDbType(MySqlDbType.UByte);
@@ -147,15 +147,15 @@ class ModelConfiguration : IModelConfiguration
         builder.Entity<Function>(f =>
         {
             f.ToTable("sys_function").Key(t => new { t.MenuId, t.PageId });
-            f.Member(t => t.MenuId).Field(nameof(Function.MenuId)).NativeDbType(SqlDbType.Int);
-            f.Member(t => t.PageId).Field(nameof(Function.PageId)).NativeDbType(SqlDbType.Int);
-            f.Member(t => t.FunctionName).Field(nameof(Function.FunctionName)).NativeDbType(SqlDbType.VarChar);
-            f.Member(t => t.Description).Field(nameof(Function.Description)).NativeDbType(SqlDbType.VarChar);
-            f.Member(t => t.IsEnabled).Field(nameof(Function.IsEnabled)).NativeDbType(SqlDbType.Bit);
-            f.Member(t => t.CreatedAt).Field(nameof(Function.CreatedAt)).NativeDbType(SqlDbType.DateTime);
-            f.Member(t => t.CreatedBy).Field(nameof(Function.CreatedBy)).NativeDbType(SqlDbType.Int);
-            f.Member(t => t.UpdatedAt).Field(nameof(Function.UpdatedAt)).NativeDbType(SqlDbType.DateTime);
-            f.Member(t => t.UpdatedBy).Field(nameof(Function.UpdatedBy)).NativeDbType(SqlDbType.Int);
+            f.Member(t => t.MenuId).Field(nameof(Function.MenuId)).NativeDbType(MySqlDbType.Int32);
+            f.Member(t => t.PageId).Field(nameof(Function.PageId)).NativeDbType(MySqlDbType.Int32);
+            f.Member(t => t.FunctionName).Field(nameof(Function.FunctionName)).NativeDbType(MySqlDbType.VarChar);
+            f.Member(t => t.Description).Field(nameof(Function.Description)).NativeDbType(MySqlDbType.VarChar);
+            f.Member(t => t.IsEnabled).Field(nameof(Function.IsEnabled)).NativeDbType(MySqlDbType.Bool);
+            f.Member(t => t.CreatedAt).Field(nameof(Function.CreatedAt)).NativeDbType(MySqlDbType.DateTime);
+            f.Member(t => t.CreatedBy).Field(nameof(Function.CreatedBy)).NativeDbType(MySqlDbType.Int32);
+            f.Member(t => t.UpdatedAt).Field(nameof(Function.UpdatedAt)).NativeDbType(MySqlDbType.DateTime);
+            f.Member(t => t.UpdatedBy).Field(nameof(Function.UpdatedBy)).NativeDbType(MySqlDbType.Int32);
         });
     }
 }

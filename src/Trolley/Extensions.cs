@@ -23,18 +23,6 @@ public static class Extensions
     private static readonly ConcurrentDictionary<int, Action<IDataParameterCollection, IOrmProvider, string, object>> addParametersCache = new();
 
 
-    public static OrmDbFactoryBuilder AddTypeHandler<TTypeHandler>(this OrmDbFactoryBuilder builder) where TTypeHandler : class, ITypeHandler, new()
-       => builder.AddTypeHandler(new TTypeHandler());
-    public static OrmDbFactoryBuilder Configure<TOrmProvider>(this OrmDbFactoryBuilder builder, IModelConfiguration configuration)
-    {
-        builder.Configure(typeof(TOrmProvider), configuration);
-        return builder;
-    }
-    public static OrmDbFactoryBuilder Configure<TOrmProvider, TModelConfiguration>(this OrmDbFactoryBuilder builder) where TModelConfiguration : class, IModelConfiguration, new()
-    {
-        builder.Configure(typeof(TOrmProvider), new TModelConfiguration());
-        return builder;
-    }
     public static IOrmDbFactory Configure<TOrmProvider>(this IOrmDbFactory dbFactory, IModelConfiguration configuration) where TOrmProvider : class, IOrmProvider, new()
     {
         var ormProviderType = typeof(TOrmProvider);
@@ -45,6 +33,12 @@ public static class Extensions
             dbFactory.AddMapProvider(ormProviderType, new EntityMapProvider { OrmProviderType = ormProviderType });
         }
         configuration.OnModelCreating(new ModelBuilder(mapProvider));
+        return dbFactory;
+    }
+    public static IOrmDbFactory Register<TOrmProvider>(this IOrmDbFactory dbFactory, string dbKey, string connectionString, bool isDefault) where TOrmProvider : class, IOrmProvider, new()
+    {
+        var ormProviderType = typeof(TOrmProvider);
+        dbFactory.Register(dbKey, connectionString, ormProviderType, isDefault);
         return dbFactory;
     }
     public static IOrmDbFactory Configure<TOrmProvider, TModelConfiguration>(this IOrmDbFactory dbFactory)
@@ -99,6 +93,16 @@ public static class Extensions
         if (underlyingType.IsEnum)
         {
             enumUnderlyingType = underlyingType.GetEnumUnderlyingType();
+            return true;
+        }
+        enumUnderlyingType = null;
+        return false;
+    }
+    public static bool IsEnumType(this Type enumType, out Type enumUnderlyingType)
+    {
+        if (enumType.IsEnum)
+        {
+            enumUnderlyingType = enumType.GetEnumUnderlyingType();
             return true;
         }
         enumUnderlyingType = null;
@@ -274,8 +278,8 @@ public static class Extensions
     }
     public static void AddDbParameter(this IOrmProvider ormProvider, string dbKey, IDataParameterCollection dbParameters, MemberMap memberMapper, string parameterName, object fieldValue)
     {
-        var fieldVallueType = fieldValue.GetType();
-        var cacheKey = HashCode.Combine(dbKey, ormProvider, memberMapper.Parent.EntityType, memberMapper, fieldVallueType);
+        var fieldValueType = fieldValue.GetType();
+        var cacheKey = HashCode.Combine(dbKey, ormProvider, memberMapper.Parent.EntityType, memberMapper, fieldValueType);
         var AddParametersDelegate = addParametersCache.GetOrAdd(cacheKey, f =>
         {
             var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
@@ -283,11 +287,12 @@ public static class Extensions
             var parameterNameExpr = Expression.Parameter(typeof(string), "parameterName");
             var fieldValueExpr = Expression.Parameter(typeof(object), "fieldValue");
 
-            var typedFieldValueExpr = Expression.Variable(fieldVallueType, "typedFieldValue");
+            var typedFieldValueExpr = Expression.Variable(fieldValueType, "typedFieldValue");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
-
-            RepositoryHelper.AddValueParameter(dbParametersExpr, ormProviderExpr, parameterNameExpr, fieldValueExpr, memberMapper, blockParameters, blockBodies);
+            blockParameters.Add(typedFieldValueExpr);
+            blockBodies.Add(Expression.Assign(typedFieldValueExpr, Expression.Convert(fieldValueExpr, fieldValueType)));
+            RepositoryHelper.AddValueParameter(dbParametersExpr, ormProviderExpr, parameterNameExpr, fieldValueType, typedFieldValueExpr, memberMapper, blockParameters, blockBodies);
             if (blockParameters.Count > 0)
             {
                 return Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, string, object>>(

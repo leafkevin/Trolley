@@ -8,30 +8,37 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public sealed class DbContext
+public sealed class DbContext : IDisposable, IAsyncDisposable
 {
     #region Properties
     public string DbKey { get; set; }
-    public TheaConnection Connection { get; set; }
+    public IDbConnection Connection { get; set; }
+    public string ConnectionString { get; set; }
     public IOrmProvider OrmProvider { get; set; }
     public IEntityMapProvider MapProvider { get; set; }
     public IDbTransaction Transaction { get; set; }
     public bool IsParameterized { get; set; }
-    public int Timeout { get; set; }
+    public int CommandTimeout { get; set; }
     public bool IsNeedClose => this.Transaction == null;
     #endregion
 
     #region CreateCommand
     public IDbCommand CreateCommand()
     {
+        if (this.Connection == null)
+            this.Connection = this.OrmProvider.CreateConnection(this.ConnectionString);
+
         var command = this.Connection.CreateCommand();
         command.CommandType = CommandType.Text;
-        command.CommandTimeout = this.Timeout;
+        command.CommandTimeout = this.CommandTimeout;
         command.Transaction = this.Transaction;
         return command;
     }
     public DbCommand CreateDbCommand()
     {
+        if (this.Connection == null)
+            this.Connection = this.OrmProvider.CreateConnection(this.ConnectionString);
+
         var cmd = this.Connection.CreateCommand();
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.Transaction;
@@ -54,7 +61,7 @@ public sealed class DbContext
             var entityType = typeof(TResult);
             commandInitializer.Invoke(command);
 
-            this.Connection.Open();
+            this.Open();
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = command.ExecuteReader(behavior);
             if (reader.Read())
@@ -90,7 +97,7 @@ public sealed class DbContext
             var entityType = typeof(TResult);
             commandInitializer.Invoke(command);
 
-            await this.Connection.OpenAsync(cancellationToken);
+            await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             if (await reader.ReadAsync(cancellationToken))
@@ -129,7 +136,7 @@ public sealed class DbContext
             command.CommandText = visitor.BuildSql(out var readerFields);
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            this.Connection.Open();
+            this.Open();
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = command.ExecuteReader(behavior);
             var entityType = typeof(TResult);
@@ -179,7 +186,7 @@ public sealed class DbContext
             command.CommandText = visitor.BuildSql(out var readerFields);
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            await this.Connection.OpenAsync(cancellationToken);
+            await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             var entityType = typeof(TResult);
@@ -231,7 +238,7 @@ public sealed class DbContext
             var entityType = typeof(TResult);
             commandInitializer.Invoke(command);
 
-            this.Connection.Open();
+            this.Open();
             var behavior = CommandBehavior.SequentialAccess;
             reader = command.ExecuteReader(behavior);
 
@@ -275,7 +282,7 @@ public sealed class DbContext
         {
             var entityType = typeof(TResult);
             commandInitializer.Invoke(command);
-            await this.Connection.OpenAsync(cancellationToken);
+            await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess;
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             if (entityType.IsEntityType(out _))
@@ -322,7 +329,7 @@ public sealed class DbContext
             command.CommandText = visitor.BuildSql(out var readerFields);
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            this.Connection.Open();
+            this.Open();
             var behavior = CommandBehavior.SequentialAccess;
             reader = command.ExecuteReader(behavior);
 
@@ -381,7 +388,7 @@ public sealed class DbContext
             command.CommandText = visitor.BuildSql(out var readerFields);
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            await this.Connection.OpenAsync(cancellationToken);
+            await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess;
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
 
@@ -444,7 +451,7 @@ public sealed class DbContext
             command.CommandText = visitor.BuildSql(out var readerFields);
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            this.Connection.Open();
+            this.Open();
             var behavior = CommandBehavior.SequentialAccess;
             reader = command.ExecuteReader(behavior);
             if (reader.Read()) result.TotalCount = reader.To<int>();
@@ -507,7 +514,7 @@ public sealed class DbContext
             command.CommandText = visitor.BuildSql(out var readerFields);
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            await this.Connection.OpenAsync(cancellationToken);
+            await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess;
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             if (await reader.ReadAsync()) result.TotalCount = reader.To<int>();
@@ -577,7 +584,7 @@ public sealed class DbContext
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
             command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, whereObj);
 
-            this.Connection.Open();
+            this.Open();
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = command.ExecuteReader(behavior);
             if (reader.Read())
@@ -614,7 +621,7 @@ public sealed class DbContext
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
             command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, whereObj);
 
-            await this.Connection.OpenAsync(cancellationToken);
+            await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
 
@@ -649,7 +656,7 @@ public sealed class DbContext
         try
         {
             commandInitializer.Invoke(command);
-            this.Connection.Open();
+            this.Open();
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = command.ExecuteReader(behavior);
             if (reader.Read()) result = reader.To<TResult>();
@@ -678,7 +685,7 @@ public sealed class DbContext
         try
         {
             commandInitializer.Invoke(command);
-            await this.Connection.OpenAsync(cancellationToken);
+            await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             if (await reader.ReadAsync(cancellationToken))
@@ -711,7 +718,7 @@ public sealed class DbContext
         try
         {
             commandInitializer.Invoke(command);
-            this.Connection.Open();
+            this.Open();
             result = command.ExecuteNonQuery();
         }
         catch (Exception ex)
@@ -736,7 +743,7 @@ public sealed class DbContext
         try
         {
             commandInitializer.Invoke(command);
-            await this.Connection.OpenAsync(cancellationToken);
+            await this.OpenAsync(cancellationToken);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch (Exception ex)
@@ -754,8 +761,101 @@ public sealed class DbContext
     }
     #endregion
 
-    #region Close
+    #region Others
+    public void Open()
+    {
+        if (this.Connection == null)
+            this.Connection = this.OrmProvider.CreateConnection(this.ConnectionString);
+
+        if (this.Connection.State == ConnectionState.Broken)
+            this.Connection.Close();
+        if (this.Connection.State == ConnectionState.Closed)
+        {
+            //关闭后，连接串被重置，需要重新设置
+            this.Connection.ConnectionString = this.ConnectionString;
+            this.Connection.Open();
+        }
+    }
+    public async Task OpenAsync(CancellationToken cancellationToken)
+    {
+        if (this.Connection == null)
+            this.Connection = this.OrmProvider.CreateConnection(this.ConnectionString);
+
+        if (this.Connection is not DbConnection connection)
+            throw new NotSupportedException("当前数据库驱动不支持异步操作");
+        if (connection.State == ConnectionState.Broken)
+            await connection.CloseAsync();
+        if (connection.State == ConnectionState.Closed)
+        {
+            //关闭后，连接串被重置，需要重新设置
+            connection.ConnectionString = this.ConnectionString;
+            await connection.OpenAsync(cancellationToken);
+        }
+    }
+    public IDbTransaction BeginTransaction()
+    {
+        this.Open();
+        this.Transaction = this.Connection.BeginTransaction();
+        return this.Transaction;
+    }
+    public async ValueTask<IDbTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        await this.OpenAsync(cancellationToken);
+        if (this.Connection is DbConnection connection)
+            this.Transaction = await connection.BeginTransactionAsync(cancellationToken);
+        else throw new NotSupportedException("当前数据库驱动不支持异步操作");
+        return this.Transaction;
+    }
+    public void Commit()
+    {
+        this.Transaction?.Commit();
+        this.Close();
+        this.Transaction = null;
+    }
+    public async Task CommitAsync(CancellationToken cancellationToken = default)
+    {
+        if (this.Transaction != null)
+        {
+            if (this.Transaction is not DbTransaction dbTransaction)
+                throw new NotSupportedException("当前数据库驱动不支持异步操作");
+            await dbTransaction.CommitAsync(cancellationToken);
+        }
+        await this.CloseAsync();
+        this.Transaction = null;
+    }
+    public void Rollback()
+    {
+        this.Transaction?.Rollback();
+        this.Close();
+        this.Transaction = null;
+    }
+    public async Task RollbackAsync(CancellationToken cancellationToken = default)
+    {
+        if (this.Transaction != null)
+        {
+            if (this.Transaction is not DbTransaction dbTransaction)
+                throw new NotSupportedException("当前数据库驱动不支持异步操作");
+            await dbTransaction.RollbackAsync(cancellationToken);
+        }
+        await this.CloseAsync();
+        this.Transaction = null;
+    }
     public void Close() => this.Connection?.Close();
-    public async ValueTask CloseAsync() => await this.Connection.CloseAsync();
+    public async Task CloseAsync()
+    {
+        if (this.Connection is not DbConnection connection)
+            throw new NotSupportedException("当前数据库驱动不支持异步操作");
+        await connection?.CloseAsync();
+    }
+    public void Dispose()
+    {
+        this.Close();
+        this.Connection = null;
+    }
+    public async ValueTask DisposeAsync()
+    {
+        await this.CloseAsync();
+        this.Connection = null;
+    }
     #endregion
 }

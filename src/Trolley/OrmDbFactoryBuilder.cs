@@ -1,40 +1,14 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 
 namespace Trolley;
 
 public class OrmDbFactoryBuilder
 {
-    private OrmDbFactoryOptions options;
-    private TheaDatabase defaultDatabase;
-    private readonly List<Type> ormProviderTypes = new();
-    private readonly ConcurrentDictionary<string, TheaDatabase> databases = new();
-    private readonly ConcurrentDictionary<Type, IEntityMapProvider> mapProviders = new();
-    private readonly ConcurrentDictionary<Type, ITypeHandler> typeHandlers = new();
+    private OrmDbFactory dbFactory = new();
 
-    public OrmDbFactoryBuilder Register<TOrmProvider>(string dbKey, bool isDefault, Action<TheaDatabaseBuilder> databaseInitializer) where TOrmProvider : class, IOrmProvider, new()
+    public OrmDbFactoryBuilder Register<TOrmProvider>(string dbKey, string connectionString, bool isDefault) where TOrmProvider : class, IOrmProvider, new()
     {
-        var ormProviderType = typeof(TOrmProvider);
-        var database = this.databases.GetOrAdd(dbKey, new TheaDatabase
-        {
-            DbKey = dbKey,
-            IsDefault = isDefault,
-            OrmProviderType = ormProviderType
-        });
-        if (!this.ormProviderTypes.Contains(ormProviderType))
-            this.ormProviderTypes.Add(ormProviderType);
-        if (isDefault) this.defaultDatabase = database;
-        var builder = new TheaDatabaseBuilder(database);
-        databaseInitializer?.Invoke(builder);
-        return this;
-    }
-    public OrmDbFactoryBuilder AddTypeHandler(ITypeHandler typeHandler)
-    {
-        if (typeHandler == null)
-            throw new ArgumentNullException(nameof(typeHandler));
-
-        this.typeHandlers.TryAdd(typeHandler.GetType(), typeHandler);
+        this.dbFactory.Register<TOrmProvider>(dbKey, connectionString, isDefault);
         return this;
     }
     public OrmDbFactoryBuilder Configure(Type ormProviderType, IModelConfiguration configuration)
@@ -42,29 +16,36 @@ public class OrmDbFactoryBuilder
         if (ormProviderType == null)
             throw new ArgumentNullException(nameof(ormProviderType));
 
-        var mapProvider = this.mapProviders.GetOrAdd(ormProviderType, new EntityMapProvider { OrmProviderType = ormProviderType });
-        configuration.OnModelCreating(new ModelBuilder(mapProvider));
+        if (!this.dbFactory.TryGetMapProvider(ormProviderType, out _))
+        {
+            var mapProvider = new EntityMapProvider() { OrmProviderType = ormProviderType };
+            configuration.OnModelCreating(new ModelBuilder(mapProvider));
+            this.dbFactory.AddMapProvider(ormProviderType, mapProvider);
+        }
+        return this;
+    }
+    public OrmDbFactoryBuilder Configure<TOrmProvider>(IModelConfiguration configuration)
+    {
+        this.Configure(typeof(TOrmProvider), configuration);
+        return this;
+    }
+    public OrmDbFactoryBuilder Configure<TOrmProvider, TModelConfiguration>() where TModelConfiguration : class, IModelConfiguration, new()
+    {
+        this.Configure(typeof(TOrmProvider), new TModelConfiguration());
+        return this;
+    }
+    public OrmDbFactoryBuilder UseSharding(Action<ShardingStrategyBuilder> shardingInitializer)
+    {
+        if (shardingInitializer == null)
+            throw new ArgumentNullException(nameof(shardingInitializer));
+
+        //TODO:
         return this;
     }
     public OrmDbFactoryBuilder With(Action<OrmDbFactoryOptions> optionsInitializer)
     {
-        if (optionsInitializer == null)
-            throw new ArgumentNullException(nameof(optionsInitializer));
-        this.options = new OrmDbFactoryOptions();
-        optionsInitializer.Invoke(this.options);
+        this.dbFactory.With(optionsInitializer);
         return this;
     }
-    public IOrmDbFactory Build()
-    {
-        var dbFactory = new OrmDbFactory();
-        dbFactory.Initialize(this.options, this.defaultDatabase, this.ormProviderTypes, this.databases, this.mapProviders, this.typeHandlers);
-        foreach (var ormProviderType in this.ormProviderTypes)
-        {
-            if (!dbFactory.TryGetMapProvider(ormProviderType, out var mapProvider))
-                dbFactory.AddMapProvider(ormProviderType, new EntityMapProvider { OrmProviderType = ormProviderType });
-            dbFactory.TryGetOrmProvider(ormProviderType, out var ormProvider);
-            mapProvider.Build(ormProvider);
-        }
-        return dbFactory;
-    }
+    public IOrmDbFactory Build() => this.dbFactory.Build();
 }
