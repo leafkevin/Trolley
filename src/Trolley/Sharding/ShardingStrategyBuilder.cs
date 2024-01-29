@@ -8,7 +8,7 @@ public class ShardingStrategyBuilder
 {
     private Dictionary<Type, object> tableShardingRules = new Dictionary<Type, object>();
     /// <summary>
-    /// 配置获取dbKey委托，可以使用租户，也可以映射表，或是指定的规则，如：.UseDbKey(f =&gt;
+    /// 配置获取dbKey委托，可以使用租户，也可以映射表，或是指定的规则，如：.UseDbKey(() =&gt;
     /// {
     ///     var passport = f.GetService&lt;IPassport&gt;();
     ///     return passport.TenantId switch
@@ -19,9 +19,9 @@ public class ShardingStrategyBuilder
     ///     }
     /// });
     /// </summary>
-    /// <param name="dbKeyGetter">dbKey获取委托</param>
+    /// <param name="dbKeySelector">dbKey获取委托</param>
     /// <returns></returns>
-    public ShardingStrategyBuilder UseDbKey(Func<string> dbKeyGetter)
+    public ShardingStrategyBuilder UseDbKey(Func<string> dbKeySelector)
     {
         return this;
     }
@@ -47,31 +47,30 @@ public class ShardingStrategyBuilder
 public class ShardingTableStrategyBuilder<TEntity>
 {
     /// <summary>
-    /// SQL查询中包含了dependentFields指定的字段，表TEntity将使用tableNameGetter获取分表名称，这个规则可用于查询、插入、更新、删除语句中
+    /// SQL查询中包含了fieldsSelector指定的字段，表TEntity将使用tableNameGetter获取分表名称，这个规则可用于查询、插入、更新、删除语句中
     /// </summary>
     /// <typeparam name="TFields">用于判断分表的依赖字段类型</typeparam>
-    /// <param name="dependentFields">用于判断分表的依赖字段</param>
+    /// <param name="fieldsSelector">用于判断分表的依赖字段</param>
     /// <param name="tableNameGetter"></param>
     /// <returns></returns>
-    public ShardingTableStrategyBuilder<TEntity> DependOn<TFields>(Expression<Func<TEntity, TFields>> dependentFields, Func<string, TFields, string> tableNameGetter)
+    public ShardingTableStrategyBuilder<TEntity> DependOn<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector, Func<string, TFields, string> tableNameGetter)
     {
         return this;
     }
     /// <summary>
-    /// 可以用来CRUD操作
+    /// 可以用来CRUD操作，建议此栏位在表中直接存在，而不是经过计算得到的栏位值
     /// </summary>
-    /// <param name="isUnique">是否可以确定唯一</param>
+    /// <param name="isRequired">在进行插入、更新、删除时，是否是必须栏位</param>
     /// <returns></returns>
-    public ShardingTableStrategyBuilder<TEntity> UseCrud(bool isUnique)
+    public ShardingTableStrategyBuilder<TEntity> UseCrud(bool isRequired)
     {
         return this;
     }
     /// <summary>
     /// 仅用于查询操作
     /// </summary>
-    /// <param name="isFuzzyMatching">是否模糊匹配</param>
     /// <returns></returns>
-    public ShardingTableStrategyBuilder<TEntity> OnlyQuery(bool isFuzzyMatching)
+    public ShardingTableStrategyBuilder<TEntity> OnlyQuery()
     {
         return this;
     }

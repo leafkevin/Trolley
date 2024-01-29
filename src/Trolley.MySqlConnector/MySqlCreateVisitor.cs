@@ -289,7 +289,9 @@ public class MySqlCreateVisitor : CreateVisitor
         {
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-            this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, sqlSegment.Value);
+            //this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, sqlSegment.Value);
+            var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, sqlSegment.Value);
+            this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
             this.UpdateFields.Append($"{fieldName}={parameterName}");
         }
         //带有参数或字段的表达式或函数调用、或是只有参数或字段
@@ -307,7 +309,11 @@ public class MySqlCreateVisitor : CreateVisitor
         if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
         //在前面insert的时候，参数有可能已经添加过了，此处需要判断是否需要添加
         if (!this.DbParameters.Contains(parameterName))
-            this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, fieldValue);
+        {
+            //this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, fieldValue);
+            var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
+            this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
+        }
         if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
         this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
     }

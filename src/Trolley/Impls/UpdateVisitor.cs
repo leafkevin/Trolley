@@ -687,7 +687,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var fieldValue = isEntity ? FasterEvaluator.Evaluate(memberMapper.Member, memberValue) : memberValue;
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-        this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, fieldValue);
+		//this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, fieldValue);
+        var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
+        this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
         this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
     }
     protected void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)
@@ -702,7 +704,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         {
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-            this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, fieldValue);
+			//this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, fieldValue);
+            var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
+            this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
             fieldValue = parameterName;
         }
         this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={fieldValue}");

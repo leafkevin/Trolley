@@ -296,7 +296,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-        this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, fieldValue);
+        var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
+        this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
         this.InsertFields.Add(new FieldsSegment
         {
             Fields = this.OrmProvider.GetFieldName(memberMapper.FieldName),
@@ -340,7 +341,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (fieldNames.Count > 0)
             return fieldNames;
         return null;
-    }  
+    }
     public void Clear()
     {
         this.Tables?.Clear();

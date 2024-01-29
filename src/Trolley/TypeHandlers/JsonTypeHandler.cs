@@ -15,18 +15,18 @@ public class JsonTypeHandler : ITypeHandler
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         ReferenceHandler = ReferenceHandler.IgnoreCycles
     };
-    public virtual object Parse(IOrmProvider ormProvider, Type targetType, object value)
+    public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is DBNull) return null;
-        return JsonSerializer.Deserialize(value as string, targetType, SerializerOptions);
+        return JsonSerializer.Deserialize(value as string, underlyingType, SerializerOptions);
     }
-    public virtual object ToFieldValue(IOrmProvider ormProvider, Type expectType, object value)
+    public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value != null)
             return JsonSerializer.Serialize(value, SerializerOptions);
         return DBNull.Value;
     }
-    public virtual string GetQuotedValue(IOrmProvider ormProvider, Type expectType, object value)
+    public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value != null)
             return $"'{JsonSerializer.Serialize(value, SerializerOptions)}'";

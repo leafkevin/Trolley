@@ -103,20 +103,13 @@ public class EntityMap
                 if (!memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                     memberMapper.NativeDbType = ormProvider.GetNativeDbType(memberMapper.MemberType);
             }
-            else
+            if (memberMapper.NativeDbType is int nativeDbType)
+                memberMapper.NativeDbType = Enum.ToObject(ormProvider.NativeDbTypeType, nativeDbType);
+            if (memberMapper.TypeHandler == null && !memberMapper.IsIgnore && !memberMapper.IsNavigation)
             {
-                if (memberMapper.NativeDbType is int nativeDbType)
-                    memberMapper.NativeDbType = Enum.ToObject(ormProvider.NativeDbTypeType, nativeDbType);
-                //if (memberMapper.NativeDbType is string strDbType)
-                //{
-                //    memberMapper.NativeDbType = Enum.ToObject(ormProvider.NativeDbTypeType, nativeDbType);
-                //    var m_stringLength = Regex.Match(col.DbTypeTextFull, @"^varchar\s*\((\w+)\)$", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant);
-                //}
+                var dbFieldType = ormProvider.MapDefaultType(memberMapper.NativeDbType);
+                memberMapper.TypeHandler = ormProvider.GetTypeHandler(memberMapper.MemberType, dbFieldType, memberMapper.IsRequired);
             }
-            if (memberMapper.NativeDbType != null)
-                memberMapper.DbFieldType = ormProvider.MapDefaultType(memberMapper.NativeDbType);
-            if (!memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
-                memberMapper.TypeHandler = ormProvider.GetTypeHandler(memberMapper.MemberType, memberMapper.DbFieldType, memberMapper.IsRequired);
         }
         if (this.memberMaps.Count > 0)
         {

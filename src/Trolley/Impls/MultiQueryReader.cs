@@ -12,14 +12,16 @@ namespace Trolley;
 class MultiQueryReader : IMultiQueryReader
 {
     private readonly bool isNeedClose;
+    private readonly IOrmProvider ormProvider;
     private IDbCommand command;
     private IDataReader reader;
     private List<ReaderAfter> readerAfters;
 
     private int readerIndex = 0;
     private List<NextReaderAfter> nextAfters;
-    public MultiQueryReader(IDbCommand command, IDataReader reader, List<ReaderAfter> readerAfters, bool isNeedClose)
+    public MultiQueryReader(IOrmProvider ormProvider, IDbCommand command, IDataReader reader, List<ReaderAfter> readerAfters, bool isNeedClose)
     {
+        this.ormProvider = ormProvider;
         this.command = command;
         this.reader = reader;
         this.readerAfters = readerAfters;
@@ -51,7 +53,7 @@ class MultiQueryReader : IMultiQueryReader
     {
         int totalCount = 0;
         if (this.reader.Read())
-            totalCount = reader.To<int>();
+            totalCount = reader.To<int>(this.ormProvider);
         this.reader.NextResult();
         var dataList = new List<T>();
 
@@ -108,7 +110,7 @@ class MultiQueryReader : IMultiQueryReader
 
         int totalCount = 0;
         if (await dbReader.ReadAsync(cancellationToken))
-            totalCount = reader.To<int>();
+            totalCount = reader.To<int>(this.ormProvider);
         await dbReader.NextResultAsync(cancellationToken);
 
         var dataList = new List<T>();

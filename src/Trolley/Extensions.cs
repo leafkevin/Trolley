@@ -20,7 +20,6 @@ public static class Extensions
     private static readonly ConcurrentDictionary<int, Delegate> valueTupleReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
-    private static readonly ConcurrentDictionary<int, Action<IDataParameterCollection, IOrmProvider, string, object>> addParametersCache = new();
 
 
     public static IOrmDbFactory Configure<TOrmProvider>(this IOrmDbFactory dbFactory, IModelConfiguration configuration) where TOrmProvider : class, IOrmProvider, new()
@@ -207,15 +206,12 @@ public static class Extensions
     /// <param name="reader"></param>
     /// <param name="columnIndex"></param>
     /// <returns></returns>
-    public static TValue To<TValue>(this IDataReader reader, int columnIndex = 0)
+    public static TValue To<TValue>(this IDataReader reader, IOrmProvider ormProvider)
     {
         var targetType = typeof(TValue);
-        var fieldType = reader.GetFieldType(columnIndex);
-        var hashCode = HashCode.Combine(targetType, fieldType);
-        if (!readerValueConverterCache.TryGetValue(hashCode, out var converter))
-            readerValueConverterCache.TryAdd(hashCode, converter = CreateReaderValueConverter(targetType, fieldType));
-        var deserializer = (Func<IDataReader, int, TValue>)converter;
-        return deserializer.Invoke(reader, columnIndex);
+        var fieldType = reader.GetFieldType(0);
+        var typeHandler = ormProvider.GetTypeHandler(targetType, fieldType, targetType.IsNullableType(out var underlyingType));
+        return (TValue)typeHandler.Parse(ormProvider, underlyingType, reader[0]);
     }
     public static TEntity To<TEntity>(this IDataReader reader, DbContext dbContext)
         => reader.To<TEntity>(dbContext.DbKey, dbContext.OrmProvider, dbContext.MapProvider);
@@ -276,33 +272,11 @@ public static class Extensions
         }
         return ((Func<IDataReader, TEntity>)deserializer).Invoke(reader);
     }
-    public static void AddDbParameter(this IOrmProvider ormProvider, string dbKey, IDataParameterCollection dbParameters, MemberMap memberMapper, string parameterName, object fieldValue)
-    {
-        var fieldValueType = fieldValue.GetType();
-        var cacheKey = HashCode.Combine(dbKey, ormProvider, memberMapper.Parent.EntityType, memberMapper, fieldValueType);
-        var AddParametersDelegate = addParametersCache.GetOrAdd(cacheKey, f =>
-        {
-            var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
-            var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-            var parameterNameExpr = Expression.Parameter(typeof(string), "parameterName");
-            var fieldValueExpr = Expression.Parameter(typeof(object), "fieldValue");
-
-            var typedFieldValueExpr = Expression.Variable(fieldValueType, "typedFieldValue");
-            var blockParameters = new List<ParameterExpression>();
-            var blockBodies = new List<Expression>();
-            blockParameters.Add(typedFieldValueExpr);
-            blockBodies.Add(Expression.Assign(typedFieldValueExpr, Expression.Convert(fieldValueExpr, fieldValueType)));
-            RepositoryHelper.AddValueParameter(dbParametersExpr, ormProviderExpr, parameterNameExpr, fieldValueType, typedFieldValueExpr, memberMapper, blockParameters, blockBodies);
-            if (blockParameters.Count > 0)
-            {
-                return Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, string, object>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, parameterNameExpr, fieldValueExpr).Compile();
-            }
-            return Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, string, object>>(
-                Expression.Block(blockBodies), dbParametersExpr, ormProviderExpr, parameterNameExpr, fieldValueExpr).Compile();
-        });
-        AddParametersDelegate.Invoke(dbParameters, ormProvider, parameterName, fieldValue);
-    }
+    //public static void AddDbParameter(this IOrmProvider ormProvider, string dbKey, IDataParameterCollection dbParameters, MemberMap memberMapper, string parameterName, object fieldValue)
+    //{
+    //    var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, memberMapper.UnderlyingType, fieldValue);
+    //    dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
+    //}
     /// <summary>
     /// 用在方法调用中，判断!=,NOT IN,NOT LIKE三种情况
     /// </summary>
@@ -366,7 +340,7 @@ public static class Extensions
                 throw new Exception($"SQL中字段{memberName}映射不到模型{entityType.FullName}任何栏位,或者没有添加AS子句");
 
             var fieldType = reader.GetFieldType(index);
-            var readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
+            var readerValueExpr = GetReaderValue(ormProvider, ormProviderExpr, readerExpr, Expression.Constant(index),
                 memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
 
             if (target.IsDefault)
@@ -402,9 +376,8 @@ public static class Extensions
             if (readerField.FieldType == ReaderFieldType.Field)
             {
                 var fieldType = reader.GetFieldType(index);
-                var typeHandler = readerField.MemberMapper?.TypeHandler;
-                var readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                    readerField.TargetMember?.GetMemberType(), fieldType, typeHandler, blockParameters, blockBodies);
+                var readerValueExpr = GetReaderValue(ormProvider, ormProviderExpr, readerExpr, Expression.Constant(index),
+                     readerField.TargetMember.GetMemberType(), fieldType, readerField.TypeHandler, blockParameters, blockBodies);
                 if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
                 else root.Arguments.Add(readerValueExpr);
                 index++;
@@ -428,9 +401,9 @@ public static class Extensions
                         current = NewBuildInfo(readerField.TargetMember.GetMemberType(), readerField.TargetMember, parent);
                         readerBuilders.Add(readerField, current);
                     }
+
                     Expression executeExpr = null;
                     List<Expression> argsExprs = null;
-
                     if (endIndex > index)
                     {
                         argsExprs = new List<Expression>();
@@ -439,10 +412,8 @@ public static class Extensions
                             var fieldType = reader.GetFieldType(index);
                             //延迟的方法调用，有字段值作为方法参数就读取，没有什么也不做
                             childReaderField = readerField.ReaderFields[childIndex];
-                            //本地函数调用
-                            var memberMapper = childReaderField.MemberMapper;
-                            readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                                memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
+                            readerValueExpr = GetReaderValue(ormProvider, ormProviderExpr, readerExpr, Expression.Constant(index),
+                                readerField.TargetMember.GetMemberType(), fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
                             argsExprs.Add(readerValueExpr);
                             childIndex++;
                             index++;
@@ -479,10 +450,8 @@ public static class Extensions
                     {
                         var fieldType = reader.GetFieldType(index);
                         childReaderField = readerField.ReaderFields[childIndex];
-                        fieldMember = childReaderField.TargetMember;
-                        var typeHandler = childReaderField.MemberMapper?.TypeHandler;
-                        readerValueExpr = GetReaderValue(ormProviderExpr, readerExpr, Expression.Constant(index),
-                            fieldMember.GetMemberType(), fieldType, typeHandler, blockParameters, blockBodies);
+                        readerValueExpr = GetReaderValue(ormProvider, ormProviderExpr, readerExpr, Expression.Constant(index),
+                            childReaderField.TargetMember.GetMemberType(), fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
 
                         if (current.IsDefault) current.Bindings.Add(Expression.Bind(fieldMember, readerValueExpr));
                         else current.Arguments.Add(readerValueExpr);
@@ -532,179 +501,181 @@ public static class Extensions
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
         return Expression.Lambda(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
     }
-    private static Expression GetReaderValue(ParameterExpression readerExpr, Expression indexExpr, Type targetType, Type fieldType, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
-        => GetReaderValue(null, readerExpr, indexExpr, targetType, fieldType, null, blockParameters, blockBodies);
-    private static Expression GetReaderValue(Expression ormProviderExpr, ParameterExpression readerExpr, Expression indexExpr, Type targetType, Type fieldType, ITypeHandler typeHandler, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
+    private static Expression GetReaderValue(IOrmProvider ormProvider, Expression ormProviderExpr, ParameterExpression readerExpr, Expression indexExpr, Type targetType, Type fieldType, ITypeHandler typeHandler, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
     {
-        bool isNullable = targetType.IsNullableType(out var underlyingType);
         var methodInfo = typeof(IDataRecord).GetMethod(nameof(IDataRecord.GetValue), new Type[] { typeof(int) });
-        var objLocalExpr = AssignLocalParameter(typeof(object), Expression.Call(readerExpr, methodInfo, indexExpr), blockParameters, blockBodies);
-        Expression typedValueExpr = null;
+        var readerValueExpr = AssignLocalParameter(typeof(object), Expression.Call(readerExpr, methodInfo, indexExpr), blockParameters, blockBodies);
 
-        if (typeHandler != null)
-        {
-            methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.Parse), new Type[] { typeof(IOrmProvider), typeof(Type), typeof(object) });
-            var typeHandlerExpr = Expression.Constant(typeHandler);
-            var typeExpr = Expression.Constant(underlyingType);
-            var objTargetExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, typeExpr, objLocalExpr);
-            blockBodies.Add(Expression.Assign(objLocalExpr, objTargetExpr));
-            typedValueExpr = Expression.Convert(objLocalExpr, targetType);
-            var equalsNullExpr = Expression.Equal(objLocalExpr, Expression.Constant(null));
-            return Expression.Condition(equalsNullExpr, Expression.Default(targetType), typedValueExpr);
-        }
-        if (underlyingType.IsAssignableFrom(fieldType))
-            typedValueExpr = Expression.Convert(objLocalExpr, underlyingType);
-        else if (underlyingType == typeof(char))
-        {
-            if (fieldType == typeof(string))
-            {
-                var strLocalExpr = AssignLocalParameter(typeof(string), Expression.Convert(objLocalExpr, typeof(string)), blockParameters, blockBodies);
-                var lengthExpr = Expression.Property(strLocalExpr, nameof(string.Length));
-                var compareExpr = Expression.GreaterThan(lengthExpr, Expression.Constant(0, typeof(int)));
-                methodInfo = typeof(string).GetProperties(BindingFlags.Instance | BindingFlags.Public)
-                    .Where(p => p.GetIndexParameters().Length > 0 && p.GetIndexParameters()[0].ParameterType == typeof(int))
-                    .Select(p => p.GetGetMethod()).First();
-                var getCharExpr = Expression.Call(strLocalExpr, methodInfo, Expression.Constant(0, typeof(int)));
-                typedValueExpr = Expression.IfThenElse(compareExpr, getCharExpr, Expression.Default(underlyingType));
-            }
-            else throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
-        }
-        else if (underlyingType == typeof(Guid))
-        {
-            if (fieldType != typeof(string) && fieldType != typeof(byte[]))
-                throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
-            typedValueExpr = Expression.New(typeof(Guid).GetConstructor(new Type[] { fieldType }), Expression.Convert(objLocalExpr, fieldType));
-        }
-        else if (underlyingType == typeof(DateTime))
-        {
-            if (fieldType == typeof(long) || fieldType == typeof(ulong))
-                typedValueExpr = Expression.New(underlyingType.GetConstructor(new Type[] { fieldType }), Expression.Convert(objLocalExpr, fieldType));
-            else if (fieldType == typeof(string))
-            {
-                methodInfo = underlyingType.GetMethod(nameof(DateTime.Parse), new Type[] { typeof(string) });
-                typedValueExpr = Expression.Call(methodInfo, Expression.Convert(objLocalExpr, fieldType));
-            }
-            else if (fieldType == typeof(DateOnly))
-            {
-                methodInfo = underlyingType.GetMethod(nameof(DateOnly.ToDateTime), new Type[] { typeof(TimeOnly) });
-                typedValueExpr = Expression.Call(Expression.Convert(objLocalExpr, fieldType), methodInfo, Expression.Constant(TimeOnly.MinValue));
-            }
-            else throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
-        }
-        else if (underlyingType == typeof(DateOnly))
-        {
-            if (fieldType == typeof(string))
-            {
-                methodInfo = underlyingType.GetMethod(nameof(DateOnly.Parse), new Type[] { typeof(string) });
-                typedValueExpr = Expression.Call(methodInfo, Expression.Convert(objLocalExpr, fieldType));
-            }
-            else if (fieldType == typeof(DateTime))
-            {
-                methodInfo = underlyingType.GetMethod(nameof(DateOnly.FromDateTime), new Type[] { typeof(DateTime) });
-                typedValueExpr = Expression.Call(methodInfo, Expression.Convert(objLocalExpr, fieldType));
-            }
-            else throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
-        }
-        else if (underlyingType == typeof(TimeSpan))
-        {
-            if (fieldType == typeof(long))
-                typedValueExpr = Expression.New(underlyingType.GetConstructor(new Type[] { fieldType }), Expression.Convert(objLocalExpr, fieldType));
-            else if (fieldType == typeof(string))
-            {
-                methodInfo = underlyingType.GetMethod(nameof(TimeSpan.Parse), new Type[] { typeof(string) });
-                typedValueExpr = Expression.Call(methodInfo, Expression.Convert(objLocalExpr, fieldType));
-            }
-            else if (fieldType == typeof(TimeOnly))
-            {
-                methodInfo = underlyingType.GetMethod(nameof(TimeOnly.ToTimeSpan));
-                typedValueExpr = Expression.Call(Expression.Convert(objLocalExpr, fieldType), methodInfo);
-            }
-            else throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
-        }
-        else if (underlyingType == typeof(TimeOnly))
-        {
-            if (fieldType == typeof(long))
-                typedValueExpr = Expression.New(underlyingType.GetConstructor(new Type[] { fieldType }), Expression.Convert(objLocalExpr, fieldType));
-            else if (fieldType == typeof(string))
-            {
-                methodInfo = underlyingType.GetMethod(nameof(TimeOnly.Parse), new Type[] { typeof(string) });
-                typedValueExpr = Expression.Call(methodInfo, Expression.Convert(objLocalExpr, fieldType));
-            }
-            else if (fieldType == typeof(DateTime))
-            {
-                methodInfo = underlyingType.GetMethod(nameof(TimeOnly.FromDateTime));
-                typedValueExpr = Expression.Call(methodInfo, Expression.Convert(objLocalExpr, fieldType));
-            }
-            else if (fieldType == typeof(TimeSpan))
-            {
-                methodInfo = underlyingType.GetMethod(nameof(TimeOnly.FromTimeSpan));
-                typedValueExpr = Expression.Call(methodInfo, Expression.Convert(objLocalExpr, fieldType));
-            }
-            else throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
-        }
-        else if (targetType.FullName == "System.Data.Linq.Binary")
-        {
-            methodInfo = typeof(Activator).GetMethod(nameof(Activator.CreateInstance), new Type[] { typeof(Type), typeof(object[]) });
-            typedValueExpr = Expression.Call(methodInfo, Expression.Constant(targetType), Expression.Constant(new object[] { objLocalExpr }));
-            typedValueExpr = Expression.Convert(typedValueExpr, targetType);
-        }
-        else
-        {
-            if (underlyingType.IsEnum)
-            {
-                if (fieldType == typeof(string))
-                {
-                    typedValueExpr = Expression.Convert(objLocalExpr, typeof(string));
-                    methodInfo = typeof(Enum).GetMethod(nameof(Enum.Parse), new Type[] { typeof(Type), typeof(string), typeof(bool) });
-                    var toEnumExpr = Expression.Call(methodInfo, Expression.Constant(underlyingType), typedValueExpr, Expression.Constant(true));
-                    typedValueExpr = Expression.Convert(toEnumExpr, underlyingType);
-                }
-                else if (fieldType == typeof(byte) || fieldType == typeof(sbyte) || fieldType == typeof(short)
-                    || fieldType == typeof(ushort) || fieldType == typeof(int) || fieldType == typeof(uint)
-                    || fieldType == typeof(long) || fieldType == typeof(ulong))
-                {
-                    typedValueExpr = Expression.Convert(objLocalExpr, fieldType);
-                    methodInfo = typeof(Enum).GetMethod(nameof(Enum.ToObject), new Type[] { typeof(Type), fieldType });
-                    var toEnumExpr = Expression.Call(methodInfo, Expression.Constant(underlyingType), typedValueExpr);
-                    typedValueExpr = Expression.Convert(toEnumExpr, underlyingType);
-                }
-                else throw new Exception($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
-            }
-            else
-            {
-                var typeCode = Type.GetTypeCode(underlyingType);
-                string toTypeMethod = null;
-                switch (typeCode)
-                {
-                    case TypeCode.Boolean: toTypeMethod = nameof(Convert.ToBoolean); break;
-                    case TypeCode.Char: toTypeMethod = nameof(Convert.ToChar); break;
-                    case TypeCode.Byte: toTypeMethod = nameof(Convert.ToByte); break;
-                    case TypeCode.SByte: toTypeMethod = nameof(Convert.ToSByte); break;
-                    case TypeCode.Int16: toTypeMethod = nameof(Convert.ToInt16); break;
-                    case TypeCode.UInt16: toTypeMethod = nameof(Convert.ToUInt16); break;
-                    case TypeCode.Int32: toTypeMethod = nameof(Convert.ToInt32); break;
-                    case TypeCode.UInt32: toTypeMethod = nameof(Convert.ToUInt32); break;
-                    case TypeCode.Int64: toTypeMethod = nameof(Convert.ToInt64); break;
-                    case TypeCode.UInt64: toTypeMethod = nameof(Convert.ToUInt64); break;
-                    case TypeCode.Single: toTypeMethod = nameof(Convert.ToSingle); break;
-                    case TypeCode.Double: toTypeMethod = nameof(Convert.ToDouble); break;
-                    case TypeCode.Decimal: toTypeMethod = nameof(Convert.ToDecimal); break;
-                    case TypeCode.DateTime: toTypeMethod = nameof(Convert.ToDateTime); break;
-                    case TypeCode.String: toTypeMethod = nameof(Convert.ToString); break;
-                }
-                if (!string.IsNullOrEmpty(toTypeMethod))
-                {
-                    methodInfo = typeof(Convert).GetMethod(toTypeMethod, new Type[] { typeof(object), typeof(IFormatProvider) });
-                    typedValueExpr = Expression.Call(methodInfo, objLocalExpr, Expression.Constant(CultureInfo.CurrentCulture));
-                }
-                else typedValueExpr = Expression.Convert(Expression.Convert(objLocalExpr, fieldType), underlyingType);
-            }
-        }
-        if (underlyingType.IsValueType && isNullable)
-            typedValueExpr = Expression.Convert(typedValueExpr, targetType);
+        var isNullable = targetType.IsNullableType(out var underlyingType);
+        if (underlyingType == fieldType)
+            return Expression.Convert(readerValueExpr, targetType);
 
-        var isNullExpr = Expression.TypeIs(objLocalExpr, typeof(DBNull));
-        return Expression.Condition(isNullExpr, Expression.Default(targetType), typedValueExpr);
+        if (typeHandler == null)
+            typeHandler = ormProvider.GetTypeHandler(targetType, fieldType, isNullable);
+
+        methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.Parse), new Type[] { typeof(IOrmProvider), typeof(Type), typeof(object) });
+        var typeHandlerExpr = Expression.Constant(typeHandler);
+        var underlyingTypeExpr = Expression.Constant(underlyingType);
+        var targetValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, underlyingTypeExpr, readerValueExpr);
+        blockBodies.Add(Expression.Assign(readerValueExpr, targetValueExpr));
+        return Expression.Convert(readerValueExpr, targetType);
+
+        #region 注释
+        //Expression typedValueExpr = null;
+        //if (underlyingType.IsAssignableFrom(fieldType))
+        //    typedValueExpr = Expression.Convert(readerValueExpr, underlyingType);
+        //else if (underlyingType == typeof(char))
+        //{
+        //    if (fieldType == typeof(string))
+        //    {
+        //        var strLocalExpr = AssignLocalParameter(typeof(string), Expression.Convert(readerValueExpr, typeof(string)), blockParameters, blockBodies);
+        //        var lengthExpr = Expression.Property(strLocalExpr, nameof(string.Length));
+        //        var compareExpr = Expression.GreaterThan(lengthExpr, Expression.Constant(0, typeof(int)));
+        //        methodInfo = typeof(string).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+        //            .Where(p => p.GetIndexParameters().Length > 0 && p.GetIndexParameters()[0].ParameterType == typeof(int))
+        //            .Select(p => p.GetGetMethod()).First();
+        //        var getCharExpr = Expression.Call(strLocalExpr, methodInfo, Expression.Constant(0, typeof(int)));
+        //        typedValueExpr = Expression.IfThenElse(compareExpr, getCharExpr, Expression.Default(underlyingType));
+        //    }
+        //    else throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
+        //}
+        //else if (underlyingType == typeof(Guid))
+        //{
+        //    if (fieldType != typeof(string) && fieldType != typeof(byte[]))
+        //        throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
+        //    typedValueExpr = Expression.New(typeof(Guid).GetConstructor(new Type[] { fieldType }), Expression.Convert(readerValueExpr, fieldType));
+        //}
+        //else if (underlyingType == typeof(DateTime))
+        //{
+        //    if (fieldType == typeof(long) || fieldType == typeof(ulong))
+        //        typedValueExpr = Expression.New(underlyingType.GetConstructor(new Type[] { fieldType }), Expression.Convert(readerValueExpr, fieldType));
+        //    else if (fieldType == typeof(string))
+        //    {
+        //        methodInfo = underlyingType.GetMethod(nameof(DateTime.Parse), new Type[] { typeof(string) });
+        //        typedValueExpr = Expression.Call(methodInfo, Expression.Convert(readerValueExpr, fieldType));
+        //    }
+        //    else if (fieldType == typeof(DateOnly))
+        //    {
+        //        methodInfo = underlyingType.GetMethod(nameof(DateOnly.ToDateTime), new Type[] { typeof(TimeOnly) });
+        //        typedValueExpr = Expression.Call(Expression.Convert(readerValueExpr, fieldType), methodInfo, Expression.Constant(TimeOnly.MinValue));
+        //    }
+        //    else throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
+        //}
+        //else if (underlyingType == typeof(DateOnly))
+        //{
+        //    if (fieldType == typeof(string))
+        //    {
+        //        methodInfo = underlyingType.GetMethod(nameof(DateOnly.Parse), new Type[] { typeof(string) });
+        //        typedValueExpr = Expression.Call(methodInfo, Expression.Convert(readerValueExpr, fieldType));
+        //    }
+        //    else if (fieldType == typeof(DateTime))
+        //    {
+        //        methodInfo = underlyingType.GetMethod(nameof(DateOnly.FromDateTime), new Type[] { typeof(DateTime) });
+        //        typedValueExpr = Expression.Call(methodInfo, Expression.Convert(readerValueExpr, fieldType));
+        //    }
+        //    else throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
+        //}
+        //else if (underlyingType == typeof(TimeSpan))
+        //{
+        //    if (fieldType == typeof(long))
+        //        typedValueExpr = Expression.New(underlyingType.GetConstructor(new Type[] { fieldType }), Expression.Convert(readerValueExpr, fieldType));
+        //    else if (fieldType == typeof(string))
+        //    {
+        //        methodInfo = underlyingType.GetMethod(nameof(TimeSpan.Parse), new Type[] { typeof(string) });
+        //        typedValueExpr = Expression.Call(methodInfo, Expression.Convert(readerValueExpr, fieldType));
+        //    }
+        //    else if (fieldType == typeof(TimeOnly))
+        //    {
+        //        methodInfo = underlyingType.GetMethod(nameof(TimeOnly.ToTimeSpan));
+        //        typedValueExpr = Expression.Call(Expression.Convert(readerValueExpr, fieldType), methodInfo);
+        //    }
+        //    else throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
+        //}
+        //else if (underlyingType == typeof(TimeOnly))
+        //{
+        //    if (fieldType == typeof(long))
+        //        typedValueExpr = Expression.New(underlyingType.GetConstructor(new Type[] { fieldType }), Expression.Convert(readerValueExpr, fieldType));
+        //    else if (fieldType == typeof(string))
+        //    {
+        //        methodInfo = underlyingType.GetMethod(nameof(TimeOnly.Parse), new Type[] { typeof(string) });
+        //        typedValueExpr = Expression.Call(methodInfo, Expression.Convert(readerValueExpr, fieldType));
+        //    }
+        //    else if (fieldType == typeof(DateTime))
+        //    {
+        //        methodInfo = underlyingType.GetMethod(nameof(TimeOnly.FromDateTime));
+        //        typedValueExpr = Expression.Call(methodInfo, Expression.Convert(readerValueExpr, fieldType));
+        //    }
+        //    else if (fieldType == typeof(TimeSpan))
+        //    {
+        //        methodInfo = underlyingType.GetMethod(nameof(TimeOnly.FromTimeSpan));
+        //        typedValueExpr = Expression.Call(methodInfo, Expression.Convert(readerValueExpr, fieldType));
+        //    }
+        //    else throw new NotSupportedException($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
+        //}
+        //else if (targetType.FullName == "System.Data.Linq.Binary")
+        //{
+        //    methodInfo = typeof(Activator).GetMethod(nameof(Activator.CreateInstance), new Type[] { typeof(Type), typeof(object[]) });
+        //    typedValueExpr = Expression.Call(methodInfo, Expression.Constant(targetType), Expression.Constant(new object[] { readerValueExpr }));
+        //    typedValueExpr = Expression.Convert(typedValueExpr, targetType);
+        //}
+        //else
+        //{
+        //    if (underlyingType.IsEnum)
+        //    {
+        //        if (fieldType == typeof(string))
+        //        {
+        //            typedValueExpr = Expression.Convert(readerValueExpr, typeof(string));
+        //            methodInfo = typeof(Enum).GetMethod(nameof(Enum.Parse), new Type[] { typeof(Type), typeof(string), typeof(bool) });
+        //            var toEnumExpr = Expression.Call(methodInfo, Expression.Constant(underlyingType), typedValueExpr, Expression.Constant(true));
+        //            typedValueExpr = Expression.Convert(toEnumExpr, underlyingType);
+        //        }
+        //        else if (fieldType == typeof(byte) || fieldType == typeof(sbyte) || fieldType == typeof(short)
+        //            || fieldType == typeof(ushort) || fieldType == typeof(int) || fieldType == typeof(uint)
+        //            || fieldType == typeof(long) || fieldType == typeof(ulong))
+        //        {
+        //            typedValueExpr = Expression.Convert(readerValueExpr, fieldType);
+        //            methodInfo = typeof(Enum).GetMethod(nameof(Enum.ToObject), new Type[] { typeof(Type), fieldType });
+        //            var toEnumExpr = Expression.Call(methodInfo, Expression.Constant(underlyingType), typedValueExpr);
+        //            typedValueExpr = Expression.Convert(toEnumExpr, underlyingType);
+        //        }
+        //        else throw new Exception($"暂时不支持的类型,FieldType:{fieldType.FullName},TargetType:{targetType.FullName}");
+        //    }
+        //    else
+        //    {
+        //        var typeCode = Type.GetTypeCode(underlyingType);
+        //        string toTypeMethod = null;
+        //        switch (typeCode)
+        //        {
+        //            case TypeCode.Boolean: toTypeMethod = nameof(Convert.ToBoolean); break;
+        //            case TypeCode.Char: toTypeMethod = nameof(Convert.ToChar); break;
+        //            case TypeCode.Byte: toTypeMethod = nameof(Convert.ToByte); break;
+        //            case TypeCode.SByte: toTypeMethod = nameof(Convert.ToSByte); break;
+        //            case TypeCode.Int16: toTypeMethod = nameof(Convert.ToInt16); break;
+        //            case TypeCode.UInt16: toTypeMethod = nameof(Convert.ToUInt16); break;
+        //            case TypeCode.Int32: toTypeMethod = nameof(Convert.ToInt32); break;
+        //            case TypeCode.UInt32: toTypeMethod = nameof(Convert.ToUInt32); break;
+        //            case TypeCode.Int64: toTypeMethod = nameof(Convert.ToInt64); break;
+        //            case TypeCode.UInt64: toTypeMethod = nameof(Convert.ToUInt64); break;
+        //            case TypeCode.Single: toTypeMethod = nameof(Convert.ToSingle); break;
+        //            case TypeCode.Double: toTypeMethod = nameof(Convert.ToDouble); break;
+        //            case TypeCode.Decimal: toTypeMethod = nameof(Convert.ToDecimal); break;
+        //            case TypeCode.DateTime: toTypeMethod = nameof(Convert.ToDateTime); break;
+        //            case TypeCode.String: toTypeMethod = nameof(Convert.ToString); break;
+        //        }
+        //        if (!string.IsNullOrEmpty(toTypeMethod))
+        //        {
+        //            methodInfo = typeof(Convert).GetMethod(toTypeMethod, new Type[] { typeof(object), typeof(IFormatProvider) });
+        //            typedValueExpr = Expression.Call(methodInfo, readerValueExpr, Expression.Constant(CultureInfo.CurrentCulture));
+        //        }
+        //        else typedValueExpr = Expression.Convert(Expression.Convert(readerValueExpr, fieldType), underlyingType);
+        //    }
+        //}
+        //if (underlyingType.IsValueType && isNullable)
+        //    typedValueExpr = Expression.Convert(typedValueExpr, targetType);
+
+        //var isNullExpr = Expression.TypeIs(readerValueExpr, typeof(DBNull));
+        //return Expression.Condition(isNullExpr, Expression.Default(targetType), typedValueExpr);
+        #endregion
     }
     private static EntityBuildInfo NewBuildInfo(Type targetType, MemberInfo fromMember = null, EntityBuildInfo parent = null)
     {
@@ -732,19 +703,6 @@ public static class Extensions
             FromMember = fromMember,
             Parent = parent
         };
-    }
-    private static Delegate CreateReaderValueConverter(Type targetType, Type fieldType)
-    {
-        var blockParameters = new List<ParameterExpression>();
-        var blockBodies = new List<Expression>();
-        var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
-        var indexExpr = Expression.Parameter(typeof(int), "index");
-
-        var resultLabelExpr = Expression.Label(targetType);
-        var readerValueExpr = GetReaderValue(readerExpr, indexExpr, targetType, fieldType, blockParameters, blockBodies);
-        blockBodies.Add(Expression.Return(resultLabelExpr, readerValueExpr));
-        blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(targetType)));
-        return Expression.Lambda(Expression.Block(blockParameters, blockBodies), readerExpr, indexExpr).Compile();
     }
     private static ParameterExpression AssignLocalParameter(Type type, Expression valueExpr, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
     {

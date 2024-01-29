@@ -57,7 +57,7 @@ public class SqlSegment
     /// </summary>
     public bool IsFieldType { get; set; }
     /// <summary>
-    /// 当强制转换时，此字段值为转换后的类型，当枚举类型时，此字段值为枚举类型，其他场景为null
+    /// 当强制转换时，此字段值为转换后的类型，除此之外就是MemberMapper.UnderlyingType
     /// </summary>
     public Type ExpectType { get; set; }
     /// <summary>
@@ -71,11 +71,12 @@ public class SqlSegment
     /// 当前是成员访问时，才有值，和FromMember是同一个栏位，是Mapper
     /// </summary>
     public MemberMap MemberMapper { get; set; }
+    public object NativeDbType { get; set; }
+    public ITypeHandler TypeHandler { get; set; }
     public object Value { get; set; }
     public Expression Expression { get; set; }
     public Expression OriginalExpression { get; set; }
     public bool HasDeferred => this.DeferredExprs != null && this.DeferredExprs.Count > 0;
-    public bool IsNeedSql { get; set; }
     /// <summary>
     /// 只改变值
     /// </summary>

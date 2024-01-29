@@ -36,29 +36,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     public abstract Type MapDefaultType(object nativeDbType);
     public abstract string CastTo(Type type, object value);
     public virtual string GetIdentitySql(Type entityType) => ";SELECT @@IDENTITY";
-    public virtual string GetQuotedValue(Type expectType, object value)
-    {
-        if (value == null) return "NULL";
-        if (expectType == typeof(bool) && value is bool bValue)
-            return bValue ? "1" : "0";
-        if (expectType == typeof(string) && value is string strValue)
-            return $"'{strValue.Replace("'", @"\'")}'";
-        if (expectType == typeof(DateTime) && value is DateTime dateTime)
-            return $"'{dateTime:yyyy-MM-dd HH:mm:ss.fffffff}'";
-        if (expectType == typeof(TimeSpan) && value is TimeSpan timeSpan)
-            return $"'{timeSpan.ToString("hh\\:mm\\:ss\\.fffffff")}'";
-        if (expectType == typeof(TimeOnly) && value is TimeOnly timeOnly)
-            return $"'{timeOnly.ToString("hh\\:mm\\:ss\\.fffffff")}'";
-        if (value is SqlSegment sqlSegment)
-        {
-            if (sqlSegment == SqlSegment.Null || !sqlSegment.IsConstant)
-                return sqlSegment.ToString();
-            //此处不应出现变量的情况，应该在此之前把变量都已经变成了参数
-            if (sqlSegment.IsVariable) throw new Exception("此处不应出现变量的情况，先调用ISqlVisitor.Change方法把变量都变成参数后，再调用本方法");
-            return this.GetQuotedValue(sqlSegment.Value);
-        }
-        return value.ToString();
-    }
+    public abstract string GetQuotedValue(Type expectType, object value);
     public virtual string GetBinaryOperator(ExpressionType nodeType) =>
         nodeType switch
         {

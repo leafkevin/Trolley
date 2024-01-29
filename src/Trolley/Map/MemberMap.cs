@@ -9,11 +9,12 @@ public class MemberMap
     public MemberInfo Member { get; set; }
     public string MemberName { get; set; }
     public Type MemberType { get; set; }
+    public Type UnderlyingType { get; set; }
     public bool IsKey { get; set; }
     public bool IsAutoIncrement { get; set; }
     public string FieldName { get; set; }
     public object NativeDbType { get; set; }
-    public Type DbFieldType { get; set; }
+    //public Type DbFieldType { get; set; }
     public int Length { get; set; }
     public bool IsIgnore { get; set; }
     public bool IsRequired { get; set; }
@@ -48,6 +49,7 @@ public class MemberMap
         this.FieldName = $"{fieldPrefix}{memberInfo.Name}";
         this.MemberName = memberInfo.Name;
         this.MemberType = memberInfo.GetMemberType();
+        this.UnderlyingType = Nullable.GetUnderlyingType(this.MemberType) ?? this.MemberType;
     }
     public MemberMap Clone(EntityMap parent, string fieldPrefix, MemberInfo memberInfo)
     {
@@ -58,6 +60,7 @@ public class MemberMap
         result.MemberName = memberInfo.Name;
         result.MemberType = memberInfo.GetMemberType();
         result.NativeDbType = this.NativeDbType;
+        result.UnderlyingType = this.UnderlyingType;
         result.TypeHandler = this.TypeHandler;
         return result;
     }

@@ -68,7 +68,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             {
                 if (entityType.IsEntityType(out _))
                     result = reader.To<TResult>(this.DbKey, this.OrmProvider, this.MapProvider);
-                else result = reader.To<TResult>();
+                else result = reader.To<TResult>(this.OrmProvider);
             }
         }
         catch (Exception ex)
@@ -104,7 +104,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             {
                 if (entityType.IsEntityType(out _))
                     result = reader.To<TResult>(this.DbKey, this.OrmProvider, this.MapProvider);
-                else result = reader.To<TResult>();
+                else result = reader.To<TResult>(this.OrmProvider);
             }
         }
         catch (Exception ex)
@@ -142,9 +142,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             var entityType = typeof(TResult);
             if (reader.Read())
             {
-                if (readerFields.Count == 1 && readerFields[0].FieldType == ReaderFieldType.Field)
-                    result = reader.To<TResult>();
-                else result = reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields);
+                if (entityType.IsEntityType(out _))
+                    result = reader.To<TResult>(this.DbKey, this.OrmProvider, this.MapProvider);
+                else result = reader.To<TResult>(this.OrmProvider);
             }
             reader.Dispose();
 
@@ -192,9 +192,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             var entityType = typeof(TResult);
             if (await reader.ReadAsync(cancellationToken))
             {
-                if (readerFields.Count == 1 && readerFields[0].FieldType == ReaderFieldType.Field)
-                    result = reader.To<TResult>();
-                else result = reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields);
+                if (entityType.IsEntityType(out _))
+                    result = reader.To<TResult>(this.DbKey, this.OrmProvider, this.MapProvider);
+                else result = reader.To<TResult>(this.OrmProvider);
             }
             await reader.DisposeAsync();
 
@@ -253,7 +253,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             {
                 while (reader.Read())
                 {
-                    result.Add(reader.To<TResult>());
+                    result.Add(reader.To<TResult>(this.OrmProvider));
                 }
             }
         }
@@ -296,7 +296,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             {
                 while (await reader.ReadAsync(cancellationToken))
                 {
-                    result.Add(reader.To<TResult>());
+                    result.Add(reader.To<TResult>(this.OrmProvider));
                 }
             }
         }
@@ -334,18 +334,18 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             reader = command.ExecuteReader(behavior);
 
             var entityType = typeof(TResult);
-            if (readerFields.Count == 1 && readerFields[0].FieldType == ReaderFieldType.Field)
+            if (entityType.IsEntityType(out _))
             {
                 while (reader.Read())
                 {
-                    result.Add(reader.To<TResult>());
+                    result.Add(reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields));
                 }
             }
             else
             {
                 while (reader.Read())
                 {
-                    result.Add(reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields));
+                    result.Add(reader.To<TResult>(this.OrmProvider));
                 }
             }
             reader.Dispose();
@@ -393,18 +393,18 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
 
             var entityType = typeof(TResult);
-            if (readerFields.Count == 1 && readerFields[0].FieldType == ReaderFieldType.Field)
+            if (entityType.IsEntityType(out _))
             {
                 while (reader.Read())
                 {
-                    result.Add(reader.To<TResult>());
+                    result.Add(reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields));
                 }
             }
             else
             {
                 while (reader.Read())
                 {
-                    result.Add(reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields));
+                    result.Add(reader.To<TResult>(this.OrmProvider));
                 }
             }
             await reader.DisposeAsync();
@@ -454,24 +454,24 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             this.Open();
             var behavior = CommandBehavior.SequentialAccess;
             reader = command.ExecuteReader(behavior);
-            if (reader.Read()) result.TotalCount = reader.To<int>();
+            if (reader.Read()) result.TotalCount = reader.To<int>(this.OrmProvider);
             result.PageIndex = pageIndex;
             result.PageSize = pageSize;
 
             reader.NextResult();
             var entityType = typeof(TResult);
-            if (readerFields.Count == 1 && readerFields[0].FieldType == ReaderFieldType.Field)
+            if (entityType.IsEntityType(out _))
             {
                 while (reader.Read())
                 {
-                    result.Data.Add(reader.To<TResult>());
+                    result.Data.Add(reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields));
                 }
             }
             else
             {
                 while (reader.Read())
                 {
-                    result.Data.Add(reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields));
+                    result.Data.Add(reader.To<TResult>(this.OrmProvider));
                 }
             }
             reader.Dispose();
@@ -517,24 +517,24 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess;
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-            if (await reader.ReadAsync()) result.TotalCount = reader.To<int>();
+            if (await reader.ReadAsync()) result.TotalCount = reader.To<int>(this.OrmProvider);
             result.PageIndex = pageIndex;
             result.PageSize = pageSize;
 
             await reader.NextResultAsync(cancellationToken);
             var entityType = typeof(TResult);
-            if (readerFields.Count == 1 && readerFields[0].FieldType == ReaderFieldType.Field)
+            if (entityType.IsEntityType(out _))
             {
                 while (reader.Read())
                 {
-                    result.Data.Add(reader.To<TResult>());
+                    result.Data.Add(reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields));
                 }
             }
             else
             {
                 while (reader.Read())
                 {
-                    result.Data.Add(reader.To<TResult>(this.DbKey, this.OrmProvider, readerFields));
+                    result.Data.Add(reader.To<TResult>(this.OrmProvider));
                 }
             }
             await reader.DisposeAsync();
@@ -659,7 +659,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             this.Open();
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = command.ExecuteReader(behavior);
-            if (reader.Read()) result = reader.To<TResult>();
+            if (reader.Read()) result = reader.To<TResult>(this.OrmProvider);
         }
         catch (Exception ex)
         {
@@ -689,7 +689,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             if (await reader.ReadAsync(cancellationToken))
-                result = reader.To<TResult>();
+                result = reader.To<TResult>(this.OrmProvider);
         }
         catch (Exception ex)
         {

@@ -55,17 +55,15 @@ public class RepositoryHelper
         Expression nativeDbTypeExpr = Expression.Constant(memberMapper.NativeDbType);
         if (nativeDbTypeExpr.Type != typeof(object))
             nativeDbTypeExpr = Expression.Convert(nativeDbTypeExpr, typeof(object));
-        Expression addTypedParameterExpr = null;
-
+        if (memberMapper.TypeHandler == null)
+            throw new Exception($"{memberMapper.Parent.EntityType.FullName}类成员{memberMapper.MemberName}TypeHandler不能为null");
         if (memberMapper.TypeHandler != null)
         {
             var typeHandlerExpr = Expression.Constant(memberMapper.TypeHandler);
             methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
             if (fieldValueExpr.Type != typeof(object))
                 fieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
-            if (!memberMapper.MemberType.IsEnumType(out var expectType, out _))
-                expectType = memberMapper.DbFieldType;
-            fieldValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, Expression.Constant(expectType), fieldValueExpr);
+            fieldValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, Expression.Constant(memberMapper.UnderlyingType), fieldValueExpr);
             typedParameterExpr = Expression.Call(ormProviderExpr, createParameterMethodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
             blockBodies.Add(Expression.Call(dbParametersExpr, addMethodInfo, typedParameterExpr));
             //if (!memberMapper.IsRequired)
@@ -78,158 +76,158 @@ public class RepositoryHelper
             //else blockBodies.Add(Expression.Call(dbParametersExpr, addMethodInfo, addTypedParameterExpr));
             return;
         }
+        //Expression addTypedParameterExpr = null;
+        //Expression addParameterExpr = null;
+        //if (memberMapper.IsRequired)
+        //{
+        //    fieldValueExpr = GetTypedFieldValue(fieldValueType, fieldValueExpr, memberMapper, blockParameters, blockBodies);
+        //    typedParameterExpr = Expression.Call(ormProviderExpr, createParameterMethodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
+        //    addParameterExpr = Expression.Call(dbParametersExpr, addMethodInfo, typedParameterExpr);
+        //}
+        //else
+        //{
+        //    if (fieldValueType.IsNullableType(out _) || fieldValueType.IsClass)
+        //    {
+        //        if (fieldValueType == typeof(DBNull))
+        //        {
+        //            fieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
+        //            var dbNullExpr = Expression.Call(ormProviderExpr, createParameterMethodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
+        //            addParameterExpr = Expression.Call(dbParametersExpr, addMethodInfo, dbNullExpr);
+        //        }
+        //        else
+        //        {
+        //            var equalsExpr = Expression.Equal(fieldValueExpr, Expression.Constant(null));
+        //            var nullExpr = Expression.Call(ormProviderExpr, createParameterMethodInfo, parameterNameExpr, nativeDbTypeExpr, Expression.Constant(DBNull.Value));
+        //            var addNullExpr = Expression.Call(dbParametersExpr, addMethodInfo, nullExpr);
 
-        Expression addParameterExpr = null;
-        if (memberMapper.IsRequired)
-        {
-            fieldValueExpr = GetTypedFieldValue(fieldValueType, fieldValueExpr, memberMapper, blockParameters, blockBodies);
-            typedParameterExpr = Expression.Call(ormProviderExpr, createParameterMethodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
-            addParameterExpr = Expression.Call(dbParametersExpr, addMethodInfo, typedParameterExpr);
-        }
-        else
-        {
-            if (fieldValueType.IsNullableType(out _) || fieldValueType.IsClass)
-            {
-                if (fieldValueType == typeof(DBNull))
-                {
-                    fieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
-                    var dbNullExpr = Expression.Call(ormProviderExpr, createParameterMethodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
-                    addParameterExpr = Expression.Call(dbParametersExpr, addMethodInfo, dbNullExpr);
-                }
-                else
-                {
-                    var equalsExpr = Expression.Equal(fieldValueExpr, Expression.Constant(null));
-                    var nullExpr = Expression.Call(ormProviderExpr, createParameterMethodInfo, parameterNameExpr, nativeDbTypeExpr, Expression.Constant(DBNull.Value));
-                    var addNullExpr = Expression.Call(dbParametersExpr, addMethodInfo, nullExpr);
+        //            fieldValueExpr = GetTypedFieldValue(fieldValueType, fieldValueExpr, memberMapper, blockParameters, blockBodies);
+        //            typedParameterExpr = Expression.Call(ormProviderExpr, createParameterMethodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
+        //            addTypedParameterExpr = Expression.Call(dbParametersExpr, addMethodInfo, typedParameterExpr);
 
-                    fieldValueExpr = GetTypedFieldValue(fieldValueType, fieldValueExpr, memberMapper, blockParameters, blockBodies);
-                    typedParameterExpr = Expression.Call(ormProviderExpr, createParameterMethodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
-                    addTypedParameterExpr = Expression.Call(dbParametersExpr, addMethodInfo, typedParameterExpr);
+        //            addParameterExpr = Expression.IfThenElse(equalsExpr, addNullExpr, addTypedParameterExpr);
+        //        }
+        //    }
+        //    else
+        //    {
+        //        fieldValueExpr = GetTypedFieldValue(fieldValueType, fieldValueExpr, memberMapper, blockParameters, blockBodies);
+        //        typedParameterExpr = Expression.Call(ormProviderExpr, createParameterMethodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
+        //        addTypedParameterExpr = Expression.Call(dbParametersExpr, addMethodInfo, typedParameterExpr);
 
-                    addParameterExpr = Expression.IfThenElse(equalsExpr, addNullExpr, addTypedParameterExpr);
-                }
-            }
-            else
-            {
-                fieldValueExpr = GetTypedFieldValue(fieldValueType, fieldValueExpr, memberMapper, blockParameters, blockBodies);
-                typedParameterExpr = Expression.Call(ormProviderExpr, createParameterMethodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
-                addTypedParameterExpr = Expression.Call(dbParametersExpr, addMethodInfo, typedParameterExpr);
-
-                addParameterExpr = addTypedParameterExpr;
-            }
-        }
-        blockBodies.Add(addParameterExpr);
+        //        addParameterExpr = addTypedParameterExpr;
+        //    }
+        //}
+        //blockBodies.Add(addParameterExpr);
     }
-    private static Expression GetTypedFieldValue(Type fieldValueType, Expression fieldValueExpr, MemberMap memberMapper, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
-    {
-        var typedFieldValueExpr = fieldValueExpr;
-        MethodInfo methodInfo = null;
+    //private static Expression GetTypedFieldValue(Type fieldValueType, Expression fieldValueExpr, MemberMap memberMapper, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
+    //{
+    //    var typedFieldValueExpr = fieldValueExpr;
+    //    MethodInfo methodInfo = null;
 
-        if (fieldValueType == typeof(DBNull))
-            throw new ArgumentNullException($"表{memberMapper.Parent.TableName}的字段{memberMapper.FieldName}配置为必输字段，不能为DBNull.Value");
+    //    if (fieldValueType == typeof(DBNull))
+    //        throw new ArgumentNullException($"表{memberMapper.Parent.TableName}的字段{memberMapper.FieldName}配置为必输字段，不能为DBNull.Value");
 
-        //数据库类型和当前值类型不一致
-        if (memberMapper.DbFieldType != fieldValueType)
-        {
-            bool isNullableType = memberMapper.MemberType.IsNullableType(out var underlyingType);
-            if (underlyingType.IsEnumType(out _, out var enumUnderlyingType))
-            {
-                //数据库类型是字符串
-                if (memberMapper.DbFieldType == typeof(string))
-                {
-                    //枚举类型或是数字类型
-                    if (!fieldValueType.IsEnum)
-                    {
-                        //数字类型，可以转换为对应的enumUnderlyingType
-                        if (fieldValueType != enumUnderlyingType)
-                            typedFieldValueExpr = Expression.Convert(typedFieldValueExpr, enumUnderlyingType);
-                        methodInfo = typeof(Enum).GetMethod(nameof(Enum.ToObject), new Type[] { typeof(Type), enumUnderlyingType });
-                        typedFieldValueExpr = Expression.Call(methodInfo, Expression.Constant(underlyingType), typedFieldValueExpr);
-                        typedFieldValueExpr = Expression.Convert(typedFieldValueExpr, underlyingType);
-                    }
-                    //把枚举类型再变成字符串类型
-                    typedFieldValueExpr = Expression.Call(typedFieldValueExpr, typeof(Enum).GetMethod(nameof(Enum.ToString), Type.EmptyTypes));
-                }
-                //数据库类型是数字类型
-                else
-                {
-                    //枚举类型或是数字类型
-                    if (fieldValueType.IsEnum)
-                        typedFieldValueExpr = Expression.Convert(typedFieldValueExpr, enumUnderlyingType);
-                    if (memberMapper.DbFieldType != enumUnderlyingType)
-                        typedFieldValueExpr = Expression.Convert(typedFieldValueExpr, memberMapper.DbFieldType);
-                }
-            }
-            else if (underlyingType == typeof(Guid))
-            {
-                if (memberMapper.DbFieldType == typeof(string))
-                    typedFieldValueExpr = Expression.Call(typedFieldValueExpr, typeof(Guid).GetMethod(nameof(Guid.ToString), Type.EmptyTypes));
-                else if (memberMapper.DbFieldType == typeof(byte[]))
-                    typedFieldValueExpr = Expression.Call(typedFieldValueExpr, typeof(Guid).GetMethod(nameof(Guid.ToByteArray), Type.EmptyTypes));
-            }
-            else if (underlyingType == typeof(DateTime))
-            {
-                if (memberMapper.DbFieldType == typeof(long))
-                    typedFieldValueExpr = Expression.Property(typedFieldValueExpr, nameof(DateTime.Ticks));
-                if (memberMapper.DbFieldType == typeof(string))
-                {
-                    methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.ToString), new Type[] { typeof(string) });
-                    typedFieldValueExpr = Expression.Call(typedFieldValueExpr, methodInfo, Expression.Constant("yyyy-MM-dd HH:mm:ss.fffffff"));
-                }
-            }
-            else if (underlyingType == typeof(DateOnly))
-            {
-                if (memberMapper.DbFieldType == typeof(string))
-                {
-                    methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.ToString), new Type[] { typeof(string) });
-                    typedFieldValueExpr = Expression.Call(typedFieldValueExpr, methodInfo, Expression.Constant("yyyy-MM-dd"));
-                }
-            }
-            else if (underlyingType == typeof(TimeSpan))
-            {
-                if (memberMapper.DbFieldType == typeof(long))
-                    typedFieldValueExpr = Expression.Property(typedFieldValueExpr, nameof(TimeSpan.Ticks));
-                if (memberMapper.DbFieldType == typeof(string))
-                {
-                    methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.ToString), new Type[] { typeof(string) });
-                    var greaterThanExpr = Expression.GreaterThanOrEqual(typedFieldValueExpr, Expression.Constant(1));
-                    var ifExpr = Expression.Call(typedFieldValueExpr, methodInfo, Expression.Constant("d\\.hh\\:mm\\:ss\\.fffffff"));
-                    var elseExpr = Expression.Call(typedFieldValueExpr, methodInfo, Expression.Constant("hh\\:mm\\:ss\\.fffffff"));
+    //    //数据库类型和当前值类型不一致
+    //    if (memberMapper.DbFieldType != fieldValueType)
+    //    {
+    //        bool isNullableType = memberMapper.MemberType.IsNullableType(out var underlyingType);
+    //        if (underlyingType.IsEnumType(out _, out var enumUnderlyingType))
+    //        {
+    //            //数据库类型是字符串
+    //            if (memberMapper.DbFieldType == typeof(string))
+    //            {
+    //                //枚举类型或是数字类型
+    //                if (!fieldValueType.IsEnum)
+    //                {
+    //                    //数字类型，可以转换为对应的enumUnderlyingType
+    //                    if (fieldValueType != enumUnderlyingType)
+    //                        typedFieldValueExpr = Expression.Convert(typedFieldValueExpr, enumUnderlyingType);
+    //                    methodInfo = typeof(Enum).GetMethod(nameof(Enum.ToObject), new Type[] { typeof(Type), enumUnderlyingType });
+    //                    typedFieldValueExpr = Expression.Call(methodInfo, Expression.Constant(underlyingType), typedFieldValueExpr);
+    //                    typedFieldValueExpr = Expression.Convert(typedFieldValueExpr, underlyingType);
+    //                }
+    //                //把枚举类型再变成字符串类型
+    //                typedFieldValueExpr = Expression.Call(typedFieldValueExpr, typeof(Enum).GetMethod(nameof(Enum.ToString), Type.EmptyTypes));
+    //            }
+    //            //数据库类型是数字类型
+    //            else
+    //            {
+    //                //枚举类型或是数字类型
+    //                if (fieldValueType.IsEnum)
+    //                    typedFieldValueExpr = Expression.Convert(typedFieldValueExpr, enumUnderlyingType);
+    //                if (memberMapper.DbFieldType != enumUnderlyingType)
+    //                    typedFieldValueExpr = Expression.Convert(typedFieldValueExpr, memberMapper.DbFieldType);
+    //            }
+    //        }
+    //        else if (underlyingType == typeof(Guid))
+    //        {
+    //            if (memberMapper.DbFieldType == typeof(string))
+    //                typedFieldValueExpr = Expression.Call(typedFieldValueExpr, typeof(Guid).GetMethod(nameof(Guid.ToString), Type.EmptyTypes));
+    //            else if (memberMapper.DbFieldType == typeof(byte[]))
+    //                typedFieldValueExpr = Expression.Call(typedFieldValueExpr, typeof(Guid).GetMethod(nameof(Guid.ToByteArray), Type.EmptyTypes));
+    //        }
+    //        else if (underlyingType == typeof(DateTime))
+    //        {
+    //            if (memberMapper.DbFieldType == typeof(long))
+    //                typedFieldValueExpr = Expression.Property(typedFieldValueExpr, nameof(DateTime.Ticks));
+    //            if (memberMapper.DbFieldType == typeof(string))
+    //            {
+    //                methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.ToString), new Type[] { typeof(string) });
+    //                typedFieldValueExpr = Expression.Call(typedFieldValueExpr, methodInfo, Expression.Constant("yyyy-MM-dd HH:mm:ss.fffffff"));
+    //            }
+    //        }
+    //        else if (underlyingType == typeof(DateOnly))
+    //        {
+    //            if (memberMapper.DbFieldType == typeof(string))
+    //            {
+    //                methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.ToString), new Type[] { typeof(string) });
+    //                typedFieldValueExpr = Expression.Call(typedFieldValueExpr, methodInfo, Expression.Constant("yyyy-MM-dd"));
+    //            }
+    //        }
+    //        else if (underlyingType == typeof(TimeSpan))
+    //        {
+    //            if (memberMapper.DbFieldType == typeof(long))
+    //                typedFieldValueExpr = Expression.Property(typedFieldValueExpr, nameof(TimeSpan.Ticks));
+    //            if (memberMapper.DbFieldType == typeof(string))
+    //            {
+    //                methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.ToString), new Type[] { typeof(string) });
+    //                var greaterThanExpr = Expression.GreaterThanOrEqual(typedFieldValueExpr, Expression.Constant(1));
+    //                var ifExpr = Expression.Call(typedFieldValueExpr, methodInfo, Expression.Constant("d\\.hh\\:mm\\:ss\\.fffffff"));
+    //                var elseExpr = Expression.Call(typedFieldValueExpr, methodInfo, Expression.Constant("hh\\:mm\\:ss\\.fffffff"));
 
-                    var localVariable = Expression.Variable(typeof(string), $"str{memberMapper.MemberName}");
-                    blockParameters.Add(localVariable);
-                    var assignIfExpr = Expression.Assign(localVariable, ifExpr);
-                    var assignElseExpr = Expression.Assign(localVariable, elseExpr);
-                    blockBodies.Add(Expression.IfThenElse(greaterThanExpr, assignIfExpr, assignElseExpr));
-                    typedFieldValueExpr = localVariable;
-                }
-            }
-            else if (underlyingType == typeof(TimeOnly))
-            {
-                if (memberMapper.DbFieldType == typeof(long))
-                    typedFieldValueExpr = Expression.Property(typedFieldValueExpr, nameof(TimeOnly.Ticks));
-                if (memberMapper.DbFieldType == typeof(string))
-                {
-                    methodInfo = typeof(TimeOnly).GetMethod(nameof(TimeOnly.ToString), new Type[] { typeof(string) });
-                    typedFieldValueExpr = Expression.Call(typedFieldValueExpr, methodInfo, Expression.Constant("hh\\:mm\\:ss\\.fffffff"));
-                }
-            }
-            else
-            {
-                methodInfo = typeof(Convert).GetMethod(nameof(Convert.ChangeType), new Type[] { typeof(Object), typeof(Type) });
-                if (fieldValueType != typeof(object))
-                    typedFieldValueExpr = Expression.Convert(typedFieldValueExpr, typeof(object));
-                typedFieldValueExpr = Expression.Call(methodInfo, typedFieldValueExpr, Expression.Constant(memberMapper.DbFieldType));
-            }
-            typedFieldValueExpr = Expression.Convert(typedFieldValueExpr, typeof(object));
-        }
-        else
-        {
-            if (fieldValueType != typeof(object))
-                typedFieldValueExpr = Expression.Convert(typedFieldValueExpr, typeof(object));
-        }
-        return typedFieldValueExpr;
-    }
+    //                var localVariable = Expression.Variable(typeof(string), $"str{memberMapper.MemberName}");
+    //                blockParameters.Add(localVariable);
+    //                var assignIfExpr = Expression.Assign(localVariable, ifExpr);
+    //                var assignElseExpr = Expression.Assign(localVariable, elseExpr);
+    //                blockBodies.Add(Expression.IfThenElse(greaterThanExpr, assignIfExpr, assignElseExpr));
+    //                typedFieldValueExpr = localVariable;
+    //            }
+    //        }
+    //        else if (underlyingType == typeof(TimeOnly))
+    //        {
+    //            if (memberMapper.DbFieldType == typeof(long))
+    //                typedFieldValueExpr = Expression.Property(typedFieldValueExpr, nameof(TimeOnly.Ticks));
+    //            if (memberMapper.DbFieldType == typeof(string))
+    //            {
+    //                methodInfo = typeof(TimeOnly).GetMethod(nameof(TimeOnly.ToString), new Type[] { typeof(string) });
+    //                typedFieldValueExpr = Expression.Call(typedFieldValueExpr, methodInfo, Expression.Constant("hh\\:mm\\:ss\\.fffffff"));
+    //            }
+    //        }
+    //        else
+    //        {
+    //            methodInfo = typeof(Convert).GetMethod(nameof(Convert.ChangeType), new Type[] { typeof(Object), typeof(Type) });
+    //            if (fieldValueType != typeof(object))
+    //                typedFieldValueExpr = Expression.Convert(typedFieldValueExpr, typeof(object));
+    //            typedFieldValueExpr = Expression.Call(methodInfo, typedFieldValueExpr, Expression.Constant(memberMapper.DbFieldType));
+    //        }
+    //        typedFieldValueExpr = Expression.Convert(typedFieldValueExpr, typeof(object));
+    //    }
+    //    else
+    //    {
+    //        if (fieldValueType != typeof(object))
+    //            typedFieldValueExpr = Expression.Convert(typedFieldValueExpr, typeof(object));
+    //    }
+    //    return typedFieldValueExpr;
+    //}
     public static void AddValueParameter(Expression dbParametersExpr, Expression ormProviderExpr,
         Expression parameterNameExpr, Expression parameterValueExpr, List<Expression> blockBodies)
     {
@@ -408,10 +406,18 @@ public class RepositoryHelper
                 loopBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant("=")));
                 loopBodies.Add(Expression.Call(builderExpr, appendMethodInfo, parameterNameExpr));
 
-                //ormProvider.AddDbParameter(dbKey, dbParameters, memberMapper, parameterName, fieldValue);
-                methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.AddDbParameter));
-                loopBodies.Add(Expression.Call(methodInfo, ormProviderExpr, Expression.Constant(dbKey),
-                    dbParametersExpr, memberMapperExpr, parameterNameExpr, fieldValueExpr));
+                //var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, memberMapper.UnderlyingType, fieldValue);
+                var underlyingTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.UnderlyingType));
+                var nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
+                var typeHandlerExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler));
+                methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
+                var dbFieldValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, underlyingTypeExpr, fieldValueExpr);
+
+                //dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
+                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });
+                var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, nativeDbTypeExpr, dbFieldValueExpr);
+                methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add), new Type[] { typeof(object) });
+                blockBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
 
                 //index++;
                 loopBodies.Add(Expression.AddAssign(indexExpr, Expression.Constant(1)));
@@ -813,10 +819,18 @@ public class RepositoryHelper
             //builder.Append(parameterName);
             loopBodies.Add(Expression.Call(builderExpr, appendMethodInfo, parameterNameExpr));
 
-            //ormProvider.AddDbParameter(dbKey, dbParameters, memberMapper, parameterName, fieldValue);
-            methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.AddDbParameter));
-            loopBodies.Add(Expression.Call(methodInfo, ormProviderExpr, Expression.Constant(dbKey),
-                dbParametersExpr, memberMapperExpr, parameterNameExpr, fieldValueExpr));
+            //var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, memberMapper.UnderlyingType, fieldValue);
+            var underlyingTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.UnderlyingType));
+            var nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
+            var typeHandlerExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler));
+            methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
+            var dbFieldValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, underlyingTypeExpr, fieldValueExpr);
+
+            //dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
+            methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });
+            var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, nativeDbTypeExpr, dbFieldValueExpr);
+            methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add), new Type[] { typeof(object) });
+            blockBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
 
             //index++;
             loopBodies.Add(Expression.AddAssign(indexExpr, Expression.Constant(1)));
@@ -1328,20 +1342,42 @@ public class RepositoryHelper
             if (isInsertOrUpdate)
             {
                 //if(!dbParameters.Contains(parameterName))
-                //  ormProvider.AddDbParameter(dbKey, dbParameters, memberMapper, parameterName, fieldValue);
+                //{
+                //  var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, memberMapper.UnderlyingType, fieldValue);
+                //  dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
+                //}
+
+                //var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, memberMapper.UnderlyingType, fieldValue);
+                var underlyingTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.UnderlyingType));
+                var nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
+                var typeHandlerExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler));
+                methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
+                var dbFieldValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, underlyingTypeExpr, fieldValueExpr);
+
+                //dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
+                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });
+                var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, nativeDbTypeExpr, dbFieldValueExpr);
+                methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add), new Type[] { typeof(object) });
+                var addParameterExpr = Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr);
+
                 methodInfo = typeof(IDataParameterCollection).GetMethod(nameof(IDataParameterCollection.Contains));
                 var notContainsExpr = Expression.IsFalse(Expression.Call(dbParametersExpr, methodInfo, parameterNameExpr));
-                methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.AddDbParameter));
-                var addParameterExpr = Expression.Call(methodInfo, ormProviderExpr, Expression.Constant(dbKey),
-                     dbParametersExpr, memberMapperExpr, parameterNameExpr, fieldValueExpr);
                 loopBodies.Add(Expression.IfThen(notContainsExpr, addParameterExpr));
             }
             else
             {
-                //ormProvider.AddDbParameter(dbKey, dbParameters, memberMapper, parameterName, fieldValue);
-                methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.AddDbParameter));
-                loopBodies.Add(Expression.Call(methodInfo, ormProviderExpr, Expression.Constant(dbKey),
-                    dbParametersExpr, memberMapperExpr, parameterNameExpr, fieldValueExpr));
+                //var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, memberMapper.UnderlyingType, fieldValue);
+                var underlyingTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.UnderlyingType));
+                var nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
+                var typeHandlerExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler));
+                methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
+                var dbFieldValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, underlyingTypeExpr, fieldValueExpr);
+
+                //dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
+                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });
+                var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, nativeDbTypeExpr, dbFieldValueExpr);
+                methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add), new Type[] { typeof(object) });
+                loopBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
             }
             //index++;
             loopBodies.Add(Expression.AddAssign(indexExpr, Expression.Constant(1)));
@@ -1398,14 +1434,26 @@ public class RepositoryHelper
                 if (isInsertOrUpdate)
                 {
                     //if(!dbParameters.Contains(parameterName))
-                    //  ormProvider.AddDbParameter(dbKey, dbParameters, memberMapper, parameterName, fieldValue);
+                    //{
+                    //  var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, memberMapper.UnderlyingType, fieldValue);
+                    //  dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
+                    //}
+
+                    //var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, memberMapper.UnderlyingType, fieldValue);
+                    var underlyingTypeExpr = Expression.Constant(memberMapper.UnderlyingType);
+                    var nativeDbTypeExpr = Expression.Constant(memberMapper.NativeDbType);
+                    var typeHandlerExpr = Expression.Constant(memberMapper.TypeHandler);
+                    methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
+                    var dbFieldValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, underlyingTypeExpr, fieldValueExpr);
+
+                    //dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
+                    methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });
+                    var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, nativeDbTypeExpr, dbFieldValueExpr);
+                    methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add), new Type[] { typeof(object) });
+                    var addParameterExpr = Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr);
+
                     methodInfo = typeof(IDataParameterCollection).GetMethod(nameof(IDataParameterCollection.Contains));
-                    var notContainsExpr = Expression.IsFalse(Expression.Call(dbParametersExpr, methodInfo, myParameterNameExpr));
-                    methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.AddDbParameter));
-                    if (fieldValueExpr.Type != typeof(object))
-                        fieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
-                    var addParameterExpr = Expression.Call(methodInfo, ormProviderExpr, Expression.Constant(dbKey),
-                         dbParametersExpr, Expression.Constant(memberMapper), myParameterNameExpr, fieldValueExpr);
+                    var notContainsExpr = Expression.IsFalse(Expression.Call(dbParametersExpr, methodInfo, parameterNameExpr));
                     blockBodies.Add(Expression.IfThen(notContainsExpr, addParameterExpr));
                 }
                 else AddValueParameter(dbParametersExpr, ormProviderExpr, myParameterNameExpr, memberMapper.MemberType, fieldValueExpr, memberMapper, blockParameters, blockBodies);
@@ -1492,10 +1540,28 @@ public class RepositoryHelper
                 //updateFields.Add(ormProvider.GetFieldName(memberMapper.FieldName) + "=" + parameterName });
                 loopBodies.Add(Expression.Call(concatMethodInfo2, fieldNameExpr, Expression.Constant("="), parameterNameExpr));
 
-                //ormProvider.AddDbParameter(dbKey, dbParameters, memberMapper, parameterName, fieldValue);              
-                methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.AddDbParameter));
-                loopBodies.Add(Expression.Call(methodInfo, ormProviderExpr, Expression.Constant(dbKey),
-                    dbParametersExpr, memberMapperExpr, parameterNameExpr, fieldValueExpr));
+                //if(!dbParameters.Contains(parameterName))
+                //{
+                //  var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, memberMapper.UnderlyingType, fieldValue);
+                //  dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
+                //}
+
+                //var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, memberMapper.UnderlyingType, fieldValue);
+                var underlyingTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.UnderlyingType));
+                var nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
+                var typeHandlerExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler));
+                methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
+                var dbFieldValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, underlyingTypeExpr, fieldValueExpr);
+
+                //dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
+                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });
+                var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, nativeDbTypeExpr, dbFieldValueExpr);
+                methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add), new Type[] { typeof(object) });
+                var addParameterExpr = Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr);
+
+                methodInfo = typeof(IDataParameterCollection).GetMethod(nameof(IDataParameterCollection.Contains));
+                var notContainsExpr = Expression.IsFalse(Expression.Call(dbParametersExpr, methodInfo, parameterNameExpr));
+                loopBodies.Add(Expression.IfThen(notContainsExpr, addParameterExpr));
 
                 //index++;
                 loopBodies.Add(Expression.AddAssign(indexExpr, Expression.Constant(1)));

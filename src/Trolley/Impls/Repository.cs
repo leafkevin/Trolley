@@ -818,7 +818,7 @@ public class Repository : IRepository
             command.CommandText = multiQuery.BuildSql(out var readerAfters);
             this.DbContext.Open();
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-            result = new MultiQueryReader(command, reader, readerAfters, isNeedClose);
+            result = new MultiQueryReader(this.OrmProvider, command, reader, readerAfters, isNeedClose);
         }
         catch (Exception ex)
         {
@@ -851,7 +851,7 @@ public class Repository : IRepository
             command.CommandText = multiQuery.BuildSql(out var readerAfters);
             await this.DbContext.OpenAsync(cancellationToken);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-            result = new MultiQueryReader(command, reader, readerAfters, isNeedClose);
+            result = new MultiQueryReader(this.OrmProvider, command, reader, readerAfters, isNeedClose);
         }
         catch (Exception ex)
         {

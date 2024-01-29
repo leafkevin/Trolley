@@ -931,6 +931,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var foreignKeyMember = includeSegment.FromTable.Mapper.KeyMembers[0];
             Expression foreignKeyValueExpr = Expression.PropertyOrField(parentExpr, foreignKeyMember.MemberName);
 
+            //TODO:
             foreignKeyValueExpr = Expression.Convert(foreignKeyValueExpr, typeof(object));
             var methedInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetQuotedValue));
             var fieldTypeExpr = Expression.Constant(foreignKeyMember.MemberType);
@@ -1008,8 +1009,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     {
                         FieldType = ReaderFieldType.Field,
                         FromMember = sqlSegment.FromMember,
-                        MemberMapper = sqlSegment.MemberMapper,
+                        //MemberMapper = sqlSegment.MemberMapper,
                         TargetMember = memberInfo,
+                        NativeDbType = sqlSegment.NativeDbType,
+                        TypeHandler = sqlSegment.TypeHandler,
                         Body = fieldName,
                         IsNeedAlias = isNeedAlias
                     });
@@ -1028,8 +1031,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     {
                         FieldType = ReaderFieldType.Field,
                         FromMember = sqlSegment.FromMember,
-                        MemberMapper = sqlSegment.MemberMapper,
+                        //MemberMapper = sqlSegment.MemberMapper,
                         TargetMember = memberExpr.Member,
+                        NativeDbType = sqlSegment.NativeDbType,
+                        TypeHandler = sqlSegment.TypeHandler,
                         Body = fieldName
                     });
                     this.GroupBySql = fieldName;
@@ -1263,9 +1268,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             readerField = new ReaderField
             {
                 FieldType = ReaderFieldType.Field,
-                MemberMapper = memberMapper,
+                //MemberMapper = memberMapper,
                 FromMember = memberMapper.Member,
                 TargetMember = memberInfo,
+                NativeDbType = memberMapper.NativeDbType,
+                TypeHandler = memberMapper.TypeHandler,
                 Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(memberMapper.FieldName)
             };
         }
@@ -1340,8 +1347,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 }
                 //分组对象为单个字段，要返回单个字段，防止后面Reader处理实体时候报错
                 var readerField = groupFields[0];
+                //要返回原始FromMember，后续方便判断是否使用AS别名
                 sqlSegment.FromMember = readerField.FromMember;
-                sqlSegment.MemberMapper = readerField.MemberMapper;
+                //sqlSegment.MemberMapper = readerField.MemberMapper;
+                sqlSegment.NativeDbType = readerField.NativeDbType;
+                sqlSegment.TypeHandler = readerField.TypeHandler;
                 sqlSegment.Value = readerField.Body;
                 return sqlSegment;
             }
@@ -1350,7 +1360,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //此时是Grouping对象字段的引用，最外面可能会更改成员名称，要复制一份，防止更改Grouping对象中的字段
                 var readerField = this.GroupFields.Find(f => f.TargetMember.Name == memberInfo.Name);
                 sqlSegment.FromMember = readerField.FromMember;
-                sqlSegment.MemberMapper = readerField.MemberMapper;
+                //sqlSegment.MemberMapper = readerField.MemberMapper;
+                sqlSegment.NativeDbType = readerField.NativeDbType;
+                sqlSegment.TypeHandler = readerField.TypeHandler;
                 sqlSegment.Value = readerField.Body;
                 return sqlSegment;
             }
@@ -1387,11 +1399,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     //Grouping分组对象的访问(包含当前查询中的和子查询表中的)                  
                     //子查询时，Mapper为null
 
-                    MemberMap memberMapper = null;
                     if (fromSegment.Mapper != null)
                     {
                         //非子查询场景
-                        memberMapper = fromSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
+                        var memberMapper = fromSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
                         if (memberMapper.IsIgnore)
                             throw new NotSupportedException($"类{fromSegment.EntityType.FullName}的成员{memberExpr.Member.Name}是忽略成员无法访问");
 
@@ -1462,8 +1473,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                                 {
                                     FieldType = ReaderFieldType.Field,
                                     FromMember = memberMapper.Member,
-                                    MemberMapper = memberMapper,
+                                    //MemberMapper = memberMapper,
                                     TargetMember = memberInfo,
+                                    NativeDbType = memberMapper.NativeDbType,
+                                    TypeHandler = memberMapper.TypeHandler,
                                     Body = fieldName
                                 };
                             }
@@ -1471,6 +1484,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             {
                                 sqlSegment.FromMember = memberMapper.Member;
                                 sqlSegment.MemberMapper = memberMapper;
+                                sqlSegment.NativeDbType = memberMapper.NativeDbType;
+                                sqlSegment.TypeHandler = memberMapper.TypeHandler;
                                 sqlSegment.Value = fieldName;
                             }
                         }
@@ -1488,7 +1503,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         //非Select场景，直接访问字段，只有是Json实体类型字段，FieldType: Field
                         else sqlSegment.Value = readerField.Body;
                         sqlSegment.FromMember = readerField.TargetMember;
-                        sqlSegment.MemberMapper = readerField.MemberMapper;
+                        //sqlSegment.MemberMapper = readerField.MemberMapper;
+                        sqlSegment.NativeDbType = readerField.NativeDbType;
+                        sqlSegment.TypeHandler = readerField.TypeHandler;
                     }
                 }
                 else
@@ -1509,6 +1526,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
                         sqlSegment.FromMember = memberMapper.Member;
                         sqlSegment.MemberMapper = memberMapper;
+                        sqlSegment.NativeDbType = memberMapper.NativeDbType;
+                        sqlSegment.TypeHandler = memberMapper.TypeHandler;
                         //查询时，IsNeedAlias始终为true，新增、更新、删除时，引用联表操作时，才会为true
                         fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                         //IncludeMany表时，fromSegment.AliasName为null
@@ -1537,22 +1556,21 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                                 fromReaderFields = fromReaderFields[0].ReaderFields;
                             readerField = fromReaderFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
                         }
-
-                        memberMapper = readerField.MemberMapper;
                         sqlSegment.FromMember = readerField.TargetMember;
-                        sqlSegment.MemberMapper = memberMapper;
+                        //sqlSegment.MemberMapper = memberMapper;
+                        sqlSegment.NativeDbType = memberMapper.NativeDbType;
+                        sqlSegment.TypeHandler = readerField.TypeHandler;
                         fieldName = this.OrmProvider.GetFieldName(memberExpr.Member.Name);
                         if (this.IsNeedTableAlias) fieldName = fromSegment.AliasName + "." + fieldName;
                         sqlSegment.Value = fieldName;
                     }
-
                     //.NET枚举类型总是解析成对应的UnderlyingType数值类型，如：a.Gender ?? Gender.Male == Gender.Male
                     //如果枚举类型对应的数据库类型是字符串就会有问题，需要把数字变为枚举，再把枚举的名字字符串完成后续操作。
-                    if (memberMapper != null && memberMapper.MemberType.IsEnumType(out var expectType, out _) && memberMapper.DbFieldType == typeof(string))
-                    {
-                        sqlSegment.ExpectType = expectType;
-                        sqlSegment.TargetType = memberMapper.DbFieldType;
-                    }
+                    //if (memberMapper != null && memberMapper.MemberType.IsEnumType(out var expectType, out _) && memberMapper.DbFieldType == typeof(string))
+                    //{
+                    //    sqlSegment.ExpectType = expectType;
+                    //    sqlSegment.TargetType = memberMapper.DbFieldType;
+                    //}
                 }
                 return sqlSegment;
             }
@@ -1619,7 +1637,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public virtual void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, List<ReaderField> readerFields)
     {
-        string fieldName = null;
         var sqlSegment = new SqlSegment { Expression = elementExpr };
         switch (elementExpr.NodeType)
         {
@@ -1655,7 +1672,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     //})
                     methodCallField.FromMember = memberInfo;
                     methodCallField.TargetMember = memberInfo;
-                    //methodCallField.IsNeedAlias = true;
                     //无参数方法调用
                     if (this.IsUseFieldAlias && methodCallField.FieldType == ReaderFieldType.DeferredFields && methodCallField.ReaderFields == null)
                         methodCallField.Body += " AS " + this.OrmProvider.GetFieldName(memberInfo.Name);
@@ -1663,13 +1679,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 }
                 else
                 {
-                    fieldName = this.GetQuotedValue(sqlSegment);
+                    var fieldName = this.GetQuotedValue(sqlSegment);
                     if (sqlSegment.IsExpression)
                         fieldName = $"({fieldName})";
                     if (this.IsUseFieldAlias && (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression
                         || sqlSegment.IsMethodCall || sqlSegment.FromMember == null || sqlSegment.FromMember.Name != memberInfo.Name))
                         fieldName += " AS " + this.OrmProvider.GetFieldName(memberInfo.Name);
 
+                    //只有常量、方法调用、表达式计算，没有设置NativeDbType和TypeHandler，需要根据memberInfo类型获取
                     readerFields.Add(new ReaderField
                     {
                         FieldType = ReaderFieldType.Field,
@@ -1722,8 +1739,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 FieldType = ReaderFieldType.Field,
                 FromMember = sqlSegment.FromMember,
-                MemberMapper = sqlSegment.MemberMapper,
+                //MemberMapper = sqlSegment.MemberMapper,
                 TargetMember = memberInfo,
+                NativeDbType = sqlSegment.NativeDbType,
+                TypeHandler = sqlSegment.TypeHandler,
                 Body = fieldName
             };
         }
