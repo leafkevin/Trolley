@@ -384,7 +384,6 @@ public static class Extensions
             }
             else
             {
-                MemberInfo fieldMember = null;
                 Expression readerValueExpr = null;
                 ReaderField childReaderField = null;
                 var childIndex = 0;
@@ -453,7 +452,7 @@ public static class Extensions
                         readerValueExpr = GetReaderValue(ormProvider, ormProviderExpr, readerExpr, Expression.Constant(index),
                             childReaderField.TargetMember.GetMemberType(), fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
 
-                        if (current.IsDefault) current.Bindings.Add(Expression.Bind(fieldMember, readerValueExpr));
+                        if (current.IsDefault) current.Bindings.Add(Expression.Bind(childReaderField.TargetMember, readerValueExpr));
                         else current.Arguments.Add(readerValueExpr);
 
                         childIndex++;

@@ -146,10 +146,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     result = reader.To<TResult>(this.OrmProvider, this.MapProvider);
                 else result = reader.To<TResult>(this.OrmProvider);
             }
-            reader.Dispose();
-
             if (visitor.BuildIncludeSql(entityType, result, out var sql))
             {
+                reader.Dispose();
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(command.Parameters);
@@ -196,10 +195,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     result = reader.To<TResult>(this.OrmProvider, this.MapProvider);
                 else result = reader.To<TResult>(this.OrmProvider);
             }
-            await reader.DisposeAsync();
-
             if (visitor.BuildIncludeSql(entityType, result, out var sql))
             {
+                await reader.DisposeAsync();
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(command.Parameters);
@@ -348,10 +346,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     result.Add(reader.To<TResult>(this.OrmProvider));
                 }
             }
-            reader.Dispose();
-
             if (visitor.BuildIncludeSql(entityType, result, out var sql))
             {
+                reader.Dispose();
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(command.Parameters);
@@ -407,10 +404,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     result.Add(reader.To<TResult>(this.OrmProvider));
                 }
             }
-            await reader.DisposeAsync();
-
             if (visitor.BuildIncludeSql(entityType, result, out var sql))
             {
+                await reader.DisposeAsync();
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(command.Parameters);
@@ -474,10 +470,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     result.Data.Add(reader.To<TResult>(this.OrmProvider));
                 }
             }
-            reader.Dispose();
-
             if (visitor.BuildIncludeSql(entityType, result.Data, out var sql))
             {
+                reader.Dispose();
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(command.Parameters);
@@ -537,10 +532,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     result.Data.Add(reader.To<TResult>(this.OrmProvider));
                 }
             }
-            await reader.DisposeAsync();
-
             if (visitor.BuildIncludeSql(entityType, result.Data, out var sql))
             {
+                await reader.DisposeAsync();
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(command.Parameters);

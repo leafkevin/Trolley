@@ -431,6 +431,7 @@ public partial class MySqlProvider : BaseOrmProvider
     public override string GetQuotedValue(Type expectType, object value)
     {
         if (value == null) return "NULL";
+        expectType ??= value.GetType();
         if (this.defaultTypeHandlers.TryGetValue(expectType, out var typeHandler))
             return typeHandler.GetQuotedValue(this, expectType, value);
         if (value is SqlSegment sqlSegment)

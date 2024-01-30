@@ -290,7 +290,7 @@ public class SqlVisitor : ISqlVisitor
                 string strRight = this.GetQuotedValue(rightSegment);
 
                 if (binaryExpr.NodeType == ExpressionType.Coalesce)
-                    return sqlSegment.Merge(leftSegment, rightSegment, $"{operators}({strLeft},{strRight})", false, false, true);
+                    return sqlSegment.Merge(leftSegment, rightSegment, $"{operators}({strLeft},{strRight})", false, false, false, true);
 
                 if (leftSegment.IsExpression)
                     strLeft = $"({strLeft})";
@@ -1286,13 +1286,14 @@ public class SqlVisitor : ISqlVisitor
             var underlyingType = sqlSegment.ExpectType ?? sqlSegment.UnderlyingType;
             if (sqlSegment.TypeHandler != null)
                 return sqlSegment.TypeHandler.GetQuotedValue(this.OrmProvider, underlyingType, sqlSegment.Value);
-            return this.OrmProvider.GetQuotedValue(underlyingType ?? sqlSegment.Expression.Type, typedValue);
+            //不能使用sqlSegment.Expression.Type，有多于1级表达式访问，sqlSegment.Expression值可以已经发生变化了
+            return this.OrmProvider.GetQuotedValue(underlyingType, typedValue);
         }
         //带有参数或字段的表达式或函数调用、或是只有参数或字段
         //TODO:本地函数调用返回值，非常量、变量、字段、SQL函数调用
         return sqlSegment.ToString();
     }
-    public virtual string GetQuotedValue(object elementValue, SqlSegment arraySegment, ITypeHandler typeHandler, Type expectType)
+    public virtual string GetQuotedValue(object elementValue, SqlSegment arraySegment, SqlSegment elementSegment)
     {
         if (elementValue is DBNull || elementValue == null)
             return "NULL";
@@ -1307,10 +1308,11 @@ public class SqlVisitor : ISqlVisitor
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + dbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
-            if (typeHandler != null)
+            var underlyingType = elementSegment.ExpectType ?? elementSegment.UnderlyingType;
+            if (elementSegment.TypeHandler != null)
             {
-                var dbFieldValue = arraySegment.TypeHandler.ToFieldValue(this.OrmProvider, expectType, elementValue);
-                this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, arraySegment.NativeDbType, dbFieldValue));
+                var dbFieldValue = elementSegment.TypeHandler.ToFieldValue(this.OrmProvider, underlyingType, elementValue);
+                this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, elementSegment.NativeDbType, dbFieldValue));
             }
             //常量、方法调用、表达式计算等场景
             else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, elementValue));
@@ -1318,9 +1320,10 @@ public class SqlVisitor : ISqlVisitor
         }
         if (arraySegment.IsConstant)
         {
-            if (typeHandler != null)
-                return typeHandler.GetQuotedValue(this.OrmProvider, expectType, elementValue);
-            return this.OrmProvider.GetQuotedValue(expectType, elementValue);
+            var underlyingType = elementSegment.ExpectType ?? elementSegment.UnderlyingType;
+            if (elementSegment.TypeHandler != null)
+                return elementSegment.TypeHandler.GetQuotedValue(this.OrmProvider, underlyingType, elementValue);
+            return this.OrmProvider.GetQuotedValue(underlyingType, elementValue);
         }
         return this.OrmProvider.GetQuotedValue(elementValue);
     }
@@ -1396,6 +1399,7 @@ public class SqlVisitor : ISqlVisitor
                     FromMember = memberMapper.Member,
                     //MemberMapper = memberMapper,
                     TargetMember = memberMapper.Member,
+                    UnderlyingType = memberMapper.UnderlyingType,
                     NativeDbType = memberMapper.NativeDbType,
                     TypeHandler = memberMapper.TypeHandler,
                     Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(memberMapper.FieldName)

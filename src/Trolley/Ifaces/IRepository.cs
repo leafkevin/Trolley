@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,26 +13,6 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
 {
     #region Properties
     DbContext DbContext { get; set; }
-    /// <summary>
-    /// 数据库链接串Key
-    /// </summary>
-    string DbKey { get; }
-    /// <summary>
-    /// 驱动提供者
-    /// </summary>
-    IOrmProvider OrmProvider { get; }
-    /// <summary>
-    /// 实体映射提供者
-    /// </summary>
-    IEntityMapProvider MapProvider { get; }
-    /// <summary>
-    /// 数据库连接
-    /// </summary>
-    IDbConnection Connection { get; }
-    /// <summary>
-    /// 事务对象
-    /// </summary>
-    IDbTransaction Transaction { get; }
     #endregion
 
     public IRepository UseShardingRule()

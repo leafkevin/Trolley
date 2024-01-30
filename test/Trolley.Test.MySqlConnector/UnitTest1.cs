@@ -162,8 +162,7 @@ public class UnitTest1 : UnitTestBase
         Assert.True((int)dbParameters[3].Value == 1);
         if (dbParameters[4] is MySqlParameter dbParameter)
         {
-            repository.MapProvider.TryGetEntityMap(typeof(User), out var entityMapper);
-            Assert.True(dbParameter.MySqlDbType == (MySqlDbType)entityMapper.GetMemberMap("Gender").NativeDbType);
+            Assert.True(dbParameter.MySqlDbType == MySqlDbType.UByte);
             Assert.True((byte)dbParameter.Value == (byte)Gender.Male);
         }
         Assert.True((bool)dbParameters[5].Value == true);

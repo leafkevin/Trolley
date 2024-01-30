@@ -1183,6 +1183,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         new ReaderField
                         {
                             FieldType = ReaderFieldType.Field,
+                            UnderlyingType = selectExpr.Type,
                             Body = sqlSegment.Value.ToString()
                         }
                     };
@@ -1706,6 +1707,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         FieldType = ReaderFieldType.Field,
                         FromMember = memberInfo,
                         TargetMember = memberInfo,
+                        UnderlyingType = elementExpr.Type,
                         Body = fieldName
                     });
                 }
