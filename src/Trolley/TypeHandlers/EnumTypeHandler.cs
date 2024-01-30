@@ -44,7 +44,7 @@ public class EnumAsStringTypeHandler : ITypeHandler
     public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
         => Enum.GetName(underlyingType, value);
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
-        => Enum.GetName(underlyingType, value);
+        => $"'{Enum.GetName(underlyingType, value)}'";
 }
 public class NullableEnumAsStringTypeHandler : ITypeHandler
 {
@@ -62,7 +62,7 @@ public class NullableEnumAsStringTypeHandler : ITypeHandler
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value != null)
-            return Enum.GetName(underlyingType, value);
+            return $"'{Enum.GetName(underlyingType, value)}'";
         return "NULL";
     }
 }

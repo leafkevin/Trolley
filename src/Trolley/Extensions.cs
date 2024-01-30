@@ -204,7 +204,7 @@ public static class Extensions
     /// </summary>
     /// <typeparam name="TValue"></typeparam>
     /// <param name="reader"></param>
-    /// <param name="columnIndex"></param>
+    /// <param name="ormProvider"></param>
     /// <returns></returns>
     public static TValue To<TValue>(this IDataReader reader, IOrmProvider ormProvider)
     {
@@ -214,9 +214,9 @@ public static class Extensions
         return (TValue)typeHandler.Parse(ormProvider, underlyingType, reader[0]);
     }
     public static TEntity To<TEntity>(this IDataReader reader, DbContext dbContext)
-        => reader.To<TEntity>(dbContext.DbKey, dbContext.OrmProvider, dbContext.MapProvider);
+        => reader.To<TEntity>(dbContext.OrmProvider, dbContext.MapProvider);
     public static TEntity To<TEntity>(this IDataReader reader, DbContext dbContext, List<ReaderField> readerFields)
-        => reader.To<TEntity>(dbContext.DbKey, dbContext.OrmProvider, readerFields);
+        => reader.To<TEntity>(dbContext.OrmProvider, readerFields);
     /// <summary>
     /// 使用SQL+参数查询,返回的是单纯的实体
     /// </summary>
@@ -226,7 +226,7 @@ public static class Extensions
     /// <param name="ormProvider"></param>
     /// <param name="mapProvider"></param>
     /// <returns></returns>
-    public static TEntity To<TEntity>(this IDataReader reader, string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
+    public static TEntity To<TEntity>(this IDataReader reader, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
     {
         var entityType = typeof(TEntity);
         var ormProviderType = ormProvider.GetType();
@@ -236,12 +236,12 @@ public static class Extensions
         ConcurrentDictionary<int, Delegate> deserializerCache = null;
         if (isValueTuple)
         {
-            cacheKey = GetValueTupleReaderKey(entityType, dbKey, ormProviderType, reader);
+            cacheKey = GetValueTupleReaderKey(entityType, ormProviderType, reader);
             deserializerCache = valueTupleReaderDeserializerCache;
         }
         else
         {
-            cacheKey = GetTypeReaderKey(entityType, dbKey, ormProviderType, reader);
+            cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader);
             deserializerCache = typeReaderDeserializerCache;
         }
         if (!deserializerCache.TryGetValue(cacheKey, out var deserializer))
@@ -260,11 +260,11 @@ public static class Extensions
     /// <param name="ormProvider"></param>
     /// <param name="readerFields"></param>
     /// <returns></returns>
-    public static TEntity To<TEntity>(this IDataReader reader, string dbKey, IOrmProvider ormProvider, List<ReaderField> readerFields)
+    public static TEntity To<TEntity>(this IDataReader reader, IOrmProvider ormProvider, List<ReaderField> readerFields)
     {
         var entityType = typeof(TEntity);
         var ormProviderType = ormProvider.GetType();
-        var cacheKey = GetTypeReaderKey(entityType, dbKey, ormProviderType, readerFields);
+        var cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader, readerFields);
         if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
         {
             deserializer = CreateReaderDeserializer(ormProvider, reader, entityType, readerFields);
@@ -711,47 +711,47 @@ public static class Extensions
         blockBodies.Add(Expression.Assign(objLocalExpr, valueExpr));
         return objLocalExpr;
     }
-    private static int GetTypeReaderKey(Type entityType, string dbKey, Type ormProviderType, IDataReader reader)
+    private static int GetTypeReaderKey(Type entityType, Type ormProviderType, IDataReader reader)
     {
         var hashCode = new HashCode();
-        hashCode.Add(dbKey);
         hashCode.Add(ormProviderType);
         hashCode.Add(entityType);
         hashCode.Add(reader.FieldCount);
         for (int i = 0; i < reader.FieldCount; i++)
         {
+            //相同实体类型，生成的字段类型可能不一样，所以要带上FieldType
+            hashCode.Add(reader.GetFieldType(i));
             hashCode.Add(reader.GetName(i));
         }
         return hashCode.ToHashCode();
     }
-    private static int GetTypeReaderKey(Type entityType, string dbKey, Type ormProviderType, List<ReaderField> readerFields)
+    private static int GetTypeReaderKey(Type entityType, Type ormProviderType, IDataReader reader, List<ReaderField> readerFields)
     {
         var hashCode = new HashCode();
-        hashCode.Add(dbKey);
         hashCode.Add(ormProviderType);
         hashCode.Add(entityType);
-        hashCode.Add(readerFields.Count);
+        hashCode.Add(reader.FieldCount);
+        for (int i = 0; i < reader.FieldCount; i++)
+        {
+            hashCode.Add(reader.GetFieldType(i));
+        }
         foreach (var readerField in readerFields)
         {
-            hashCode.Add(readerField.FieldType);
-            hashCode.Add(readerField.TargetMember);
-
-            if (readerField.ReaderFields != null)
+            if (readerField.FieldType == ReaderFieldType.Field)
+                hashCode.Add(readerField.TargetMember.Name);
+            else
             {
-                hashCode.Add(readerField.ReaderFields.Count);
                 foreach (var childReaderField in readerField.ReaderFields)
                 {
-                    hashCode.Add(childReaderField.FieldType);
-                    hashCode.Add(childReaderField.TargetMember);
+                    hashCode.Add(childReaderField.TargetMember.Name);
                 }
             }
         }
         return hashCode.ToHashCode();
     }
-    private static int GetValueTupleReaderKey(Type entityType, string dbKey, Type ormProviderType, IDataReader reader)
+    private static int GetValueTupleReaderKey(Type entityType, Type ormProviderType, IDataReader reader)
     {
         var hashCode = new HashCode();
-        hashCode.Add(dbKey);
         hashCode.Add(ormProviderType);
         hashCode.Add(entityType);
         hashCode.Add(reader.FieldCount);

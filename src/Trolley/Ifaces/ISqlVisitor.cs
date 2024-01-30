@@ -32,7 +32,7 @@ public interface ISqlVisitor : IDisposable
     object Evaluate(Expression expr);
     T Evaluate<T>(Expression expr);
     string GetQuotedValue(SqlSegment sqlSegment);
-    string GetQuotedValue(object elementValue, SqlSegment arraySegment);
+    string GetQuotedValue(object elementValue, SqlSegment arraySegment, ITypeHandler typeHandler, Type expectType);
     SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment);
     bool IsStringConcatOperator(SqlSegment sqlSegment, out SqlSegment result);
     string VisitConditionExpr(Expression conditionExpr);

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -26,6 +27,7 @@ public class ReaderField
     /// 当前是成员访问时，才有值，和FromMember是同一个栏位，是Mapper
     /// </summary>
     //public MemberMap MemberMapper { get; set; }
+    public Type UnderlyingType { get; set; }
     public object NativeDbType { get; set; }
     public ITypeHandler TypeHandler { get; set; }
     /// <summary>
@@ -90,7 +92,7 @@ public class ReaderField
             FromMember = this.FromMember,
             HasNextInclude = this.HasNextInclude,
             IsTargetType = this.IsTargetType,
-			//MemberMapper = this.MemberMapper,
+            //MemberMapper = this.MemberMapper,
             IsNeedAlias = this.IsNeedAlias,
             NativeDbType = this.NativeDbType,
             TypeHandler = this.TypeHandler,

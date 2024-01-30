@@ -270,16 +270,22 @@ public class SqlVisitor : ISqlVisitor
                 //... WHERE (int)(a.Price * a.Quartity)>500
                 //SELECT TotalAmount = (int)(amount + (a.Price + increasedPrice) * (a.Quartity + increasedCount)) ...FROM ...
                 //SELECT OrderNo = $"OrderNo-{f.CreatedAt.ToString("yyyyMMdd")}-{f.Id}"...FROM ...
-                var leftType = leftSegment.GetExpectType(binaryExpr.Left);
-                var rightType = rightSegment.GetExpectType(binaryExpr.Right);
-                if (leftType.IsEnum || rightType.IsEnum || leftType != rightType)
-                {
-                    if ((leftType.IsEnum || rightType.IsEnum) && calcOps.Contains(operators))
-                        throw new NotSupportedException($"枚举类成员{leftSegment.MemberMapper.MemberName}对应的数据库类型为非数字类型，不能进行{operators}操作，可以使用=、<>、IN、EXISTS等操作来代替，表达式：{binaryExpr}");
+                //var leftType = leftSegment.GetExpectType(binaryExpr.Left);
+                //var rightType = rightSegment.GetExpectType(binaryExpr.Right);
+                //if (leftType.IsEnum || rightType.IsEnum || leftType != rightType)
+                //{
+                //    if ((leftType.IsEnum || rightType.IsEnum) && calcOps.Contains(operators))
+                //        throw new NotSupportedException($"枚举类成员{leftSegment.MemberMapper.MemberName}对应的数据库类型为非数字类型，不能进行{operators}操作，可以使用=、<>、IN、EXISTS等操作来代替，表达式：{binaryExpr}");
 
-                    //在调用GetQuotedValue方法前，确保左右两侧的类型一致，并都根据MemberMapper的映射类型表生成SQL语句                   
+                //    //在调用GetQuotedValue方法前，确保左右两侧的类型一致，并都根据MemberMapper的映射类型表生成SQL语句
+                //    if (leftType.IsEnum) leftSegment.ExpectType = leftType;
+                //    else leftSegment.ExpectType = rightType;
+                //    this.ChangeSameType(leftSegment, rightSegment);
+                //}
+                if (leftSegment.ExpectType != null || leftSegment.TypeHandler != null)
                     this.ChangeSameType(leftSegment, rightSegment);
-                }
+                else this.ChangeSameType(rightSegment, leftSegment);
+
                 string strLeft = this.GetQuotedValue(leftSegment);
                 string strRight = this.GetQuotedValue(rightSegment);
 
@@ -345,31 +351,28 @@ public class SqlVisitor : ISqlVisitor
                     //取AS后的字段名，与原字段名不一定一样,AS后的字段名与memberExpr.Member.Name一致
                     if (memberExpr.Expression.NodeType != ExpressionType.Parameter)
                     {
-                        fieldName = this.OrmProvider.GetFieldName(memberExpr.Member.Name);
-                        if (this.IsNeedTableAlias) fieldName = tableSegment.AliasName + "." + fieldName;
-                        sqlSegment.Value = fieldName;
-
                         var parentMemberExpr = memberExpr.Expression as MemberExpression;
                         var parenetReaderField = tableSegment.ReaderFields.Count == 1 ? tableSegment.ReaderFields.First()
                             : tableSegment.ReaderFields.Find(f => f.TargetMember.Name == parentMemberExpr.Member.Name);
                         var fromReaderFields = parenetReaderField.ReaderFields;
                         readerField = fromReaderFields.Count == 1 ? fromReaderFields.First()
                             : fromReaderFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
-                        sqlSegment.FromMember = readerField.TargetMember;
+                        fieldName = this.OrmProvider.GetFieldName(memberExpr.Member.Name);
+                        if (this.IsNeedTableAlias) fieldName = tableSegment.AliasName + "." + fieldName;
                     }
                     else
                     {
                         readerField = tableSegment.ReaderFields.Count == 1 ? tableSegment.ReaderFields.First()
                           : tableSegment.ReaderFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
                         fieldName = readerField.Body;
-                        sqlSegment.FromMember = readerField.TargetMember;
-                        sqlSegment.Value = readerField.Body;
                     }
-                    //memberMapper = readerField.MemberMapper;
-                    //sqlSegment.MemberMapper = memberMapper;
-                    //sqlSegment.ExpectType = readerField.TargetMember.GetMemberType().ToUnderlyingType();
+                    sqlSegment.FromMember = readerField.TargetMember;
+                    if (readerField.TargetMember.GetMemberType().IsEntityType(out var underlyingType))
+                        sqlSegment.ExpectType = underlyingType;
+                    sqlSegment.UnderlyingType = readerField.UnderlyingType;
                     sqlSegment.NativeDbType = readerField.NativeDbType;
                     sqlSegment.TypeHandler = readerField.TypeHandler;
+                    sqlSegment.Value = fieldName;
                 }
                 else
                 {
@@ -379,8 +382,9 @@ public class SqlVisitor : ISqlVisitor
                     if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                         throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
                     sqlSegment.FromMember = memberMapper.Member;
-                    //sqlSegment.MemberMapper = memberMapper;
-                    //sqlSegment.ExpectType = memberMapper.UnderlyingType;
+                    if (memberMapper.UnderlyingType.IsEnum)
+                        sqlSegment.ExpectType = memberMapper.UnderlyingType;
+                    sqlSegment.UnderlyingType = memberMapper.UnderlyingType;
                     sqlSegment.NativeDbType = memberMapper.NativeDbType;
                     sqlSegment.TypeHandler = memberMapper.TypeHandler;
                     //查询时，IsNeedAlias始终为true，新增、更新、删除时，引用联表操作时，才会为true
@@ -1256,7 +1260,7 @@ public class SqlVisitor : ISqlVisitor
             //    this.OrmProvider.AddDbParameter(this.DbKey, dbParameters, sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
             if (sqlSegment.TypeHandler != null)
             {
-                var underlyingType = sqlSegment.ExpectType ?? sqlSegment.FromMember.GetMemberType().ToUnderlyingType();
+                var underlyingType = sqlSegment.ExpectType ?? sqlSegment.UnderlyingType;
                 var dbFieldValue = sqlSegment.TypeHandler.ToFieldValue(this.OrmProvider, underlyingType, sqlSegment.Value);
                 this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.NativeDbType, dbFieldValue));
             }
@@ -1279,15 +1283,18 @@ public class SqlVisitor : ISqlVisitor
         else if (sqlSegment.IsConstant)
         {
             var typedValue = sqlSegment.Value;
-            if (sqlSegment.ExpectType != null)
-                typedValue = this.ChangeTypedValue(sqlSegment.ExpectType, typedValue, sqlSegment.TargetType);
+            if (sqlSegment.TypeHandler != null)
+            {
+                var underlyingType = sqlSegment.ExpectType ?? sqlSegment.UnderlyingType;
+                return sqlSegment.TypeHandler.GetQuotedValue(this.OrmProvider, underlyingType, sqlSegment.Value);
+            }
             return this.OrmProvider.GetQuotedValue(typedValue);
         }
         //带有参数或字段的表达式或函数调用、或是只有参数或字段
         //TODO:本地函数调用返回值，非常量、变量、字段、SQL函数调用
         return sqlSegment.ToString();
     }
-    public virtual string GetQuotedValue(object elementValue, SqlSegment arraySegment)
+    public virtual string GetQuotedValue(object elementValue, SqlSegment arraySegment, ITypeHandler typeHandler, Type expectType)
     {
         if (elementValue is DBNull || elementValue == null)
             return "NULL";
@@ -1302,12 +1309,9 @@ public class SqlVisitor : ISqlVisitor
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + dbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
-            //if (arraySegment.MemberMapper != null)
-            //    this.OrmProvider.AddDbParameter(this.DbKey, dbParameters, arraySegment.MemberMapper, parameterName, elementValue);
-            if (arraySegment.TypeHandler != null)
+            if (typeHandler != null)
             {
-                var underlyingType = arraySegment.ExpectType ?? arraySegment.FromMember.GetMemberType().ToUnderlyingType();
-                var dbFieldValue = arraySegment.TypeHandler.ToFieldValue(this.OrmProvider, underlyingType, arraySegment.Value);
+                var dbFieldValue = arraySegment.TypeHandler.ToFieldValue(this.OrmProvider, expectType, elementValue);
                 this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, arraySegment.NativeDbType, dbFieldValue));
             }
             //常量、方法调用、表达式计算等场景
@@ -1316,10 +1320,9 @@ public class SqlVisitor : ISqlVisitor
         }
         if (arraySegment.IsConstant)
         {
-            var typedValue = elementValue;
-            if (arraySegment.ExpectType != null)
-                typedValue = this.ChangeTypedValue(arraySegment.ExpectType, elementValue, arraySegment.TargetType);
-            return this.OrmProvider.GetQuotedValue(typedValue);
+            if (typeHandler != null)
+                return typeHandler.GetQuotedValue(this.OrmProvider, expectType, elementValue);
+            return this.OrmProvider.GetQuotedValue(elementValue);
         }
         return this.OrmProvider.GetQuotedValue(elementValue);
     }
@@ -1489,16 +1492,10 @@ public class SqlVisitor : ISqlVisitor
         {
             //变量时，根据MemberMapper的配置，把参数转变成真正的数据库字段类型
             rightSegment.MemberMapper = leftSegment.MemberMapper;
-            rightSegment.FromMember = leftSegment.FromMember;
+            rightSegment.ExpectType = leftSegment.ExpectType;
+            rightSegment.UnderlyingType = leftSegment.UnderlyingType;
             rightSegment.NativeDbType = leftSegment.NativeDbType;
             rightSegment.TypeHandler = leftSegment.TypeHandler;
-            rightSegment.ExpectType = leftSegment.ExpectType;
-            //常量时，根据ExpectType、TargetType值，把常量转变成真正的数据库字段类型
-            //if (rightSegment.IsConstant)
-            //{
-            //    rightSegment.ExpectType = leftSegment.ExpectType;
-            //    rightSegment.TargetType = leftSegment.TargetType;
-            //}      
             return true;
         }
         return false;

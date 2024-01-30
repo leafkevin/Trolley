@@ -39,7 +39,8 @@ partial class SqlServerProvider
                             string sqlArgument = null;
                             if (item is SqlSegment sqlSegment)
                                 sqlArgument = visitor.GetQuotedValue(sqlSegment);
-                            else sqlArgument = visitor.GetQuotedValue(item, arraySegment);
+                            else sqlArgument = visitor.GetQuotedValue(item, arraySegment,
+                                elementSegment.TypeHandler, elementSegment.ExpectType ?? elementSegment.UnderlyingType);
                             builder.Append(sqlArgument);
                         }
                         if (builder.Length > 0)
@@ -72,7 +73,8 @@ partial class SqlServerProvider
                             string sqlArgument = null;
                             if (item is SqlSegment sqlSegment)
                                 sqlArgument = visitor.GetQuotedValue(sqlSegment);
-                            else sqlArgument = visitor.GetQuotedValue(item, targetSegment);
+                            else sqlArgument = visitor.GetQuotedValue(item, targetSegment,
+                                elementSegment.TypeHandler, elementSegment.ExpectType ?? elementSegment.UnderlyingType);
                             builder.Append(sqlArgument);
                         }
                         if (builder.Length > 0)

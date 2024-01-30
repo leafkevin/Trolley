@@ -60,10 +60,7 @@ public class SqlSegment
     /// 当强制转换时，此字段值为转换后的类型，除此之外就是MemberMapper.UnderlyingType
     /// </summary>
     public Type ExpectType { get; set; }
-    /// <summary>
-    /// 当枚举类型成员访问时，且数据库为VARCHAR类型，此字段会有值，值为typeof(string)
-    /// </summary>
-    public Type TargetType { get; set; }
+    public Type UnderlyingType { get; set; }
     public string ParameterName { get; set; }
     public TableSegment TableSegment { get; set; }
     public MemberInfo FromMember { get; set; }
