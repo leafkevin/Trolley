@@ -39,5 +39,5 @@ public interface ISqlVisitor : IDisposable
     List<Expression> ConvertFormatToConcatList(Expression[] argsExprs);
     List<Expression> SplitConcatList(Expression[] argsExprs);
     string VisitFromQuery(LambdaExpression lambdaExpr);
-    bool ChangeSameType(SqlSegment leftSegment, SqlSegment rightSegment);
+    bool ChangeSameType(SqlSegment leftSegment, SqlSegment rightSegment, bool isForce = false);
 }

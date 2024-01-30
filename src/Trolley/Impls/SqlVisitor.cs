@@ -624,8 +624,10 @@ public class SqlVisitor : ISqlVisitor
             this.ChangeSameType(ifFalseSegment, ifTrueSegment);
         var leftArgument = this.GetQuotedValue(ifTrueSegment);
         var rightArgument = this.GetQuotedValue(ifFalseSegment);
-        //确保返回的值类型与数据库类型一致
-        this.ChangeSameType(ifTrueSegment, sqlSegment);
+        //确保sqlSegment.UnderlyingType有值，后面的GetQuotedValue能够得到返回的类型
+        this.ChangeSameType(ifTrueSegment, sqlSegment, true);
+        //if (sqlSegment.UnderlyingType == null)
+        //    sqlSegment.UnderlyingType = ifTrueSegment.Expression.Type;
         sqlSegment.IsFieldType = true;
         return this.VisitDeferredBoolConditional(sqlSegment, conditionalExpr.IfTrue.Type == typeof(bool), leftArgument, rightArgument);
     }
@@ -1256,8 +1258,6 @@ public class SqlVisitor : ISqlVisitor
             }
             var parameterName = sqlSegment.ParameterName ?? this.OrmProvider.ParameterPrefix + this.ParameterPrefix + dbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-            //if (sqlSegment.MemberMapper != null)
-            //    this.OrmProvider.AddDbParameter(this.DbKey, dbParameters, sqlSegment.MemberMapper, parameterName, sqlSegment.Value);
             if (sqlSegment.TypeHandler != null)
             {
                 var underlyingType = sqlSegment.ExpectType ?? sqlSegment.UnderlyingType;
@@ -1283,12 +1283,10 @@ public class SqlVisitor : ISqlVisitor
         else if (sqlSegment.IsConstant)
         {
             var typedValue = sqlSegment.Value;
+            var underlyingType = sqlSegment.ExpectType ?? sqlSegment.UnderlyingType;
             if (sqlSegment.TypeHandler != null)
-            {
-                var underlyingType = sqlSegment.ExpectType ?? sqlSegment.UnderlyingType;
                 return sqlSegment.TypeHandler.GetQuotedValue(this.OrmProvider, underlyingType, sqlSegment.Value);
-            }
-            return this.OrmProvider.GetQuotedValue(typedValue);
+            return this.OrmProvider.GetQuotedValue(underlyingType ?? sqlSegment.Expression.Type, typedValue);
         }
         //带有参数或字段的表达式或函数调用、或是只有参数或字段
         //TODO:本地函数调用返回值，非常量、变量、字段、SQL函数调用
@@ -1322,7 +1320,7 @@ public class SqlVisitor : ISqlVisitor
         {
             if (typeHandler != null)
                 return typeHandler.GetQuotedValue(this.OrmProvider, expectType, elementValue);
-            return this.OrmProvider.GetQuotedValue(elementValue);
+            return this.OrmProvider.GetQuotedValue(expectType, elementValue);
         }
         return this.OrmProvider.GetQuotedValue(elementValue);
     }
@@ -1482,13 +1480,12 @@ public class SqlVisitor : ISqlVisitor
         right = left;
         left = temp;
     }
-    public bool ChangeSameType(SqlSegment leftSegment, SqlSegment rightSegment)
+    public bool ChangeSameType(SqlSegment leftSegment, SqlSegment rightSegment, bool isForce = false)
     {
         //表达式左侧有枚举类字段访问，直接字段访问或是表达式计算(加、减、乘、除、取模、按位与、按位或...)
         //如：f.SourceType = UserSourceType.WebSite 或是f.SourceType & UserSourceType.WebSite = UserSourceType.WebSite
         //在表达式解析过程中，计算时使用UnderlyingType类型，条件等于判断使用枚举类型
-        if (leftSegment.HasField && (!leftSegment.IsExpression && !leftSegment.IsMethodCall || leftSegment.IsFieldType)
-            && (rightSegment.IsConstant || rightSegment.IsVariable))
+        if (isForce || leftSegment.HasField && (!leftSegment.IsExpression && !leftSegment.IsMethodCall || leftSegment.IsFieldType))
         {
             //变量时，根据MemberMapper的配置，把参数转变成真正的数据库字段类型
             rightSegment.MemberMapper = leftSegment.MemberMapper;
