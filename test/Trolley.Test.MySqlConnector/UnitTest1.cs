@@ -1053,7 +1053,7 @@ public class UnitTest1 : UnitTestBase
              })
              .OnDuplicateKeyUpdate(x => x
                 .Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
-                .Set(true, f => f.Products))
+                .Set(f => f.Products, f => x.Values(f.Products)))
             .ToSql(out _);
         Assert.True(sql2 == "INSERT INTO `sys_order` (`Id`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`TotalAmount`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@OrderNo,@BuyerId,@SellerId,@BuyerSource,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=VALUES(`TotalAmount`),`Products`=VALUES(`Products`)");
 
@@ -1085,7 +1085,7 @@ public class UnitTest1 : UnitTestBase
              })
              .OnDuplicateKeyUpdate(x => x
                 .Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
-                .Set(true, f => f.Products))
+                .Set(true, f => f.Products, f => x.Values(f.Products)))
             .ExecuteAsync();
         var order = await repository.GetAsync<Order>(9);
         await repository.CommitAsync();
@@ -1120,7 +1120,7 @@ public class UnitTest1 : UnitTestBase
             })
             .OnDuplicateKeyUpdate(x => x
                 .Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
-                .Set(true, f => f.Products))
+                .Set(true, f => f.Products, f => x.Values(f.Products)))
             .ExecuteAsync();
         order = await repository.GetAsync<Order>(9);
         await repository.CommitAsync();

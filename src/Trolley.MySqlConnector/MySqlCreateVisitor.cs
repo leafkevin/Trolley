@@ -164,8 +164,6 @@ public class MySqlCreateVisitor : CreateVisitor
                         if (callExpr.Arguments[0].Type.BaseType == typeof(LambdaExpression))
                         {
                             var argumentExpr = callExpr.Arguments[0];
-                            //if (argumentExpr.NodeType != ExpressionType.New && argumentExpr.NodeType != ExpressionType.MemberAccess)
-                            //    throw new NotSupportedException($"不支持的表达式访问，类型{callExpr.Method.DeclaringType.FullName}.Set方法，只支持MemberAccess/New访问，如：.Set(f =&gt; f.TotalAmount) 或 .Set(f =&gt; new {{TotalAmount = f.TotalAmount + x.Values(f.TotalAmount)}})");
                             this.VisitAndDeferred(new SqlSegment { Expression = callExpr.Arguments[0] });
                             isNeedAlias = true;
                         }
@@ -180,8 +178,16 @@ public class MySqlCreateVisitor : CreateVisitor
                             var argumentExpr = callExpr.Arguments[1];
                             //if (argumentExpr.NodeType != ExpressionType.New && argumentExpr.NodeType != ExpressionType.MemberAccess)
                             //    throw new NotSupportedException($"不支持的表达式访问，类型{callExpr.Method.DeclaringType.FullName}.Set方法，只支持MemberAccess/New访问，如：.Set(true, f =&gt; f.TotalAmount) 或 .Set(true, f =&gt; new {{TotalAmount = f.TotalAmount + x.Values(f.TotalAmount)}})");
-                            var condition = this.Evaluate<bool>(callExpr.Arguments[0]);
-                            if (condition) this.VisitAndDeferred(new SqlSegment { Expression = callExpr.Arguments[1] });
+                            if (callExpr.Arguments[0].Type == typeof(bool))
+                            {
+                                var condition = this.Evaluate<bool>(callExpr.Arguments[0]);
+                                if (condition) this.VisitAndDeferred(new SqlSegment { Expression = callExpr.Arguments[1] });
+                            }
+                            else
+                            {
+                                //Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector)
+                                this.VisitSetFieldExpression(callExpr.Arguments[0], callExpr.Arguments[1]);
+                            }
                             isNeedAlias = true;
                         }
                         else
@@ -197,10 +203,20 @@ public class MySqlCreateVisitor : CreateVisitor
                         }
                     }
                     //Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+                    //Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector)
                     else
                     {
                         var condition = this.Evaluate<bool>(callExpr.Arguments[0]);
-                        if (condition) this.VisitWithSetField(callExpr.Arguments[1], this.Evaluate(callExpr.Arguments[2]));
+                        if (condition)
+                        {
+                            if (callExpr.Arguments[2].Type.BaseType == typeof(LambdaExpression))
+                                this.VisitSetFieldExpression(callExpr.Arguments[1], callExpr.Arguments[2]);
+                            else
+                            {
+                                var leftSegment = this.VisitAndDeferred(new SqlSegment { Expression = callExpr.Arguments[0] });
+                                this.VisitWithSetField(callExpr.Arguments[1], this.Evaluate(callExpr.Arguments[2]));
+                            }
+                        }
                     }
                     break;
             }
@@ -208,17 +224,6 @@ public class MySqlCreateVisitor : CreateVisitor
         this.UpdateFields.Insert(0, " ON DUPLICATE KEY UPDATE ").ToString();
         if (this.IsSetAlias && isNeedAlias) this.UpdateFields.Insert(0, $" AS {this.SetRowAlias}");
         this.IsUpdate = false;
-    }
-    public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
-    {
-        sqlSegment = base.VisitMemberAccess(sqlSegment);
-        if (this.IsUpdate)
-        {
-            //.Set(true, f => f.TotalAmount)) 特殊处理一下
-            sqlSegment.Value = $"VALUES({sqlSegment.Value})";
-            this.AddMemberElement(sqlSegment, sqlSegment.MemberMapper);
-        }
-        return sqlSegment;
     }
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
     {
@@ -298,6 +303,13 @@ public class MySqlCreateVisitor : CreateVisitor
         //.Set(true, f => f.TotalAmount))
         //.Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
         else this.UpdateFields.Append($"{fieldName}={sqlSegment.Value.ToString()}");
+    }
+    public virtual void VisitSetFieldExpression(Expression fieldSelector, Expression fieldValueSelector)
+    {
+        var fieldSegment = this.VisitAndDeferred(new SqlSegment { Expression = fieldSelector });
+        var valueSegment = this.VisitAndDeferred(new SqlSegment { Expression = fieldValueSelector });
+        if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
+        this.UpdateFields.Append($"{fieldSegment}={valueSegment}");
     }
     public virtual void VisitWithSetField(Expression fieldSelector, object fieldValue)
     {

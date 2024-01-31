@@ -828,17 +828,14 @@ public class RepositoryHelper
             Expression nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
             var typeHandlerExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler));
             methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
-            Expression myFieldValueExpr = fieldValueExpr;
-            if (fieldValueExpr.Type != typeof(object))
-                myFieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
-            var dbFieldValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, underlyingTypeExpr, myFieldValueExpr);
+            var dbFieldValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, underlyingTypeExpr, fieldValueExpr);
 
             //dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
             methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });
             nativeDbTypeExpr = Expression.Convert(nativeDbTypeExpr, typeof(object));
             var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, dbFieldValueExpr);
             methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add), new Type[] { typeof(object) });
-            blockBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
+            loopBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
 
             //index++;
             loopBodies.Add(Expression.AddAssign(indexExpr, Expression.Constant(1)));

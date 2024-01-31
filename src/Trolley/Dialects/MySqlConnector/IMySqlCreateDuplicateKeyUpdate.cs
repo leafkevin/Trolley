@@ -41,14 +41,17 @@ public interface IMySqlCreateDuplicateKeyUpdate<TEntity>
     /// <returns></returns>
     IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// 
+    /// .WithBy( ... ).OnDuplicateKeyUpdate(x =>.Set(f => f.TotalAmount, f=> x.Values(f.TotalAmount)))
+    /// SQL: INSERT INTO ... VALUES ( ... ) ON DUPLICATE KEY UPDATE `TotalAmount`=VALUES(`TotalAmount`)
     /// </summary>
-    /// <typeparam name="TFields"></typeparam>
-    /// <param name="condition"></param>
-    /// <param name="fieldsAssignment"></param>
+    /// <typeparam name="TField"></typeparam>
+    /// <param name="fieldSelector"></param>
+    /// <param name="fieldValueSelector"></param>
     /// <returns></returns>
+    IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector);
     IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);
     IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    IMySqlCreateDuplicateKeyUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector);
     #endregion
 }
