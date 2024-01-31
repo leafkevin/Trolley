@@ -504,13 +504,9 @@ public static class Extensions
     {
         var methodInfo = typeof(IDataRecord).GetMethod(nameof(IDataRecord.GetValue), new Type[] { typeof(int) });
         var readerValueExpr = AssignLocalParameter(typeof(object), Expression.Call(readerExpr, methodInfo, indexExpr), blockParameters, blockBodies);
-
         var isNullable = targetType.IsNullableType(out var underlyingType);
-        if (underlyingType == fieldType)
-            return Expression.Convert(readerValueExpr, targetType);
-
         if (typeHandler == null)
-            typeHandler = ormProvider.GetTypeHandler(targetType, fieldType, isNullable);
+            typeHandler = ormProvider.GetTypeHandler(targetType, fieldType, !isNullable);
 
         methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.Parse), new Type[] { typeof(IOrmProvider), typeof(Type), typeof(object) });
         var typeHandlerExpr = Expression.Constant(typeHandler);

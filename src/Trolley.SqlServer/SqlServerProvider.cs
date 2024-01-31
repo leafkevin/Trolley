@@ -11,6 +11,7 @@ public partial class SqlServerProvider : BaseOrmProvider
     private static Dictionary<object, Type> defaultMapTypes = new();
     private static Dictionary<Type, object> defaultDbTypes = new();
     private static Dictionary<Type, string> castTos = new();
+    private static Dictionary<Type, ITypeHandler> defaultTypeHandlers = new();
 
     public override Type NativeDbTypeType => typeof(SqlDbType);
     static SqlServerProvider()
@@ -65,7 +66,7 @@ public partial class SqlServerProvider : BaseOrmProvider
 
         defaultDbTypes[typeof(bool?)] = SqlDbType.Bit;
         defaultDbTypes[typeof(byte?)] = SqlDbType.TinyInt;
-        defaultDbTypes[typeof(sbyte?)] = SqlDbType.TinyInt;   
+        defaultDbTypes[typeof(sbyte?)] = SqlDbType.TinyInt;
         defaultDbTypes[typeof(short?)] = SqlDbType.SmallInt;
         defaultDbTypes[typeof(ushort?)] = SqlDbType.SmallInt;
         defaultDbTypes[typeof(int?)] = SqlDbType.Int;
@@ -117,6 +118,41 @@ public partial class SqlServerProvider : BaseOrmProvider
         castTos[typeof(DateOnly?)] = "DATE";
         castTos[typeof(TimeOnly?)] = "TIME";
         castTos[typeof(Guid?)] = "UNIQUEIDENTIFIER";
+
+        defaultTypeHandlers[typeof(bool)] = typeHandlers[typeof(BooleanAsIntTypeHandler)];
+        defaultTypeHandlers[typeof(bool?)] = typeHandlers[typeof(NullableBooleanAsIntTypeHandler)];
+        defaultTypeHandlers[typeof(string)] = typeHandlers[typeof(NullableStringTypeHandler)];
+        defaultTypeHandlers[typeof(DateTimeOffset)] = typeHandlers[typeof(DateTimeOffsetTypeHandler)];
+        defaultTypeHandlers[typeof(DateTimeOffset?)] = typeHandlers[typeof(NullableDateTimeOffsetTypeHandler)];
+        defaultTypeHandlers[typeof(byte)] = typeHandlers[typeof(NumberTypeHandler)];
+        defaultTypeHandlers[typeof(byte?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
+        defaultTypeHandlers[typeof(sbyte)] = typeHandlers[typeof(NumberTypeHandler)];
+        defaultTypeHandlers[typeof(sbyte?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
+        defaultTypeHandlers[typeof(short)] = typeHandlers[typeof(NumberTypeHandler)];
+        defaultTypeHandlers[typeof(ushort?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
+        defaultTypeHandlers[typeof(char)] = typeHandlers[typeof(CharTypeHandler)];
+        defaultTypeHandlers[typeof(char?)] = typeHandlers[typeof(NullableCharTypeHandler)];
+        defaultTypeHandlers[typeof(int)] = typeHandlers[typeof(NumberTypeHandler)];
+        defaultTypeHandlers[typeof(uint?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
+        defaultTypeHandlers[typeof(long)] = typeHandlers[typeof(NumberTypeHandler)];
+        defaultTypeHandlers[typeof(ulong?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
+        defaultTypeHandlers[typeof(float)] = typeHandlers[typeof(NumberTypeHandler)];
+        defaultTypeHandlers[typeof(float?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
+        defaultTypeHandlers[typeof(double)] = typeHandlers[typeof(NumberTypeHandler)];
+        defaultTypeHandlers[typeof(double?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
+        defaultTypeHandlers[typeof(decimal)] = typeHandlers[typeof(NumberTypeHandler)];
+        defaultTypeHandlers[typeof(decimal?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
+        defaultTypeHandlers[typeof(DateTime)] = typeHandlers[typeof(DateTimeTypeHandler)];
+        defaultTypeHandlers[typeof(DateTime?)] = typeHandlers[typeof(NullableDateTimeTypeHandler)];
+        defaultTypeHandlers[typeof(DateOnly)] = typeHandlers[typeof(DateOnlyTypeHandler)];
+        defaultTypeHandlers[typeof(DateOnly?)] = typeHandlers[typeof(NullableDateOnlyTypeHandler)];
+        defaultTypeHandlers[typeof(TimeSpan)] = typeHandlers[typeof(TimeSpanTypeHandler)];
+        defaultTypeHandlers[typeof(TimeSpan?)] = typeHandlers[typeof(NullableTimeSpanTypeHandler)];
+        defaultTypeHandlers[typeof(TimeOnly)] = typeHandlers[typeof(TimeOnlyTypeHandler)];
+        defaultTypeHandlers[typeof(TimeOnly?)] = typeHandlers[typeof(NullableTimeOnlyTypeHandler)];
+        defaultTypeHandlers[typeof(Guid)] = typeHandlers[typeof(GuidTypeHandler)];
+        defaultTypeHandlers[typeof(Guid?)] = typeHandlers[typeof(NullableGuidTypeHandler)];
+        defaultTypeHandlers[typeof(object)] = typeHandlers[typeof(JsonTypeHandler)];
     }
     public override IDbConnection CreateConnection(string connectionString)
         => new SqlConnection(connectionString);
@@ -171,19 +207,6 @@ public partial class SqlServerProvider : BaseOrmProvider
     public override string GetIdentitySql(Type entityType) => ";SELECT SCOPE_IDENTITY()";
     public override string CastTo(Type type, object value)
         => $"CAST({value} AS {castTos[type]})";
-    public override string GetQuotedValue(Type expectType, object value)
-    {
-        if (expectType == typeof(DateTime) && value is DateTime dateTime)
-            return $"'{dateTime:yyyy-MM-dd HH:mm:ss.fff}'";
-        if (expectType == typeof(TimeSpan) && value is TimeSpan timeSpan)
-        {
-            //在SELECT的场景才会用到
-            if (timeSpan > TimeSpan.FromDays(1) || timeSpan < -TimeSpan.FromDays(1))
-                return $"'{(int)timeSpan.TotalDays}.{timeSpan.ToString("hh\\:mm\\:ss\\.fff")}'";
-            return $"'{timeSpan.ToString("hh\\:mm\\:ss\\.fff")}'";
-        }
-        if (expectType == typeof(TimeOnly) && value is TimeOnly timeOnly)
-            return $"'{timeOnly.ToString("hh\\:mm\\:ss\\.fff")}'";
-        return base.GetQuotedValue(expectType, value);
-    }
+    public override bool TryGetDefaultTypeHandler(Type targetType, out ITypeHandler typeHandler)
+        => defaultTypeHandlers.TryGetValue(targetType, out typeHandler);
 }

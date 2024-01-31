@@ -5,7 +5,7 @@ namespace Trolley;
 public class TimeOnlyTypeHandler : ITypeHandler
 {
     public virtual string Format { get; set; } = "\\'hh\\:mm\\:ss\\.ffffff\\'";
-    public object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
+    public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is TimeOnly)
             return value;
@@ -13,7 +13,7 @@ public class TimeOnlyTypeHandler : ITypeHandler
             return TimeOnly.FromTimeSpan(tsValue);
         return TimeOnly.MinValue;
     }
-    public object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value) => value;
+    public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value) => value;
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is TimeOnly toValue)
@@ -24,7 +24,7 @@ public class TimeOnlyTypeHandler : ITypeHandler
 public class NullableTimeOnlyTypeHandler : ITypeHandler
 {
     public virtual string Format { get; set; } = "\\'hh\\:mm\\:ss\\.ffffff\\'";
-    public object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
+    public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is TimeOnly)
             return value;
@@ -32,7 +32,7 @@ public class NullableTimeOnlyTypeHandler : ITypeHandler
             return TimeOnly.FromTimeSpan(tsValue);
         return null;
     }
-    public object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
+    public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is TimeOnly)
             return value;
@@ -48,13 +48,14 @@ public class NullableTimeOnlyTypeHandler : ITypeHandler
 public class TimeOnlyAsStringTypeHandler : ITypeHandler
 {
     public virtual string Format { get; set; } = "\\'hh\\:mm\\:ss\\.ffffff\\'";
-    public object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
+    public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
     {
-        if (value is string strValue)
+        if (value is string strValue && !string.IsNullOrEmpty(strValue))
             return TimeOnly.Parse(strValue);
         return TimeOnly.MinValue;
     }
-    public object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value) => value;
+    public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
+        => this.GetQuotedValue(ormProvider, underlyingType, value);
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is TimeOnly toValue)
@@ -65,16 +66,16 @@ public class TimeOnlyAsStringTypeHandler : ITypeHandler
 public class NullableTimeOnlyAsStringTypeHandler : ITypeHandler
 {
     public virtual string Format { get; set; } = "\\'hh\\:mm\\:ss\\.ffffff\\'";
-    public object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
+    public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
     {
-        if (value is string strValue)
+        if (value is string strValue && !string.IsNullOrEmpty(strValue))
             return TimeOnly.Parse(strValue);
         return null;
     }
-    public object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
+    public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
-        if (value is TimeOnly)
-            return value;
+        if (value is TimeOnly toValue)
+            return $"'{toValue.ToString(this.Format)}'";
         return DBNull.Value;
     }
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
@@ -86,22 +87,14 @@ public class NullableTimeOnlyAsStringTypeHandler : ITypeHandler
 }
 public class TimeOnlyAsLongTypeHandler : ITypeHandler
 {
-    public object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
+    public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
     {
-        if (value is TimeOnly)
-            return value;
-        if (value is TimeSpan tsValue)
-            return TimeOnly.FromTimeSpan(tsValue);
         if (value is long lValue)
-            return TimeOnly.FromTimeSpan(TimeSpan.FromTicks(lValue));
+            return new TimeOnly(lValue);
         return TimeOnly.MinValue;
     }
-    public object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
-    {
-        if (value is TimeOnly toValue)
-            return toValue.Ticks;
-        return 0;
-    }
+    public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
+        => this.GetQuotedValue(ormProvider, underlyingType, value);
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is TimeOnly toValue)
@@ -111,17 +104,13 @@ public class TimeOnlyAsLongTypeHandler : ITypeHandler
 }
 public class NullableTimeOnlyAsLongTypeHandler : ITypeHandler
 {
-    public object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
+    public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
     {
-        if (value is TimeOnly)
-            return value;
-        if (value is TimeSpan tsValue)
-            return TimeOnly.FromTimeSpan(tsValue);
         if (value is long lValue)
-            return TimeOnly.FromTimeSpan(TimeSpan.FromTicks(lValue));
+            return new TimeOnly(lValue);
         return null;
     }
-    public object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
+    public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is TimeOnly toValue)
             return toValue.Ticks;

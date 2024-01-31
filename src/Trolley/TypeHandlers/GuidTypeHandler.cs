@@ -4,13 +4,13 @@ namespace Trolley;
 
 public class GuidTypeHandler : ITypeHandler
 {
-    public object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
+    public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is Guid)
             return value;
         return Guid.Empty;
     }
-    public object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value) => value;
+    public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value) => value;
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is Guid gVaue)
@@ -20,7 +20,7 @@ public class GuidTypeHandler : ITypeHandler
 }
 public class GuidAsStringTypeHandler : ITypeHandler
 {
-    public object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
+    public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is Guid)
             return value;
@@ -28,7 +28,7 @@ public class GuidAsStringTypeHandler : ITypeHandler
             return Guid.Parse(strValue);
         return Guid.Empty;
     }
-    public object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value) => value.ToString();
+    public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value) => value.ToString();
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is Guid gVaue)
@@ -38,13 +38,13 @@ public class GuidAsStringTypeHandler : ITypeHandler
 }
 public class NullableGuidTypeHandler : ITypeHandler
 {
-    public object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
+    public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is Guid)
             return value;
         return null;
     }
-    public object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
+    public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is Guid)
             return value;
@@ -59,7 +59,7 @@ public class NullableGuidTypeHandler : ITypeHandler
 }
 public class NullableGuidAsStringTypeHandler : ITypeHandler
 {
-    public object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
+    public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is Guid gValue)
             return gValue;
@@ -67,7 +67,7 @@ public class NullableGuidAsStringTypeHandler : ITypeHandler
             return Guid.Parse(strValue);
         return null;
     }
-    public object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
+    public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is Guid gValue)
             return gValue.ToString();

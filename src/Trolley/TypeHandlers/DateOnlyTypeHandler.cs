@@ -9,6 +9,8 @@ public class DateOnlyTypeHandler : ITypeHandler
     {
         if (value is DateOnly)
             return value;
+        if (value is DateTime dtValue)
+            return DateOnly.FromDateTime(dtValue);
         return DateOnly.MinValue;
     }
     public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value) => value;
@@ -26,6 +28,8 @@ public class NullableDateOnlyTypeHandler : ITypeHandler
     {
         if (value is DateOnly)
             return value;
+        if (value is DateTime dtValue)
+            return DateOnly.FromDateTime(dtValue);
         return null;
     }
     public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
@@ -46,11 +50,12 @@ public class DateOnlyAsStringTypeHandler : ITypeHandler
     public virtual string Format { get; set; } = "\\'yyyy-MM-dd\\'";
     public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
     {
-        if (value is string strValue)
+        if (value is string strValue && !string.IsNullOrEmpty(strValue))
             return DateOnly.Parse(strValue);
         return DateOnly.MinValue;
     }
-    public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value) => value;
+    public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
+        => this.GetQuotedValue(ormProvider, underlyingType, value);
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is DateOnly doValue)
@@ -63,7 +68,7 @@ public class NullableDateOnlyAsStringTypeHandler : ITypeHandler
     public virtual string Format { get; set; } = "\\'yyyy-MM-dd\\'";
     public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
     {
-        if (value is string strValue)
+        if (value is string strValue && !string.IsNullOrEmpty(strValue))
             return DateOnly.Parse(strValue);
         return null;
     }

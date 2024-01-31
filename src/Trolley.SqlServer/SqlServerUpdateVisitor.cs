@@ -39,7 +39,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
             foreach (var setField in this.UpdateFields)
             {
                 if (index > 0) builder.Append(',');
-                builder.Append($"{setField.Fields}={setField.Values}");
+                builder.Append($"{setField}");
                 index++;
             }
         }

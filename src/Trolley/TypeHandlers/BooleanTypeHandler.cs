@@ -24,7 +24,7 @@ public class NullableBooleanTypeHandler : ITypeHandler
     {
         if (value is bool)
             return value;
-        return DBNull.Value;
+        return null;
     }
     public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
@@ -42,8 +42,16 @@ public class NullableBooleanTypeHandler : ITypeHandler
 public class BooleanAsIntTypeHandler : ITypeHandler
 {
     public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
-        => Convert.ToInt32(value) == 1;
-    public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value) => value;
+    {
+        if (value is DBNull) return false;
+        return Convert.ToInt32(value) == 1;
+    }
+    public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
+    {
+        if (value is bool bValue)
+            return bValue ? 1 : 0;
+        return 0;
+    }
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is bool bValue)
@@ -55,13 +63,13 @@ public class NullableBooleanAsIntTypeHandler : ITypeHandler
 {
     public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
     {
-        if (value == null) return null;
+        if (value is DBNull) return null;
         return Convert.ToInt32(value) == 1;
     }
     public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
-        if (value is bool)
-            return value;
+        if (value is bool bValue)
+            return bValue ? 1 : 0;
         return DBNull.Value;
     }
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
