@@ -221,7 +221,6 @@ public static class Extensions
     /// </summary>
     /// <typeparam name="TEntity"></typeparam>
     /// <param name="reader"></param>
-    /// <param name="dbKey"></param>
     /// <param name="ormProvider"></param>
     /// <param name="mapProvider"></param>
     /// <returns></returns>
