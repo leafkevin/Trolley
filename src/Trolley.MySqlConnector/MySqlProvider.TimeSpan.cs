@@ -233,7 +233,7 @@ partial class MySqlProvider
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.Change(TimeSpan.FromMinutes(Convert.ToDouble(valueSegment.Value)));
-                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment}*60))", false, false, true);
+                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment}*60))", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -243,7 +243,7 @@ partial class MySqlProvider
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.Change(TimeSpan.FromSeconds(Convert.ToDouble(valueSegment.Value)));
-                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment}))", false, false, true);
+                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment}))", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -253,7 +253,7 @@ partial class MySqlProvider
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.Change(TimeSpan.FromTicks(Convert.ToInt64(valueSegment.Value)));
-                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment}/{TimeSpan.TicksPerSecond}))", false, false, true);
+                        return valueSegment.Change($"ADDTIME('00:00:00',SEC_TO_TIME({valueSegment}/{TimeSpan.TicksPerSecond}))", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -338,7 +338,7 @@ partial class MySqlProvider
                                 else builder.Append($"ADDTIME({targetArgument}");
                                 builder.Append($",{this.GetQuotedValue(timeSpan)})");
                             }
-                            return targetSegment.Merge(rightSegment, builder.ToString(), false, false, true, true);
+                            return targetSegment.Merge(rightSegment, builder.ToString(), false, false, false, true);
                         }
 
                         var rightArgument = visitor.GetQuotedValue(rightSegment);

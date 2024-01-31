@@ -604,7 +604,7 @@ partial class MySqlProvider
                                     else builder.Append($"SUBTIME({targetArgument}");
                                     builder.Append($",{this.GetQuotedValue(timeSpan)})");
                                 }
-                                return targetSegment.Change(builder.ToString(), false, false, true);
+                                return targetSegment.Change(builder.ToString(), false, false, false, true);
                             }
                             //非常量、变量的，只能小于一天,数据库的Time类型映射成TimeSpan
                             var rightArgument = visitor.GetQuotedValue(rightSegment);

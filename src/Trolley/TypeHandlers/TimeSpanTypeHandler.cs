@@ -18,7 +18,7 @@ public class TimeSpanTypeHandler : ITypeHandler
     {
         if (value is TimeSpan tsValue)
         {
-            if (tsValue.TotalDays > 24 || tsValue.TotalDays < -24)
+            if (tsValue.TotalDays > 1 || tsValue.TotalDays < -1)
                 return $"'{(int)tsValue.TotalDays}.{tsValue.ToString(Format)}'";
             return $"'{tsValue.ToString(this.Format)}'";
         }
@@ -46,7 +46,7 @@ public class NullableTimeSpanTypeHandler : ITypeHandler
     {
         if (value is TimeSpan tsValue)
         {
-            if (tsValue.TotalDays > 24 || tsValue.TotalDays < -24)
+            if (tsValue.TotalDays > 1 || tsValue.TotalDays < -1)
                 return $"'{(int)tsValue.TotalDays}.{tsValue.ToString(Format)}'";
             return $"'{tsValue.ToString(this.Format)}'";
         }
@@ -68,7 +68,7 @@ public class TimeSpanAsStringTypeHandler : ITypeHandler
     {
         if (value is TimeSpan tsValue)
         {
-            if (tsValue.TotalDays > 24 || tsValue.TotalDays < -24)
+            if (tsValue.TotalDays > 1 || tsValue.TotalDays < -1)
                 return $"'{(int)tsValue.TotalDays}.{tsValue.ToString(Format)}'";
             return $"'{tsValue.ToString(this.Format)}'";
         }
@@ -94,7 +94,7 @@ public class NullableTimeSpanAsStringTypeHandler : ITypeHandler
     {
         if (value is TimeSpan tsValue)
         {
-            if (tsValue.TotalDays > 24 || tsValue.TotalDays < -24)
+            if (tsValue.TotalDays > 1 || tsValue.TotalDays < -1)
                 return $"'{(int)tsValue.TotalDays}.{tsValue.ToString(Format)}'";
             return $"'{tsValue.ToString(this.Format)}'";
         }

@@ -58,7 +58,7 @@ partial class MySqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeOnly)targetSegment.Value).Millisecond);
 
-                        return targetSegment.Change($"MICROSECOND({targetSegment}) DIV 1000 MOD 1000", false, false, false, true);
+                        return targetSegment.Change($"MICROSECOND({targetSegment}) DIV 1000 MOD 1000", false, false, true);
                     });
                     result = true;
                     break;

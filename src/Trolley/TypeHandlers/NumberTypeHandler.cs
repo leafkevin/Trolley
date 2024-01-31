@@ -32,8 +32,9 @@ public class NullableNumberTypeHandler : ITypeHandler
         return "NULL";
     }
 }
-public class ConvertNumberTypeHandler : ITypeHandler
+public class ConvertNumberTypeHandler<TField> : ITypeHandler
 {
+    protected Type fieldType = typeof(TField);
     public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is DBNull)
@@ -41,11 +42,12 @@ public class ConvertNumberTypeHandler : ITypeHandler
         return Convert.ChangeType(value, underlyingType);
     }
     public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
-        => Convert.ChangeType(value, underlyingType);
+        => Convert.ChangeType(value, this.fieldType);
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value) => value.ToString();
 }
-public class NullableConvertNumberTypeHandler : ITypeHandler
+public class NullableConvertNumberTypeHandler<TField> : ITypeHandler
 {
+    protected Type fieldType = typeof(TField);
     public virtual object Parse(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value is DBNull) return null;
@@ -54,7 +56,7 @@ public class NullableConvertNumberTypeHandler : ITypeHandler
     public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
         if (value != null)
-            return Convert.ChangeType(value, underlyingType);
+            return Convert.ChangeType(value, this.fieldType);
         return DBNull.Value;
     }
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
