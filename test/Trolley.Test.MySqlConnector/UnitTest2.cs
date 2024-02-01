@@ -102,7 +102,7 @@ public class UnitTest2 : UnitTestBase
     public async void QueryPage()
     {
         Initialize();
-        using var repository = dbFactory.Create("22");
+        using var repository = dbFactory.Create();
         var result = repository.From<OrderDetail>()
             .Where(f => f.ProductId == 1)
             .OrderByDescending(f => f.CreatedAt)

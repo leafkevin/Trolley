@@ -728,16 +728,23 @@ public static class Extensions
         {
             hashCode.Add(reader.GetFieldType(i));
         }
+        hashCode.Add(readerFields.Count);
         foreach (var readerField in readerFields)
         {
             if (readerField.FieldType == ReaderFieldType.Field)
                 hashCode.Add(readerField.TargetMember.Name);
             else
             {
-                foreach (var childReaderField in readerField.ReaderFields)
+                //其他实体类型
+                if (readerField.ReaderFields != null && readerField.ReaderFields.Count > 0)
                 {
-                    hashCode.Add(childReaderField.TargetMember.Name);
+                    foreach (var childReaderField in readerField.ReaderFields)
+                    {
+                        hashCode.Add(childReaderField.TargetMember.Name);
+                    }
                 }
+                //延迟函数调用字段，DeferredFields
+                else hashCode.Add(readerField.TargetMember.Name);
             }
         }
         return hashCode.ToHashCode();

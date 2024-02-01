@@ -732,9 +732,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             blockParameters.Add(typedListExpr);
             blockBodies.Add(Expression.Assign(typedListExpr, Expression.Convert(anonObjsExpr, listType)));
 
-            var methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.To), new Type[] { typeof(IDataReader), typeof(string), typeof(IOrmProvider), typeof(IEntityMapProvider) });
+            var methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.To), new Type[] { typeof(IDataReader), typeof(IOrmProvider), typeof(IEntityMapProvider) });
             methodInfo = methodInfo.MakeGenericMethod(elementType);
-            var elementExpr = Expression.Call(methodInfo, readerExpr, dbKeyExpr, ormProviderExpr, mapProviderExpr);
+            var elementExpr = Expression.Call(methodInfo, readerExpr, ormProviderExpr, mapProviderExpr);
             methodInfo = listType.GetMethod("Add", new Type[] { elementType });
             blockBodies.Add(Expression.Call(typedListExpr, methodInfo, elementExpr));
             return Expression.Lambda<Action<object, string, IDataReader, IOrmProvider, IEntityMapProvider>>(
@@ -1009,8 +1009,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     {
                         FieldType = ReaderFieldType.Field,
                         FromMember = sqlSegment.FromMember,
-                        //MemberMapper = sqlSegment.MemberMapper,
                         TargetMember = memberInfo,
+                        UnderlyingType = sqlSegment.UnderlyingType,
                         NativeDbType = sqlSegment.NativeDbType,
                         TypeHandler = sqlSegment.TypeHandler,
                         Body = fieldName,
@@ -1031,8 +1031,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     {
                         FieldType = ReaderFieldType.Field,
                         FromMember = sqlSegment.FromMember,
-                        //MemberMapper = sqlSegment.MemberMapper,
                         TargetMember = memberExpr.Member,
+                        UnderlyingType = sqlSegment.UnderlyingType,
                         NativeDbType = sqlSegment.NativeDbType,
                         TypeHandler = sqlSegment.TypeHandler,
                         Body = fieldName
@@ -1269,9 +1269,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             readerField = new ReaderField
             {
                 FieldType = ReaderFieldType.Field,
-                //MemberMapper = memberMapper,
                 FromMember = memberMapper.Member,
                 TargetMember = memberInfo,
+                UnderlyingType = memberMapper.UnderlyingType,
                 NativeDbType = memberMapper.NativeDbType,
                 TypeHandler = memberMapper.TypeHandler,
                 Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(memberMapper.FieldName)
@@ -1350,9 +1350,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 var readerField = groupFields[0];
                 //要返回原始FromMember，后续方便判断是否使用AS别名
                 sqlSegment.FromMember = readerField.FromMember;
-                if (readerField.FromMember.GetMemberType().IsEnumType(out var underlyingType))
-                    sqlSegment.ExpectType = underlyingType;
                 sqlSegment.UnderlyingType = readerField.UnderlyingType;
+                if (readerField.UnderlyingType.IsEnum)
+                    sqlSegment.ExpectType = readerField.UnderlyingType;
                 sqlSegment.NativeDbType = readerField.NativeDbType;
                 sqlSegment.TypeHandler = readerField.TypeHandler;
                 sqlSegment.Value = readerField.Body;
@@ -1363,9 +1363,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //此时是Grouping对象字段的引用，最外面可能会更改成员名称，要复制一份，防止更改Grouping对象中的字段
                 var readerField = this.GroupFields.Find(f => f.TargetMember.Name == memberInfo.Name);
                 sqlSegment.FromMember = readerField.FromMember;
-                if (readerField.FromMember.GetMemberType().IsEnumType(out var underlyingType))
-                    sqlSegment.ExpectType = underlyingType;
                 sqlSegment.UnderlyingType = readerField.UnderlyingType;
+                if (readerField.UnderlyingType.IsEnum)
+                    sqlSegment.ExpectType = readerField.UnderlyingType;
                 sqlSegment.NativeDbType = readerField.NativeDbType;
                 sqlSegment.TypeHandler = readerField.TypeHandler;
                 sqlSegment.Value = readerField.Body;
@@ -1478,7 +1478,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                                 {
                                     FieldType = ReaderFieldType.Field,
                                     FromMember = memberMapper.Member,
-                                    //MemberMapper = memberMapper,
                                     TargetMember = memberInfo,
                                     UnderlyingType = memberMapper.UnderlyingType,
                                     NativeDbType = memberMapper.NativeDbType,
@@ -1491,8 +1490,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                                 sqlSegment.FromMember = memberMapper.Member;
                                 sqlSegment.MemberMapper = memberMapper;
                                 sqlSegment.UnderlyingType = memberMapper.UnderlyingType;
-                                if (memberMapper.UnderlyingType.IsEnum)
-                                    sqlSegment.ExpectType = memberMapper.UnderlyingType;
+                                //if (memberMapper.UnderlyingType.IsEnum)
+                                //    sqlSegment.ExpectType = memberMapper.UnderlyingType;
                                 sqlSegment.NativeDbType = memberMapper.NativeDbType;
                                 sqlSegment.TypeHandler = memberMapper.TypeHandler;
                                 sqlSegment.Value = fieldName;
@@ -1521,13 +1520,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 {
                     //Where(f => f.Amount > 5)
                     //Select(f => new { f.OrderId, f.Disputes ...})                    
-                    MemberMap memberMapper = null;
                     string fieldName = null;
                     sqlSegment.HasField = true;
 
                     if (fromSegment.Mapper != null)
                     {
-                        memberMapper = fromSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
+                        var memberMapper = fromSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
                         if (memberMapper.IsIgnore)
                             throw new Exception($"类{fromSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
                         if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
@@ -1535,9 +1533,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
                         sqlSegment.FromMember = memberMapper.Member;
                         sqlSegment.MemberMapper = memberMapper;
+                        sqlSegment.UnderlyingType = memberMapper.UnderlyingType;
                         if (memberMapper.UnderlyingType.IsEnum)
                             sqlSegment.ExpectType = memberMapper.UnderlyingType;
-                        sqlSegment.UnderlyingType = memberMapper.UnderlyingType;
                         sqlSegment.NativeDbType = memberMapper.NativeDbType;
                         sqlSegment.TypeHandler = memberMapper.TypeHandler;
                         //查询时，IsNeedAlias始终为true，新增、更新、删除时，引用联表操作时，才会为true
@@ -1569,11 +1567,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             readerField = fromReaderFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
                         }
                         sqlSegment.FromMember = readerField.TargetMember;
-                        sqlSegment.MemberMapper = memberMapper;
-                        if (memberMapper.UnderlyingType.IsEnum)
-                            sqlSegment.ExpectType = memberMapper.UnderlyingType;
-                        sqlSegment.UnderlyingType = memberMapper.UnderlyingType;
-                        sqlSegment.NativeDbType = memberMapper.NativeDbType;
+                        sqlSegment.UnderlyingType = readerField.UnderlyingType;
+                        if (readerField.UnderlyingType.IsEnum)
+                            sqlSegment.ExpectType = readerField.UnderlyingType;
+                        sqlSegment.NativeDbType = readerField.NativeDbType;
                         sqlSegment.TypeHandler = readerField.TypeHandler;
                         fieldName = this.OrmProvider.GetFieldName(memberExpr.Member.Name);
                         if (this.IsNeedTableAlias) fieldName = fromSegment.AliasName + "." + fieldName;
@@ -1736,7 +1733,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         childReaderField.Body += " AS " + this.OrmProvider.GetFieldName(childReaderField.TargetMember.Name);
                 }
             }
-            readerField.TargetMember = memberInfo;
+            readerField.TargetMember = memberInfo;           
             return readerField;
         }
         else
@@ -1755,8 +1752,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 FieldType = ReaderFieldType.Field,
                 FromMember = sqlSegment.FromMember,
-                //MemberMapper = sqlSegment.MemberMapper,
                 TargetMember = memberInfo,
+                UnderlyingType = (memberInfo ?? sqlSegment.FromMember).GetMemberType(),
                 NativeDbType = sqlSegment.NativeDbType,
                 TypeHandler = sqlSegment.TypeHandler,
                 Body = fieldName

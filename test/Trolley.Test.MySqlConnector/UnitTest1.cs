@@ -165,7 +165,7 @@ public class UnitTest1 : UnitTestBase
             Assert.True(dbParameter.MySqlDbType == MySqlDbType.UByte);
             Assert.True((byte)dbParameter.Value == (byte)Gender.Male);
         }
-        Assert.True((bool)dbParameters[5].Value == true);
+        Assert.True((int)dbParameters[5].Value == 1);
         Assert.True((DateTime)dbParameters[6].Value == now);
         Assert.True((int)dbParameters[7].Value == 1);
         Assert.True((DateTime)dbParameters[8].Value == now);

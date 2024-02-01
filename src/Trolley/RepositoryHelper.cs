@@ -27,9 +27,6 @@ public class RepositoryHelper
     private static ConcurrentDictionary<int, object> deleteCommandInitializerCache = new();
     private static ConcurrentDictionary<int, object> deleteMultiCommandInitializerCache = new();
 
-    private static ConcurrentDictionary<int, object> deleteBulkCommandInitializerCache = new();
-    private static ConcurrentDictionary<int, object> deleteMultiBulkCommandInitializerCache = new();
-
     private static ConcurrentDictionary<int, (string, object)> createBulkCommandInitializerCache = new();
     private static ConcurrentDictionary<int, (string, object)> createMultiBulkCommandInitializerCache = new();
 
@@ -1785,19 +1782,19 @@ public class RepositoryHelper
     //}
 
 
-    public static object BuildDeleteCommandInitializer(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object whereObj, bool isMultiple)
+    public static object BuildDeleteCommandInitializer(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object whereObj, bool hasSuffix)
     {
         var whereObjType = whereObj.GetType();
         var cacheKey = HashCode.Combine(dbKey, ormProvider, mapProvider, entityType, whereObjType);
-        var commandInitializerCache = isMultiple ? deleteMultiCommandInitializerCache : deleteCommandInitializerCache;
+        var commandInitializerCache = hasSuffix ? deleteMultiCommandInitializerCache : deleteCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, f =>
         {
             var entityMapper = mapProvider.GetEntityMap(entityType);
             var headSql = $"DELETE FROM {ormProvider.GetTableName(entityMapper.TableName)} WHERE ";
-            return BuildWhereSqlParameters(dbKey, ormProvider, mapProvider, entityType, whereObjType, true, isMultiple, false, "whereObj", headSql);
+            return BuildWhereSqlParameters(dbKey, ormProvider, mapProvider, entityType, whereObjType, true, hasSuffix, false, "whereObj", headSql);
         });
     }
-    public static (bool, string, object) BuildDeleteBulkCommandInitializer(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object whereObjs, bool isMultiple)
+    public static (bool, string, object) BuildDeleteBulkCommandInitializer(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object whereObjs)
     {
         object whereObj = null;
         var enumerable = whereObjs as IEnumerable;
@@ -1807,11 +1804,10 @@ public class RepositoryHelper
             break;
         }
         var whereObjType = whereObj.GetType();
-        var cacheKey = HashCode.Combine(dbKey, ormProvider, mapProvider, entityType, whereObjType);
+        var cacheKey = HashCode.Combine(ormProvider, mapProvider, entityType, whereObjType);
         var entityMapper = mapProvider.GetEntityMap(entityType);
         var isMultiKeys = entityMapper.KeyMembers.Count > 1;
-        var commandInitializerCache = isMultiple ? deleteMultiBulkCommandInitializerCache : deleteBulkCommandInitializerCache;
-        var commandInitializer = commandInitializerCache.GetOrAdd(cacheKey, f =>
+        var commandInitializer = deleteMultiCommandInitializerCache.GetOrAdd(cacheKey, f =>
         {
             var bulkHeadSql = $"DELETE FROM {ormProvider.GetFieldName(entityMapper.TableName)} WHERE ";
             return BuildBulkWhereKeySqlParameters(dbKey, ormProvider, mapProvider, entityType, whereObj, isMultiple, bulkHeadSql);
@@ -1820,16 +1816,16 @@ public class RepositoryHelper
         if (!isMultiKeys) headSql = $"DELETE FROM {ormProvider.GetFieldName(entityMapper.TableName)} WHERE {ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (";
         return (isMultiKeys, headSql, commandInitializer);
     }
-    public static object BuildBulkWhereKeySqlParameters(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object whereKeys, bool isMultiple, string bulkHeadSql)
+    public static object BuildDeleteBulkWhereKeySqlParameters(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object whereKeys, bool hasSuffix, string bulkHeadSql)
     {
         object commandInitializer = null;
         var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
         var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
         var builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
         var whereObjExpr = Expression.Parameter(typeof(object), "whereObj");
-        var bulkIndexExpr = Expression.Parameter(typeof(int), "bulkIndex");
+        ParameterExpression suffixExpr = null;
+        if (hasSuffix) suffixExpr = Expression.Parameter(typeof(string), "suffix");
 
-        ParameterExpression multiMarkExpr = null;
         ParameterExpression dictExpr = null;
         ParameterExpression typedWhereObjExpr = null;
         var blockParameters = new List<ParameterExpression>();
@@ -1838,8 +1834,6 @@ public class RepositoryHelper
         var fieldValueExpr = Expression.Variable(typeof(object), "fieldValue");
         var parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
         blockParameters.AddRange(new[] { fieldValueExpr, parameterNameExpr });
-        var methodInfo = typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes);
-        var strBulkIndexExpr = Expression.Call(bulkIndexExpr, methodInfo);
         bool isEntityType = false;
         Type whereObjType = null;
         List<MemberInfo> memberInfos = null;
@@ -1870,14 +1864,9 @@ public class RepositoryHelper
                     throw new NotSupportedException($"模型{entityType.FullName}有多个主键字段，不能使用单个值类型{whereObjType.FullName}作为参数");
             }
         }
-        if (isMultiple)
-        {
-            multiMarkExpr = Expression.Parameter(typeof(string), "multiMark");
-            blockParameters.Add(parameterNameExpr);
-        }
         var index = 0;
         var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
-        var concatMethodInfo1 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
+        var concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
         var concatMethodInfo2 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string), typeof(string) });
         var tryGetValueMethodInfo = typeof(IDictionary<string, object>).GetMethod(nameof(IDictionary<string, object>.TryGetValue));
 
@@ -1905,9 +1894,7 @@ public class RepositoryHelper
 
             var parameterName = ormProvider.ParameterPrefix + keyMapper.MemberName;
             Expression myParameterNameExpr = Expression.Constant(parameterName);
-            if (isMultiple)
-                myParameterNameExpr = Expression.Call(concatMethodInfo2, myParameterNameExpr, multiMarkExpr, strBulkIndexExpr);
-            else myParameterNameExpr = Expression.Call(concatMethodInfo1, myParameterNameExpr, strBulkIndexExpr);
+            if (hasSuffix) myParameterNameExpr = Expression.Call(concatMethodInfo, myParameterNameExpr, suffixExpr);
             blockBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
 
             if (index > 0) blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(" AND ")));
@@ -1921,10 +1908,10 @@ public class RepositoryHelper
             AddValueParameter(dbParametersExpr, ormProviderExpr, parameterNameExpr, keyMapper.MemberType, myFieldValueExpr, keyMapper, blockParameters, blockBodies);
             index++;
         }
-        if (isMultiple) commandInitializer = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, string, int>>(
-            Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, builderExpr, whereObjExpr, multiMarkExpr, bulkIndexExpr).Compile();
-        else commandInitializer = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, int>>(
-            Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, builderExpr, whereObjExpr, bulkIndexExpr).Compile();
+        if (hasSuffix) commandInitializer = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, string>>(
+            Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, builderExpr, whereObjExpr, suffixExpr).Compile();
+        else commandInitializer = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, StringBuilder, object>>(
+            Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, builderExpr, whereObjExpr).Compile();
         return commandInitializer;
     }
 

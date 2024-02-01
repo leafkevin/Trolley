@@ -143,7 +143,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (reader.Read())
             {
                 if (entityType.IsEntityType(out _))
-                    result = reader.To<TResult>(this.OrmProvider, this.MapProvider);
+                    result = reader.To<TResult>(this.OrmProvider, readerFields);
                 else result = reader.To<TResult>(this.OrmProvider);
             }
             if (visitor.BuildIncludeSql(entityType, result, out var sql))
@@ -192,7 +192,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (await reader.ReadAsync(cancellationToken))
             {
                 if (entityType.IsEntityType(out _))
-                    result = reader.To<TResult>(this.OrmProvider, this.MapProvider);
+                    result = reader.To<TResult>(this.OrmProvider, readerFields);
                 else result = reader.To<TResult>(this.OrmProvider);
             }
             if (visitor.BuildIncludeSql(entityType, result, out var sql))

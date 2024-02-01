@@ -367,9 +367,9 @@ public class SqlVisitor : ISqlVisitor
                         fieldName = readerField.Body;
                     }
                     sqlSegment.FromMember = readerField.TargetMember;
-                    if (readerField.TargetMember.GetMemberType().IsEntityType(out var underlyingType))
-                        sqlSegment.ExpectType = underlyingType;
                     sqlSegment.UnderlyingType = readerField.UnderlyingType;
+                    if ((readerField.UnderlyingType ?? readerField.TargetMember.GetMemberType()).IsEnum)
+                        sqlSegment.ExpectType = readerField.UnderlyingType;
                     sqlSegment.NativeDbType = readerField.NativeDbType;
                     sqlSegment.TypeHandler = readerField.TypeHandler;
                     sqlSegment.Value = fieldName;
@@ -382,9 +382,9 @@ public class SqlVisitor : ISqlVisitor
                     if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                         throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
                     sqlSegment.FromMember = memberMapper.Member;
+                    sqlSegment.UnderlyingType = memberMapper.UnderlyingType;
                     if (memberMapper.UnderlyingType.IsEnum)
                         sqlSegment.ExpectType = memberMapper.UnderlyingType;
-                    sqlSegment.UnderlyingType = memberMapper.UnderlyingType;
                     sqlSegment.NativeDbType = memberMapper.NativeDbType;
                     sqlSegment.TypeHandler = memberMapper.TypeHandler;
                     //查询时，IsNeedAlias始终为true，新增、更新、删除时，引用联表操作时，才会为true
@@ -467,8 +467,8 @@ public class SqlVisitor : ISqlVisitor
                         {
                             FieldType = ReaderFieldType.Field,
                             FromMember = argumentSegment.FromMember,
-                            //MemberMapper = argumentSegment.MemberMapper, 
                             TargetMember = argumentSegment.FromMember,
+                            UnderlyingType = argumentSegment.FromMember.GetMemberType(),
                             NativeDbType = argumentSegment.NativeDbType,
                             TypeHandler = argumentSegment.TypeHandler,
                             Body = fieldName
@@ -533,7 +533,6 @@ public class SqlVisitor : ISqlVisitor
                 {
                     FieldType = ReaderFieldType.Entity,
                     TableSegment = includedSegment,
-                    //MemberMapper = includedSegment.FromMember,
                     FromMember = includedSegment.FromMember.Member,
                     TargetMember = includedSegment.FromMember.Member,
                     Parent = parent,
@@ -1262,7 +1261,7 @@ public class SqlVisitor : ISqlVisitor
             {
                 var underlyingType = sqlSegment.ExpectType ?? sqlSegment.UnderlyingType;
                 var dbFieldValue = sqlSegment.TypeHandler.ToFieldValue(this.OrmProvider, underlyingType, sqlSegment.Value);
-                this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.NativeDbType, dbFieldValue));
+                dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.NativeDbType, dbFieldValue));
             }
             //常量、方法调用、表达式计算等场景
             else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.Value));
@@ -1312,7 +1311,7 @@ public class SqlVisitor : ISqlVisitor
             if (elementSegment.TypeHandler != null)
             {
                 var dbFieldValue = elementSegment.TypeHandler.ToFieldValue(this.OrmProvider, underlyingType, elementValue);
-                this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, elementSegment.NativeDbType, dbFieldValue));
+                dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, elementSegment.NativeDbType, dbFieldValue));
             }
             //常量、方法调用、表达式计算等场景
             else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, elementValue));
@@ -1397,7 +1396,6 @@ public class SqlVisitor : ISqlVisitor
                     FieldType = ReaderFieldType.Field,
                     TableSegment = tableSegment,
                     FromMember = memberMapper.Member,
-                    //MemberMapper = memberMapper,
                     TargetMember = memberMapper.Member,
                     UnderlyingType = memberMapper.UnderlyingType,
                     NativeDbType = memberMapper.NativeDbType,

@@ -703,6 +703,7 @@ public class Repository : IRepository
                     typedCommandInitializer.Invoke(command.Parameters, this.ormProvider, sqlBuilder, entity, index);
                     index++;
                 }
+                if (!isMultiKeys) sqlBuilder.Append(')');
                 command.CommandText = sqlBuilder.ToString();
                 sqlBuilder.Clear();
             }
