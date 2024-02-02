@@ -51,7 +51,7 @@ public interface IUpdateVisitor : IDisposable
     IUpdateVisitor OnlyFields(params string[] fieldNames);
     IUpdateVisitor OnlyFields(Expression fieldsSelector);
     IUpdateVisitor SetBulk(IEnumerable updateObjs, int bulkCount);
-    (IEnumerable, int, Action<StringBuilder, object, string>) BuildSetBulk(IDbCommand command);
+    (IEnumerable, int, Action<StringBuilder, object, string>, Action<IDataParameterCollection>) BuildSetBulk(IDbCommand command);
     IUpdateVisitor WhereWith(object whereObj);
     IUpdateVisitor Where(Expression whereExpr);
     IUpdateVisitor And(Expression whereExpr);

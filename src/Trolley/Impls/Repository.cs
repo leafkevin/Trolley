@@ -629,8 +629,7 @@ public class Repository : IRepository
                 int index = 0;
                 var sqlBuilder = new StringBuilder();
                 var entities = whereKeys as IEnumerable;
-                (var isMultiKeys, var headSql, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.dbKey, this.ormProvider, this.mapProvider, entityType, whereKeys, false);
-                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, int>;
+                (var isMultiKeys, var headSql, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.dbKey, this.ormProvider, this.mapProvider, entityType, whereKeys);
                 string separator = null;
                 if (isMultiKeys) separator = ";";
                 else
@@ -641,7 +640,7 @@ public class Repository : IRepository
                 foreach (var entity in entities)
                 {
                     if (index > 0) sqlBuilder.Append(separator);
-                    typedCommandInitializer.Invoke(command.Parameters, this.ormProvider, sqlBuilder, entity, index);
+                    commandInitializer.Invoke(command.Parameters, this.ormProvider, sqlBuilder, entity, $"{index}");
                     index++;
                 }
                 if (!isMultiKeys) sqlBuilder.Append(')');
@@ -688,8 +687,7 @@ public class Repository : IRepository
                 int index = 0;
                 var sqlBuilder = new StringBuilder();
                 var entities = whereKeys as IEnumerable;
-                (var isMultiKeys, var headSql, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.dbKey, this.ormProvider, this.mapProvider, entityType, whereKeys, false);
-                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, int>;
+                (var isMultiKeys, var headSql, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.dbKey, this.ormProvider, this.mapProvider, entityType, whereKeys);
                 string separator = null;
                 if (isMultiKeys) separator = ";";
                 else
@@ -700,7 +698,7 @@ public class Repository : IRepository
                 foreach (var entity in entities)
                 {
                     if (index > 0) sqlBuilder.Append(separator);
-                    typedCommandInitializer.Invoke(command.Parameters, this.ormProvider, sqlBuilder, entity, index);
+                    commandInitializer.Invoke(command.Parameters, this.ormProvider, sqlBuilder, entity, $"{index}");
                     index++;
                 }
                 if (!isMultiKeys) sqlBuilder.Append(')');

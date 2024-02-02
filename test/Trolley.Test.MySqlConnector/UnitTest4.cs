@@ -237,8 +237,8 @@ public class UnitTest4 : UnitTestBase
             .ToSql(out var parameters1);
         Assert.True(sql2 == "DELETE FROM `sys_user` WHERE `Gender`=@p0");
         Assert.True(parameters1[0].ParameterName == "@p0");
-        Assert.True(parameters1[0].Value.GetType() == typeof(sbyte));
-        Assert.True((sbyte)parameters1[0].Value == (sbyte)gender);
+        Assert.True(parameters1[0].Value.GetType() == typeof(byte));
+        Assert.True((byte)parameters1[0].Value == (byte)gender);
 
         var sql3 = repository.Delete<Company>()
              .Where(f => f.Nature == CompanyNature.Internet)

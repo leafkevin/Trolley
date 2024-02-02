@@ -146,7 +146,8 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
                 int index = 0;
                 bool isFirst = true;
                 var sqlBuilder = new StringBuilder();
-                (var updateObjs, var bulkCount, var commandInitializer) = this.Visitor.BuildSetBulk(command);
+                (var updateObjs, var bulkCount, var commandInitializer, var firstCommandInitializer) = this.Visitor.BuildSetBulk(command);
+                firstCommandInitializer?.Invoke(command.Parameters);
                 foreach (var updateObj in updateObjs)
                 {
                     if (index > 0) sqlBuilder.Append(';');
@@ -161,6 +162,7 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
                         }
                         result += command.ExecuteNonQuery();
                         command.Parameters.Clear();
+                        firstCommandInitializer?.Invoke(command.Parameters);
                         sqlBuilder.Clear();
                         index = 0;
                         continue;
@@ -210,7 +212,8 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
                 int index = 0;
                 bool isFirst = true;
                 var sqlBuilder = new StringBuilder();
-                (var updateObjs, var bulkCount, var commandInitializer) = this.Visitor.BuildSetBulk(command);
+                (var updateObjs, var bulkCount, var commandInitializer, var firstCommandInitializer) = this.Visitor.BuildSetBulk(command);
+                firstCommandInitializer?.Invoke(command.Parameters);
                 foreach (var updateObj in updateObjs)
                 {
                     if (index > 0) sqlBuilder.Append(';');
@@ -225,6 +228,7 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
                         }
                         result += await command.ExecuteNonQueryAsync(cancellationToken);
                         command.Parameters.Clear();
+                        firstCommandInitializer?.Invoke(command.Parameters);
                         sqlBuilder.Clear();
                         index = 0;
                         continue;
@@ -277,7 +281,8 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
         {
             int index = 0;
             var sqlBuilder = new StringBuilder();
-            (var updateObjs, var bulkCount, var commandInitializer) = this.Visitor.BuildSetBulk(command);
+            (var updateObjs, var bulkCount, var commandInitializer, var firstCommandInitializer) = this.Visitor.BuildSetBulk(command);
+            firstCommandInitializer?.Invoke(command.Parameters);
             foreach (var updateObj in updateObjs)
             {
                 if (index > 0) sqlBuilder.Append(';');
@@ -422,7 +427,7 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     {
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
-        if (fieldsSelector.Body.NodeType != ExpressionType.New && fieldsSelector.Body.NodeType != ExpressionType.MemberInit)
+        if (fieldsSelector.Body.NodeType != ExpressionType.MemberAccess && fieldsSelector.Body.NodeType != ExpressionType.New && fieldsSelector.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelector)},只支持MemberAccess、New或MemberInit类型表达式");
 
         this.Visitor.OnlyFields(fieldsSelector);

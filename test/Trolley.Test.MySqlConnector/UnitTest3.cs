@@ -31,18 +31,29 @@ public class UnitTest3 : UnitTestBase
     {
         Initialize();
         using var repository = dbFactory.Create();
-        var result2 = repository.Update<User>(new
+        var user = repository.Get<User>(1);
+        user.Name = "kevin";
+        user.Gender = Gender.Female;
+        user.SourceType = null;
+        var count = repository.Update<User>(user);
+        var changedUser = repository.Get<User>(1);
+        Assert.True(count > 0);
+        Assert.NotNull(changedUser);
+        Assert.True(changedUser.Name == user.Name);
+        Assert.True(changedUser.SourceType == changedUser.SourceType);
+
+        count = repository.Update<User>(new
         {
             Id = 1,
-            Name = "kevin",
-            Gender = Gender.Female,
-            SourceType = DBNull.Value
+            Name = (string)null,
+            Gender = Gender.Male,
+            SourceType = UserSourceType.Douyin
         });
-        var result3 = repository.Get<User>(1);
-        Assert.True(result2 > 0);
-        Assert.NotNull(result3);
-        Assert.True(result3.Name == "kevin");
-        Assert.True(result3.SourceType.HasValue == false);
+        var result = repository.Get<User>(1);
+        Assert.True(count > 0);
+        Assert.NotNull(result);
+        Assert.True(result.Name == null);
+        Assert.True(result.SourceType == UserSourceType.Douyin);
     }
     [Fact]
     public async void Update_AnonymousObjects()
@@ -789,12 +800,13 @@ public class UnitTest3 : UnitTestBase
 
         //批量表达式部分栏位更新
         var sql9 = repository.Update<Company>()
-            .SetBulk(new[] { new { Id = 1, Name = "google" }, new { Id = 2, Name = "facebook" } })
+            .SetBulk(new[] { new { Id = 1, Name = "google", UpdatedAt = DateTime.Now }, new { Id = 2, Name = "facebook", UpdatedAt = DateTime.Now } })
             .Set(f => f.Nature, company.Nature)
             .OnlyFields(f => new { f.Name, f.Nature })
             .ToSql(out var parameters9);
-        Assert.True(sql9 == "UPDATE `sys_company` SET `Nature`=@p0,`Name`=@Name0 WHERE `Id`=@kId0;UPDATE `sys_company` SET `Nature`=@p0,`Name`=@Name1 WHERE `Id`=@kId1");
-        Assert.True(parameters9[0].ParameterName == "@p0");
+        Assert.True(sql9 == "UPDATE `sys_company` SET `Nature`=@Nature,`Name`=@Name0 WHERE `Id`=@kId0;UPDATE `sys_company` SET `Nature`=@Nature,`Name`=@Name1 WHERE `Id`=@kId1");
+        Assert.True(parameters9.Count == 5);
+        Assert.True(parameters9[0].ParameterName == "@Nature");
         Assert.True(parameters9[0].Value.GetType() == typeof(string));
         Assert.True((string)parameters9[0].Value == CompanyNature.Internet.ToString());
 

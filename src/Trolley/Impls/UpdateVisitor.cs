@@ -19,7 +19,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public bool IsJoin { get; set; }
     public List<string> UpdateFields { get; set; }
     public string FixedSql { get; set; }
-    public List<IDbDataParameter> FixedDbParameters { get; set; } = new();
+    public List<IDbDataParameter> FixedDbParameters { get; set; }
 
     public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
     {
@@ -284,14 +284,24 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         });
         return this;
     }
-    public virtual (IEnumerable, int, Action<StringBuilder, object, string>) BuildSetBulk(IDbCommand command)
+    public virtual (IEnumerable, int, Action<StringBuilder, object, string>, Action<IDataParameterCollection>) BuildSetBulk(IDbCommand command)
     {
         var entityMapper = this.Tables[0].Mapper;
         this.DbParameters = command.Parameters;
+        string fixedHeadUpdateSql = null;
+        List<IDbDataParameter> fixedDbParameters = null;
+
+        var builder = new StringBuilder($"UPDATE {this.OrmProvider.GetTableName(entityMapper.TableName)} SET ");
+        var aliasName = this.Tables[0].AliasName;
+        //sql server表别名就是表名，长度>1
+        if (this.IsNeedTableAlias && aliasName.Length == 1)
+            builder.Append($"{aliasName} ");
+
         if (this.deferredSegments.Count > 1)
         {
             //先解析其他sql，生成固定sql
             this.UpdateFields = new();
+            this.FixedDbParameters = new();
             for (int i = 1; i < this.deferredSegments.Count; i++)
             {
                 var deferredSegment = this.deferredSegments[i];
@@ -309,30 +319,25 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     default: throw new NotSupportedException("SetBulk操作后，只支持Set/IgnoreFields/OnlyFields操作");
                 }
             }
-        }
-        var builder = new StringBuilder($"UPDATE {this.OrmProvider.GetTableName(entityMapper.TableName)} SET ");
-        var aliasName = this.Tables[0].AliasName;
-        //sql server表别名就是表名，长度>1
-        if (this.IsNeedTableAlias && aliasName.Length == 1)
-            builder.Append($"{aliasName} ");
+            if (this.DbParameters.Count > 0)
+                fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
+            this.DbParameters.Clear();
 
-        int index = 0;
-        string fixedHeadUpdateSql = null;
-        if (this.UpdateFields != null && this.UpdateFields.Count > 0)
-        {
-            foreach (var setField in this.UpdateFields)
+            int index = 0;
+            if (this.UpdateFields != null && this.UpdateFields.Count > 0)
             {
-                if (index > 0) builder.Append(',');
-                if (this.IsNeedTableAlias) builder.Append($"{aliasName}.");
-                builder.Append(setField);
-                index++;
+                foreach (var setField in this.UpdateFields)
+                {
+                    if (index > 0) builder.Append(',');
+                    if (this.IsNeedTableAlias) builder.Append($"{aliasName}.");
+                    builder.Append(setField);
+                    index++;
+                }
             }
+            builder.Append(',');
         }
         fixedHeadUpdateSql = builder.ToString();
-
-        List<IDbDataParameter> fixedDbParameters = null;
-        if (this.DbParameters.Count > 0)
-            fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
+        builder.Clear();
 
         var entityType = this.Tables[0].EntityType;
         (var updateObjs, int bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
@@ -348,8 +353,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var whereCommandInitializer = RepositoryHelper.BuildWhereSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjType, true, true, true, nameof(updateObj), null);
         var typeWhereCommandInitializer = whereCommandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
 
-        builder.Clear();
-        this.DbParameters.Clear();
         Action<StringBuilder, object, string> commandInitializer = null;
         commandInitializer = (builder, updateObj, suffix) =>
         {
@@ -357,16 +360,18 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             typedSetCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, builder, updateObj, suffix);
             builder.Append(" WHERE ");
             builder.Append(typeWhereCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, updateObj, suffix));
-            if (fixedDbParameters != null && fixedDbParameters.Count > 0)
-                fixedDbParameters.ForEach(f => this.DbParameters.Add(f));
         };
-        return (updateObjs, bulkCount, commandInitializer);
+        Action<IDataParameterCollection> firstCommandInitializer = null;
+        if (fixedDbParameters != null)
+            firstCommandInitializer = dbParameters => fixedDbParameters.ForEach(f => dbParameters.Add(f));
+        return (updateObjs, bulkCount, commandInitializer, firstCommandInitializer);
     }
     public virtual string BuildMutilBulkSql(IDbCommand command)
     {
-        (var updateObjs, _, var commandInitializer) = this.BuildSetBulk(command);
+        (var updateObjs, _, var commandInitializer, var firstCommandInitializer) = this.BuildSetBulk(command);
         int index = 0;
         var builder = new StringBuilder();
+        firstCommandInitializer?.Invoke(command.Parameters);
         foreach (var updateObj in updateObjs)
         {
             if (index > 0) builder.Append(';');
@@ -684,10 +689,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.UpdateFields.Add(this.OrmProvider.GetFieldName(memberMapper.FieldName) + "=NULL");
             return;
         }
-        var fieldValue = isEntity ? FasterEvaluator.Evaluate(memberMapper.Member, memberValue) : memberValue;
+        var fieldValue = isEntity ? memberMapper.Member.Evaluate(memberValue) : memberValue;
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-		//this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, fieldValue);
         var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
         this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
         this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
@@ -704,7 +708,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         {
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-			//this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, fieldValue);
+            //this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, fieldValue);
             var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
             fieldValue = parameterName;

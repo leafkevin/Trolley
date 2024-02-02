@@ -31,9 +31,9 @@ public class NullableEnumTypeHandler<TField> : ITypeHandler
     }
     public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
-        if (value != null)
-            return Convert.ChangeType(value, fieldType);
-        return DBNull.Value;
+        if (value is DBNull || value == null)
+            return DBNull.Value;
+        return Convert.ChangeType(value, fieldType);
     }
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
@@ -79,9 +79,9 @@ public class NullableConvertEnumTypeHandler<TField> : ITypeHandler
     }
     public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
-        if (value != null)
-            return Convert.ChangeType(value, fieldType);
-        return DBNull.Value;
+        if (value is DBNull || value == null)
+            return DBNull.Value;
+        return Convert.ChangeType(value, fieldType);
     }
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
@@ -116,7 +116,8 @@ public class NullableEnumAsStringTypeHandler : ITypeHandler
     }
     public virtual object ToFieldValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
-        if (value == null) return DBNull.Value;
+        if (value is DBNull || value == null)
+            return DBNull.Value;
         return Enum.GetName(underlyingType, value);
     }
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)

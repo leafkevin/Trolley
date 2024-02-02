@@ -250,17 +250,16 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         {
             int index = 0;
             var builder = new StringBuilder();
-            (var isMultiKeys, var headSql, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereKeys, this.IsMultiple);
+            (var isMultiKeys, var headSql, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereKeys);
             var entities = whereKeys as IEnumerable;
             if (this.IsMultiple)
             {
-                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, string, int>;
                 if (isMultiKeys)
                 {
                     foreach (var entity in entities)
                     {
                         if (index > 0) builder.Append(';');
-                        typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, builder, entity, $"_m{this.CommandIndex}", index);
+                        commandInitializer.Invoke(command.Parameters, this.OrmProvider, builder, entity, $"_m{this.CommandIndex}_{index}");
                         index++;
                     }
                 }
@@ -270,7 +269,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                     foreach (var entity in entities)
                     {
                         if (index > 0) builder.Append(',');
-                        typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, builder, entity, $"_m{this.CommandIndex}", index);
+                        commandInitializer.Invoke(command.Parameters, this.OrmProvider, builder, entity, $"_m{index}");
                         index++;
                     }
                     builder.Append(')');
@@ -278,13 +277,12 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             }
             else
             {
-                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, int>;
                 if (isMultiKeys)
                 {
                     foreach (var entity in entities)
                     {
                         if (index > 0) builder.Append(';');
-                        typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, builder, entity, index);
+                        commandInitializer.Invoke(command.Parameters, this.OrmProvider, builder, entity, $"{index}");
                         index++;
                     }
                 }
@@ -294,7 +292,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                     foreach (var entity in entities)
                     {
                         if (index > 0) builder.Append(',');
-                        typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, builder, entity, index);
+                        commandInitializer.Invoke(command.Parameters, this.OrmProvider, builder, entity, $"{index}");
                         index++;
                     }
                     builder.Append(')');
