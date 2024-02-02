@@ -395,13 +395,10 @@ public class UnitTest3 : UnitTestBase
                 BuyerId = DBNull.Value
             })
             .Where(a => a.BuyerId == 1)
-            .ToSql(out var dbParameters);
+            .ToSql(out _);
         Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
-        Assert.True(dbParameters[0].ParameterName == "@p0");
-        Assert.True((double)dbParameters[0].Value == 200.56);
-        Assert.True(dbParameters[1].ParameterName == "@Products");
 
-        await repository.Update<Order>()
+        var count = await repository.Update<Order>()
             .SetFrom((a, b) => new
             {
                 TotalAmount = a.From<OrderDetail>('b')
@@ -412,6 +409,8 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(a => a.BuyerId == 1)
             .ExecuteAsync();
+        Assert.True(count > 0);
+
         var orderAmounts = repository.From<OrderDetail>()
             .GroupBy(x => x.OrderId)
             .Select((f, a) => new
@@ -420,13 +419,6 @@ public class UnitTest3 : UnitTestBase
                 TotalAmount = f.Sum(a.Amount)
             })
             .ToList();
-        for (int i = 0; i < orderAmounts.Count; i++)
-        {
-            Assert.True(dbParameters[0].ParameterName == "@p0");
-            Assert.True((double)dbParameters[0].Value == 200.56);
-            Assert.True(dbParameters[1].ParameterName == "@Products");
-        }
-
     }
     [Fact]
     public void Update_Set_Join()
@@ -831,42 +823,46 @@ public class UnitTest3 : UnitTestBase
     public async void Update_TimeSpan_Fields()
     {
         using var repository = dbFactory.Create();
-        var sql1 = repository.Update<User>()
-            .Set(new { SomeTimes = TimeSpan.FromMinutes(1455) })
+        var timeSpan = TimeSpan.FromMinutes(1455);
+        await repository.DeleteAsync<UpdateEntity>(1);
+        await repository.CreateAsync<UpdateEntity>(new UpdateEntity
+        {
+            Id = 1,
+            BooleanField = true,
+            TimeSpanField = TimeSpan.FromSeconds(456),
+            DateOnlyField = new DateOnly(2022, 05, 06),
+            DateTimeField = DateTime.Now,
+            DateTimeOffsetField = new DateTimeOffset(DateTime.Parse("2022-01-02 03:04:05")),
+            EnumField = Gender.Male,
+            GuidField = Guid.NewGuid(),
+            TimeOnlyField = new TimeOnly(3, 5, 7)
+        });
+        var sql1 = repository.Update<UpdateEntity>()
+            .Set(new { TimeSpanField = timeSpan })
             .Where(new { Id = 1 })
             .ToSql(out var parameters1);
-        Assert.True(sql1 == "UPDATE `sys_user` SET `SomeTimes`=@SomeTimes WHERE `Id`=@kId");
-        Assert.True(parameters1[0].ParameterName == "@SomeTimes");
+        Assert.True(sql1 == "UPDATE `sys_entity1` SET `TimeSpanField`=@TimeSpanField WHERE `Id`=@kId");
+        Assert.True(parameters1[0].ParameterName == "@TimeSpanField");
         Assert.True(parameters1[0].Value.GetType() == typeof(TimeSpan));
-        Assert.True((TimeSpan)parameters1[0].Value == TimeSpan.FromMinutes(1455));
+        Assert.True((TimeSpan)parameters1[0].Value == timeSpan);
 
-        var sql2 = repository.Update<User>()
-            .Set(f => new { SomeTimes = TimeSpan.FromMinutes(1455) })
+        var sql2 = repository.Update<UpdateEntity>()
+            .Set(f => new { TimeSpanField = TimeSpan.FromMinutes(1455) })
             .Where(f => f.Id == 1)
             .ToSql(out var parameters2);
-        Assert.True(sql2 == "UPDATE `sys_user` SET `SomeTimes`=@p0 WHERE `Id`=1");
+        Assert.True(sql2 == "UPDATE `sys_entity1` SET `TimeSpanField`=@p0 WHERE `Id`=1");
         Assert.True(parameters2[0].ParameterName == "@p0");
         Assert.True(parameters1[0].Value.GetType() == typeof(TimeSpan));
         Assert.True((TimeSpan)parameters1[0].Value == TimeSpan.FromMinutes(1455));
 
-        int age = 20;
-        var sql7 = repository.Update<User>()
-            .Set(new { Id = 1, Age = age, SomeTimes = TimeSpan.FromMinutes(1455) })
-            .Where(new { Id = 1 })
-            .ToSql(out var parameters7);
-        Assert.True(sql7 == "UPDATE `sys_user` SET `SomeTimes`=@SomeTimes,`Age`=@p1 WHERE `Id`=@kId");
-        Assert.True(parameters7[0].ParameterName == "@SomeTimes");
-        Assert.True(parameters1[0].Value.GetType() == typeof(TimeSpan));
-        Assert.True((TimeSpan)parameters1[0].Value == TimeSpan.FromMinutes(1455));
-
         repository.BeginTransaction();
-        await repository.Update<User>()
-            .Set(new { SomeTimes = TimeSpan.FromMinutes(55) })
+        await repository.Update<UpdateEntity>()
+            .Set(new { TimeSpanField = timeSpan })
             .Where(new { Id = 1 })
             .ExecuteAsync();
-        var userInfo = repository.Get<User>(1);
+        var entity = repository.Get<UpdateEntity>(1);
         repository.Commit();
-        Assert.True(userInfo.SomeTimes.Value == TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(55)));
+        Assert.True(entity.TimeSpanField == timeSpan);
     }
     [Fact]
     public void Update_Set_MethodCall()

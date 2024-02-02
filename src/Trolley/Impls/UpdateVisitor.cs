@@ -425,7 +425,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         //把方法返回值当作常量处理
         sqlSegment = base.VisitMethodCall(sqlSegment);
-        sqlSegment.IsConstant = true;
+        if (!sqlSegment.HasField && !sqlSegment.HasParameter && !sqlSegment.IsMethodCall)
+            sqlSegment.IsConstant = true;
         return sqlSegment;
     }
     public void Clear()

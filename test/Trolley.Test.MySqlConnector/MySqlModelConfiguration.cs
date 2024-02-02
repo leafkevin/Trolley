@@ -157,5 +157,18 @@ class MySqlModelConfiguration : IModelConfiguration
             f.Member(t => t.UpdatedAt).Field(nameof(Function.UpdatedAt)).NativeDbType(MySqlDbType.DateTime);
             f.Member(t => t.UpdatedBy).Field(nameof(Function.UpdatedBy)).NativeDbType(MySqlDbType.Int32);
         });
+        builder.Entity<UpdateEntity>(f =>
+        {
+            f.ToTable("sys_entity1").Key(t => t.Id);
+            f.Member(t => t.Id).Field(nameof(UpdateEntity.Id)).NativeDbType(MySqlDbType.Int32).Required();
+            f.Member(t => t.BooleanField).Field(nameof(UpdateEntity.BooleanField)).NativeDbType(MySqlDbType.Bool);
+            f.Member(t => t.EnumField).Field(nameof(UpdateEntity.EnumField)).NativeDbType(MySqlDbType.Byte);
+            f.Member(t => t.GuidField).Field(nameof(UpdateEntity.GuidField)).NativeDbType(MySqlDbType.VarChar);
+            f.Member(t => t.DateTimeField).Field(nameof(UpdateEntity.DateTimeField)).NativeDbType(MySqlDbType.DateTime);
+            f.Member(t => t.DateOnlyField).Field(nameof(UpdateEntity.DateOnlyField)).NativeDbType(MySqlDbType.Date);
+            f.Member(t => t.DateTimeOffsetField).Field(nameof(UpdateEntity.DateTimeOffsetField)).NativeDbType(MySqlDbType.Timestamp);
+            f.Member(t => t.TimeSpanField).Field(nameof(UpdateEntity.TimeSpanField)).NativeDbType(MySqlDbType.Time);
+            f.Member(t => t.TimeOnlyField).Field(nameof(UpdateEntity.TimeOnlyField)).NativeDbType(MySqlDbType.Time);
+        });
     }
 }

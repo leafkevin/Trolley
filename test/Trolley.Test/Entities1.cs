@@ -197,3 +197,15 @@ public class Function
     public int UpdatedBy { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
+public class UpdateEntity
+{
+    public int Id { get; set; }
+    public bool BooleanField { get; set; }
+    public Gender EnumField { get; set; }
+    public Guid GuidField { get; set; }
+    public DateTime DateTimeField { get; set; }
+    public DateOnly DateOnlyField { get; set; }
+    public DateTimeOffset DateTimeOffsetField { get; set; }
+    public TimeSpan TimeSpanField { get; set; }
+    public TimeOnly TimeOnlyField { get; set; }
+}

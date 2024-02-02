@@ -1,4 +1,6 @@
-﻿namespace Trolley.Test;
+﻿using System;
+
+namespace Trolley.Test;
 
 enum Sex { Male, Female }
 struct Studuent
