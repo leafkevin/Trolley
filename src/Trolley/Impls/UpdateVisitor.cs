@@ -70,7 +70,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     break;
                 case "SetFromField":
                     this.IsNeedTableAlias = true;
-                    this.VisitSetFromField((FieldFromQuery)deferredSegment.Value);
+                    this.VisitSetFromField(deferredSegment.Value);
                     break;
                 case "SetBulk":
                     this.IsBulk = true;
@@ -411,31 +411,22 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         if (sqlSegment.Expression.IsParameter(out _))
             throw new NotSupportedException($"不支持的表达式访问,{sqlSegment.Expression}");
-        return this.Evaluate(sqlSegment);
+        //当作常量处理
+        return sqlSegment.Change(sqlSegment.Expression.Evaluate(), true);
     }
     public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
     {
         if (sqlSegment.Expression.IsParameter(out _))
             throw new NotSupportedException($"不支持的表达式访问,{sqlSegment.Expression}");
-        return this.Evaluate(sqlSegment);
+        //当作常量处理
+        return sqlSegment.Change(sqlSegment.Expression.Evaluate(), true);
     }
     public override SqlSegment VisitMethodCall(SqlSegment sqlSegment)
     {
-        var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
-        if (methodCallExpr.Method.DeclaringType == typeof(Sql)
-            || typeof(IAggregateSelect).IsAssignableFrom(methodCallExpr.Method.DeclaringType))
-            return this.VisitSqlMethodCall(sqlSegment);
-
-        if (!sqlSegment.IsDeferredFields && this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter))
-            return formatter.Invoke(this, methodCallExpr, methodCallExpr.Object, sqlSegment.DeferredExprs, methodCallExpr.Arguments.ToArray());
-
-        var lambdaExpr = Expression.Lambda(sqlSegment.Expression);
-        var objValue = lambdaExpr.Compile().DynamicInvoke();
-        if (objValue == null)
-            return SqlSegment.Null;
-
         //把方法返回值当作常量处理
-        return sqlSegment.Change(objValue, true, false, false);
+        sqlSegment = base.VisitMethodCall(sqlSegment);
+        sqlSegment.IsConstant = true;
+        return sqlSegment;
     }
     public void Clear()
     {
@@ -708,7 +699,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         {
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-            //this.OrmProvider.AddDbParameter(this.DbKey, this.DbParameters, memberMapper, parameterName, fieldValue);
             var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
             fieldValue = parameterName;

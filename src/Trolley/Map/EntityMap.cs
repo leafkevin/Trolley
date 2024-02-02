@@ -107,8 +107,13 @@ public class EntityMap
                 memberMapper.NativeDbType = Enum.ToObject(ormProvider.NativeDbTypeType, nativeDbType);
             if (memberMapper.TypeHandler == null && !memberMapper.IsIgnore && !memberMapper.IsNavigation)
             {
-                var dbFieldType = ormProvider.MapDefaultType(memberMapper.NativeDbType);
-                memberMapper.TypeHandler = ormProvider.GetTypeHandler(memberMapper.MemberType, dbFieldType, memberMapper.IsRequired);
+                if (memberMapper.TypeHandlerType != null)
+                    memberMapper.TypeHandler = ormProvider.CreateTypeHandler(memberMapper.TypeHandlerType);
+                else
+                {
+                    var dbFieldType = ormProvider.MapDefaultType(memberMapper.NativeDbType);
+                    memberMapper.TypeHandler = ormProvider.GetTypeHandler(memberMapper.MemberType, dbFieldType, memberMapper.IsRequired);
+                }
             }
         }
         if (this.memberMaps.Count > 0)

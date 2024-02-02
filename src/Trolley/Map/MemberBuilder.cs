@@ -52,7 +52,7 @@ public class MemberBuilder<TMember>
     }
     public virtual MemberBuilder<TMember> TypeHandler<TTypeHandler>() where TTypeHandler : class, ITypeHandler, new()
     {
-        this.mapper.TypeHandler = new TTypeHandler();
+        this.mapper.TypeHandlerType = typeof(TTypeHandler);
         return this;
     }
     public virtual MemberBuilder<TMember> Ignore()

@@ -183,6 +183,12 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             ExpressionType.RightShift => ">>",
             _ => nodeType.ToString()
         };
+    public virtual ITypeHandler CreateTypeHandler(Type typeHandlerType)
+    {
+        if (typeHandlers.TryGetValue(typeHandlerType, out var typeHandler))
+            return typeHandler;
+        return Activator.CreateInstance(typeHandlerType) as ITypeHandler;
+    }
     public virtual ITypeHandler GetTypeHandler(Type targetType, Type fieldType, bool isRequired)
     {
         var hashKey = HashCode.Combine(targetType, fieldType, isRequired);

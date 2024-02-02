@@ -40,6 +40,7 @@ public class MemberMap
     /// 类型处理器
     /// </summary>
     public ITypeHandler TypeHandler { get; set; }
+    public Type TypeHandlerType { get; set; }
 
     public MemberMap(EntityMap parent, string fieldPrefix, MemberInfo memberInfo)
     {
