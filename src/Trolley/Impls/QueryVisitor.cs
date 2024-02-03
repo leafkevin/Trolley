@@ -17,7 +17,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 {
     private static ConcurrentDictionary<int, (string, Action<IOrmProvider, StringBuilder, object>)> includeSqlGetterCache = new();
     private static ConcurrentDictionary<Type, Func<object>> typedListGetters = new();
-    private static ConcurrentDictionary<Type, Action<object, string, IDataReader, IOrmProvider, IEntityMapProvider>> typedReaderElementSetters = new();
+    private static ConcurrentDictionary<Type, Action<object, IDataReader, IOrmProvider, IEntityMapProvider>> typedReaderElementSetters = new();
     private static ConcurrentDictionary<int, Action<object, object>> targetIncludeValuesSetters = new();
     private static ConcurrentDictionary<int, Action<object>> targetRefIncludeValuesSetters = new();
     private bool isDisposed;
@@ -46,9 +46,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public bool IsUseCteTable { get; set; } = true;
     public ICteQuery SelfRefQueryObj { get; set; }
 
-    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
+    public QueryVisitor(IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
     {
-        this.DbKey = dbKey;
         this.OrmProvider = ormProvider;
         this.MapProvider = mapProvider;
         this.IsParameterized = isParameterized;
@@ -725,7 +724,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var typedReaderElementSetter = typedReaderElementSetters.GetOrAdd(elementType, f =>
         {
             var anonObjsExpr = Expression.Parameter(typeof(object), "anonObjs");
-            var dbKeyExpr = Expression.Parameter(typeof(string), "dbKey");
             var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
             var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
             var mapProviderExpr = Expression.Parameter(typeof(IEntityMapProvider), "mapProvider");
@@ -742,10 +740,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var elementExpr = Expression.Call(methodInfo, readerExpr, ormProviderExpr, mapProviderExpr);
             methodInfo = listType.GetMethod("Add", new Type[] { elementType });
             blockBodies.Add(Expression.Call(typedListExpr, methodInfo, elementExpr));
-            return Expression.Lambda<Action<object, string, IDataReader, IOrmProvider, IEntityMapProvider>>(
-                Expression.Block(blockParameters, blockBodies), anonObjsExpr, dbKeyExpr, readerExpr, ormProviderExpr, mapProviderExpr).Compile();
+            return Expression.Lambda<Action<object, IDataReader, IOrmProvider, IEntityMapProvider>>(
+                Expression.Block(blockParameters, blockBodies), anonObjsExpr, readerExpr, ormProviderExpr, mapProviderExpr).Compile();
         });
-        typedReaderElementSetter.Invoke(includeValues, this.DbKey, reader, this.OrmProvider, this.MapProvider);
+        typedReaderElementSetter.Invoke(includeValues, reader, this.OrmProvider, this.MapProvider);
     }
     private void SetIncludeValueToTarget(Type targetType, MemberInfo firstMember, TableSegment includeSegment, object target, object includeValues)
     {
@@ -1738,7 +1736,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         childReaderField.Body += " AS " + this.OrmProvider.GetFieldName(childReaderField.TargetMember.Name);
                 }
             }
-            readerField.TargetMember = memberInfo;           
+            readerField.TargetMember = memberInfo;
             return readerField;
         }
         else
@@ -1943,7 +1941,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     private int GetIncludeKey(Type targetType, MemberInfo firstMember, TableSegment includeSegment)
     {
         var hashCode = new HashCode();
-        hashCode.Add(this.DbKey);
         hashCode.Add(this.OrmProvider);
         hashCode.Add(targetType);
         hashCode.Add(includeSegment.ParentMemberVisits.Count + 1);
@@ -1960,7 +1957,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     private int GetRefIncludeKey(Type targetType, string refPath)
     {
         var hashCode = new HashCode();
-        hashCode.Add(this.DbKey);
         hashCode.Add(this.OrmProvider);
         hashCode.Add(targetType);
         hashCode.Add(refPath);

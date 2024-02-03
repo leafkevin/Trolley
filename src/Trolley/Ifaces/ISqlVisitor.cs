@@ -6,7 +6,7 @@ namespace Trolley;
 
 public interface ISqlVisitor : IDisposable
 {
-    string DbKey { get; }
+    //string DbKey { get; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
     bool IsParameterized { get; set; }

@@ -19,12 +19,11 @@ public class FromQuery : IFromQuery
         this.visitor = visitor;
         this.ormProvider = dbContext.OrmProvider;
     }
-    public FromQuery(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor, bool isParameterized)
+    public FromQuery(IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor, bool isParameterized)
     {
         this.ormProvider = ormProvider;
         this.dbContext = new DbContext
         {
-            DbKey = dbKey,
             OrmProvider = ormProvider,
             MapProvider = mapProvider,
             IsParameterized = isParameterized

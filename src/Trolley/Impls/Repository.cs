@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.IO;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
@@ -123,7 +124,7 @@ public class Repository : IRepository
             f.CommandText = rawSql;
             if (parameters != null)
             {
-                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.dbKey, this.ormProvider, rawSql, parameters);
+                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.ormProvider, rawSql, parameters);
                 commandInitializer.Invoke(f.Parameters, this.ormProvider, parameters);
             }
         });
@@ -144,7 +145,7 @@ public class Repository : IRepository
             f.CommandText = rawSql;
             if (parameters != null)
             {
-                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.dbKey, this.ormProvider, rawSql, parameters);
+                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.ormProvider, rawSql, parameters);
                 commandInitializer.Invoke(f.Parameters, this.ormProvider, parameters);
             }
         }, cancellationToken);
@@ -160,7 +161,7 @@ public class Repository : IRepository
         return this.DbContext.QueryFirst<TEntity>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, whereObj, false);
+            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.ormProvider, this.mapProvider, entityType, whereObj, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
             f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.ormProvider, whereObj);
         });
@@ -176,7 +177,7 @@ public class Repository : IRepository
         return await this.DbContext.QueryFirstAsync<TEntity>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, whereObj, false);
+            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.ormProvider, this.mapProvider, entityType, whereObj, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
             f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.ormProvider, whereObj);
         }, cancellationToken);
@@ -197,7 +198,7 @@ public class Repository : IRepository
             f.CommandText = rawSql;
             if (parameters != null)
             {
-                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.dbKey, this.ormProvider, rawSql, parameters);
+                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.ormProvider, rawSql, parameters);
                 commandInitializer.Invoke(f.Parameters, this.ormProvider, parameters);
             }
         });
@@ -218,7 +219,7 @@ public class Repository : IRepository
             f.CommandText = rawSql;
             if (parameters != null)
             {
-                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.dbKey, this.ormProvider, rawSql, parameters);
+                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.ormProvider, rawSql, parameters);
                 commandInitializer.Invoke(f.Parameters, this.ormProvider, parameters);
             }
         }, cancellationToken);
@@ -234,7 +235,7 @@ public class Repository : IRepository
         return this.DbContext.Query<TEntity>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, whereObj, false);
+            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.ormProvider, this.mapProvider, entityType, whereObj, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
             f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.ormProvider, whereObj);
         });
@@ -250,7 +251,7 @@ public class Repository : IRepository
         return await this.DbContext.QueryAsync<TEntity>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, whereObj, false);
+            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.ormProvider, this.mapProvider, entityType, whereObj, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
             f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.ormProvider, whereObj);
         }, cancellationToken);
@@ -284,7 +285,7 @@ public class Repository : IRepository
                 bool isFirst = true;
                 var sqlBuilder = new StringBuilder();
                 var entities = insertObjs as IEnumerable;
-                (var headSqlSetter, var commandInitializer) = RepositoryHelper.BuildCreateMultiSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, insertObjs, null, null, true);
+                (var headSqlSetter, var commandInitializer) = RepositoryHelper.BuildCreateMultiSqlParameters(this.ormProvider, this.mapProvider, entityType, insertObjs, null, null, true);
                 headSqlSetter.Invoke(sqlBuilder);
 
                 foreach (var insertObj in entities)
@@ -318,7 +319,7 @@ public class Repository : IRepository
             }
             else
             {
-                var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, insertObjs, null, null, false);
+                var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.ormProvider, this.mapProvider, entityType, insertObjs, null, null, false);
                 command.CommandText = commandInitializer.Invoke(command.Parameters, ormProvider, insertObjs);
                 this.DbContext.Open();
                 result = command.ExecuteNonQuery();
@@ -356,7 +357,7 @@ public class Repository : IRepository
                 bool isFirst = true;
                 var sqlBuilder = new StringBuilder();
                 var entities = insertObjs as IEnumerable;
-                (var headSqlSetter, var commandInitializer) = RepositoryHelper.BuildCreateMultiSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, insertObjs, null, null, true);
+                (var headSqlSetter, var commandInitializer) = RepositoryHelper.BuildCreateMultiSqlParameters(this.ormProvider, this.mapProvider, entityType, insertObjs, null, null, true);
                 headSqlSetter.Invoke(sqlBuilder);
 
                 foreach (var insertObj in entities)
@@ -390,7 +391,7 @@ public class Repository : IRepository
             }
             else
             {
-                var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, insertObjs, null, null, false);
+                var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.ormProvider, this.mapProvider, entityType, insertObjs, null, null, false);
                 command.CommandText = commandInitializer.Invoke(command.Parameters, ormProvider, insertObjs);
                 await this.DbContext.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
@@ -419,7 +420,7 @@ public class Repository : IRepository
         return this.DbContext.CreateIdentity<int>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, insertObj, null, null, true);
+            var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.ormProvider, this.mapProvider, entityType, insertObj, null, null, true);
             f.CommandText = commandInitializer.Invoke(f.Parameters, this.ormProvider, insertObj);
         });
     }
@@ -433,7 +434,7 @@ public class Repository : IRepository
         return await this.DbContext.CreateIdentityAsync<int>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, insertObj, null, null, true);
+            var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.ormProvider, this.mapProvider, entityType, insertObj, null, null, true);
             f.CommandText = commandInitializer.Invoke(f.Parameters, this.ormProvider, insertObj);
         }, cancellationToken);
     }
@@ -447,7 +448,7 @@ public class Repository : IRepository
         return this.DbContext.CreateIdentity<int>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, insertObj, null, null, true);
+            var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.ormProvider, this.mapProvider, entityType, insertObj, null, null, true);
             f.CommandText = commandInitializer.Invoke(f.Parameters, this.ormProvider, insertObj);
         });
     }
@@ -461,7 +462,7 @@ public class Repository : IRepository
         return await this.DbContext.CreateIdentityAsync<long>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, insertObj, null, null, true);
+            var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.ormProvider, this.mapProvider, entityType, insertObj, null, null, true);
             f.CommandText = commandInitializer.Invoke(f.Parameters, this.ormProvider, insertObj);
         }, cancellationToken);
     }
@@ -488,7 +489,7 @@ public class Repository : IRepository
                 bool isFirst = true;
                 var sqlBuilder = new StringBuilder();
                 var entities = updateObjs as IEnumerable;
-                var commandInitializer = RepositoryHelper.BuildUpdateMultiSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, updateObjs, null, null);
+                var commandInitializer = RepositoryHelper.BuildUpdateMultiSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjs, null, null);
                 foreach (var updateObj in entities)
                 {
                     if (index > 0) sqlBuilder.Append(';');
@@ -519,7 +520,7 @@ public class Repository : IRepository
             }
             else
             {
-                var commandInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, updateObjs, null, null);
+                var commandInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjs, null, null);
                 command.CommandText = commandInitializer.Invoke(command.Parameters, this.ormProvider, updateObjs);
                 this.DbContext.Open();
                 result = command.ExecuteNonQuery();
@@ -557,7 +558,7 @@ public class Repository : IRepository
                 bool isFirst = true;
                 var sqlBuilder = new StringBuilder();
                 var entities = updateObjs as IEnumerable;
-                var commandInitializer = RepositoryHelper.BuildUpdateMultiSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, updateObjs, null, null);
+                var commandInitializer = RepositoryHelper.BuildUpdateMultiSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjs, null, null);
                 foreach (var updateObj in entities)
                 {
                     if (index > 0) sqlBuilder.Append(';');
@@ -588,7 +589,7 @@ public class Repository : IRepository
             }
             else
             {
-                var commandInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, updateObjs, null, null);
+                var commandInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjs, null, null);
                 command.CommandText = commandInitializer.Invoke(command.Parameters, this.ormProvider, updateObjs);
                 await this.DbContext.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
@@ -629,7 +630,7 @@ public class Repository : IRepository
                 int index = 0;
                 var sqlBuilder = new StringBuilder();
                 var entities = whereKeys as IEnumerable;
-                (var isMultiKeys, var headSql, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.dbKey, this.ormProvider, this.mapProvider, entityType, whereKeys);
+                (var isMultiKeys, var headSql, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereKeys);
                 string separator = null;
                 if (isMultiKeys) separator = ";";
                 else
@@ -649,7 +650,7 @@ public class Repository : IRepository
             }
             else
             {
-                var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.dbKey, this.ormProvider, this.mapProvider, entityType, whereKeys, false);
+                var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereKeys, false);
                 var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
                 command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.ormProvider, whereKeys);
             }
@@ -687,7 +688,7 @@ public class Repository : IRepository
                 int index = 0;
                 var sqlBuilder = new StringBuilder();
                 var entities = whereKeys as IEnumerable;
-                (var isMultiKeys, var headSql, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.dbKey, this.ormProvider, this.mapProvider, entityType, whereKeys);
+                (var isMultiKeys, var headSql, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereKeys);
                 string separator = null;
                 if (isMultiKeys) separator = ";";
                 else
@@ -707,7 +708,7 @@ public class Repository : IRepository
             }
             else
             {
-                var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.dbKey, this.ormProvider, this.mapProvider, entityType, whereKeys, false);
+                var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereKeys, false);
                 var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
                 command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.ormProvider, whereKeys);
             }
@@ -738,7 +739,7 @@ public class Repository : IRepository
         var result = this.DbContext.QueryFirst<int>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, whereObj, false);
+            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.ormProvider, this.mapProvider, entityType, whereObj, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
             f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.ormProvider, whereObj);
         });
@@ -752,7 +753,7 @@ public class Repository : IRepository
         var result = await this.DbContext.QueryFirstAsync<int>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, entityType, whereObj, false);
+            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.ormProvider, this.mapProvider, entityType, whereObj, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
             f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.ormProvider, whereObj);
         }, cancellationToken);
@@ -775,7 +776,7 @@ public class Repository : IRepository
             f.CommandText = rawSql;
             if (parameters != null)
             {
-                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.dbKey, this.ormProvider, rawSql, parameters);
+                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.ormProvider, rawSql, parameters);
                 commandInitializer.Invoke(f.Parameters, this.ormProvider, parameters);
             }
         });
@@ -790,7 +791,7 @@ public class Repository : IRepository
             f.CommandText = rawSql;
             if (parameters != null)
             {
-                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.dbKey, this.ormProvider, rawSql, parameters);
+                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.ormProvider, rawSql, parameters);
                 commandInitializer.Invoke(f.Parameters, this.ormProvider, parameters);
             }
         }, cancellationToken);
@@ -806,7 +807,7 @@ public class Repository : IRepository
         using var command = this.DbContext.CreateCommand();
         IMultiQueryReader result = null;
         IDataReader reader = null;
-        bool isNeedClose = this.DbContext.IsNeedClose;
+        bool isNeedClose = false;
         Exception exception = null;
         try
         {
@@ -824,9 +825,12 @@ public class Repository : IRepository
         }
         finally
         {
-            reader?.Dispose();
-            command.Dispose();
-            if (isNeedClose) this.Dispose();
+            if (isNeedClose)
+            {
+                reader?.Dispose();
+                command.Dispose();
+                this.Dispose();
+            }
         }
         if (exception != null) throw exception;
         return result;
@@ -839,7 +843,7 @@ public class Repository : IRepository
         using var command = this.DbContext.CreateDbCommand();
         IMultiQueryReader result = null;
         DbDataReader reader = null;
-        bool isNeedClose = this.DbContext.IsNeedClose;
+        bool isNeedClose = false;
         Exception exception = null;
         try
         {
@@ -857,13 +861,16 @@ public class Repository : IRepository
         }
         finally
         {
-            if (reader != null)
-                await reader.DisposeAsync();
-            await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync();
+            if (isNeedClose)
+            {
+                if (reader != null)
+                    await reader.DisposeAsync();
+                await command.DisposeAsync();
+                await this.DisposeAsync();
+            }
         }
         if (exception != null) throw exception;
-        return null;
+        return result;
     }
     #endregion
 
@@ -889,10 +896,10 @@ public class Repository : IRepository
                 {
                     visitor = multiCcommand.CommandType switch
                     {
-                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.dbKey, this.mapProvider, this.isParameterized),
-                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.isParameterized),
-                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.dbKey, this.mapProvider, this.isParameterized),
-                        _ => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.isParameterized)
+                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.mapProvider, this.isParameterized),
+                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.mapProvider, this.isParameterized),
+                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.mapProvider, this.isParameterized),
+                        _ => this.ormProvider.NewUpdateVisitor(this.mapProvider, this.isParameterized)
                     };
                     visitors.Add(multiCcommand.CommandType, visitor);
                     isFirst = true;
@@ -901,17 +908,17 @@ public class Repository : IRepository
                 {
                     case MultipleCommandType.Insert:
                         var insertVisitor = visitor as ICreateVisitor;
-                        insertVisitor.Initialize(multiCcommand.EntityType, isFirst);
+                        insertVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
                         insertVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
                         break;
                     case MultipleCommandType.Update:
                         var updateVisitor = visitor as IUpdateVisitor;
-                        updateVisitor.Initialize(multiCcommand.EntityType, isFirst);
+                        updateVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
                         updateVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
                         break;
                     case MultipleCommandType.Delete:
                         var deleteVisitor = visitor as IDeleteVisitor;
-                        deleteVisitor.Initialize(multiCcommand.EntityType, isFirst);
+                        deleteVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
                         deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
                         break;
                 }
@@ -955,10 +962,10 @@ public class Repository : IRepository
                 {
                     visitor = multiCcommand.CommandType switch
                     {
-                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.dbKey, this.mapProvider, this.isParameterized),
-                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.isParameterized),
-                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.dbKey, this.mapProvider, this.isParameterized),
-                        _ => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.isParameterized)
+                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.mapProvider, this.isParameterized),
+                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.mapProvider, this.isParameterized),
+                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.mapProvider, this.isParameterized),
+                        _ => this.ormProvider.NewUpdateVisitor(this.mapProvider, this.isParameterized)
                     };
                     visitors.Add(multiCcommand.CommandType, visitor);
                     isFirst = true;
@@ -1071,6 +1078,6 @@ public class Repository : IRepository
     }
     ~Repository() => this.Dispose();
     private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
-        => this.ormProvider.NewQueryVisitor(this.dbKey, this.mapProvider, this.isParameterized, tableAsStart);
+        => this.ormProvider.NewQueryVisitor(this.mapProvider, this.isParameterized, tableAsStart);
     #endregion
 }

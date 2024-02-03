@@ -123,7 +123,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
         if (parameters == null)
             throw new ArgumentNullException(nameof(parameters));
 
-        var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.DbKey, this.OrmProvider, rawSql, parameters);
+        var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
         commandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, parameters);
 
         var targetType = typeof(TEntity);
@@ -140,7 +140,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
             throw new ArgumentNullException(nameof(whereObj));
 
         var targetType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, targetType, whereObj, true);
+        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.OrmProvider, this.MapProvider, targetType, whereObj, true);
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, whereObj, $"_m{this.ReaderAfters.Count}");
 
@@ -168,7 +168,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
         if (parameters == null)
             throw new ArgumentNullException(nameof(parameters));
 
-        var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.DbKey, this.OrmProvider, rawSql, parameters);
+        var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
         commandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, parameters);
 
         var targetType = typeof(TEntity);
@@ -185,7 +185,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
             throw new ArgumentNullException(nameof(whereObj));
 
         var targetType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, targetType, whereObj, true);
+        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.OrmProvider, this.MapProvider, targetType, whereObj, true);
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, whereObj, $"_m{this.ReaderAfters.Count}");
 
@@ -202,7 +202,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
             throw new ArgumentNullException(nameof(whereObj));
 
         var targetType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, targetType, whereObj, true);
+        var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.OrmProvider, this.MapProvider, targetType, whereObj, true);
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, whereObj, $"_m{this.ReaderAfters.Count}");
 
@@ -219,7 +219,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, true);
+        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObj, true);
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, whereObj, $"_m{this.ReaderAfters.Count}");
 
@@ -275,9 +275,8 @@ public class MultipleQuery : IMultipleQuery, IDisposable
 
     private IQueryVisitor CreateQueryVisitor(char tableAsStart)
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.DbContext.IsParameterized, tableAsStart);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.MapProvider, this.DbContext.IsParameterized, tableAsStart);
         visitor.DbParameters = this.Command.Parameters;
-        //TODO:支持CTE
         return visitor;
     }
 }

@@ -21,30 +21,28 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public string FixedSql { get; set; }
     public List<IDbDataParameter> FixedDbParameters { get; set; }
 
-    public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+    public UpdateVisitor(IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
     {
-        this.DbKey = dbKey;
         this.OrmProvider = ormProvider;
         this.MapProvider = mapProvider;
         this.IsParameterized = isParameterized;
         this.TableAsStart = tableAsStart;
         this.ParameterPrefix = parameterPrefix;
     }
-    public virtual void Initialize(Type entityType, bool isFirst = true)
+    public virtual void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true)
     {
-        if (isFirst)
+        if (!isMultiple)
         {
             this.Tables = new();
             this.TableAliases = new();
+            this.Tables.Add(new TableSegment
+            {
+                EntityType = entityType,
+                AliasName = "a",
+                Mapper = this.MapProvider.GetEntityMap(entityType)
+            });
         }
-        //clear
-        else this.Clear();
-        this.Tables.Add(new TableSegment
-        {
-            EntityType = entityType,
-            AliasName = "a",
-            Mapper = this.MapProvider.GetEntityMap(entityType)
-        });
+        if (!isFirst) this.Clear();
     }
     public string BuildCommand(IDbCommand command)
     {
@@ -88,7 +86,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         if (this.IsBulk) sql = this.BuildMutilBulkSql(command);
         if (sql == null) sql = this.BuildSql();
-        command.CommandText = sql;
         return sql;
     }
     public virtual MultipleCommand CreateMultipleCommand()
@@ -97,7 +94,13 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         {
             CommandType = MultipleCommandType.Update,
             EntityType = this.Tables[0].EntityType,
-            Body = this.deferredSegments
+            Body = this.deferredSegments,
+            Tables = this.Tables,
+            IgnoreFieldNames = this.IgnoreFieldNames,
+            OnlyFieldNames = this.OnlyFieldNames,
+            RefQueries = this.RefQueries,
+            IsNeedTableAlias = this.IsNeedTableAlias,
+            IsJoin = this.IsJoin
         };
     }
     public void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
@@ -105,6 +108,12 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.IsMultiple = true;
         this.CommandIndex = commandIndex;
         this.deferredSegments = multiCommand.Body as List<CommandSegment>;
+        this.Tables = multiCommand.Tables;
+        this.IgnoreFieldNames = multiCommand.IgnoreFieldNames;
+        this.OnlyFieldNames = multiCommand.OnlyFieldNames;
+        this.RefQueries = multiCommand.RefQueries;
+        this.IsJoin = multiCommand.IsJoin;
+        this.IsNeedTableAlias = multiCommand.IsNeedTableAlias;
         if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
         sqlBuilder.Append(this.BuildCommand(command));
     }
@@ -297,7 +306,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (this.IsNeedTableAlias && aliasName.Length == 1)
             builder.Append($"{aliasName} ");
 
-        if (this.deferredSegments.Count > 1)
+        if (this.deferredSegments.Count > 1 && !this.IsMultiple)
         {
             //先解析其他sql，生成固定sql
             this.UpdateFields = new();
@@ -322,20 +331,19 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             if (this.DbParameters.Count > 0)
                 fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
             this.DbParameters.Clear();
-
-            int index = 0;
-            if (this.UpdateFields != null && this.UpdateFields.Count > 0)
-            {
-                foreach (var setField in this.UpdateFields)
-                {
-                    if (index > 0) builder.Append(',');
-                    if (this.IsNeedTableAlias) builder.Append($"{aliasName}.");
-                    builder.Append(setField);
-                    index++;
-                }
-            }
-            builder.Append(',');
         }
+        int index = 0;
+        if (this.UpdateFields != null && this.UpdateFields.Count > 0)
+        {
+            foreach (var setField in this.UpdateFields)
+            {
+                if (index > 0) builder.Append(',');
+                if (this.IsNeedTableAlias) builder.Append($"{aliasName}.");
+                builder.Append(setField);
+                index++;
+            }
+        }
+        builder.Append(',');
         fixedHeadUpdateSql = builder.ToString();
         builder.Clear();
 
@@ -348,9 +356,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             break;
         }
         var updateObjType = updateObj.GetType();
-        var setCommandInitializer = RepositoryHelper.BuildUpdateSetPartSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, true);
+        var setCommandInitializer = RepositoryHelper.BuildUpdateSetPartSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, true);
         var typedSetCommandInitializer = setCommandInitializer as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, string>;
-        var whereCommandInitializer = RepositoryHelper.BuildWhereSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjType, true, true, true, nameof(updateObj), null);
+        var whereCommandInitializer = RepositoryHelper.BuildWhereSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, true, true, true, nameof(updateObj), null);
         var typeWhereCommandInitializer = whereCommandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
 
         Action<StringBuilder, object, string> commandInitializer = null;
@@ -444,7 +452,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.deferredSegments.Clear();
         this.UpdateFields.Clear();
         this.FixedSql = null;
-        this.FixedDbParameters.Clear();
+        this.FixedDbParameters?.Clear();
     }
     public override void Dispose()
     {
@@ -492,7 +500,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var entityMapper = this.Tables[0].Mapper;
         var entityType = entityMapper.EntityType;
         var updateObjType = updateObj.GetType();
-        var commandInitializer = RepositoryHelper.BuildUpdateSetWithPartSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple);
+        var commandInitializer = RepositoryHelper.BuildUpdateSetWithPartSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple);
         if (this.IsMultiple)
         {
             var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, List<string>, object, string>;
@@ -582,7 +590,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var whereObjType = whereObj.GetType();
-        var commandInitializer = RepositoryHelper.BuildWhereSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObjType, true, this.IsMultiple, true, "whereObj", null);
+        var commandInitializer = RepositoryHelper.BuildWhereSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, true, this.IsMultiple, true, "whereObj", null);
         string whereSql = null;
         if (this.IsMultiple)
         {

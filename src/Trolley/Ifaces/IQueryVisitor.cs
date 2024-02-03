@@ -27,6 +27,9 @@ public interface IQueryVisitor : IDisposable
     bool IsUseFieldAlias { get; set; }
     bool IsUseCteTable { get; set; }
     public char TableAsStart { get; set; }
+    /// <summary>
+    /// 解析子查询时，父亲查询的TableAliases
+    /// </summary>
     Dictionary<string, TableSegment> RefTableAliases { get; set; }
 
     string BuildSql(out List<ReaderField> readerFields);

@@ -9,27 +9,28 @@ namespace Trolley;
 
 public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 {
-    private List<DeleteDeferredSegment> deferredSegments = new();
-    public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
+    private List<CommandSegment> deferredSegments = new();
+    public DeleteVisitor(IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
     {
-        this.DbKey = dbKey;
         this.OrmProvider = ormProvider;
         this.MapProvider = mapProvider;
         this.IsParameterized = isParameterized;
         this.TableAsStart = tableAsStart;
         this.ParameterPrefix = parameterPrefix;
     }
-    public virtual void Initialize(Type entityType, bool isFirst = true)
+    public virtual void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true)
     {
-        if (isFirst) this.Tables = new();
-        //clear
-        else this.Clear();
-
-        this.Tables.Add(new TableSegment
+        if (!isMultiple)
         {
-            EntityType = entityType,
-            Mapper = this.MapProvider.GetEntityMap(entityType)
-        });
+            this.Tables = new();
+            this.Tables.Add(new TableSegment
+            {
+                EntityType = entityType,
+                AliasName = "a",
+                Mapper = this.MapProvider.GetEntityMap(entityType)
+            });
+        }
+        if (!isFirst) this.Clear();
     }
     public string BuildCommand(IDbCommand command)
     {
@@ -39,13 +40,13 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         {
             switch (deferredSegment.Type)
             {
-                case DeferredDeleteType.WhereWith:
+                case "WhereWith":
                     sql = this.VisitWhereWith(command, deferredSegment.Value);
                     break;
-                case DeferredDeleteType.WhereExpr:
+                case "Where":
                     this.VisitWhere(deferredSegment.Value as Expression);
                     break;
-                case DeferredDeleteType.AndExpr:
+                case "And":
                     this.VisitAnd(deferredSegment.Value as Expression);
                     break;
             }
@@ -59,7 +60,6 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 builder.Append(" WHERE " + this.WhereSql);
             sql = builder.ToString();
         }
-        command.CommandText = sql;
         return sql;
     }
     public virtual MultipleCommand CreateMultipleCommand()
@@ -68,40 +68,46 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         {
             CommandType = MultipleCommandType.Delete,
             EntityType = this.Tables[0].EntityType,
-            Body = this.deferredSegments
+            Body = this.deferredSegments,
+            Tables = this.Tables,
+            RefQueries = this.RefQueries,
+            IsNeedTableAlias = this.IsNeedTableAlias
         };
     }
     public void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
     {
         this.IsMultiple = true;
         this.CommandIndex = commandIndex;
-        this.deferredSegments = multiCommand.Body as List<DeleteDeferredSegment>;
+        this.deferredSegments = multiCommand.Body as List<CommandSegment>;
+        this.Tables = multiCommand.Tables;
+        this.RefQueries = multiCommand.RefQueries;
+        this.IsNeedTableAlias = multiCommand.IsNeedTableAlias;
         if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
         sqlBuilder.Append(this.BuildCommand(command));
     }
     public virtual IDeleteVisitor WhereWith(object wherKeys)
     {
-        this.deferredSegments.Add(new DeleteDeferredSegment
+        this.deferredSegments.Add(new CommandSegment
         {
-            Type = DeferredDeleteType.WhereWith,
+            Type = "WhereWith",
             Value = wherKeys
         });
         return this;
     }
     public virtual IDeleteVisitor Where(Expression whereExpr)
     {
-        this.deferredSegments.Add(new DeleteDeferredSegment
+        this.deferredSegments.Add(new CommandSegment
         {
-            Type = DeferredDeleteType.WhereExpr,
+            Type = "Where",
             Value = whereExpr
         });
         return this;
     }
     public virtual IDeleteVisitor And(Expression whereExpr)
     {
-        this.deferredSegments.Add(new DeleteDeferredSegment
+        this.deferredSegments.Add(new CommandSegment
         {
-            Type = DeferredDeleteType.AndExpr,
+            Type = "And",
             Value = whereExpr
         });
         return this;
@@ -250,7 +256,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         {
             int index = 0;
             var builder = new StringBuilder();
-            (var isMultiKeys, var headSql, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereKeys);
+            (var isMultiKeys, var headSql, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.OrmProvider, this.MapProvider, entityType, whereKeys);
             var entities = whereKeys as IEnumerable;
             if (this.IsMultiple)
             {
@@ -302,7 +308,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         }
         else
         {
-            var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereKeys, this.IsMultiple);
+            var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.OrmProvider, this.MapProvider, entityType, whereKeys, this.IsMultiple);
             if (this.IsMultiple)
             {
                 var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;

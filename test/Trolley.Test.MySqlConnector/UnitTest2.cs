@@ -47,7 +47,7 @@ public class UnitTest2 : UnitTestBase
                 //    .UseCrud(false))
                 //.Build();
             })
-            .Configure<MySqlProvider, MySqlModelConfiguration>();
+            .Configure<MySqlProvider, ModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();

@@ -20,7 +20,7 @@ public class UnitTest3 : UnitTestBase
         {
             var builder = new OrmDbFactoryBuilder()
             .Register<MySqlProvider>("fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true)
-            .Configure<MySqlProvider, MySqlModelConfiguration>();
+            .Configure<MySqlProvider, ModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
@@ -433,7 +433,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Set(x => x.Products, new List<int> { 1, 2, 3 })
             .Where((a, b) => a.BuyerId == 1)
-          .ToSql(out var dbParameters);
+            .ToSql(out var dbParameters);
         Assert.True(sql == "UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@p0,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1");
         Assert.NotNull(dbParameters);
         Assert.True(dbParameters[0].ParameterName == "@p0");

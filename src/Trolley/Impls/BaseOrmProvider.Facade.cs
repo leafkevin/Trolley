@@ -121,7 +121,6 @@ partial class BaseOrmProvider
     public virtual IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor) => new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(multiQuery, visitor);
     public virtual IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor) => new MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(multiQuery, visitor);
 
-
     public virtual ICreate<TEntity> NewCreate<TEntity>(DbContext dbContext) => new Create<TEntity>(dbContext);
     public virtual ICreated<TEntity> NewCreated<TEntity>(DbContext dbContext, ICreateVisitor visitor) => new Created<TEntity>(dbContext, visitor);
     public virtual IContinuedCreate<TEntity> NewContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor) => new ContinuedCreate<TEntity>(dbContext, visitor);
@@ -134,8 +133,8 @@ partial class BaseOrmProvider
     public virtual IDeleted<TEntity> NewDeleted<TEntity>(DbContext dbContext, IDeleteVisitor visitor) => new Deleted<TEntity>(dbContext, visitor);
     public virtual IContinuedDelete<TEntity> NewContinuedDelete<TEntity>(DbContext dbContext, IDeleteVisitor visitor) => new ContinuedDelete<TEntity>(dbContext, visitor);
 
-    public virtual IQueryVisitor NewQueryVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null) => new QueryVisitor(dbKey, this, mapProvider, isParameterized, tableAsStart, parameterPrefix, dbParameters);
-    public virtual ICreateVisitor NewCreateVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p") => new CreateVisitor(dbKey, this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
-    public virtual IUpdateVisitor NewUpdateVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p") => new UpdateVisitor(dbKey, this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
-    public virtual IDeleteVisitor NewDeleteVisitor(string dbKey, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p") => new DeleteVisitor(dbKey, this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
+    public virtual IQueryVisitor NewQueryVisitor(IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null) => new QueryVisitor(this, mapProvider, isParameterized, tableAsStart, parameterPrefix, dbParameters);
+    public virtual ICreateVisitor NewCreateVisitor(IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p") => new CreateVisitor(this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
+    public virtual IUpdateVisitor NewUpdateVisitor(IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p") => new UpdateVisitor(this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
+    public virtual IDeleteVisitor NewDeleteVisitor(IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p") => new DeleteVisitor(this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
 }

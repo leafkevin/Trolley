@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Linq.Expressions;
+using System.Collections.Generic;
 
 namespace Trolley;
 
@@ -14,6 +14,12 @@ public struct MultipleCommand
     public MultipleCommandType CommandType { get; set; }
     public Type EntityType { get; set; }
     public object Body { get; set; }
+    public List<TableSegment> Tables { get; set; }
+    public List<string> OnlyFieldNames { get; set; }
+    public List<string> IgnoreFieldNames { get; set; }
+    public List<IQuery> RefQueries { get; set; }
+    public bool IsNeedTableAlias { get; set; }
+    public bool IsJoin { get; set; }
 }
 public struct CommandSegment
 {
@@ -25,16 +31,4 @@ public struct FieldsSegment
     public string Type { get; set; }
     public string Fields { get; set; }
     public string Values { get; set; }
-}
-public struct FieldFromQuery
-{
-    public Expression FieldSelector { get; set; }
-    public Expression ValueSelector { get; set; }
-}
-public struct BulkObject
-{
-    public string HeadSql { get; set; }
-    public Expression FieldsSelectorOrAssignment { get; set; }
-    public object CommandInitializer { get; set; }
-    public object BulkObjects { get; set; }
 }

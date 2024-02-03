@@ -8,7 +8,6 @@ namespace Trolley;
 
 public interface ICreateVisitor : IDisposable
 {
-    string DbKey { get; }
     IDataParameterCollection DbParameters { get; set; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
@@ -18,7 +17,7 @@ public interface ICreateVisitor : IDisposable
     MultipleCommand CreateMultipleCommand();
     IQueryVisitor CreateQueryVisitor();
     void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
-    void Initialize(Type entityType, bool isFirst = true);
+    void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
     string BuildSql();
     void WithBy(object insertObj);
     void WithByField(Expression fieldSelector, object fieldValue);

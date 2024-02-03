@@ -5,11 +5,6 @@ namespace Trolley.MySqlConnector;
 
 public interface IMySqlUpdate<TEntity> : IUpdate<TEntity>
 {
-    //#region FromWith CTE
-    //IUpdateFrom<TEntity, TSource> FromWith<TSource>(IQuery<TSource> subQuery);
-    //IUpdateFrom<TEntity, TSource> FromWith<TSource>(Func<IFromQuery, IQuery<TSource>> subQuery);
-    //#endregion
-
     #region InnerJoin
     /// <summary>
     /// InnerJoin内连接表TSource部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用

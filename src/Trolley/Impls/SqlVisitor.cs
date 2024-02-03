@@ -15,7 +15,6 @@ public class SqlVisitor : ISqlVisitor
     private static string[] calcOps = new string[] { ">", ">=", "<", "<=", "+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>" };
     private bool isDisposed;
 
-    public string DbKey { get; set; }
     public IDataParameterCollection DbParameters { get; set; }
     public IDataParameterCollection NextDbParameters { get; set; }
     public IOrmProvider OrmProvider { get; set; }
@@ -1103,8 +1102,8 @@ public class SqlVisitor : ISqlVisitor
             {
                 if (currentExpr.NodeType == ExpressionType.Parameter)
                 {
-                    queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
-                    fromQuery = new FromQuery(this.DbKey, this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
+                    queryVisitor = this.OrmProvider.NewQueryVisitor(this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+                    fromQuery = new FromQuery(this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
                     dbContext = fromQuery.dbContext;
                     break;
                 }
@@ -1113,8 +1112,8 @@ public class SqlVisitor : ISqlVisitor
                     var sqlSegment = this.VisitMemberAccess(new SqlSegment { Expression = memberExpr });
                     if (sqlSegment.Value is IRepository)
                     {
-                        queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
-                        fromQuery = new FromQuery(this.DbKey, this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
+                        queryVisitor = this.OrmProvider.NewQueryVisitor(this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+                        fromQuery = new FromQuery(this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
                         dbContext = fromQuery.dbContext;
                     }
                     else
@@ -1328,7 +1327,7 @@ public class SqlVisitor : ISqlVisitor
     }
     public virtual IQueryVisitor CreateQueryVisitor()
     {
-        var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+        var queryVisiter = this.OrmProvider.NewQueryVisitor(this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
         queryVisiter.IsMultiple = this.IsMultiple;
         queryVisiter.CommandIndex = this.CommandIndex;
         queryVisiter.RefQueries = this.RefQueries;
@@ -1562,7 +1561,6 @@ public class SqlVisitor : ISqlVisitor
         this.GroupFields = null;
         this.IncludeSegments = null;
 
-        this.DbKey = null;
         this.DbParameters = null;
         this.NextDbParameters = null;
         this.OrmProvider = null;

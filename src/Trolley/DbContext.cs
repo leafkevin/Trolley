@@ -574,7 +574,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         try
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, false);
+            var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObj, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
             command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, whereObj);
 
@@ -611,7 +611,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         try
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, whereObj, false);
+            var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObj, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
             command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, whereObj);
 

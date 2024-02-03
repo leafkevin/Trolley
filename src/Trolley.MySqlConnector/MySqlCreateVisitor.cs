@@ -14,8 +14,8 @@ public class MySqlCreateVisitor : CreateVisitor
     public bool IsSetAlias { get; set; }
     public string SetRowAlias { get; set; } = "newRow";
 
-    public MySqlCreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix) { }
+    public MySqlCreateVisitor(IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+        : base(ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix) { }
 
     public override string BuildCommand(IDbCommand command, bool isReturnIdentity)
     {
@@ -48,7 +48,6 @@ public class MySqlCreateVisitor : CreateVisitor
         if (this.IsBulk)
             sql = this.BuildMultiBulkSql(command);
         else sql = this.BuildSql();
-        command.CommandText = sql;
         return sql;
     }
     public override string BuildSql()
@@ -115,7 +114,7 @@ public class MySqlCreateVisitor : CreateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var updateObjType = updateObj.GetType();
-        var setFieldsInitializer = RepositoryHelper.BuildUpdateSetPartSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple, true);
+        var setFieldsInitializer = RepositoryHelper.BuildUpdateSetPartSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple, true);
         if (this.IsMultiple)
         {
             var typedSetFieldsInitializer = setFieldsInitializer as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, string>;
@@ -263,7 +262,7 @@ public class MySqlCreateVisitor : CreateVisitor
     }
     public override IQueryVisitor CreateQueryVisitor()
     {
-        var queryVisiter = new MySqlQueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+        var queryVisiter = new MySqlQueryVisitor(this.OrmProvider, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
         queryVisiter.IsMultiple = this.IsMultiple;
         queryVisiter.CommandIndex = this.CommandIndex;
         queryVisiter.RefQueries = this.RefQueries;

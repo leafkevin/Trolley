@@ -24,29 +24,28 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public virtual bool IsReturnIdentity { get; set; }
     public bool IsUseCte { get; set; }
 
-    public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+    public CreateVisitor(IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
     {
-        this.DbKey = dbKey;
         this.OrmProvider = ormProvider;
         this.MapProvider = mapProvider;
         this.IsParameterized = isParameterized;
         this.TableAsStart = tableAsStart;
         this.ParameterPrefix = parameterPrefix;
     }
-    public virtual void Initialize(Type entityType, bool isFirst = true)
+    public virtual void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true)
     {
-        if (isFirst)
+        if (!isMultiple)
         {
             this.Tables = new();
             this.TableAliases = new();
+            this.Tables.Add(new TableSegment
+            {
+                EntityType = entityType,
+                AliasName = "a",
+                Mapper = this.MapProvider.GetEntityMap(entityType)
+            });
         }
-        //clear
-        else this.Clear();
-        this.Tables.Add(new TableSegment
-        {
-            EntityType = entityType,
-            Mapper = this.MapProvider.GetEntityMap(entityType)
-        });
+        if (!isFirst) this.Clear();
     }
     public virtual string BuildCommand(IDbCommand command, bool isReturnIdentity)
     {
@@ -71,7 +70,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (this.IsBulk)
             sql = this.BuildMultiBulkSql(command);
         if (sql == null) sql = this.BuildSql();
-        command.CommandText = sql;
         return sql;
     }
     public virtual MultipleCommand CreateMultipleCommand()
@@ -80,7 +78,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         {
             CommandType = MultipleCommandType.Insert,
             EntityType = this.Tables[0].EntityType,
-            Body = this.deferredSegments
+            Body = this.deferredSegments,
+            Tables = this.Tables,
+            IgnoreFieldNames = this.IgnoreFieldNames,
+            OnlyFieldNames = this.OnlyFieldNames,
+            RefQueries = this.RefQueries,
+            IsNeedTableAlias = this.IsNeedTableAlias
         };
     }
     public void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
@@ -88,6 +91,11 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.IsMultiple = true;
         this.CommandIndex = commandIndex;
         this.deferredSegments = multiCommand.Body as List<CommandSegment>;
+        this.Tables = multiCommand.Tables;
+        this.IgnoreFieldNames = multiCommand.IgnoreFieldNames;
+        this.OnlyFieldNames = multiCommand.OnlyFieldNames;
+        this.RefQueries = multiCommand.RefQueries;
+        this.IsNeedTableAlias = multiCommand.IsNeedTableAlias;
         if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
         sqlBuilder.Append(this.BuildCommand(command, false));
     }
@@ -171,7 +179,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
         var entityType = this.Tables[0].EntityType;
         //多语句执行，一次性不分批次
-        (var headSqlSetter, var commandInitializer) = RepositoryHelper.BuildCreateMultiSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjs, this.OnlyFieldNames, this.IgnoreFieldNames, true);
+        (var headSqlSetter, var commandInitializer) = RepositoryHelper.BuildCreateMultiSqlParameters(this.OrmProvider, this.MapProvider, entityType, insertObjs, this.OnlyFieldNames, this.IgnoreFieldNames, true);
         foreach (var insertObj in insertObjs)
         {
             if (index > 0) builder.Append(',');
@@ -196,9 +204,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             var insertObjType = insertObjs.GetType();
             var entityMapper = this.Tables[0].Mapper;
 
-            var cacheKey = RepositoryHelper.BuildInsertHashKey(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
+            var cacheKey = RepositoryHelper.BuildInsertHashKey(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
             var headSqlBulkSetter = headSqlSetterCache.GetOrAdd(cacheKey, f => RepositoryHelper.BuildCreateHeadSqlPart(
-                this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames));
+                 this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames));
 
             for (int i = 1; i < this.deferredSegments.Count; i++)
             {
@@ -230,7 +238,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     fixedDbParameters.ForEach(f => this.DbParameters.Add(f));
             };
             var valuesPartSqlParameters = multiValuesSqlParametersCache.GetOrAdd(cacheKey, f => RepositoryHelper.BuildCreateValuesPartSqlParametes(
-                this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, true));
+                 this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, true));
             var typedValuesPartSqlParameters = valuesPartSqlParameters as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, string>;
 
             this.DbParameters.Clear();
@@ -252,7 +260,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         }
         else
         {
-            (var headSqlSetter, var typedCommandInitializer) = RepositoryHelper.BuildCreateMultiSqlParameters(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjs, this.OnlyFieldNames, this.IgnoreFieldNames, true);
+            (var headSqlSetter, var typedCommandInitializer) = RepositoryHelper.BuildCreateMultiSqlParameters(this.OrmProvider, this.MapProvider, entityType, insertObjs, this.OnlyFieldNames, this.IgnoreFieldNames, true);
             Action<StringBuilder, object, string> commandInitializer = null;
             commandInitializer = (builder, insertObj, suffix) => typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, builder, insertObj, suffix);
             return (insertObjs, bulkCount, headSqlSetter, commandInitializer);
@@ -262,12 +270,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var insertObjType = insertObj.GetType();
-        var cacheKey = RepositoryHelper.BuildInsertHashKey(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
+        var cacheKey = RepositoryHelper.BuildInsertHashKey(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
         var headSqlSetter = headSqlSetterCache.GetOrAdd(cacheKey, f =>
-            RepositoryHelper.BuildCreateHeadSqlPart(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames));
+            RepositoryHelper.BuildCreateHeadSqlPart(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames));
         var commandInitializerCache = this.IsMultiple ? multiValuesSqlParametersCache : valuesSqlParametersCache;
         var commandInitializer = commandInitializerCache.GetOrAdd(cacheKey, f =>
-            RepositoryHelper.BuildCreateValuesPartSqlParametes(this.DbKey, this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple));
+            RepositoryHelper.BuildCreateValuesPartSqlParametes(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple));
         var fieldsBuilder = new StringBuilder();
         headSqlSetter.Invoke(fieldsBuilder, insertObj);
         var valuesBuilder = new StringBuilder();
@@ -360,28 +368,5 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.InsertFields = null;
         this.OnlyFieldNames = null;
         this.IgnoreFieldNames = null;
-    }
-    private int GetHashKey(Type entityType, Type insertObjType)
-    {
-        var hashCode = new HashCode();
-        hashCode.Add(this.DbKey);
-        hashCode.Add(this.OrmProvider);
-        hashCode.Add(this.MapProvider);
-        hashCode.Add(entityType);
-        hashCode.Add(insertObjType);
-        this.AddFieldHashCode(hashCode, this.OnlyFieldNames);
-        this.AddFieldHashCode(hashCode, this.IgnoreFieldNames);
-        return hashCode.ToHashCode();
-    }
-    private void AddFieldHashCode(HashCode hashCode, List<string> fieldNames)
-    {
-        if (fieldNames == null)
-        {
-            hashCode.Add(0);
-            return;
-        }
-        hashCode.Add(fieldNames.Count);
-        foreach (var fieldName in fieldNames)
-            hashCode.Add(fieldName);
     }
 }

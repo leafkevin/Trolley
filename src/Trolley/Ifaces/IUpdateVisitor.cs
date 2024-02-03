@@ -1,40 +1,20 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using System.Text;
 
 namespace Trolley;
 
-public enum UpdateFieldType
-{
-    /// <summary>
-    /// 设置字段
-    /// </summary>
-    SetField,
-    /// <summary>
-    /// 设置NULL
-    /// </summary>
-    SetValue,
-    Where
-}
-public struct UpdateField
-{
-    public UpdateFieldType Type { get; set; }
-    public MemberMap MemberMapper { get; set; }
-    public string Value { get; set; }
-    public override int GetHashCode() => HashCode.Combine(this.Type, this.MemberMapper?.MemberName);
-}
 public interface IUpdateVisitor : IDisposable
 {
-    string DbKey { get; }
+    //string DbKey { get; }
     IDataParameterCollection DbParameters { get; set; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
     bool IsBulk { get; set; }
 
-    void Initialize(Type entityType, bool isFirst = true);
+    void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
     MultipleCommand CreateMultipleCommand();
     string BuildCommand(IDbCommand command);
     void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);

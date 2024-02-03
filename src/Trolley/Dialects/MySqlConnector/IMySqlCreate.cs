@@ -46,6 +46,4 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <returns>返回插入对象</returns>
     new IMySqlContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
     #endregion
-
-
 }

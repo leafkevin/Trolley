@@ -22,7 +22,7 @@ public class Create<TEntity> : ICreate<TEntity>
     public Create(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = this.DbContext.OrmProvider.NewCreateVisitor(this.DbContext.DbKey, this.DbContext.MapProvider, this.DbContext.IsParameterized);
+        this.Visitor = this.DbContext.OrmProvider.NewCreateVisitor(this.DbContext.MapProvider, this.DbContext.IsParameterized);
         this.Visitor.Initialize(typeof(TEntity));
         this.DbContext = dbContext;
     }
@@ -181,7 +181,7 @@ public class Created<TEntity> : ICreated<TEntity>
         }
         else
         {
-            result = this.DbContext.Execute(f => this.Visitor.BuildCommand(f, false));
+            result = this.DbContext.Execute(f => f.CommandText = this.Visitor.BuildCommand(f, false));
             this.Visitor.Dispose();
             this.Visitor = null;
         }
@@ -245,7 +245,7 @@ public class Created<TEntity> : ICreated<TEntity>
         }
         else
         {
-            result = await this.DbContext.ExecuteAsync(f => this.Visitor.BuildCommand(f, false), cancellationToken);
+            result = await this.DbContext.ExecuteAsync(f => f.CommandText = this.Visitor.BuildCommand(f, false), cancellationToken);
             this.Visitor.Dispose();
             this.Visitor = null;
         }
@@ -256,28 +256,28 @@ public class Created<TEntity> : ICreated<TEntity>
     #region ExecuteIdentity
     public int ExecuteIdentity()
     {
-        var result = this.DbContext.CreateIdentity<int>(f => this.Visitor.BuildCommand(f, true));
+        var result = this.DbContext.CreateIdentity<int>(f => f.CommandText = this.Visitor.BuildCommand(f, true));
         this.Visitor.Dispose();
         this.Visitor = null;
         return result;
     }
     public async Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
     {
-        var result = await this.DbContext.CreateIdentityAsync<int>(f => this.Visitor.BuildCommand(f, true), cancellationToken);
+        var result = await this.DbContext.CreateIdentityAsync<int>(f => f.CommandText = this.Visitor.BuildCommand(f, true), cancellationToken);
         this.Visitor.Dispose();
         this.Visitor = null;
         return result;
     }
     public long ExecuteIdentityLong()
     {
-        var result = this.DbContext.CreateIdentity<long>(f => this.Visitor.BuildCommand(f, true));
+        var result = this.DbContext.CreateIdentity<long>(f => f.CommandText = this.Visitor.BuildCommand(f, true));
         this.Visitor.Dispose();
         this.Visitor = null;
         return result;
     }
     public async Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
     {
-        var result = await this.DbContext.CreateIdentityAsync<long>(f => this.Visitor.BuildCommand(f, true), cancellationToken);
+        var result = await this.DbContext.CreateIdentityAsync<long>(f => f.CommandText = this.Visitor.BuildCommand(f, true), cancellationToken);
         this.Visitor.Dispose();
         this.Visitor = null;
         return result;

@@ -19,7 +19,7 @@ public class Delete<TEntity> : IDelete<TEntity>
     public Delete(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = dbContext.OrmProvider.NewDeleteVisitor(dbContext.DbKey, dbContext.MapProvider, dbContext.IsParameterized);
+        this.Visitor = dbContext.OrmProvider.NewDeleteVisitor(dbContext.MapProvider, dbContext.IsParameterized);
         this.Visitor.Initialize(typeof(TEntity));
     }
     #endregion
@@ -63,9 +63,9 @@ public class Deleted<TEntity> : IDeleted<TEntity>
 
     #region Execute
     public int Execute()
-        => this.DbContext.Execute(f => this.Visitor.BuildCommand(f));
+        => this.DbContext.Execute(f => f.CommandText = this.Visitor.BuildCommand(f));
     public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.ExecuteAsync(f => this.Visitor.BuildCommand(f), cancellationToken);
+        => await this.DbContext.ExecuteAsync(f => f.CommandText = this.Visitor.BuildCommand(f), cancellationToken);
     #endregion
 
     #region ToMultipleCommand

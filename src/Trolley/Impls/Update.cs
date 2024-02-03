@@ -20,7 +20,7 @@ public class Update<TEntity> : IUpdate<TEntity>
     public Update(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(this.DbContext.DbKey, this.DbContext.MapProvider, this.DbContext.IsParameterized);
+        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(this.DbContext.MapProvider, this.DbContext.IsParameterized);
         this.Visitor.Initialize(typeof(TEntity));
     }
     #endregion
@@ -181,7 +181,7 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
                 if (!hasWhere)
                     throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
 
-                this.Visitor.BuildCommand(command);
+                command.CommandText = this.Visitor.BuildCommand(command);
                 this.DbContext.Open();
                 result = command.ExecuteNonQuery();
             }
@@ -247,7 +247,7 @@ public class Updated<TEntity> : IUpdated<TEntity>, IDisposable
                 if (!hasWhere)
                     throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
 
-                this.Visitor.BuildCommand(command);
+                command.CommandText = this.Visitor.BuildCommand(command);
                 await this.DbContext.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
             }

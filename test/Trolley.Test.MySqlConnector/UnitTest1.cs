@@ -16,7 +16,7 @@ public class UnitTest1 : UnitTestBase
         {
             var builder = new OrmDbFactoryBuilder()
             .Register<MySqlProvider>("fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true)
-            .Configure<MySqlProvider, MySqlModelConfiguration>();
+            .Configure<MySqlProvider, ModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
@@ -615,7 +615,7 @@ public class UnitTest1 : UnitTestBase
                 UpdatedBy = 1,
                 UpdatedAt = DateTime.Now
             })
-           .ToSql(out _);
+            .ToSql(out _);
         Assert.True(sql == "INSERT IGNORE INTO `sys_product` (`Id`,`ProductNo`,`Name`,`Price`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT @p1 AS `Id`,CONCAT('PN_',@p2) AS `ProductNo`,@p3 AS `Name`,25.85 AS `Price`,b.`Id` AS `BrandId`,@p4 AS `CategoryId`,b.`CompanyId`,1 AS `IsEnabled`,1 AS `CreatedBy`,NOW() AS `CreatedAt`,1 AS `UpdatedBy`,NOW() AS `UpdatedAt` FROM `sys_brand` b WHERE b.`Id`=@p0");
 
         var count = repository.Create<Product>()
@@ -957,37 +957,7 @@ public class UnitTest1 : UnitTestBase
             .OnlyFields(f => new { f.Id, f.Name, f.IsEnabled, f.CreatedBy, f.CreatedAt, f.UpdatedAt, f.UpdatedBy })
             .ExecuteAsync();
         Assert.True(count == 0);
-    }
-    [Fact]
-    public void Insert_ToMultipleCommand()
-    {
-        using var repository = dbFactory.Create();
-        int id = 2;
-        int category = 1;
-        var commands = new List<MultipleCommand>();
-        var deleteCommand = repository.Delete<Product>()
-            .Where(f => f.Id == id)
-            .ToMultipleCommand();
-        var insertCommand = repository.Create<Product>()
-           .WithBy(new
-           {
-               Id = 2,
-               ProductNo = "PN_111",
-               Name = "PName_111",
-               BrandId = 1,
-               CategoryId = category,
-               CompanyId = 1,
-               IsEnabled = true,
-               CreatedBy = 1,
-               CreatedAt = DateTime.Now,
-               UpdatedBy = 1,
-               UpdatedAt = DateTime.Now
-           })
-           .ToMultipleCommand();
-        commands.AddRange(new[] { deleteCommand, insertCommand });
-        var count = repository.MultipleExecute(commands);
-        Assert.True(count == 2);
-    }
+    }  
     [Fact]
     public async void Insert_OnDuplicateKeyUpdate()
     {

@@ -4,7 +4,7 @@ using System.Data;
 
 namespace Trolley.Test.MySqlConnector;
 
-class MySqlModelConfiguration : IModelConfiguration
+class ModelConfiguration : IModelConfiguration
 {
     public void OnModelCreating(ModelBuilder builder)
     {

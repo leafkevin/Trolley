@@ -7,12 +7,11 @@ namespace Trolley;
 
 public interface IDeleteVisitor : IDisposable
 {
-    string DbKey { get; }
     IDataParameterCollection DbParameters { get; set; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
 
-    void Initialize(Type entityType, bool isFirst = true);
+    void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
     MultipleCommand CreateMultipleCommand();
     string BuildCommand(IDbCommand command);
     void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);

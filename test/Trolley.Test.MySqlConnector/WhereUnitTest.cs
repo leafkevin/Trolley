@@ -14,7 +14,7 @@ public class WhereUnitTest : UnitTestBase
         {
             var builder = new OrmDbFactoryBuilder()
             .Register<MySqlProvider>("fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true)
-            .Configure<MySqlProvider, MySqlModelConfiguration>();
+            .Configure<MySqlProvider, ModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
