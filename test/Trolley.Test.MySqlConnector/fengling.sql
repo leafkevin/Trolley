@@ -217,7 +217,7 @@ INSERT INTO `sys_user` VALUES (2, 'cindy', 2, 21, 2, '20687f1c-3f27-4741-894e-fa
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ----------------------------
--- Table structure for sys_user
+-- Table structure for sys_function
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_function`;
 CREATE TABLE `sys_function`  (
@@ -232,3 +232,25 @@ CREATE TABLE `sys_function`  (
   `UpdatedBy` int NULL DEFAULT NULL,
   PRIMARY KEY (`MenuId`,`PageId`) USING BTREE
 );
+
+-- ----------------------------
+-- Table structure for sys_entity1
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_entity1`;
+CREATE TABLE `sys_entity1`  (
+  `Id` int NOT NULL,
+  `BooleanField` tinyint(1) NULL DEFAULT NULL,
+  `EnumField` tinyint NULL DEFAULT NULL,
+  `GuidField` varchar(36) NULL DEFAULT NULL,
+  `DateTimeField` datetime NULL DEFAULT NULL,
+  `DateOnlyField` date NULL DEFAULT NULL,
+  `DateTimeOffsetField` timestamp NULL DEFAULT NULL,
+  `TimeSpanField` time NULL DEFAULT NULL,
+  `TimeOnlyField` time NULL DEFAULT NULL,
+  PRIMARY KEY (`Id`) USING BTREE
+);
+
+-- ----------------------------
+-- Records of sys_entity1
+-- ----------------------------
+INSERT INTO `sys_entity1` VALUES (1, 1, 2, 'cd16c16d-ad12-4702-9205-dcc94de4bcc8', '2024-02-02 11:43:54', '2022-05-06', '2022-01-01 19:04:05', '24:15:00', '03:05:07');

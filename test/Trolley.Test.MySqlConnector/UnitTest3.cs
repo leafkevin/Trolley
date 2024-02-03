@@ -216,8 +216,8 @@ public class UnitTest3 : UnitTestBase
             .Set(new { Quantity = 5 })
             .Set(f => new { Price = f.Price + 10 })
             .ToSql(out var dbParameters);
-        Assert.True(sql == "");
-        Assert.True(dbParameters.Count == 7);
+        Assert.True(sql == "UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount0,`UpdatedAt`=@UpdatedAt0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount1,`UpdatedAt`=@UpdatedAt1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount2,`UpdatedAt`=@UpdatedAt2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount3,`UpdatedAt`=@UpdatedAt3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount4,`UpdatedAt`=@UpdatedAt4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount5,`UpdatedAt`=@UpdatedAt5 WHERE `Id`=@kId5;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount6,`UpdatedAt`=@UpdatedAt6 WHERE `Id`=@kId6");
+        Assert.True(dbParameters.Count == parameters.Count * 3 + 2);
 
         var result = repository.Update<OrderDetail>()
             .SetBulk(parameters)
@@ -288,8 +288,8 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(f => f.Id == 1)
             .ToSql(out var dbParameters);
-        Assert.True(sql == "");
-        Assert.True(dbParameters.Count == 4);
+        Assert.True(sql == "UPDATE `sys_user` SET `Age`=@Age,`Name`=@Name,`CompanyId`=@CompanyId WHERE `Id`=1");
+        Assert.True(dbParameters.Count == 3);
         Assert.True((int)dbParameters[0].Value == 25);
         Assert.True((string)dbParameters[1].Value == "leafkevin22");
         Assert.True(dbParameters[2].Value == DBNull.Value);
@@ -304,10 +304,8 @@ public class UnitTest3 : UnitTestBase
            .Where(f => f.Id == 1)
            .Execute();
         var result = repository.Get<User>(1);
-        Assert.True(sql == "");
         Assert.True(result.Name == "leafkevin22");
         Assert.True(result.Age == 25);
-        Assert.True(dbParameters[2].Value == DBNull.Value);
         Assert.True(result.CompanyId == 0);
     }
     [Fact]
@@ -315,35 +313,35 @@ public class UnitTest3 : UnitTestBase
     {
         Initialize();
         using var repository = dbFactory.Create();
+        var user = repository.Get<User>(1);
         var sql = repository.Update<User>()
             .Set(new
             {
-                Age = 25,
-                Name = "leafkevin22",
-                CompanyId = DBNull.Value
+                Age = 30,
+                Name = "leafkevinabc",
+                CompanyId = 1
             })
             .OnlyFields(f => f.Name)
             .Where(f => f.Id == 1)
             .ToSql(out var dbParameters);
-        Assert.True(sql == "");
-        Assert.True(dbParameters.Count == 2);
-        Assert.True((int)dbParameters[0].Value == 25);
-        Assert.True(dbParameters[1].Value == DBNull.Value);
+        Assert.True(sql == "UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=1");
+        Assert.True(dbParameters.Count == 1);
+        Assert.True((string)dbParameters[0].Value == "leafkevinabc");
 
         repository.Update<User>()
             .Set(new
             {
-                Age = 25,
-                Name = "leafkevin22",
-                CompanyId = DBNull.Value
+                Age = 30,
+                Name = "leafkevinabc",
+                CompanyId = 1
             })
             .OnlyFields(f => f.Name)
             .Where(f => f.Id == 1)
             .Execute();
         var result = repository.Get<User>(1);
-        Assert.True(result.Name == "leafkevin22");
-        Assert.True(result.Age != 25);
-        Assert.True(result.CompanyId != 0);
+        Assert.True(result.Name == "leafkevinabc");
+        Assert.True(result.Age == user.Age);
+        Assert.True(result.CompanyId == user.CompanyId);
     }
     [Fact]
     public void Update_Set_AnonymousObject_Where_IgnoreFields()
@@ -360,10 +358,10 @@ public class UnitTest3 : UnitTestBase
             .IgnoreFields(f => f.Name)
             .Where(f => f.Id == 1)
             .ToSql(out var dbParameters);
-        Assert.True(sql == "");
-        Assert.True(dbParameters.Count == 3);
-        Assert.True((int)dbParameters[1].Value == 25);
-        Assert.True(dbParameters[2].Value == DBNull.Value);
+        Assert.True(sql == "UPDATE `sys_user` SET `Age`=@Age,`CompanyId`=@CompanyId WHERE `Id`=1");
+        Assert.True(dbParameters.Count == 2);
+        Assert.True((int)dbParameters[0].Value == 25);
+        Assert.True(dbParameters[1].Value == DBNull.Value);
 
         repository.Update<User>()
             .Set(new
@@ -457,26 +455,40 @@ public class UnitTest3 : UnitTestBase
         Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
     }
     [Fact]
-    public void Update_Set_FromQuery_One()
+    public async void Update_Set_FromQuery_One()
     {
         Initialize();
         using var repository = dbFactory.Create();
+        var order = repository.Get<Order>(1);
+        var totalAmount = await repository.From<OrderDetail>()
+            .Where(f => f.OrderId == 1)
+            .SumAsync(f => f.Amount);
         var sql = repository.Update<Order>()
-            .SetFrom((a, b) => new
-            {
-                TotalAmount = a.From<OrderDetail>('b')
-                    .Where(f => f.OrderId == b.Id)
-                    .Select(t => Sql.Sum(t.Amount))
-            })
-            .SetFrom(f => f.TotalAmount, (x, y) =>
-                x.From<OrderDetail>('a')
+            .SetFrom(f => f.TotalAmount, (x, y) => x
+                .From<OrderDetail>('b')
                 .Where(t => t.OrderId == y.Id)
                 .Select(f => Sql.Sum(f.Amount)))
             .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
-            .Where(a => a.BuyerId == 1)
-            .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
+            .Where(a => a.Id == 1)
+            .ToSql(out var dbParameters);
+        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`Id`=1");
+        Assert.True(dbParameters.Count == 1);
+        Assert.True((string)dbParameters[0].Value == "ON_111");
+
+        var count = await repository.Update<Order>()
+          .SetFrom(f => f.TotalAmount, (x, y) => x
+              .From<OrderDetail>('b')
+              .Where(t => t.OrderId == y.Id)
+              .Select(f => Sql.Sum(f.Amount)))
+          .Set(x => x.OrderNo, "ON_111")
+          .Set(f => new { BuyerId = DBNull.Value })
+          .Where(a => a.Id == 1)
+          .ExecuteAsync();
+        var reult = repository.Get<Order>(1);
+        Assert.True(count > 0);
+        Assert.True(reult.TotalAmount == totalAmount);
+        Assert.True(reult.TotalAmount != order.TotalAmount);
     }
     [Fact]
     public void Update_Set_FromQuery_One_Enum()
