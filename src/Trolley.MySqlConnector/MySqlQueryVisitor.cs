@@ -36,30 +36,35 @@ public class MySqlQueryVisitor : QueryVisitor
         {
             bool isRecursive = false;
             var cteQueries = this.FlattenRefCteTables(this.RefQueries);
-            for (int i = 0; i < cteQueries.Count; i++)
+            if (cteQueries.Count > 0)
             {
-                if (i > 0) builder.AppendLine(",");
-                builder.Append(cteQueries[i].Body);
+                for (int i = 0; i < cteQueries.Count; i++)
+                {
+                    if (i > 0) builder.AppendLine(",");
+                    builder.Append(cteQueries[i].Body);
+                    if (cteQueries[i].IsRecursive)
+                        isRecursive = true;
+                }
+                if (isRecursive)
+                    builder.Insert(0, "WITH RECURSIVE ");
+                else builder.Insert(0, "WITH ");
                 builder.AppendLine();
-                if (cteQueries[i].IsRecursive)
-                    isRecursive = true;
             }
-            if (isRecursive)
-                builder.Insert(0, "WITH RECURSIVE ");
-            else builder.Insert(0, "WITH ");
         }
         dbParameters = this.DbParameters;
         if (!string.IsNullOrEmpty(this.UnionSql))
         {
-            builder.Append($"SELECT * FROM ({this.UnionSql}) t");
+            builder.Append(this.UnionSql);
             var sql = builder.ToString();
             builder.Clear();
             return sql;
         }
         var headSql = builder.ToString();
         builder.Clear();
-        //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以，要排序或是插入时候就排好序
+        //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以在插入时候就排好序
         //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
+        if (this.ReaderFields == null)
+            throw new Exception("缺少Select语句");
         builder.Append(this.BuildSelectSql(this.ReaderFields));
 
         string selectSql = null;
