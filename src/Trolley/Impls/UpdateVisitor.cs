@@ -44,7 +44,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         if (!isFirst) this.Clear();
     }
-    public string BuildCommand(IDbCommand command)
+    public virtual string BuildCommand(IDbCommand command)
     {
         string sql = null;
         this.DbParameters = command.Parameters;
@@ -103,7 +103,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             IsJoin = this.IsJoin
         };
     }
-    public void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
+    public virtual void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
     {
         this.IsMultiple = true;
         this.CommandIndex = commandIndex;
@@ -342,8 +342,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 builder.Append(setField);
                 index++;
             }
+            builder.Append(',');
         }
-        builder.Append(',');
         fixedHeadUpdateSql = builder.ToString();
         builder.Clear();
 
@@ -437,7 +437,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             sqlSegment.IsConstant = true;
         return sqlSegment;
     }
-    public void Clear()
+    public virtual void Clear()
     {
         this.Tables?.Clear();
         this.TableAliases?.Clear();
@@ -464,7 +464,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.OnlyFieldNames = null;
         this.IgnoreFieldNames = null;
     }
-    public void InitTableAlias(LambdaExpression lambdaExpr)
+    public virtual void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.TableAliases.Clear();
         lambdaExpr.Body.GetParameterNames(out var parameters);
@@ -682,7 +682,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 break;
         }
     }
-    protected void AddMemberElement(MemberMap memberMapper, object memberValue, bool isEntity = true)
+    public virtual void AddMemberElement(MemberMap memberMapper, object memberValue, bool isEntity = true)
     {
         if (memberValue is DBNull || memberValue == null)
         {
@@ -696,7 +696,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
         this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
     }
-    protected void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)
+    public virtual void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)
     {
         if (sqlSegment == SqlSegment.Null)
         {

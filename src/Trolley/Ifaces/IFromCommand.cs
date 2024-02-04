@@ -36,7 +36,7 @@ public interface IFromCommand : IDisposable
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
     Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion 
+    #endregion
 
     #region ToSql
     /// <summary>

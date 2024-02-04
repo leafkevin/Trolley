@@ -32,7 +32,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         }
         if (!isFirst) this.Clear();
     }
-    public string BuildCommand(IDbCommand command)
+    public virtual string BuildCommand(IDbCommand command)
     {
         string sql = null;
         this.DbParameters = command.Parameters;
@@ -74,7 +74,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             IsNeedTableAlias = this.IsNeedTableAlias
         };
     }
-    public void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
+    public virtual void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
     {
         this.IsMultiple = true;
         this.CommandIndex = commandIndex;
@@ -232,7 +232,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         }
         return sqlSegment.Change(builder.ToString());
     }
-    public void Clear()
+    public virtual void Clear()
     {
         this.Tables?.Clear();
         this.TableAliases?.Clear();
@@ -359,16 +359,5 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         if (sqlSegment == SqlSegment.Null)
             builder.Append("NULL");
         else builder.Append(this.GetQuotedValue(sqlSegment));
-    }
-    enum DeferredDeleteType
-    {
-        WhereWith,
-        WhereExpr,
-        AndExpr
-    }
-    struct DeleteDeferredSegment
-    {
-        public DeferredDeleteType Type { get; set; }
-        public object Value { get; set; }
     }
 }

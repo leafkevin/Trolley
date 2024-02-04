@@ -21,7 +21,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public List<string> IgnoreFieldNames { get; set; }
     public List<FieldsSegment> InsertFields { get; set; } = new();
     public bool IsBulk { get; set; }
-    public virtual bool IsReturnIdentity { get; set; }
+    public bool IsReturnIdentity { get; set; }
     public bool IsUseCte { get; set; }
 
     public CreateVisitor(IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
@@ -86,7 +86,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             IsNeedTableAlias = this.IsNeedTableAlias
         };
     }
-    public void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
+    public virtual void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
     {
         this.IsMultiple = true;
         this.CommandIndex = commandIndex;
@@ -350,7 +350,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             return fieldNames;
         return null;
     }
-    public void Clear()
+    public virtual void Clear()
     {
         this.Tables?.Clear();
         this.TableAliases?.Clear();

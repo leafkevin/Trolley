@@ -356,7 +356,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.SelfRefQueryObj = null;
         return builder.ToString();
     }
-    public void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes)
+    public virtual void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes)
     {
         this.TableAsStart = tableAsStart;
         foreach (var entityType in entityTypes)
@@ -374,13 +374,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             });
         }
     }
-    public void From(Type targetType, IQuery subQueryObj)
+    public virtual void From(Type targetType, IQuery subQueryObj)
     {
         var tableSegment = this.AddSubQueryTable(targetType, subQueryObj);
         //更改现有的ReaderFields，新的ReaderFields字段名称会有更改
         this.ReaderFields = tableSegment.ReaderFields;
     }
-    public void From(Type targetType, DbContext dbContext, Delegate subQueryGetter)
+    public virtual void From(Type targetType, DbContext dbContext, Delegate subQueryGetter)
     {
         //可能是CTE表，也可能是子查询
         var queryVisitor = this.CreateQueryVisitor();
@@ -392,7 +392,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.From(targetType, subQueryObj);
         this.IsFromQuery = false;
     }
-    public void Union(string union, Type targetType, IQuery subQuery)
+    public virtual void Union(string union, Type targetType, IQuery subQuery)
     {
         //解析第一个UNION子句，需要AS别名
         this.IsUnion = true;
@@ -419,7 +419,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.UnionSql = rawSql;
         this.IsUnion = false;
     }
-    public void Union(string union, Type targetType, DbContext dbContext, Delegate subQueryGetter)
+    public virtual void Union(string union, Type targetType, DbContext dbContext, Delegate subQueryGetter)
     {
         //解析第一个UNION子句，需要AS别名
         this.IsUnion = true;
@@ -451,7 +451,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.UnionSql = rawSql;
         this.IsUnion = false;
     }
-    public void UnionRecursive(string union, DbContext dbContext, ICteQuery selfQueryObj, Delegate subQueryGetter)
+    public virtual void UnionRecursive(string union, DbContext dbContext, ICteQuery selfQueryObj, Delegate subQueryGetter)
     {
         this.IsUnion = true;
         this.IsRecursive = true;
@@ -476,7 +476,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.UnionSql = rawSql;
         this.IsUnion = false;
     }
-    public void Join(string joinType, Expression joinOn)
+    public virtual void Join(string joinType, Expression joinOn)
     {
         this.Join(joinOn, f =>
         {
@@ -485,7 +485,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             return tableSegment;
         });
     }
-    public void Join(string joinType, Type newEntityType, Expression joinOn)
+    public virtual void Join(string joinType, Type newEntityType, Expression joinOn)
     {
         this.Join(joinOn, f =>
         {
@@ -495,7 +495,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             return tableSegment;
         });
     }
-    public void Join(string joinType, Type newEntityType, IQuery subQuery, Expression joinOn)
+    public virtual void Join(string joinType, Type newEntityType, IQuery subQuery, Expression joinOn)
     {
         this.Join(joinOn, f =>
         {
@@ -504,7 +504,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             return tableSegment;
         });
     }
-    public void Join(string joinType, Type newEntityType, DbContext dbContext, Delegate subQueryGetter, Expression joinOn)
+    public virtual void Join(string joinType, Type newEntityType, DbContext dbContext, Delegate subQueryGetter, Expression joinOn)
     {
         this.Join(joinOn, f =>
         {
@@ -516,7 +516,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             return tableSegment;
         });
     }
-    protected void Join(Expression joinOn, Func<LambdaExpression, TableSegment> joinTableSegmentGetter)
+    public virtual void Join(Expression joinOn, Func<LambdaExpression, TableSegment> joinTableSegmentGetter)
     {
         this.IsWhere = true;
         var lambdaExpr = joinOn as LambdaExpression;
@@ -655,7 +655,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         await reader.NextResultAsync(cancellationToken);
     }
-    public void SetIncludeValues<TTarget>(Type targetType, List<TTarget> targets, IDataReader reader)
+    public virtual void SetIncludeValues<TTarget>(Type targetType, List<TTarget> targets, IDataReader reader)
     {
         var deferredInitializers = new List<(object IncludeValues, Action<object> SetIncludeValues)>();
         foreach (var includeSegment in this.IncludeSegments)
@@ -682,7 +682,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         reader.NextResult();
     }
-    public async Task SetIncludeValueAsync<TTarget>(Type targetType, List<TTarget> targets, DbDataReader reader, CancellationToken cancellationToken)
+    public virtual async Task SetIncludeValueAsync<TTarget>(Type targetType, List<TTarget> targets, DbDataReader reader, CancellationToken cancellationToken)
     {
         var deferredInitializers = new List<(object IncludeValues, Action<object> SetIncludeValues)>();
         foreach (var includeSegment in this.IncludeSegments)
@@ -1246,7 +1246,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsFromQuery = false;
         this.IsSelect = false;
     }
-    public bool TryFindReaderField(MemberInfo memberInfo, out ReaderField readerField)
+    public virtual bool TryFindReaderField(MemberInfo memberInfo, out ReaderField readerField)
     {
         foreach (var tableSegment in this.Tables)
         {
@@ -1256,7 +1256,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         readerField = null;
         return false;
     }
-    public bool TryFindReaderField(TableSegment tableSegment, MemberInfo memberInfo, out ReaderField readerField)
+    public virtual bool TryFindReaderField(TableSegment tableSegment, MemberInfo memberInfo, out ReaderField readerField)
     {
         readerField = null;
         if (tableSegment.ReaderFields != null)
@@ -1714,7 +1714,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 break;
         }
     }
-    public ReaderField SelectMemberAccess(SqlSegment sqlSegment, MemberInfo memberInfo = null)
+    public virtual ReaderField SelectMemberAccess(SqlSegment sqlSegment, MemberInfo memberInfo = null)
     {
         sqlSegment = this.VisitAndDeferred(sqlSegment);
         //实体类型成员访问，只有两种场景：主表的实体成员(Include子表访问)或是Grouping分组对象访问
@@ -1850,7 +1850,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         return tableSegment;
     }
-    public void Clear(bool isClearReaderFields = false)
+    public virtual void Clear(bool isClearReaderFields = false)
     {
         this.Tables.Clear();
         if (isClearReaderFields)
