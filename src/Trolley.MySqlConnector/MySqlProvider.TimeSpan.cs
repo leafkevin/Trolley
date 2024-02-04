@@ -76,7 +76,7 @@ partial class MySqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Milliseconds);
 
-                        return targetSegment.Change($"MICROSECOND({targetSegment}) DIV 1000 MOD 1000", false, false, true, true);
+                        return targetSegment.Change($"MICROSECOND({targetSegment}) DIV 1000 MOD 1000", false, false, true);
                     });
                     result = true;
                     break;
@@ -109,7 +109,7 @@ partial class MySqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalDays);
 
-                        return targetSegment.Change($"TIME_TO_SEC({targetSegment})/{3600 * 24}", false, false, true, true);
+                        return targetSegment.Change($"TIME_TO_SEC({targetSegment})/{3600 * 24}", false, false, true);
                     });
                     result = true;
                     break;
@@ -120,7 +120,7 @@ partial class MySqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalHours);
 
-                        return targetSegment.Change($"TIME_TO_SEC({targetSegment})/3600", false, false, true, true);
+                        return targetSegment.Change($"TIME_TO_SEC({targetSegment})/3600", false, false, true);
                     });
                     result = true;
                     break;
@@ -131,7 +131,7 @@ partial class MySqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalMilliseconds);
 
-                        return targetSegment.Change($"TIME_TO_SEC({targetSegment})*1000", false, false, true, true);
+                        return targetSegment.Change($"TIME_TO_SEC({targetSegment})*1000", false, false, true);
                     });
                     result = true;
                     break;
@@ -142,7 +142,7 @@ partial class MySqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalMinutes);
 
-                        return targetSegment.Change($"TIME_TO_SEC({targetSegment})/60", false, false, true, true);
+                        return targetSegment.Change($"TIME_TO_SEC({targetSegment})/60", false, false, true);
                     });
                     result = true;
                     break;

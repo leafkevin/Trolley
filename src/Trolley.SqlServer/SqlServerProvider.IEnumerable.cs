@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -21,7 +20,7 @@ partial class SqlServerProvider
             case "Contains":
                 //public static bool Contains<TSource>(this IEnumerable<TSource> source, TSource value);
                 //public static bool Contains<TSource>(this IEnumerable<TSource> source, TSource value, IEqualityComparer<TSource>? comparer);
-                if (methodInfo.IsStatic && parameterInfos.Length >= 2 && methodInfo.DeclaringType == typeof(Enumerable))
+                if (methodInfo.IsStatic && parameterInfos.Length >= 2)
                 {
                     //数组调用
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
@@ -87,8 +86,7 @@ partial class SqlServerProvider
                 }
                 break;
             case "Reverse":
-                if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType == typeof(Enumerable)
-                    && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
+                if (!methodInfo.IsStatic && parameterInfos.Length == 1 && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
                     && methodInfo.DeclaringType.GenericTypeArguments[0] == typeof(char))
                 {
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>

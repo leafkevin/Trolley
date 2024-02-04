@@ -292,7 +292,7 @@ partial class SqlServerProvider
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.Change(DateTime.IsLeapYear(Convert.ToInt32(valueSegment.Value)));
 
-                        var valueArgument = valueSegment.ToString();
+                        var valueArgument = valueSegment.Value;
                         if (valueSegment.IsExpression)
                             valueArgument = $"({valueSegment})";
 
@@ -554,7 +554,7 @@ partial class SqlServerProvider
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
                             var rightArgument = visitor.GetQuotedValue(rightSegment);
-                            return targetSegment.Change($"CAST(DATEDIFF(DAY,'1900-01-01 00:00:00',{targetArgument}-{rightArgument}) AS VARCHAR)+'.'+CONVERT(VARCHAR,{targetArgument}-{rightArgument},108)", false, false, true);
+                            return targetSegment.Change($"CAST(DATEDIFF(DAY,'1900-01-01 00:00:00',{targetArgument}-{rightArgument}) AS VARCHAR)+'.'+CONVERT(VARCHAR,{targetArgument}-{rightArgument},108)", false, false, false, true);
                         });
                         result = true;
                     }

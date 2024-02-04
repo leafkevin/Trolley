@@ -69,6 +69,7 @@ public partial class MySqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(decimal)] = MySqlDbType.Decimal;
         defaultDbTypes[typeof(string)] = MySqlDbType.VarChar;
         defaultDbTypes[typeof(DateTime)] = MySqlDbType.DateTime;
+        defaultDbTypes[typeof(DateTimeOffset)] = MySqlDbType.Timestamp;
         defaultDbTypes[typeof(DateOnly)] = MySqlDbType.Date;
         defaultDbTypes[typeof(TimeOnly)] = MySqlDbType.Time;
         defaultDbTypes[typeof(Guid)] = MySqlDbType.Guid;
@@ -87,6 +88,7 @@ public partial class MySqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(double?)] = MySqlDbType.Double;
         defaultDbTypes[typeof(decimal?)] = MySqlDbType.Decimal;
         defaultDbTypes[typeof(DateTime?)] = MySqlDbType.DateTime;
+        defaultDbTypes[typeof(DateTimeOffset?)] = MySqlDbType.Timestamp;
         defaultDbTypes[typeof(DateOnly?)] = MySqlDbType.Date;
         defaultDbTypes[typeof(TimeOnly?)] = MySqlDbType.Time;
         defaultDbTypes[typeof(Guid?)] = MySqlDbType.Guid;

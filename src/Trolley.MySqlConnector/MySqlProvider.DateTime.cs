@@ -19,7 +19,7 @@ partial class MySqlProvider
                 //静态成员访问，理论上没有target对象，为了不再创建sqlSegment对象，外层直接把对象传了进来
                 case "MinValue":
                     formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.Change(DateTime.MinValue, true));
-                    result = formatter != null;
+                    result = true;
                     break;
                 case "MaxValue":
                     formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.Change(DateTime.MaxValue, true));

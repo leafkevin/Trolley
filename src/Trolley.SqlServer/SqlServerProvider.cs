@@ -13,7 +13,9 @@ public partial class SqlServerProvider : BaseOrmProvider
     private static Dictionary<Type, string> castTos = new();
     private static Dictionary<Type, ITypeHandler> defaultTypeHandlers = new();
 
+    public override OrmProviderType OrmProviderType => OrmProviderType.SqlServer;
     public override Type NativeDbTypeType => typeof(SqlDbType);
+
     static SqlServerProvider()
     {
         defaultMapTypes[SqlDbType.Bit] = typeof(bool);
