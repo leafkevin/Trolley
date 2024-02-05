@@ -619,6 +619,15 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
+    public IQuery<T> UsingSharding()
+    {
+        return this;
+    }
+    public IQuery<T> UsingSharding(string tableName)
+    {
+        return this;
+    }
+
     #region ToSql
     public override string ToSql(out List<IDbDataParameter> dbParameters)
     {

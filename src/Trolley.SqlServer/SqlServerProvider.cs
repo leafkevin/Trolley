@@ -172,9 +172,8 @@ public partial class SqlServerProvider : BaseOrmProvider
     //    => new SqlServerCreateVisitor(this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
     //public override IUpdateVisitor NewUpdateVisitor(IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
     //    => new SqlServerUpdateVisitor(this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
-
+    public override string GetTableName(string tableName) => "[" + tableName + "]";
     public override string GetFieldName(string fieldName) => "[" + fieldName + "]";
-    public override string GetTableName(string entityName) => "[" + entityName + "]";
     public override string GetPagingTemplate(int? skip, int? limit, string orderBy = null)
     {
         var builder = new StringBuilder("SELECT ");

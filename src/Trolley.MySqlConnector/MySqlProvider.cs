@@ -171,7 +171,7 @@ public partial class MySqlProvider : BaseOrmProvider
         parameter.Value = value;
         return parameter;
     }
-    public override string GetTableName(string entityName) => "`" + entityName + "`";
+    public override string GetTableName(string tableName) => "`" + tableName + "`";
     public override string GetFieldName(string fieldName) => "`" + fieldName + "`";
     public override object GetNativeDbType(Type fieldType)
     {

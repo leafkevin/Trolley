@@ -161,8 +161,8 @@ public interface IOrmProvider
     IUpdateVisitor NewUpdateVisitor(IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p");
     IDeleteVisitor NewDeleteVisitor(IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p");
 
-    string GetTableName(string entityName);
-    string GetFieldName(string propertyName);
+    string GetTableName(string tableName);
+    string GetFieldName(string fieldName);
     string GetPagingTemplate(int? skip, int? limit, string orderBy = null);
     object GetNativeDbType(Type type);
     Type MapDefaultType(object nativeDbType);
