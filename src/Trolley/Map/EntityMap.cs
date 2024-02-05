@@ -10,13 +10,13 @@ public class EntityMap
 {
     private bool isBuild = false;
     private readonly ConcurrentDictionary<string, MemberMap> memberMaps = new();
+    private readonly ConcurrentDictionary<string, Func<object, string>> shardingStrategies = new();
     private List<MemberMap> memberMappers = new();
 
     public EntityMap(Type entityType) => this.EntityType = entityType;
 
     public Type EntityType { get; set; }
     public string TableName { get; set; }
-    public string FieldPrefix { get; set; } = String.Empty;
     public bool IsNullable { get; set; }
     public Type UnderlyingType { get; set; }
     public bool IsAutoIncrement { get; set; }
@@ -32,7 +32,7 @@ public class EntityMap
         {
             if (!this.memberMaps.TryGetValue(memberInfo.Name, out var memberMap))
             {
-                memberMap = new MemberMap(this, this.FieldPrefix, memberInfo);
+                memberMap = new MemberMap(this, memberInfo);
                 this.AddMemberMap(memberInfo.Name, memberMap);
             }
             this.KeyMembers.Add(memberMap);
@@ -43,7 +43,7 @@ public class EntityMap
     {
         if (!this.memberMaps.TryGetValue(memberInfo.Name, out var memberMap))
         {
-            memberMap = new MemberMap(this, this.FieldPrefix, memberInfo);
+            memberMap = new MemberMap(this, memberInfo);
             this.AddMemberMap(memberInfo.Name, memberMap);
         }
         memberMap.IsAutoIncrement = true;
@@ -63,7 +63,7 @@ public class EntityMap
         var memberInfos = this.EntityType.GetMember(memberName, BindingFlags.Public | BindingFlags.Instance);
         if (memberInfos == null || memberInfos.Length <= 0)
             throw new Exception($"不存在名为{memberName}的成员");
-        this.AddMemberMap(memberName, mapper = new MemberMap(this, this.FieldPrefix, memberInfos[0]));
+        this.AddMemberMap(memberName, mapper = new MemberMap(this, memberInfos[0]));
         return mapper;
     }
 
@@ -90,7 +90,7 @@ public class EntityMap
         {
             if (!this.TryGetMemberMap(memberInfo.Name, out var memberMapper))
             {
-                memberMapper = new MemberMap(this, this.FieldPrefix, memberInfo);
+                memberMapper = new MemberMap(this, memberInfo);
                 this.AddMemberMap(memberInfo.Name, memberMapper);
 
                 //检查导航属性和TypeHandler配置，在Build的时候，就把错误暴漏出来
@@ -123,7 +123,7 @@ public class EntityMap
             {
                 if (!memberMapper.IsKey) continue;
 
-                var fieldName = $"{this.FieldPrefix}{memberMapper.FieldName}";
+                var fieldName = memberMapper.FieldName;
                 if (!this.KeyMembers.Contains(memberMapper))
                     this.KeyMembers.Add(memberMapper);
                 if (memberMapper.IsAutoIncrement)
@@ -162,7 +162,7 @@ public class EntityMap
         {
             foreach (var memberInfo in memberInfos)
             {
-                var memberMapper = new MemberMap(mapper, mapper.FieldPrefix, memberInfo);
+                var memberMapper = new MemberMap(mapper, memberInfo);
                 mapper.AddMemberMap(memberMapper.MemberName, memberMapper);
             }
         }
@@ -174,7 +174,6 @@ public class EntityMap
             return mapTo;
 
         var mapper = new EntityMap(entityType);
-        mapper.FieldPrefix = mapTo.FieldPrefix;
         mapper.TableName = mapTo.TableName;
         mapper.IsAutoIncrement = mapTo.IsAutoIncrement;
         mapper.KeyMembers = mapTo.KeyMembers;
@@ -204,12 +203,12 @@ public class EntityMap
             foreach (var memberInfo in memberInfos)
             {
                 var mapToMemberMapper = mapTo.GetMemberMap(memberInfo.Name);
-                var memberMapper = mapToMemberMapper.Clone(mapper, mapper.FieldPrefix, memberInfo);
+                var memberMapper = mapToMemberMapper.Clone(mapper, memberInfo);
                 mapper.AddMemberMap(memberMapper.MemberName, memberMapper);
             }
         }
         return mapper;
     }
-    public List<MemberInfo> GetMembers() => this.EntityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+    private List<MemberInfo> GetMembers() => this.EntityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
         .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
 }

@@ -35,11 +35,6 @@ public class EntityBuilder<TEntity> where TEntity : class
         else throw new Exception("不支持的Linq表达式");
         return this;
     }
-    public virtual EntityBuilder<TEntity> FieldPrefix(string fieldPrefix)
-    {
-        this.mapper.FieldPrefix = fieldPrefix;
-        return this;
-    }
     public virtual EntityBuilder<TEntity> AutoIncrement(string memberName)
     {
         var memberInfos = this.mapper.EntityType.GetMember(memberName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
@@ -60,7 +55,7 @@ public class EntityBuilder<TEntity> where TEntity : class
 
         var memberName = memberExpr.Member.Name;
         if (!this.mapper.TryGetMemberMap(memberName, out var memberMapper))
-            this.mapper.AddMemberMap(memberName, memberMapper = new MemberMap(this.mapper, this.mapper.FieldPrefix, memberExpr.Member));
+            this.mapper.AddMemberMap(memberName, memberMapper = new MemberMap(this.mapper, memberExpr.Member));
         return new MemberBuilder<TMember>(memberMapper);
     }
     public virtual Navigation<TEntity> Navigation<TMember>(Expression<Func<TEntity, TMember>> memberSelector) where TMember : class
@@ -74,7 +69,7 @@ public class EntityBuilder<TEntity> where TEntity : class
 
         var memberName = memberExpr.Member.Name;
         if (!this.mapper.TryGetMemberMap(memberName, out var memberMapper))
-            this.mapper.AddMemberMap(memberName, memberMapper = new MemberMap(this.mapper, this.mapper.FieldPrefix, memberExpr.Member));
+            this.mapper.AddMemberMap(memberName, memberMapper = new MemberMap(this.mapper, memberExpr.Member));
 
         memberMapper.IsNavigation = true;
         memberMapper.IsToOne = true;
@@ -89,7 +84,7 @@ public class EntityBuilder<TEntity> where TEntity : class
 
         var memberName = memberExpr.Member.Name;
         if (!this.mapper.TryGetMemberMap(memberName, out var memberMapper))
-            this.mapper.AddMemberMap(memberName, memberMapper = new MemberMap(this.mapper, this.mapper.FieldPrefix, memberExpr.Member));
+            this.mapper.AddMemberMap(memberName, memberMapper = new MemberMap(this.mapper, memberExpr.Member));
 
         memberMapper.IsNavigation = true;
         memberMapper.IsToOne = false;
@@ -97,9 +92,26 @@ public class EntityBuilder<TEntity> where TEntity : class
         memberMapper.MapType = typeof(TElement);
         return new Navigation<TElement>(memberMapper);
     }
-    public virtual EntityBuilder<TEntity> WithSharding(Action<ShardingTableStrategyBuilder<TEntity>> shardingInitializer)
+    /// <summary>
+    /// 实体TEntity表，使用字段进行分表，如：.UseTable&lt;Order&gt;(f =&gt; f.TenantId, (origName, tenantId) =&gt; $"{origName}_{tenantId}")
+    /// </summary>
+    /// <param name="fieldsSelector">依赖字段获取委托</param>
+    /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <returns></returns>
+    public virtual EntityBuilder<TEntity> UseSharding(Expression<Func<TEntity, object>> fieldsSelector, Func<string, object, string> tableNameGetter)
     {
-        //TODO:
+        return this;
+    }
+    /// <summary>
+    /// 实体TEntity表，当满足条件condition时，使用字段进行分表，如：.UseTable&lt;Order&gt;(f =&gt; f.TenantId, (origName, tenantId) =&gt; $"{origName}_{tenantId}")
+    /// </summary>
+    /// <typeparam name="TEntity">表实体类型</typeparam>
+    /// <param name="condition">分表条件委托，参数是dbKey</param>
+    /// <param name="fieldsSelector">依赖字段获取委托</param>
+    /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <returns></returns>
+    public virtual EntityBuilder<TEntity> UseSharding(Func<string, bool> condition, Expression<Func<TEntity, object>> fieldsSelector, Func<string, object, string> tableNameGetter)
+    {
         return this;
     }
 }

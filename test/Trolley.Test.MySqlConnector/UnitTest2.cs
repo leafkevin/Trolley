@@ -29,10 +29,10 @@ public class UnitTest2 : UnitTestBase
                         300 => "fengling_tenant2",
                         _ => "fengling"
                     };
-                });
+                })
                 //可以指定数据库指定表分表，也可以所有数据库都分表，未指定的表不分表，可以按照时间、租户、依赖字段... 等分表
                 //.UseTable<User>(t => t.DependOn(d => ObjectId.Parse(d.Id).Timestamp, (origName, timestamp) => $"{origName}_{timestamp}"))
-                //.UseTableIf<Order>(dbKey => dbKey == "fengling", t => t.DependOn(d => d.TenantId, (origName, tenantId) => $"{origName}_{tenantId}").UseCrud(true))
+                .UseTable<Order>(t => t.BuyerId, (origName, buyerId) => $"{origName}_{buyerId}");
                 //按照租户+时间yyyy-MM分表，依赖Id字段，可以Get/Insert/Update/Delete操作，是可以确定
                 //.UseTableIf<Order>(dbKey => dbKey == "fengling", t => t
                 //    .DependOn(d => new { d.TenantId, d.Id }, (origName, value) => $"{origName}_{value.TenantId}_{new DateTime(ObjectId.Parse(value.Id).Timestamp):yyyyMM}")

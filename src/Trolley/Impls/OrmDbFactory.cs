@@ -13,6 +13,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
     private ConcurrentDictionary<Type, IOrmProvider> ormProviders = new();
     private ConcurrentDictionary<string, TenantDatabase> databases = new();
     private ConcurrentDictionary<Type, IEntityMapProvider> mapProviders = new();
+    private Func<string> dbKeySelector = null;
 
     public ICollection<TenantDatabase> Databases => this.databases.Values;
     public ICollection<IOrmProvider> OrmProviders => this.ormProviders.Values;
@@ -131,6 +132,8 @@ public sealed class OrmDbFactory : IOrmDbFactory
         this.options = new OrmDbFactoryOptions();
         optionsInitializer.Invoke(this.options);
     }
+    internal void SetDbKeySelector(Func<string> dbKeySelector) => this.dbKeySelector = dbKeySelector;
+    internal void AddDbKeySelector(Func<string> dbKeySelector) => this.dbKeySelector = dbKeySelector;
     internal IOrmDbFactory Build()
     {
         foreach (var ormProviderType in this.ormProviders.Keys)

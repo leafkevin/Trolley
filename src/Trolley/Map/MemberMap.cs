@@ -42,18 +42,18 @@ public class MemberMap
     public ITypeHandler TypeHandler { get; set; }
     public Type TypeHandlerType { get; set; }
 
-    public MemberMap(EntityMap parent, string fieldPrefix, MemberInfo memberInfo)
+    public MemberMap(EntityMap parent, MemberInfo memberInfo)
     {
         this.Parent = parent;
         this.Member = memberInfo;
-        this.FieldName = $"{fieldPrefix}{memberInfo.Name}";
+        this.FieldName = memberInfo.Name;
         this.MemberName = memberInfo.Name;
         this.MemberType = memberInfo.GetMemberType();
         this.UnderlyingType = Nullable.GetUnderlyingType(this.MemberType) ?? this.MemberType;
     }
-    public MemberMap Clone(EntityMap parent, string fieldPrefix, MemberInfo memberInfo)
+    public MemberMap Clone(EntityMap parent, MemberInfo memberInfo)
     {
-        var result = new MemberMap(parent, fieldPrefix, memberInfo);
+        var result = new MemberMap(parent, memberInfo);
         result.Parent = parent;
         result.Member = memberInfo;
         result.FieldName = this.FieldName;
