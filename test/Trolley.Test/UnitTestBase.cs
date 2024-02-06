@@ -166,16 +166,17 @@ public class UnitTestBase
             }
         });
 
-        repository.Delete<Order>(new[] { 1, 2, 3 });
+        repository.Delete<Order>(new[] { "1", "2", "3" });
         repository.Create<Order>(new[]
         {
             new Order
             {
-                Id = 1,
+                Id = "1",
+                TenantId = "1",
                 OrderNo = "ON-001",
                 BuyerId = 1,
                 BuyerSource = UserSourceType.Douyin,
-                SellerId = 2,                
+                SellerId = 2,
                 TotalAmount = 500,
                 Products = new List<int>{1, 2},
                 ProductCount = 2,
@@ -195,7 +196,8 @@ public class UnitTestBase
             },
             new Order
             {
-                Id = 2,
+                Id = "2",
+                TenantId = "2",
                 OrderNo = "ON-002",
                 BuyerId = 2,
                 BuyerSource = UserSourceType.Taobao,
@@ -218,7 +220,8 @@ public class UnitTestBase
             },
             new Order
             {
-                Id = 3,
+                Id = "3",
+                TenantId = "3",
                 OrderNo = "ON-003",
                 BuyerId = 1,
                 BuyerSource = UserSourceType.Douyin,
@@ -234,13 +237,14 @@ public class UnitTestBase
             }
         });
 
-        repository.Delete<OrderDetail>(new[] { 1, 2, 3, 4, 5, 6 });
+        repository.Delete<OrderDetail>(new[] { "1", "2", "3", "4", "5", "6" });
         repository.Create<OrderDetail>(new[]
         {
             new OrderDetail
             {
-                Id = 1,
-                OrderId = 1,
+                Id = "1",
+                TenantId = "1",
+                OrderId = "1",
                 ProductId = 1,
                 Price = 299,
                 Quantity = 1,
@@ -253,8 +257,9 @@ public class UnitTestBase
             },
             new OrderDetail
             {
-                Id = 2,
-                OrderId = 1,
+                Id = "2",
+                TenantId = "1",
+                OrderId = "1",
                 ProductId = 2,
                 Price = 159,
                 Quantity = 1,
@@ -267,8 +272,9 @@ public class UnitTestBase
             },
             new OrderDetail
             {
-                Id = 3,
-                OrderId = 1,
+                Id = "3",
+                TenantId = "2",
+                OrderId = "1",
                 ProductId = 3,
                 Price = 69,
                 Quantity = 1,
@@ -281,8 +287,9 @@ public class UnitTestBase
             },
             new OrderDetail
             {
-                Id = 4,
-                OrderId = 2,
+                Id = "4",
+                TenantId = "1",
+                OrderId = "2",
                 ProductId = 1,
                 Price = 299,
                 Quantity = 1,
@@ -295,8 +302,9 @@ public class UnitTestBase
             },
             new OrderDetail
             {
-                Id = 5,
-                OrderId = 2,
+                Id = "5",
+                TenantId = "2",
+                OrderId = "2",
                 ProductId = 3,
                 Price = 69,
                 Quantity = 1,
@@ -309,8 +317,9 @@ public class UnitTestBase
             },
             new OrderDetail
             {
-                Id = 6,
-                OrderId = 3,
+                Id = "6",
+                TenantId = "3",
+                OrderId = "3",
                 ProductId = 2,
                 Price = 199,
                 Quantity = 1,

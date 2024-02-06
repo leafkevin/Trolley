@@ -22,12 +22,8 @@ public class UnitTest4 : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-             .Register<SqlServerProvider>("fengling", true, f =>
-             {
-                 f.Add("Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true);
-             })
-             .AddTypeHandler<JsonTypeHandler>()
-             .Configure<SqlServerProvider, ModelConfiguration>();
+            .Register<SqlServerProvider>("fengling", "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
+            .Configure<SqlServerProvider, ModelConfiguration>();
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();

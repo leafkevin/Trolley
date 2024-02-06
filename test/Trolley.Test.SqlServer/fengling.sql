@@ -17,6 +17,9 @@ CREATE TABLE [dbo].[sys_brand](
 )
 );
 GO
+INSERT INTO [dbo].[sys_brand] ([Id], [BrandNo], [Name], [CompanyId], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (1, N'BN-001', N'²¨Ë¾µÇ', 1, '1', '2023-09-04 09:34:02.757', 1, '2023-09-04 09:34:02.757', 1);
+INSERT INTO [dbo].[sys_brand] ([Id], [BrandNo], [Name], [CompanyId], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (2, N'BN-002', N'Ñ©ÖÐ·É', 2, '1', '2023-09-04 09:34:02.757', 1, '2023-09-04 09:34:02.757', 1);
+INSERT INTO [dbo].[sys_brand] ([Id], [BrandNo], [Name], [CompanyId], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (3, N'BN-003', N'ÓÅÒÂ¿â', 1, '1', '2023-09-04 09:34:02.757', 1, '2023-09-04 09:34:02.757', 1);
 CREATE TABLE [dbo].[sys_company](
 	[Id] [int] NOT NULL,
 	[Name] [nvarchar](50) NULL,
@@ -32,6 +35,8 @@ CREATE TABLE [dbo].[sys_company](
 )
 );
 GO
+INSERT INTO [dbo].[sys_company] ([Id], [Name], [Nature], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (1, N'微软', N'Internet', '1', '2023-09-04 09:34:02.750', 1, '2023-09-04 09:34:02.750', 1);
+INSERT INTO [dbo].[sys_company] ([Id], [Name], [Nature], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (2, N'谷歌', N'Internet', '1', '2023-09-04 09:34:02.750', 1, '2023-09-04 09:34:02.750', 1);
 CREATE TABLE [dbo].[sys_menu](
 	[Id] [int] NOT NULL,
 	[Name] [nvarchar](50) NULL,
@@ -49,8 +54,9 @@ CREATE TABLE [dbo].[sys_menu](
 );
 GO
 CREATE TABLE [dbo].[sys_order](
-	[Id] [int] NOT NULL,
-	[OrderNo] [nvarchar](50) NULL,
+	[Id] [nvarchar](50) NOT NULL,
+	[TenantId] [nvarchar](50) NOT NULL,
+	[OrderNo] [nvarchar](50) NULL,	
 	[ProductCount] [int] NULL,
 	[TotalAmount] [float] NULL,
 	[BuyerId] [int] NULL,
@@ -70,7 +76,8 @@ CREATE TABLE [dbo].[sys_order](
 );
 GO
 CREATE TABLE [dbo].[sys_order_detail](
-	[Id] [int] NOT NULL,
+	[Id] [nvarchar](50) NOT NULL,
+	[TenantId] [nvarchar](50) NOT NULL,
 	[OrderId] [int] NULL,
 	[ProductId] [int] NULL,
 	[Price] [float] NULL,

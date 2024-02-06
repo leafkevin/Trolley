@@ -188,7 +188,7 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.True(sql == "SELECT (CASE WHEN a.`Id`=1 THEN 0 WHEN a.`Id`>1 THEN 1 ELSE -1 END) AS `IntCompare`,(CASE WHEN a.`OrderNo`='OrderNo-001' THEN 0 WHEN a.`OrderNo`>'OrderNo-001' THEN 1 ELSE -1 END) AS `StringCompare`,(CASE WHEN a.`CreatedAt`='2022-12-20 00:00:00.000' THEN 0 WHEN a.`CreatedAt`>'2022-12-20 00:00:00.000' THEN 1 ELSE -1 END) AS `DateTimeCompare`,(CASE WHEN a.`IsEnabled`=0 THEN 0 WHEN a.`IsEnabled`>0 THEN 1 ELSE -1 END) AS `BooleanCompare` FROM `sys_order` a");
 
         var result = repository.From<Order>()
-            .Where(f => f.Id == 1)
+            .Where(f => f.Id == "1")
             .Select(f => new
             {
                 f.Id,
@@ -245,12 +245,13 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.True(dbParameters[4].Value.GetType() == typeof(string));
 
         repository.BeginTransaction();
-        repository.Delete<Order>(new[] { 1, 2, 3 });
+        repository.Delete<Order>(new[] { "1", "2", "3" });
         var count = repository.Create<Order>(new[]
         {
             new Order
             {
-                Id = 1,
+                Id =  "1",
+                TenantId = "1",
                 OrderNo = " ON-001 ",
                 BuyerId = 1,
                 SellerId = 2,
@@ -264,7 +265,8 @@ public class MethodCallUnitTest : UnitTestBase
             },
             new Order
             {
-                Id = 2,
+                Id = "2",
+                TenantId = "2",
                 OrderNo = " ON-002 ",
                 BuyerId = 2,
                 SellerId = 1,
@@ -278,7 +280,8 @@ public class MethodCallUnitTest : UnitTestBase
             },
             new Order
             {
-                Id = 3,
+                Id = "3",
+                TenantId = "3",
                 OrderNo = " ON-003 ",
                 BuyerId = 1,
                 SellerId = 2,
@@ -292,7 +295,7 @@ public class MethodCallUnitTest : UnitTestBase
             }
         });
         var result = repository.From<Order>()
-            .Where(f => Sql.In(f.Id, new[] { 1, 2, 3 }))
+            .Where(f => Sql.In(f.Id, new[] { "1", "2", "3" }))
             .Select(f => new
             {
                 Trim = "Begin_" + f.OrderNo.Trim() + "  123   ".Trim() + "_End",
@@ -322,10 +325,11 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.True(sql == "SELECT CONCAT(LOWER(a.`OrderNo`),'_ABCD') AS `Col1`,CONCAT(UPPER(a.`OrderNo`),'_abcd') AS `Col2` FROM `sys_order` a");
 
         repository.BeginTransaction();
-        repository.Delete<Order>(1);
+        repository.Delete<Order>("1");
         var count = repository.Create<Order>(new Order
         {
-            Id = 1,
+            Id = "1",
+            TenantId = "1",
             OrderNo = "On-ZwYx",
             BuyerId = 1,
             SellerId = 2,
@@ -338,7 +342,7 @@ public class MethodCallUnitTest : UnitTestBase
             UpdatedBy = 1
         });
         var result = repository.From<Order>()
-            .Where(f => Sql.In(f.Id, new[] { 1, 2, 3 }))
+            .Where(f => Sql.In(f.Id, new[] { "1", "2", "3" }))
             .Select(f => new
             {
                 Col1 = f.OrderNo.ToLower() + "_AbCd".ToUpper(),
@@ -380,10 +384,11 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.True(dbParameters[1].Value.GetType() == typeof(string));
 
         repository.BeginTransaction();
-        repository.Delete<Order>(1);
+        repository.Delete<Order>("1");
         repository.Create<Order>(new Order
         {
-            Id = 1,
+            Id = "1",
+            TenantId = "1",
             OrderNo = "On-ZwYx",
             BuyerId = 1,
             SellerId = 2,
@@ -397,7 +402,7 @@ public class MethodCallUnitTest : UnitTestBase
         });
         repository.Commit();
         var result = repository.From<Order>()
-            .Where(f => Sql.In(f.Id, new[] { 1, 2, 3 }))
+            .Where(f => Sql.In(f.Id, new[] { "1", "2", "3" }))
             .Select(f => new
             {
                 Col1 = f.OrderNo.ToLower() + "_AbCd".ToUpper(),

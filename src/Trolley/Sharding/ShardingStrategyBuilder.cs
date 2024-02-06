@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
 
 namespace Trolley;
@@ -29,25 +28,23 @@ public class ShardingStrategyBuilder
         return this;
     }
     /// <summary>
-    /// 实体TEntity表，使用字段进行分表，如：.UseTable&lt;Order&gt;(f =&gt; f.TenantId, (origName, tenantId) =&gt; $"{origName}_{tenantId}")
+    /// 使用依赖字段分表，支持各种场景，只支持依赖单个字段分表，但可以有多个字段用于CRUD查询，如：.UseTable&lt;Order&gt;(f =&gt; f.CreatedAt, (origName, createdAt) =&gt; $"{origName}_{createdAt:yyyyMM}")
     /// </summary>
-    /// <typeparam name="TEntity">表实体类型</typeparam>
+    /// <typeparam name="TEntity"></typeparam>
     /// <param name="fieldsSelector">依赖字段获取委托</param>
     /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <param name="isRequired">是否是必须栏位，如果为true，在Insert、Update、Delete场景会使用</param>
     /// <returns></returns>
-    public ShardingStrategyBuilder UseTable<TEntity>(Expression<Func<TEntity, object>> fieldsSelector, Func<string, object, string> tableNameGetter)
+    /// <exception cref="NotSupportedException"></exception>
+    public ShardingStrategyBuilder UseTable<TEntity>(Expression<Func<TEntity, object>> fieldsSelector, Func<string, object, string> tableNameGetter, bool isRequired = false)
     {
+        if (fieldsSelector.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelector)},只支持MemberAccess类型表达式，单个字段分表");
+        var memberExpr = fieldsSelector.Body as MemberExpression;
+        var memberName = memberExpr.Member.Name;
         return this;
     }
-    /// <summary>
-    /// 实体TEntity表，当满足条件condition时，使用字段进行分表，如：.UseTable&lt;Order&gt;(f =&gt; f.TenantId, (origName, tenantId) =&gt; $"{origName}_{tenantId}")
-    /// </summary>
-    /// <typeparam name="TEntity">表实体类型</typeparam>
-    /// <param name="condition">分表条件委托，参数是dbKey</param>
-    /// <param name="fieldsSelector">依赖字段获取委托</param>
-    /// <param name="tableNameGetter">分表名获取委托</param>
-    /// <returns></returns>
-    public ShardingStrategyBuilder UseTable<TEntity>(Func<string, bool> condition, Expression<Func<TEntity, object>> fieldsSelector, Func<string, object, string> tableNameGetter)
+    public ShardingStrategyBuilder UseTableIf<TEntity>(Func<string, bool> condition, Expression<Func<TEntity, object>> fieldsSelector, Func<string, object, string> tableNameGetter, bool isRequired = false)
     {
         return this;
     }

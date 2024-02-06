@@ -10,7 +10,7 @@ class ModelConfiguration : IModelConfiguration
     {
         builder.Entity<User>(f =>
         {
-            f.ToTable("sys_user").Key(t => t.Id).UseSharding(d => d.Id, (origName, id) => $"{origName}_{id}");
+            f.ToTable("sys_user").Key(t => t.Id).UseSharding(s => s.Id, (origName, id) => $"{origName}_{id}",true);
             f.Member(t => t.Id).Field(nameof(User.Id)).NativeDbType(MySqlDbType.Int32).Required();
             f.Member(t => t.Name).Field(nameof(User.Name)).NativeDbType(MySqlDbType.VarChar);
             f.Member(t => t.Gender).Field(nameof(User.Gender)).NativeDbType(MySqlDbType.UByte);
@@ -46,8 +46,9 @@ class ModelConfiguration : IModelConfiguration
         });
         builder.Entity<Order>(f =>
         {
-            f.ToTable("sys_order").Key(t => t.Id);
+            f.ToTable("sys_order").Key(t => t.Id).UseSharding(d => d.TenantId, (origName, tenantId) => $"");
             f.Member(t => t.Id).Field(nameof(Order.Id)).NativeDbType(MySqlDbType.Int32);
+            f.Member(t => t.TenantId).Field(nameof(Order.TenantId)).NativeDbType(MySqlDbType.VarChar).Required();
             f.Member(t => t.OrderNo).Field(nameof(Order.OrderNo)).NativeDbType(MySqlDbType.VarChar);
             f.Member(t => t.ProductCount).Field(nameof(Order.ProductCount)).NativeDbType(MySqlDbType.Int32);
             f.Member(t => t.TotalAmount).Field(nameof(Order.TotalAmount)).NativeDbType(MySqlDbType.Double);
@@ -71,6 +72,7 @@ class ModelConfiguration : IModelConfiguration
         {
             f.ToTable("sys_order_detail").Key(t => t.Id);
             f.Member(t => t.Id).Field(nameof(OrderDetail.Id)).NativeDbType(MySqlDbType.Int32);
+            f.Member(t => t.TenantId).Field(nameof(Order.TenantId)).NativeDbType(MySqlDbType.VarChar).Required();
             f.Member(t => t.OrderId).Field(nameof(OrderDetail.OrderId)).NativeDbType(MySqlDbType.Int32);
             f.Member(t => t.ProductId).Field(nameof(OrderDetail.ProductId)).NativeDbType(MySqlDbType.Int32);
             f.Member(t => t.Price).Field(nameof(OrderDetail.Price)).NativeDbType(MySqlDbType.Double);

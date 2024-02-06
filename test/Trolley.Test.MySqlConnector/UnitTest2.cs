@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using Trolley.MySqlConnector;
@@ -21,7 +22,7 @@ public class UnitTest2 : UnitTestBase
             {
                 s.UseDbKey(() =>
                 {
-                    //可以硬编码分库，也可以使用redis，映射表... 其他方式等
+                    //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
                     var passport = f.GetService<IPassport>();
                     return passport.TenantId switch
                     {
@@ -30,22 +31,14 @@ public class UnitTest2 : UnitTestBase
                         _ => "fengling"
                     };
                 })
-                //可以指定数据库指定表分表，也可以所有数据库都分表，未指定的表不分表，可以按照时间、租户、依赖字段... 等分表
-                //.UseTable<User>(t => t.DependOn(d => ObjectId.Parse(d.Id).Timestamp, (origName, timestamp) => $"{origName}_{timestamp}"))
-                .UseTable<Order>(t => t.BuyerId, (origName, buyerId) => $"{origName}_{buyerId}");
-                //按照租户+时间yyyy-MM分表，依赖Id字段，可以Get/Insert/Update/Delete操作，是可以确定
-                //.UseTableIf<Order>(dbKey => dbKey == "fengling", t => t
-                //    .DependOn(d => new { d.TenantId, d.Id }, (origName, value) => $"{origName}_{value.TenantId}_{new DateTime(ObjectId.Parse(value.Id).Timestamp):yyyyMM}")
-                //    .UseCrud(true))
-                //按照租户+时间yyyy-MM分表，依赖CreatedAt字段，只可以Query操作
-                //.UseTableIf<Order>(dbKey => dbKey == "fengling", t => t
-                //    .DependOn(d => new { d.TenantId, d.CreatedAt }, (origName, value) => $"{origName}_{value.TenantId}_{value.CreatedAt:yyyyMM}")
-                //    .OnlyQuery(true))
-
-                //.UseTableIf<OrderDetail>(dbKey => dbKey == "fengling", t => t
-                //    .DependOn(d => d.TenantId, (origName, tenantId) => $"{origName}_{tenantId}")
-                //    .UseCrud(false))
-                //.Build();
+                //可以指定数据库指定表分表，也可以所有数据库都分表，未指定的表不分表，可以按照时间、租户、取模 ...，等分表
+                .UseTable<Order>(t => t.TenantId, (origName, tenantId) => $"{origName}_{tenantId}", true)
+                .UseTable<Order>(d => d.Id, (origName, id) => $"{origName}_{new DateTime(ObjectId.Parse((string)id).Timestamp):yyyyMM}", true)
+                .UseTable<Order>(d => d.Id, (origName, id) => $"{HashCode.Combine(id) % 5}")
+                .UseTable<Order>(d => d.CreatedAt, (origName, createdAt) => $"{origName}_{createdAt:yyyyMM}")
+                .UseTable<Order>(d => d.UpdatedAt, (origName, updatedAt) => $"{origName}_{updatedAt:yyyyMM}")
+                //当数据库dbKey是fengling主库时，才分表，取模分表
+                .UseTableIf<User>(dbKey => dbKey == "fengling", t => t.Id, (origName, id) => $"{HashCode.Combine(id) % 5}", true);
             })
             .Configure<MySqlProvider, ModelConfiguration>();
             return builder.Build();
@@ -55,6 +48,7 @@ public class UnitTest2 : UnitTestBase
     }
     public interface IPassport
     {
+        //只用于演示，实际使用中要与ASP.NET CORE中间件或是IOC组件相结合，赋值此对象
         public int TenantId { get; set; }
     }
     [Fact]
@@ -347,7 +341,7 @@ public class UnitTest2 : UnitTestBase
         if (result != null)
         {
             Assert.NotNull(result);
-            Assert.True(result.OrderId > 0);
+            Assert.NotNull(result.OrderId);
             Assert.True(result.BuyerId > 0);
             Assert.NotNull(result.OrderNo);
             Assert.NotNull(result.Buyer);
@@ -586,7 +580,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         var result = repository.From<Order>()
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .IncludeMany((x, y) => x.Details)
-            .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new int[] { 1, 2, 3 }))
+            .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new string[] { "1", "2", "3" }))
             .Select((x, y) => new { Order = x, Buyer = y })
             .ToList();
         Assert.True(result.Count == 2);
@@ -597,7 +591,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         result = repository.From<Order>()
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .IncludeMany((x, y) => x.Details)
-            .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, 1, 2, 3))
+            .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, "1", "2", "3"))
             .Select((x, y) => new { Order = x, Buyer = y })
             .ToList();
         Assert.True(result.Count == 2);
@@ -615,7 +609,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         var result = repository.From<Order>()
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .IncludeMany((x, y) => x.Details, f => f.ProductId == productId)
-            .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new int[] { 1, 2, 3 }))
+            .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new string[] { "1", "2", "3" }))
             .Select((x, y) => new { Order = x, Buyer = y, Test = x.OrderNo + "_" + y.Age % 4 })
             .ToList();
 
@@ -637,7 +631,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
             .InnerJoin<User>((a, b) => a.SellerId == b.Id)
             .Include((x, y) => x.Buyer)
             .ThenInclude(f => f.Company)
-            .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new int[] { 1, 2, 3 }))
+            .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new string[] { "1", "2", "3" }))
             .Select((x, y) => new { Order = x, Seller = y })
             .ToListAsync();
 
@@ -715,7 +709,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         var sql = repository.From<Order>()
            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
            .IncludeMany((x, y) => x.Details)
-           .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new int[] { 1, 2, 3 }))
+           .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new string[] { "1", "2", "3" }))
            .Select((x, y) => new { Order = x, Buyer = y })
            .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`TotalAmount`>300 AND a.`Id` IN (1,2,3)");
@@ -723,7 +717,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         var result = repository.From<Order>()
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .IncludeMany((x, y) => x.Details)
-            .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new int[] { 1, 2, 3 }))
+            .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new string[] { "1", "2", "3" }))
             .Select((x, y) => new { Order = x, Buyer = y })
             .ToList();
         Assert.True(result.Count == 2);
@@ -1236,7 +1230,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
     {
         this.Initialize();
         using var repository = dbFactory.Create();
-        var result = repository.Get<Order>(1);
+        var result = repository.Get<Order>("1");
         Assert.NotNull(result);
         Assert.NotNull(result.Products);
         Assert.NotNull(result.Disputes);
@@ -1270,8 +1264,8 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
     [Fact]
     public async void Query_Union()
     {
-        int id1 = 1;
-        int id2 = 2;
+        var id1 = "1";
+        var id2 = "2";
         using var repository = dbFactory.Create();
         var sql = repository.From<Order>()
             .Where(x => x.Id == id1)
@@ -1283,7 +1277,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
                 x.BuyerId
             })
             .UnionAll(f => f.From<Order>()
-                .Where(x => x.Id > id2)
+                .Where(x => x.Id != id2)
                 .Select(x => new
                 {
                     x.Id,
@@ -1293,7 +1287,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
                 }))
             .ToSql(out _);
         Assert.True(sql == @"SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`=@p0 UNION ALL
-SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`>@p1");
+SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`<>@p1");
 
         var result = await repository.From<Order>()
            .Where(x => x.Id == id1)
@@ -1305,7 +1299,7 @@ SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`I
                x.BuyerId
            })
            .UnionAll(f => f.From<Order>()
-               .Where(x => x.Id > id2)
+               .Where(x => x.Id != id2)
                .Select(x => new
                {
                    x.Id,
@@ -1321,11 +1315,11 @@ SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`I
     public void Query_Union_Take()
     {
         this.Initialize();
-        int id1 = 3, id2 = 2;
+        string id1 = "3", id2 = "2";
         using var repository = this.dbFactory.Create();
         var sql = repository
             .From<Order>('b')
-                .Where(x => x.Id < id1)
+                .Where(x => x.Id == id1)
                 .OrderBy(f => f.Id)
                 .Select(x => new
                 {
@@ -1336,7 +1330,7 @@ SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`I
                 })
                .Take(1)
             .UnionAll(f => f.From<Order>()
-                .Where(x => x.Id > id2)
+                .Where(x => x.Id != id2)
                 .Select(x => new
                 {
                     x.Id,
@@ -1347,8 +1341,8 @@ SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`I
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
             .Select((x, y) => new { x.Id, x.OrderNo, x.SellerId, x.BuyerId, BuyerName = y.Name })
             .ToSql(out var dbParameters);
-        Assert.True(sql == @"SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId`,b.`Name` AS `BuyerName` FROM (SELECT * FROM (SELECT b.`Id`,b.`OrderNo`,b.`SellerId`,b.`BuyerId` FROM `sys_order` b WHERE b.`Id`<@p0 ORDER BY b.`Id` LIMIT 1) a UNION ALL
-SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`>@p1) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id`");
+        Assert.True(sql == @"SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId`,b.`Name` AS `BuyerName` FROM (SELECT * FROM (SELECT b.`Id`,b.`OrderNo`,b.`SellerId`,b.`BuyerId` FROM `sys_order` b WHERE b.`Id`=@p0 ORDER BY b.`Id` LIMIT 1) a UNION ALL
+SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`<>@p1) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id`");
         Assert.True(dbParameters[0].ParameterName == "@p0");
         Assert.True(dbParameters[1].ParameterName == "@p1");
 
@@ -1357,7 +1351,7 @@ SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`I
             .WithTable(t => t
                 .From<Order>()
                     .InnerJoin<User>((a, b) => a.SellerId == b.Id)
-                    .Where((x, y) => x.Id < id1)
+                    .Where((x, y) => x.Id == id1)
                     .OrderBy((a, b) => a.Id)
                     .Select((x, y) => new
                     {
@@ -1369,7 +1363,7 @@ SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`I
                     .Take(1)
                 .UnionAll(f => f.From<Order>()
                     .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-                    .Where((x, y) => x.Id > id2)
+                    .Where((x, y) => x.Id != id2)
                     .Select((x, y) => new
                     {
                         x.Id,
@@ -1381,14 +1375,14 @@ SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`I
           .InnerJoin((a, b, c) => b.BuyerId == c.Id)
           .Select((x, y, z) => new { y.Id, y.OrderNo, y.SellerId, SellerName = x.Name, y.BuyerId, BuyerName = z.Name })
           .ToSql(out var dbParameters1);
-        Assert.True(sql1 == @"SELECT b.`Id`,b.`OrderNo`,b.`SellerId`,a.`Name` AS `SellerName`,b.`BuyerId`,c.`Name` AS `BuyerName` FROM `sys_user` a INNER JOIN (SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`SellerId`=b.`Id` WHERE a.`Id`<@p0 ORDER BY a.`Id` LIMIT 1) a UNION ALL
-SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`Id`>@p1) b ON a.`Id`=b.`SellerId` INNER JOIN `sys_user` c ON b.`BuyerId`=c.`Id`");
+        Assert.True(sql1 == @"SELECT b.`Id`,b.`OrderNo`,b.`SellerId`,a.`Name` AS `SellerName`,b.`BuyerId`,c.`Name` AS `BuyerName` FROM `sys_user` a INNER JOIN (SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`SellerId`=b.`Id` WHERE a.`Id`=@p0 ORDER BY a.`Id` LIMIT 1) a UNION ALL
+SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`Id`<>@p1) b ON a.`Id`=b.`SellerId` INNER JOIN `sys_user` c ON b.`BuyerId`=c.`Id`");
         Assert.True(dbParameters1[0].ParameterName == "@p0");
         Assert.True(dbParameters1[1].ParameterName == "@p1");
 
         var result = repository
             .From(f => f.From<Order>()
-               .Where(x => x.Id < id1)
+               .Where(x => x.Id == id1)
                .OrderBy(f => f.Id)
                .Select(x => new
                {
@@ -1399,7 +1393,7 @@ SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a INNER JOIN
                })
               .Take(1))
            .UnionAll(f => f.From<Order>()
-               .Where(x => x.Id > id2)
+               .Where(x => x.Id != id2)
                .Select(x => new
                {
                    x.Id,
@@ -1413,10 +1407,10 @@ SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a INNER JOIN
     public async void FromQuery_Union_Limit()
     {
         this.Initialize();
-        int id1 = 4, id2 = 2;
+        string id1 = "4", id2 = "2";
         using var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
-                .Where(x => x.Id < id1)
+                .Where(x => x.Id == id1)
                 .OrderBy(f => f.Id)
                 .Select(x => new
                 {
@@ -1427,23 +1421,24 @@ SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a INNER JOIN
                 })
                 .Take(1)
             .UnionAll(f => f.From<Order>()
-                .Where(x => x.Id > id2)
+                .Where(x => x.Id != id2)
                 .Select(x => new
                 {
                     x.Id,
                     x.OrderNo,
                     x.SellerId,
                     x.BuyerId
-                }).Take(1))
+                })
+                .Take(1))
             .ToSql(out var dbParameters);
-        Assert.True(sql == @"SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`<@p0 ORDER BY a.`Id` LIMIT 1) a UNION ALL
-SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`>@p1 LIMIT 1) a");
+        Assert.True(sql == @"SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`=@p0 ORDER BY a.`Id` LIMIT 1) a UNION ALL
+SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`<>@p1 LIMIT 1) a");
         Assert.True(dbParameters.Count == 2);
-        Assert.True((int)dbParameters[0].Value == id1);
-        Assert.True((int)dbParameters[1].Value == id2);
+        Assert.True((string)dbParameters[0].Value == id1);
+        Assert.True((string)dbParameters[1].Value == id2);
 
         var result = await repository.From<Order>()
-                .Where(x => x.Id < id1)
+                .Where(x => x.Id == id1)
                 .OrderBy(f => f.Id)
                 .Select(x => new
                 {
@@ -1454,7 +1449,7 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
                 })
                 .Take(1)
             .UnionAll(f => f.From<Order>()
-                .Where(x => x.Id > id2)
+                .Where(x => x.Id != id2)
                 .Select(x => new
                 {
                     x.Id,
@@ -1466,79 +1461,17 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
         Assert.True(result.Count > 0);
         foreach (var item in result)
         {
-            Assert.True(item.Id < id1 || item.Id > id2);
-        }
-    }
-    [Fact]
-    public async void FromQuery_Union_SubQuery_Limit()
-    {
-        this.Initialize();
-        int id1 = 4, id2 = 2;
-        using var repository = this.dbFactory.Create();
-        var sql = repository.From(f => f.From<Order>()
-                .Where(x => x.Id < id1)
-                .OrderBy(f => f.Id)
-                .Select(x => new
-                {
-                    x.Id,
-                    x.OrderNo,
-                    x.SellerId,
-                    x.BuyerId
-                })
-               .Take(1))
-            .UnionAll(f => f.From<Order>()
-                .Where(x => x.Id > id2)
-                .Select(x => new
-                {
-                    x.Id,
-                    x.OrderNo,
-                    x.SellerId,
-                    x.BuyerId
-                })
-                .Take(1))
-            .ToSql(out var dbParameters);
-        Assert.True(sql == @"SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`<@p0 ORDER BY a.`Id` LIMIT 1) a UNION ALL
-SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`>@p1 LIMIT 1) a");
-        Assert.True(dbParameters.Count == 2);
-        Assert.True((int)dbParameters[0].Value == id1);
-        Assert.True((int)dbParameters[1].Value == id2);
-
-        var result = await repository.From(f => f.From<Order>()
-                .Where(x => x.Id < id1)
-                .OrderBy(f => f.Id)
-                .Select(x => new
-                {
-                    x.Id,
-                    x.OrderNo,
-                    x.SellerId,
-                    x.BuyerId
-                })
-                .Take(1))
-            .UnionAll(f => f.From<Order>()
-                .Where(x => x.Id > id2)
-                .Select(x => new
-                {
-                    x.Id,
-                    x.OrderNo,
-                    x.SellerId,
-                    x.BuyerId
-                })
-                .Take(1))
-            .ToListAsync();
-        Assert.True(result.Count > 0);
-        foreach (var item in result)
-        {
-            Assert.True(item.Id < id1 || item.Id > id2);
+            Assert.True(item.Id == id1 || item.Id != id2);
         }
     }
     [Fact]
     public async void FromQuery_Union_SubQuery_OrderBy()
     {
         this.Initialize();
-        int id1 = 4, id2 = 2;
+        string id1 = "4", id2 = "2";
         using var repository = this.dbFactory.Create();
         var sql = repository.From(f => f.From<Order>()
-                .Where(x => x.Id < id1)
+                .Where(x => x.Id == id1)
                 .OrderBy(f => f.Id)
                 .Select(x => new
                 {
@@ -1549,7 +1482,7 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
                 })
                .Take(1))
             .UnionAll(f => f.From<Order>()
-                .Where(x => x.Id > id2)
+                .Where(x => x.Id != id2)
                 .OrderByDescending(f => f.Id)
                 .Select(x => new
                 {
@@ -1560,14 +1493,14 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
                 })
                 .Take(1))
             .ToSql(out var dbParameters);
-        Assert.True(sql == @"SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`<@p0 ORDER BY a.`Id` LIMIT 1) a UNION ALL
-SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`>@p1 ORDER BY a.`Id` DESC LIMIT 1) a");
+        Assert.True(sql == @"SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`=@p0 ORDER BY a.`Id` LIMIT 1) a UNION ALL
+SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`<>@p1 ORDER BY a.`Id` DESC LIMIT 1) a");
         Assert.True(dbParameters.Count == 2);
-        Assert.True((int)dbParameters[0].Value == id1);
-        Assert.True((int)dbParameters[1].Value == id2);
+        Assert.True((string)dbParameters[0].Value == id1);
+        Assert.True((string)dbParameters[1].Value == id2);
 
         var result = await repository.From(f => f.From<Order>()
-                .Where(x => x.Id < 3)
+                .Where(x => x.Id == id1)
                 .OrderBy(f => f.Id)
                 .Select(x => new
                 {
@@ -1578,7 +1511,7 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
                 })
                .Take(1))
             .UnionAll(f => f.From<Order>()
-                .Where(x => x.Id > 2)
+                .Where(x => x.Id != id2)
                 .OrderByDescending(f => f.Id)
                 .Select(x => new
                 {
@@ -1592,7 +1525,7 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
         Assert.True(result.Count > 0);
         foreach (var item in result)
         {
-            Assert.True(item.Id < id1 || item.Id > id2);
+            Assert.True(item.Id == id1 || item.Id != id2);
         }
     }
     [Fact]
@@ -1606,11 +1539,11 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
             .InnerJoin<Page>((a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
             .UnionAll(f => f.From<Order>()
-                .Where(x => x.Id > 2)
+                .Where(x => x.Id == "2")
                 .OrderByDescending(f => f.Id)
                 .Select(x => new
                 {
-                    x.Id,
+                    Id = x.BuyerId,
                     Name = x.OrderNo,
                     ParentId = x.SellerId,
                     Url = x.BuyerId.ToString()
@@ -1618,7 +1551,7 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
                 .Take(1))
             .ToSql(out _);
         Assert.True(sql == @"SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM (SELECT a.`Id`,a.`Name`,a.`ParentId`,a.`PageId` FROM `sys_menu` a) a INNER JOIN `sys_page` b ON a.`Id`=b.`Id` UNION ALL
-SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,CAST(a.`BuyerId` AS CHAR) FROM `sys_order` a WHERE a.`Id`>2 ORDER BY a.`Id` DESC LIMIT 1) a");
+SELECT * FROM (SELECT a.`BuyerId`,a.`OrderNo`,a.`SellerId`,CAST(a.`BuyerId` AS CHAR) FROM `sys_order` a WHERE a.`Id`='2' ORDER BY a.`Id` DESC LIMIT 1) a");
     }
     [Fact]
     public async void Query_WithCte_SelfRef()
@@ -1869,10 +1802,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
-        repository.Delete<Order>(8);
+        repository.Delete<Order>("8");
         repository.Create<Order>(new Order
         {
-            Id = 8,
+            Id = "8",
+            TenantId = "2",
             OrderNo = "On-ZwYx",
             BuyerId = 1,
             SellerId = 2,
@@ -1887,35 +1821,35 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         repository.Commit();
 
         var result = repository.From<Order>()
-            .Where(f => Sql.In(f.Id, new[] { 8 }))
+            .Where(f => Sql.In(f.Id, new[] { "8" }))
             .SelectFlattenTo<OrderInfo>()
             .ToList();
-        Assert.True(result[0].Id == 8);
+        Assert.True(result[0].Id == "8");
         Assert.True(result[0].BuyerId == 1);
         Assert.True(result[0].OrderNo == "On-ZwYx");
         Assert.Null(result[0].Description);
 
         result = repository.From<Order>()
-            .Where(f => Sql.In(f.Id, new[] { 8 }))
+            .Where(f => Sql.In(f.Id, new[] { "8" }))
             .SelectFlattenTo(f => new OrderInfo
             {
                 Description = "TotalAmount:" + f.TotalAmount
             })
             .ToList();
-        Assert.True(result[0].Id == 8);
+        Assert.True(result[0].Id == "8");
         Assert.True(result[0].BuyerId == 1);
         Assert.True(result[0].OrderNo == "On-ZwYx");
         Assert.NotNull(result[0].Description);
         Assert.True(result[0].Description == "TotalAmount:500");
 
         result = repository.From<Order>()
-            .Where(f => Sql.In(f.Id, new[] { 8 }))
+            .Where(f => Sql.In(f.Id, new[] { "8" }))
             .SelectFlattenTo(f => new OrderInfo
             {
                 Description = this.DeferInvoke().Deferred()
             })
             .ToList();
-        Assert.True(result[0].Id == 8);
+        Assert.True(result[0].Id == "8");
         Assert.True(result[0].BuyerId == 1);
         Assert.True(result[0].OrderNo == "On-ZwYx");
         Assert.NotNull(result[0].Description);

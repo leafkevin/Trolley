@@ -97,8 +97,9 @@ public class EntityBuilder<TEntity> where TEntity : class
     /// </summary>
     /// <param name="fieldsSelector">依赖字段获取委托</param>
     /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <param name="isRequired">是否是必须栏位，如果为true，在Insert、Update、Delete场景会使用</param>
     /// <returns></returns>
-    public virtual EntityBuilder<TEntity> UseSharding(Expression<Func<TEntity, object>> fieldsSelector, Func<string, object, string> tableNameGetter)
+    public virtual EntityBuilder<TEntity> UseSharding(Expression<Func<TEntity, object>> fieldsSelector, Func<string, object, string> tableNameGetter, bool isRequired = false)
     {
         return this;
     }
@@ -109,8 +110,9 @@ public class EntityBuilder<TEntity> where TEntity : class
     /// <param name="condition">分表条件委托，参数是dbKey</param>
     /// <param name="fieldsSelector">依赖字段获取委托</param>
     /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <param name="isRequired">是否是必须栏位，如果为true，在Insert、Update、Delete场景会使用</param>
     /// <returns></returns>
-    public virtual EntityBuilder<TEntity> UseSharding(Func<string, bool> condition, Expression<Func<TEntity, object>> fieldsSelector, Func<string, object, string> tableNameGetter)
+    public virtual EntityBuilder<TEntity> UseShardingIf(Func<string, bool> condition, Expression<Func<TEntity, object>> fieldsSelector, Func<string, object, string> tableNameGetter, bool isRequired = false)
     {
         return this;
     }

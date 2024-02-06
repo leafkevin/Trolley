@@ -16,11 +16,7 @@ public class UnitTest3 : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-             .Register<SqlServerProvider>("fengling", true, f =>
-             {
-                 f.Add("Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true);
-             })
-             .AddTypeHandler<JsonTypeHandler>()
+             .Register<SqlServerProvider>("fengling", "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)              
              .Configure<SqlServerProvider, ModelConfiguration>();
             return builder.Build();
         });
@@ -152,25 +148,25 @@ public class UnitTest3 : UnitTestBase
             ProductCount = 10,
             Id = 1
         });
-        var result1 = repository.Get<Order>(new { Id = 1 });
+        var result1 = repository.Get<Order>(new { Id = "1" });
         repository.Commit();
         if (result > 0)
         {
             Assert.NotNull(result1);
-            Assert.True(result1.Id == 1);
+            Assert.True(result1.Id == "1");
             Assert.True(result1.ProductCount == 10);
         }
         repository.BeginTransaction();
         result = repository.Update<Order>()
             .Set(new { ProductCount = 11 })
-            .Where(new { Id = 1 })
+            .Where(new { Id = "1" })
             .Execute();
-        var result2 = repository.Get<Order>(new { Id = 1 });
+        var result2 = repository.Get<Order>(new { Id = "1" });
         repository.Commit();
         if (result > 0)
         {
             Assert.NotNull(result2);
-            Assert.True(result2.Id == 1);
+            Assert.True(result2.Id == "1");
             Assert.True(result2.ProductCount == 11);
         }
     }
@@ -245,7 +241,7 @@ public class UnitTest3 : UnitTestBase
         this.Initialize();
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
-        var updateObj = repository.Get<Order>(1);
+        var updateObj = repository.Get<Order>("1");
         updateObj.Disputes = new Dispute
         {
             Id = 2,
@@ -267,7 +263,7 @@ public class UnitTest3 : UnitTestBase
             f.UpdatedAt
         }, updateObj);
 
-        var updatedOrder = repository.Get<Order>(1);
+        var updatedOrder = repository.Get<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -284,12 +280,12 @@ public class UnitTest3 : UnitTestBase
             .Set(new { ProductCount = 10, BuyerSource = DBNull.Value })
             .Where(new { Id = 1 })
             .Execute();
-        updatedOrder = repository.Get<Order>(new { Id = 1 });
+        updatedOrder = repository.Get<Order>(new { Id = "1" });
         repository.Commit();
         if (result > 0)
         {
             Assert.NotNull(updatedOrder);
-            Assert.True(updatedOrder.Id == 1);
+            Assert.True(updatedOrder.Id == "1");
             Assert.True(updatedOrder.ProductCount == 10);
             Assert.True(updatedOrder.BuyerSource.HasValue == false);
         }
@@ -300,7 +296,7 @@ public class UnitTest3 : UnitTestBase
         this.Initialize();
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
-        var updateObj = repository.Get<Order>(1);
+        var updateObj = repository.Get<Order>("1");
         updateObj.Disputes = new Dispute
         {
             Id = 2,
@@ -323,7 +319,7 @@ public class UnitTest3 : UnitTestBase
             .Where(new { updateObj.Id })
             .Execute();
 
-        var updatedOrder = repository.Get<Order>(1);
+        var updatedOrder = repository.Get<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -527,7 +523,7 @@ public class UnitTest3 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
-        var parameter = repository.Get<Order>(1);
+        var parameter = repository.Get<Order>("1");
         parameter.TotalAmount += 50;
         var result = repository.Update<Order>()
             .Set(f => new
@@ -545,7 +541,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(x => x.Id == 1)
             .Execute();
-        var order = repository.Get<Order>(1);
+        var order = repository.Get<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -558,7 +554,7 @@ public class UnitTest3 : UnitTestBase
         }
 
         repository.BeginTransaction();
-        parameter = repository.Get<Order>(1);
+        parameter = repository.Get<Order>("1");
         parameter.TotalAmount += 50;
         result = repository.Update<Order>()
             .Set(new
@@ -576,7 +572,7 @@ public class UnitTest3 : UnitTestBase
             })
           .Where(x => x.Id == 1)
           .Execute();
-        order = repository.Get<Order>(1);
+        order = repository.Get<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -608,7 +604,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(x => x.Id == 1)
             .Execute();
-        var order = repository.Get<Order>(1);
+        var order = repository.Get<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -641,7 +637,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(x => x.Id == 2)
             .Execute();
-        var order = repository.Get<Order>(1);
+        var order = repository.Get<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -822,7 +818,7 @@ public class UnitTest3 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
-        var parameter = repository.Get<Order>(1);
+        var parameter = repository.Get<Order>("1");
         parameter.TotalAmount += 50;
         var result = repository.Update<Order>()
             .Set(f => new
@@ -833,7 +829,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(x => x.Id == 1)
             .Execute();
-        var order = repository.Get<Order>(1);
+        var order = repository.Get<Order>("1");
         repository.Commit();
         if (result > 0)
         {

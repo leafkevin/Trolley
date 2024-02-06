@@ -124,12 +124,12 @@ public class WhereUnitTest : UnitTestBase
            .ToSql(out _);
         Assert.True(sql1 == "SELECT a.`Id`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order` a WHERE a.`BuyerId` IS NULL");
         repository.BeginTransaction();
-        repository.Update<Order>(f => new { BuyerId = DBNull.Value }, f => f.Id == 1);
+        repository.Update<Order>(f => new { BuyerId = DBNull.Value }, f => f.Id == "1");
         var result1 = repository.From<Order>()
             .Where(f => f.BuyerId.IsNull())
             .First();
         repository.Commit();
-        Assert.True(result1.Id == 1);
+        Assert.True(result1.Id == "1");
         var result2 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet);
         Assert.True(result2.Count >= 2);
         var localNature = CompanyNature.Internet;

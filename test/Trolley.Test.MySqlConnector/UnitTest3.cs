@@ -459,9 +459,9 @@ public class UnitTest3 : UnitTestBase
     {
         Initialize();
         using var repository = dbFactory.Create();
-        var order = repository.Get<Order>(1);
+        var order = repository.Get<Order>("1");
         var totalAmount = await repository.From<OrderDetail>()
-            .Where(f => f.OrderId == 1)
+            .Where(f => f.OrderId == "1")
             .SumAsync(f => f.Amount);
         var sql = repository.Update<Order>()
             .SetFrom(f => f.TotalAmount, (x, y) => x
@@ -470,9 +470,9 @@ public class UnitTest3 : UnitTestBase
                 .Select(f => Sql.Sum(f.Amount)))
             .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
-            .Where(a => a.Id == 1)
+            .Where(a => a.Id == "1")
             .ToSql(out var dbParameters);
-        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`Id`=1");
+        Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`Id`='1'");
         Assert.True(dbParameters.Count == 1);
         Assert.True((string)dbParameters[0].Value == "ON_111");
 
@@ -483,9 +483,9 @@ public class UnitTest3 : UnitTestBase
               .Select(f => Sql.Sum(f.Amount)))
           .Set(x => x.OrderNo, "ON_111")
           .Set(f => new { BuyerId = DBNull.Value })
-          .Where(a => a.Id == 1)
+          .Where(a => a.Id == "1")
           .ExecuteAsync();
-        var reult = repository.Get<Order>(1);
+        var reult = repository.Get<Order>("1");
         Assert.True(count > 0);
         Assert.True(reult.TotalAmount == totalAmount);
         Assert.True(reult.TotalAmount != order.TotalAmount);
@@ -607,7 +607,7 @@ public class UnitTest3 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
-        var parameter = repository.Get<Order>(1);
+        var parameter = repository.Get<Order>("1");
         parameter.TotalAmount += 50;
         var result = repository.Update<Order>()
             .Set(f => new
@@ -623,9 +623,9 @@ public class UnitTest3 : UnitTestBase
                     CreatedAt = DateTime.Now
                 }
             })
-            .Where(x => x.Id == 1)
+            .Where(x => x.Id == "1")
             .Execute();
-        var order = repository.Get<Order>(1);
+        var order = repository.Get<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -638,7 +638,7 @@ public class UnitTest3 : UnitTestBase
         }
 
         repository.BeginTransaction();
-        parameter = repository.Get<Order>(1);
+        parameter = repository.Get<Order>("1");
         parameter.TotalAmount += 50;
         result = repository.Update<Order>()
             .Set(new
@@ -654,9 +654,9 @@ public class UnitTest3 : UnitTestBase
                     CreatedAt = DateTime.Now
                 }
             })
-          .Where(x => x.Id == 1)
+          .Where(x => x.Id == "1")
           .Execute();
-        order = repository.Get<Order>(1);
+        order = repository.Get<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -686,9 +686,9 @@ public class UnitTest3 : UnitTestBase
                     CreatedAt = DateTime.Now
                 }
             })
-            .Where(x => x.Id == 1)
+            .Where(x => x.Id == "1")
             .Execute();
-        var order = repository.Get<Order>(1);
+        var order = repository.Get<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -712,16 +712,16 @@ public class UnitTest3 : UnitTestBase
                 BuyerId = DBNull.Value,
                 UpdatedAt = DateTime.UtcNow
             })
-            .Where(x => x.Id == 1)
+            .Where(x => x.Id == "1")
             .Execute();
         repository.Update<Order>()
             .Set(f => new
             {
                 UpdatedAt = DateTime.Now
             })
-            .Where(x => x.Id == 2)
+            .Where(x => x.Id == "2")
             .Execute();
-        var order = repository.Get<Order>(1);
+        var order = repository.Get<Order>("1");
         repository.Commit();
         if (result > 0)
         {
@@ -881,7 +881,7 @@ public class UnitTest3 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
-        var parameter = repository.Get<Order>(1);
+        var parameter = repository.Get<Order>("1");
         parameter.TotalAmount += 50;
         var result = repository.Update<Order>()
             .Set(f => new
@@ -890,9 +890,9 @@ public class UnitTest3 : UnitTestBase
                 Products = this.GetProducts(),
                 OrderNo = string.Concat("Order", "111").Substring(0, 7) + "_123"
             })
-            .Where(x => x.Id == 1)
+            .Where(x => x.Id == "2")
             .Execute();
-        var order = repository.Get<Order>(1);
+        var order = repository.Get<Order>("1");
         repository.Commit();
         if (result > 0)
         {

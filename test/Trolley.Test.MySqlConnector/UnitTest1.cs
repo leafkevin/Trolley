@@ -675,10 +675,11 @@ public class UnitTest1 : UnitTestBase
         var sql = repository.Create<OrderDetail>()
             .IgnoreInto()
             .From<Order, Product>()
-            .Where((a, b) => a.Id == 3 && b.Id == 1)
+            .Where((a, b) => a.Id == "3" && b.Id == 1)
             .Select((x, y) => new OrderDetail
             {
-                Id = 7,
+                Id = "7",
+                TenantId = "1",
                 OrderId = x.Id,
                 ProductId = y.Id,
                 Price = y.Price,
@@ -697,10 +698,11 @@ public class UnitTest1 : UnitTestBase
         var result = await repository.Create<OrderDetail>()
             .IgnoreInto()
             .From<Order, Product>()
-            .Where((a, b) => a.Id == 3 && b.Id == 1)
+            .Where((a, b) => a.Id == "3" && b.Id == 1)
             .Select((x, y) => new OrderDetail
             {
-                Id = 7,
+                Id = "7",
+                TenantId = "1",
                 OrderId = x.Id,
                 ProductId = y.Id,
                 Price = y.Price,
@@ -717,7 +719,7 @@ public class UnitTest1 : UnitTestBase
         var product = repository.Get<Product>(1);
         await repository.CommitAsync();
         Assert.NotNull(orderDetail);
-        Assert.True(orderDetail.OrderId == 3);
+        Assert.True(orderDetail.OrderId == "3");
         Assert.True(orderDetail.ProductId == 1);
         Assert.True(orderDetail.Amount == product.Price * 3);
     }
@@ -726,10 +728,11 @@ public class UnitTest1 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
-        repository.Delete<Order>(1);
+        repository.Delete<Order>("1");
         var count = repository.Create<Order>(new Order
         {
-            Id = 1,
+            Id = "1",
+            TenantId = "1",
             OrderNo = "ON-001",
             BuyerId = 1,
             SellerId = 2,
@@ -743,7 +746,7 @@ public class UnitTest1 : UnitTestBase
             UpdatedAt = DateTime.Now,
             UpdatedBy = 1
         });
-        var result = repository.Get<Order>(1);
+        var result = repository.Get<Order>("1");
         repository.Commit();
         Assert.True(!result.ProductCount.HasValue);
     }
@@ -762,7 +765,8 @@ public class UnitTest1 : UnitTestBase
         var sql = repository.Create<Order>()
            .WithBy(new Order
            {
-               Id = 4,
+               Id = "4",
+               TenantId = "1",
                OrderNo = "ON-001",
                BuyerId = 1,
                SellerId = 2,
@@ -785,11 +789,12 @@ public class UnitTest1 : UnitTestBase
         Assert.True((string)parameters[8].Value == new JsonTypeHandler().ToFieldValue(null, null, dispute).ToString());
 
         repository.BeginTransaction();
-        repository.Delete<Order>(4);
+        repository.Delete<Order>("4");
         var count = repository.Create<Order>()
             .WithBy(new Order
             {
-                Id = 4,
+                Id = "4",
+                TenantId = "1",
                 OrderNo = "ON-001",
                 BuyerId = 1,
                 SellerId = 2,
@@ -803,7 +808,7 @@ public class UnitTest1 : UnitTestBase
                 UpdatedBy = 1
             })
             .Execute();
-        var order = repository.Get<Order>(4);
+        var order = repository.Get<Order>("4");
         repository.Commit();
         Assert.NotEmpty(order.Products);
         Assert.NotNull(order.Disputes);
@@ -957,7 +962,7 @@ public class UnitTest1 : UnitTestBase
             .OnlyFields(f => new { f.Id, f.Name, f.IsEnabled, f.CreatedBy, f.CreatedAt, f.UpdatedAt, f.UpdatedBy })
             .ExecuteAsync();
         Assert.True(count == 0);
-    }  
+    }
     [Fact]
     public async void Insert_OnDuplicateKeyUpdate()
     {
@@ -966,7 +971,8 @@ public class UnitTest1 : UnitTestBase
         var sql1 = repository.Create<Order>()
              .WithBy(new
              {
-                 Id = 9,
+                 Id = "9",
+                 TenantId = "3",
                  OrderNo = "ON-001",
                  BuyerId = 1,
                  SellerId = 2,
@@ -1000,7 +1006,8 @@ public class UnitTest1 : UnitTestBase
         var sql2 = repository.Create<Order>()
              .WithBy(new
              {
-                 Id = 9,
+                 Id = "9",
+                 TenantId = "3",
                  OrderNo = "ON-001",
                  BuyerId = 1,
                  SellerId = 2,
@@ -1028,11 +1035,12 @@ public class UnitTest1 : UnitTestBase
         Assert.True(sql2 == "INSERT INTO `sys_order` (`Id`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`TotalAmount`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@OrderNo,@BuyerId,@SellerId,@BuyerSource,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=VALUES(`TotalAmount`),`Products`=VALUES(`Products`)");
 
         await repository.BeginTransactionAsync();
-        await repository.DeleteAsync<Order>(9);
+        await repository.DeleteAsync<Order>("9");
         var count = await repository.Create<Order>()
              .WithBy(new
              {
-                 Id = 9,
+                 Id = "9",
+                 TenantId = "3",
                  OrderNo = "ON-001",
                  BuyerId = 1,
                  SellerId = 2,
@@ -1057,7 +1065,7 @@ public class UnitTest1 : UnitTestBase
                 .Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
                 .Set(true, f => f.Products, f => x.Values(f.Products)))
             .ExecuteAsync();
-        var order = await repository.GetAsync<Order>(9);
+        var order = await repository.GetAsync<Order>("9");
         await repository.CommitAsync();
         Assert.True(count == 1);
         Assert.True(order.TotalAmount == 500);
@@ -1067,7 +1075,8 @@ public class UnitTest1 : UnitTestBase
         count = await repository.Create<Order>()
             .WithBy(new
             {
-                Id = 9,
+                Id = "9",
+                TenantId = "3",
                 OrderNo = "ON-001",
                 BuyerId = 1,
                 SellerId = 2,

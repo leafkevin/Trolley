@@ -71,8 +71,8 @@ public class CompanyInfo
 }
 public class Order
 {
-    public int Id { get; set; }
-    //public int TenantId { get; set; }
+    public string Id { get; set; }
+    public string TenantId { get; set; }
     public string OrderNo { get; set; }
     public double TotalAmount { get; set; }
     public int BuyerId { get; set; }
@@ -94,15 +94,15 @@ public class Order
 public class OrderInfo
 {
     public string Description { get; set; }
-    public int Id { get; set; }
+    public string Id { get; set; }
     public string OrderNo { get; set; }
     public int BuyerId { get; set; }
 }
 public class OrderDetail
 {
-    public int Id { get; set; }
-    //public int TenantId { get; set; }
-    public int OrderId { get; set; }
+    public string Id { get; set; }
+    public string TenantId { get; set; }
+    public string OrderId { get; set; }
     public int ProductId { get; set; }
     public double Price { get; set; }
     public int Quantity { get; set; }

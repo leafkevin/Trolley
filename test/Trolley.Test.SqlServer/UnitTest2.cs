@@ -13,11 +13,7 @@ public class UnitTest2 : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<SqlServerProvider>("fengling", true, f =>
-            {
-                f.Add("Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true);
-            })
-            .AddTypeHandler<JsonTypeHandler>()
+            .Register<SqlServerProvider>("fengling", "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
             .Configure<SqlServerProvider, ModelConfiguration>();
             return builder.Build();
         });
@@ -1029,7 +1025,7 @@ public class UnitTest2 : UnitTestBase
     {
         this.Initialize();
         using var repository = dbFactory.Create();
-        var result = repository.Get<Order>(1);
+        var result = repository.Get<Order>("1");
         Assert.NotNull(result);
         Assert.NotNull(result.Products);
         Assert.NotNull(result.Disputes);

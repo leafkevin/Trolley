@@ -89,7 +89,8 @@ CREATE TABLE `sys_menu`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_order`;
 CREATE TABLE `sys_order`  (
-  `Id` int NOT NULL,
+  `Id` varchar(50) NOT NULL,
+  `TenantId` varchar(50) NOT NULL,
   `OrderNo` varchar(50) NULL DEFAULT NULL,
   `ProductCount` int NULL DEFAULT NULL,
   `TotalAmount` double NULL DEFAULT NULL,
@@ -109,16 +110,17 @@ CREATE TABLE `sys_order`  (
 -- ----------------------------
 -- Records of sys_order
 -- ----------------------------
-INSERT INTO `sys_order` VALUES (1, 'ON-001', 2, 500, 1, 'Douyi', 2, '[1,2]', '{\"Id\":1,\"Users\":\"Buyer1,Seller1\",\"Content\":\"\\u65E0\\u826F\\u5546\\u5BB6\\uFF0C\\u6295\\u8BC9\\uFF0C\\u6295\\u8BC9\",\"Result\":\"\\u540C\\u610F\\u66F4\\u6362\",\"CreatedAt\":\"2023-04-29T00:05:28.9494366+08:00\"}', 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order` VALUES (2, 'ON-002', NULL, 350, 2, 'Taobao', 1, '[1,3]', '{\"Id\":2,\"Users\":\"Buyer2,Seller2\",\"Content\":\"\\u65E0\\u826F\\u5546\\u5BB6\",\"Result\":\"\\u540C\\u610F\\u9000\\u6B3E\",\"CreatedAt\":\"2023-04-29T00:05:28.9495535+08:00\"}', 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order` VALUES (3, 'ON-003', 1, 199, 1, 'Taobao', 2, '[2]', NULL, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order` (`Id`, `TenantId`, `OrderNo`, `ProductCount`, `TotalAmount`, `BuyerId`, `BuyerSource`, `SellerId`, `Products`, `Disputes`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('1', '1', 'ON-001', 2, 500, 1, 'Douyi', 2, '[1,2]', '{\"Id\":1,\"Users\":\"Buyer1,Seller1\",\"Content\":\"\\u65E0\\u826F\\u5546\\u5BB6\\uFF0C\\u6295\\u8BC9\\uFF0C\\u6295\\u8BC9\",\"Result\":\"\\u540C\\u610F\\u66F4\\u6362\",\"CreatedAt\":\"2023-04-29T00:05:28.9494366+08:00\"}', 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order` (`Id`, `TenantId`, `OrderNo`, `ProductCount`, `TotalAmount`, `BuyerId`, `BuyerSource`, `SellerId`, `Products`, `Disputes`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('2', '2', 'ON-002', NULL, 350, 2, 'Taobao', 1, '[1,3]', '{\"Id\":2,\"Users\":\"Buyer2,Seller2\",\"Content\":\"\\u65E0\\u826F\\u5546\\u5BB6\",\"Result\":\"\\u540C\\u610F\\u9000\\u6B3E\",\"CreatedAt\":\"2023-04-29T00:05:28.9495535+08:00\"}', 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order` (`Id`, `TenantId`, `OrderNo`, `ProductCount`, `TotalAmount`, `BuyerId`, `BuyerSource`, `SellerId`, `Products`, `Disputes`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('3', '3', 'ON-003', 1, 199, 1, 'Taobao', 2, '[2]', NULL, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
 
 -- ----------------------------
 -- Table structure for sys_order_detail
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_order_detail`;
 CREATE TABLE `sys_order_detail`  (
-  `Id` int NOT NULL,
+  `Id` varchar(50) NOT NULL,
+  `TenantId` varchar(50) NOT NULL,
   `OrderId` int NULL DEFAULT NULL,
   `ProductId` int NULL DEFAULT NULL,
   `Price` double(10, 2) NULL DEFAULT NULL,
@@ -135,12 +137,12 @@ CREATE TABLE `sys_order_detail`  (
 -- ----------------------------
 -- Records of sys_order_detail
 -- ----------------------------
-INSERT INTO `sys_order_detail` VALUES (1, 1, 1, 299.00, 1, 299.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order_detail` VALUES (2, 1, 2, 159.00, 1, 159.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order_detail` VALUES (3, 1, 3, 69.00, 1, 69.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order_detail` VALUES (4, 2, 1, 299.00, 1, 299.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order_detail` VALUES (5, 2, 3, 69.00, 1, 69.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order_detail` VALUES (6, 3, 2, 199.00, 1, 199.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('1', '1', 1, 1, 299.00, 1, 299.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('2', '2', 1, 2, 159.00, 1, 159.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('3', '3', 1, 3, 69.00, 1, 69.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('4', '1', 2, 1, 299.00, 1, 299.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('5', '2', 2, 3, 69.00, 1, 69.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('6', '3', 3, 2, 199.00, 1, 199.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
 
 -- ----------------------------
 -- Table structure for sys_page

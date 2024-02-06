@@ -14,11 +14,7 @@ public class ExpressionUnitTest : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<SqlServerProvider>("fengling", true, f =>
-            {
-                f.Add("Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true);
-            })
-            .AddTypeHandler<JsonTypeHandler>()
+            .Register<SqlServerProvider>("fengling", "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
             .Configure<SqlServerProvider, ModelConfiguration>();
             return builder.Build();
         });
@@ -36,8 +32,14 @@ public class ExpressionUnitTest : UnitTestBase
             .Where(f => f.Name.Contains(lastName ?? firstName))
             .Select(f => new { HasName = f.Name ?? "NoName" })
             .ToSql(out var dbParameters);
-        Assert.True(sql == "SELECT COALESCE([Name],'NoName') AS [HasName] FROM [sys_user] WHERE [Name] LIKE '%'+@p0+'%'");
+        Assert.True(sql == "SELECT COALESCE(a.[Name],'NoName') AS [HasName] FROM [sys_user] a WHERE a.[Name] LIKE '%'+@p0+'%'");
         Assert.True(dbParameters[0].Value.ToString() == firstName);
+
+        sql = repository.From<User>()
+            .Where(f => (f.Name ?? f.Id.ToString()) == "kevin")
+            .Select(f => f.Id)
+            .ToSql(out dbParameters);
+        Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE COALESCE(a.`Name`,CAST(a.`Id` AS CHAR))='kevin'");
     }
     [Fact]
     public void Conditional()
@@ -55,7 +57,7 @@ public class ExpressionUnitTest : UnitTestBase
                 IsNeedParameter = f.Name.Contains("kevin") ? "Yes" : "No",
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (CASE WHEN [IsEnabled]=1 THEN 'Enabled' ELSE 'Disabled' END) AS [IsEnabled],(CASE WHEN [GuidField] IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END) AS [GuidField],(CASE WHEN [Age]>35 THEN 1 ELSE 0 END) AS [IsOld],(CASE WHEN [Name] LIKE '%kevin%' THEN 'Yes' ELSE 'No' END) AS [IsNeedParameter] FROM [sys_user] WHERE (CASE WHEN [IsEnabled]=1 THEN 'Enabled' ELSE 'Disabled' END)='Enabled' AND (CASE WHEN [GuidField] IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END)='HasValue'");
+        Assert.True(sql == "SELECT (CASE WHEN a.[IsEnabled]=1 THEN 'Enabled' ELSE 'Disabled' END) AS [IsEnabled],(CASE WHEN [GuidField] IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END) AS [GuidField],(CASE WHEN [Age]>35 THEN 1 ELSE 0 END) AS [IsOld],(CASE WHEN [Name] LIKE '%kevin%' THEN 'Yes' ELSE 'No' END) AS [IsNeedParameter] FROM [sys_user] WHERE (CASE WHEN [IsEnabled]=1 THEN 'Enabled' ELSE 'Disabled' END)='Enabled' AND (CASE WHEN [GuidField] IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END)='HasValue'");
         var enabled = "Enabled";
         var hasValue = "HasValue";
         sql = repository.From<User>()

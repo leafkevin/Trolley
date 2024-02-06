@@ -33,7 +33,7 @@ public class UnitTest5 : UnitTestBase
             .Exists<Order>(f => f.BuyerId.IsNull())
             .From<Order>()
                 .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-                .Where((x, y) => x.Id == 1)
+                .Where((x, y) => x.Id == "1")
                 .Select((x, y) => new { x.Id, x.OrderNo, x.BuyerId, BuyerName = y.Name, x.TotalAmount })
                 .First()
             .QueryFirst<User>(new { Id = 2 })
@@ -42,7 +42,7 @@ public class UnitTest5 : UnitTestBase
                 .Where(f => f.ProductNo.Contains("PN-00"))
                 .ToList()
             .From(f => f.From<Order, OrderDetail>('a')
-                    .Where((a, b) => a.Id == b.OrderId && a.Id == 1)
+                    .Where((a, b) => a.Id == b.OrderId && a.Id == "1")
                     .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
                     .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
                     .Select((x, a, b) => new { a.Id, x.Grouping, ProductTotal = Sql.CountDistinct(b.ProductId), BuyerId1 = x.Grouping.BuyerId }))
@@ -99,7 +99,7 @@ public class UnitTest5 : UnitTestBase
                BuyerSource = y.SourceType
            })
            .Set(x => x.Products, new List<int> { 1, 2, 3 })
-           .Where((a, b) => a.Id == 1)
+           .Where((a, b) => a.Id == "1")
            .ToMultipleCommand();
 
         var orderDetails = await repository.From<OrderDetail>().ToListAsync();

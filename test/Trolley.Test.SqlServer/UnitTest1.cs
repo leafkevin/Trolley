@@ -1,10 +1,8 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using Trolley.SqlServer;
 using Xunit;
-using Trolley.SqlServer;
 
 namespace Trolley.Test.SqlServer;
 
@@ -16,11 +14,7 @@ public class UnitTest1 : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-             .Register<SqlServerProvider>("fengling", true, f =>
-             {
-                 f.Add("Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true);
-             })
-             .AddTypeHandler<JsonTypeHandler>()
+             .Register<SqlServerProvider>("fengling", "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
              .Configure<SqlServerProvider, ModelConfiguration>();
             return builder.Build();
         });
@@ -479,7 +473,7 @@ public class UnitTest1 : UnitTestBase
         var orderDetail = repository.Get<OrderDetail>(7);
         var product = repository.Get<Product>(1);
         Assert.NotNull(orderDetail);
-        Assert.True(orderDetail.OrderId == 3);
+        Assert.True(orderDetail.OrderId == "3");
         Assert.True(orderDetail.ProductId == 1);
         Assert.True(orderDetail.Amount == product.Price * 3);
     }
@@ -488,10 +482,11 @@ public class UnitTest1 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
-        repository.Delete<Order>(1);
+        repository.Delete<Order>("1");
         var count = repository.Create<Order>(new Order
         {
-            Id = 1,
+            Id = "1",
+            TenantId = "1",
             OrderNo = "ON-001",
             BuyerId = 1,
             SellerId = 2,
@@ -505,7 +500,7 @@ public class UnitTest1 : UnitTestBase
             UpdatedAt = DateTime.Now,
             UpdatedBy = 1
         });
-        var result = repository.Get<Order>(1);
+        var result = repository.Get<Order>("1");
         repository.Commit();
         if (count > 0)
         {
@@ -517,11 +512,12 @@ public class UnitTest1 : UnitTestBase
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
-        repository.Delete<Order>(4);
+        repository.Delete<Order>("4");
         var sql = repository.Create<Order>()
             .WithBy(new Order
             {
-                Id = 4,
+                Id = "4",
+                TenantId = "1",
                 OrderNo = "ON-001",
                 BuyerId = 1,
                 SellerId = 2,
@@ -552,7 +548,8 @@ public class UnitTest1 : UnitTestBase
         var count = repository.Create<Order>()
             .WithBy(new Order
             {
-                Id = 4,
+                Id = "4",
+                TenantId = "1",
                 OrderNo = "ON-001",
                 BuyerId = 1,
                 SellerId = 2,
@@ -573,7 +570,7 @@ public class UnitTest1 : UnitTestBase
                 UpdatedBy = 1
             })
             .Execute();
-        var order = repository.Get<Order>(4);
+        var order = repository.Get<Order>("4");
         repository.Commit();
         if (count > 0)
         {
