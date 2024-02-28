@@ -406,6 +406,37 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     });
                     return true;
                 }
+                if (!methodInfo.IsStatic && parameterInfos.Length == 1 && parameterInfos[0].ParameterType == typeof(string))
+                {
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                    {
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        if (targetSegment.IsConstant || targetSegment.IsVariable)
+                        {
+                            targetSegment.ExpectType = methodInfo.ReturnType;
+                            return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, new object[] { args0Segment.Value }));
+                        }
+                        throw new NotSupportedException("不支持的方法调用，方法.ToString(string format)只支持常量或是变量的解析");
+                    });
+                    return true;
+                }
+                if (!methodInfo.IsStatic && parameterInfos.Length == 2 && parameterInfos[0].ParameterType == typeof(string) && typeof(IFormatProvider).IsAssignableFrom(parameterInfos[0].ParameterType))
+                {
+                    methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                    {
+                        var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
+                        var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                        var args1Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                        if (targetSegment.IsConstant || targetSegment.IsVariable)
+                        {
+                            targetSegment.ExpectType = methodInfo.ReturnType;
+                            return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, new object[] { args0Segment.Value, args1Segment.Value }));
+                        }
+                        throw new NotSupportedException("不支持的方法调用，方法.ToString(string format, IFormatProvider provider)只支持常量或是变量的解析");
+                    });
+                    return true;
+                }
                 break;
             case "Parse":
                 if (methodInfo.IsStatic && methodInfo.DeclaringType == typeof(Enum))

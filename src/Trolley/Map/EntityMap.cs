@@ -10,7 +10,7 @@ public class EntityMap
 {
     private bool isBuild = false;
     private readonly ConcurrentDictionary<string, MemberMap> memberMaps = new();
-    private readonly ConcurrentDictionary<string, Func<object, string>> shardingStrategies = new();
+    private readonly ConcurrentDictionary<string, Func<string, object, string>> shardingStrategies = new();
     private List<MemberMap> memberMappers = new();
 
     public EntityMap(Type entityType) => this.EntityType = entityType;

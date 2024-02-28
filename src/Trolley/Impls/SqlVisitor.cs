@@ -454,7 +454,8 @@ public class SqlVisitor : ISqlVisitor
                 var builder = new StringBuilder();
                 var visitor = new ReplaceParameterVisitor();
                 deferredDelegate = visitor.Visit(methodCallExpr);
-
+                if (methodCallExpr.Object.IsParameter(out _))
+                    throw new NotSupportedException($"延迟方法调用不支持参数是target的场景，{methodCallExpr}");
                 foreach (var argsExpr in visitor.OrgMembers)
                 {
                     var argumentSegment = this.VisitAndDeferred(new SqlSegment { Expression = argsExpr });

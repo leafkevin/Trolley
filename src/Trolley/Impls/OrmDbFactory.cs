@@ -8,7 +8,6 @@ public sealed class OrmDbFactory : IOrmDbFactory
 {
     private OrmDbFactoryOptions options;
     private TenantDatabase defaultDatabase;
-    private ConcurrentDictionary<string, string> connStrings = new();
     private Dictionary<OrmProviderType, IOrmProvider> typedOrmProviders = new();
     private ConcurrentDictionary<Type, IOrmProvider> ormProviders = new();
     private ConcurrentDictionary<string, TenantDatabase> databases = new();

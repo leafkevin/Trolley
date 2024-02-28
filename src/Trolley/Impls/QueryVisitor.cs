@@ -1217,6 +1217,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (specialMemberSelector != null)
         {
             var lambdaExpr = specialMemberSelector as LambdaExpression;
+            this.InitTableAlias(lambdaExpr);
             var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = lambdaExpr.Body });
             this.ReaderFields = sqlSegment.Value as List<ReaderField>;
             var existsMembers = this.ReaderFields.Select(f => f.TargetMember.Name).ToList();
