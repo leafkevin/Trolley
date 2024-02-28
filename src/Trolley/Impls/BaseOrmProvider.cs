@@ -406,7 +406,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     });
                     return true;
                 }
-                if (!methodInfo.IsStatic && parameterInfos.Length == 1 && parameterInfos[0].ParameterType == typeof(string))
+                if (!methodInfo.IsStatic && parameterInfos.Length == 1 && (parameterInfos[0].ParameterType == typeof(string) || typeof(IFormatProvider).IsAssignableFrom(parameterInfos[0].ParameterType)))
                 {
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
@@ -417,11 +417,44 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             targetSegment.ExpectType = methodInfo.ReturnType;
                             return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, new object[] { args0Segment.Value }));
                         }
+                        //f.Balance.ToString("C")
+                        //args0.ToString("C")
+                        //(args0)=>{args0.ToString("C")}
+
+                        //f.Balance.ToString(new CultureInfo("en-US"))
+                        //args.ToString(new CultureInfo("en-US"))
+                        //(args)=>{args.ToString(new CultureInfo("en-US"))}
+                        if (visitor.IsSelect && (args0Segment.IsConstant || args0Segment.IsVariable))
+                        {
+                            var argsExpr = Expression.Parameter(target.Type, "args");
+                            var newCallExpr = Expression.Call(argsExpr, methodInfo, args);
+                            var deferredDelegate = Expression.Lambda(newCallExpr, argsExpr);
+                            var fieldName = targetSegment.Value.ToString();
+                            return targetSegment.Change(new ReaderField
+                            {
+                                FieldType = ReaderFieldType.DeferredFields,
+                                Body = fieldName,
+                                DeferredDelegate = deferredDelegate,
+                                ReaderFields = new List<ReaderField>
+                                {
+                                    new ReaderField
+                                    {
+                                        FieldType = ReaderFieldType.Field,
+                                        FromMember = targetSegment.FromMember,
+                                        TargetMember = targetSegment.FromMember,
+                                        UnderlyingType = targetSegment.UnderlyingType,
+                                        NativeDbType = targetSegment.NativeDbType,
+                                        TypeHandler = targetSegment.TypeHandler,
+                                        Body = fieldName
+                                    }
+                                }
+                            });
+                        }
                         throw new NotSupportedException("不支持的方法调用，方法.ToString(string format)只支持常量或是变量的解析");
                     });
                     return true;
                 }
-                if (!methodInfo.IsStatic && parameterInfos.Length == 2 && parameterInfos[0].ParameterType == typeof(string) && typeof(IFormatProvider).IsAssignableFrom(parameterInfos[0].ParameterType))
+                if (!methodInfo.IsStatic && parameterInfos.Length == 2 && parameterInfos[0].ParameterType == typeof(string) && typeof(IFormatProvider).IsAssignableFrom(parameterInfos[1].ParameterType))
                 {
                     methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
                     {
@@ -432,6 +465,35 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         {
                             targetSegment.ExpectType = methodInfo.ReturnType;
                             return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, new object[] { args0Segment.Value, args1Segment.Value }));
+                        }
+                        //f.Balance.ToString("C", new CultureInfo("en-US"))
+                        //args.ToString("C", new CultureInfo("en-US"))
+                        //(args)=>{args.ToString("C", new CultureInfo("en-US"))}
+                        if (visitor.IsSelect && (args0Segment.IsConstant || args0Segment.IsVariable) && (args1Segment.IsConstant || args1Segment.IsVariable))
+                        {
+                            var argsExpr = Expression.Parameter(target.Type, "args");
+                            var newCallExpr = Expression.Call(argsExpr, methodInfo, args);
+                            var deferredDelegate = Expression.Lambda(newCallExpr, argsExpr);
+                            var fieldName = targetSegment.Value.ToString();
+                            return targetSegment.Change(new ReaderField
+                            {
+                                FieldType = ReaderFieldType.DeferredFields,
+                                Body = fieldName,
+                                DeferredDelegate = deferredDelegate,
+                                ReaderFields = new List<ReaderField>
+                                {
+                                    new ReaderField
+                                    {
+                                        FieldType = ReaderFieldType.Field,
+                                        FromMember = targetSegment.FromMember,
+                                        TargetMember = targetSegment.FromMember,
+                                        UnderlyingType = targetSegment.UnderlyingType,
+                                        NativeDbType = targetSegment.NativeDbType,
+                                        TypeHandler = targetSegment.TypeHandler,
+                                        Body = fieldName
+                                    }
+                                }
+                            });
                         }
                         throw new NotSupportedException("不支持的方法调用，方法.ToString(string format, IFormatProvider provider)只支持常量或是变量的解析");
                     });

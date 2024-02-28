@@ -454,8 +454,11 @@ public class SqlVisitor : ISqlVisitor
                 var builder = new StringBuilder();
                 var visitor = new ReplaceParameterVisitor();
                 deferredDelegate = visitor.Visit(methodCallExpr);
+                //f.Balance.ToString("C")
+                //args0.ToString("C")
+                //(args0)=>{args0.ToString("C")}
                 if (methodCallExpr.Object.IsParameter(out _))
-                    throw new NotSupportedException($"延迟方法调用不支持参数是target的场景，{methodCallExpr}");
+                    deferredDelegate = Expression.Lambda(deferredDelegate, visitor.NewParameters);
                 foreach (var argsExpr in visitor.OrgMembers)
                 {
                     var argumentSegment = this.VisitAndDeferred(new SqlSegment { Expression = argsExpr });
@@ -468,7 +471,7 @@ public class SqlVisitor : ISqlVisitor
                             FieldType = ReaderFieldType.Field,
                             FromMember = argumentSegment.FromMember,
                             TargetMember = argumentSegment.FromMember,
-                            UnderlyingType = argumentSegment.FromMember.GetMemberType(),
+                            UnderlyingType = argumentSegment.UnderlyingType,
                             NativeDbType = argumentSegment.NativeDbType,
                             TypeHandler = argumentSegment.TypeHandler,
                             Body = fieldName
