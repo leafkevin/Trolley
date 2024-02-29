@@ -34,7 +34,7 @@ public class OrmDbFactoryBuilder
         this.Configure(typeof(TOrmProvider), new TModelConfiguration());
         return this;
     }
-    public OrmDbFactoryBuilder UseSharding(Action<ShardingStrategyBuilder> shardingInitializer)
+    public OrmDbFactoryBuilder UseSharding(Action<ShardingBuilder> shardingInitializer)
     {
         if (shardingInitializer == null)
             throw new ArgumentNullException(nameof(shardingInitializer));

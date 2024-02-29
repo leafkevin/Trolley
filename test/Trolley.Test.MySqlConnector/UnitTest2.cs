@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using Trolley.MySqlConnector;
@@ -31,14 +30,52 @@ public class UnitTest2 : UnitTestBase
                         _ => "fengling"
                     };
                 })
-                //可以指定数据库指定表分表，也可以所有数据库都分表，未指定的表不分表，可以按照时间、租户、取模 ...，等分表
-                .UseTable<Order>(t => t.TenantId, (origName, tenantId) => $"{origName}_{tenantId}", true)
-                .UseTable<Order>(d => d.Id, (origName, id) => $"{origName}_{new DateTime(ObjectId.Parse((string)id).Timestamp):yyyyMM}", true)
-                .UseTable<Order>(d => d.Id, (origName, id) => $"{HashCode.Combine(id) % 5}")
-                .UseTable<Order>(d => d.CreatedAt, (origName, createdAt) => $"{origName}_{createdAt:yyyyMM}")
-                .UseTable<Order>(d => d.UpdatedAt, (origName, updatedAt) => $"{origName}_{updatedAt:yyyyMM}")
-                //当数据库dbKey是fengling主库时，才分表，取模分表
-                .UseTableIf<User>(dbKey => dbKey == "fengling", t => t.Id, (origName, id) => $"{HashCode.Combine(id) % 5}", true);
+                //按照租户+时间分表
+                .UseTable<Order>(t =>
+                {
+                    t.DependOn(d => d.TenantId).DependOnTime()
+                    .Use((origName, tenantId, dateTime) => $"{origName}_{tenantId}_{dateTime:yyyMM}")
+                    //时间分表，通常都是支持范围查询
+                    .UseRange((origName, tenantId, beginTime, endTime) =>
+                    {
+                        var shardingNames = new List<string>();
+                        var current = beginTime;
+                        while (current <= endTime)
+                        {
+                            var tableName = $"{origName}_{current:yyyyMM}";
+                            if (shardingNames.Contains(tableName))
+                                continue;
+                            shardingNames.Add(tableName);
+                        }
+                        return shardingNames;
+                    });
+                })
+                //按租户分表
+                .UseTable<Order>(t => t.DependOn(d => d.TenantId).Use((origName, tenantId) => $"{origName}_{tenantId}"))
+                //按照Id字段分表，Id字段是带有时间属性的ObjectId
+                .UseTable<Order>(t =>
+                {
+                    t.DependOn(d => d.Id)
+                    .Use((origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}")
+                    //支持时间范围
+                    .UseRange<DateTime>((origName, beginTime, endTime) =>
+                    {
+                        var shardingNames = new List<string>();
+                        var current = beginTime;
+                        while (current <= endTime)
+                        {
+                            var tableName = $"{origName}_{current:yyyyMM}";
+                            if (shardingNames.Contains(tableName))
+                                continue;
+                            shardingNames.Add(tableName);
+                        }
+                        return shardingNames;
+                    });
+                })
+                //按照Id字段哈希取模分表
+                .UseTable<Order>(t => t.DependOn(d => d.Id).Use((origName, id) => $"{HashCode.Combine(id) % 5}"))
+                //当数据库dbKey是fengling主库时，才取模分表
+                .UseTable<User>(dbKey => dbKey == "fengling", t => t.DependOn(d => d.Id).Use((origName, id) => $"{HashCode.Combine(id) % 5}"));
             })
             .Configure<MySqlProvider, ModelConfiguration>();
             return builder.Build();
