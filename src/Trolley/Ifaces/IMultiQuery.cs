@@ -43,7 +43,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <summary>
     /// Union操作，去掉重复记录，用法：
     /// <code>
-    /// var subQuery = f.From&lt;Order&gt;()
+    /// var subQuery = repository.From&lt;Order&gt;()
     ///     .Where(x =&gt; x.Id &gt; 1)
     ///     .Select(x =&gt; new { ... });
     /// await f.From&lt;Order&gt;() ...
@@ -57,7 +57,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <code>repository.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> Union(IMultiQuery<T> subQuery);
+    IMultiQuery<T> Union(IQuery<T> subQuery);
     /// <summary>
     /// Union操作，去掉重复记录，用法：
     /// <code>
@@ -79,7 +79,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <summary>
     /// Union All操作，所有记录不去掉重复，用法：
     /// <code>
-    /// var subQuery = f.From&lt;Order&gt;()
+    /// var subQuery = repository.From&lt;Order&gt;()
     ///     .Where(x =&gt; x.Id &gt; 1)
     ///     .Select(x =&gt; new { ... })
     /// await f.From&lt;Order&gt;() ...
@@ -93,7 +93,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UnionAll(IMultiQuery<T> subQuery);
+    IMultiQuery<T> UnionAll(IQuery<T> subQuery);
     /// <summary>
     /// Union All操作，所有记录不去掉重复，用法：
     /// <code>
@@ -111,47 +111,6 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> UnionAll(Func<IFromQuery, IQuery<T>> subQuery);
-    /// <summary>
-    /// 递归CTE子查询中的Union操作，表达式subQuery中的第二参数是自身引用，用法：
-    /// <code>
-    /// f.FromWith(f =&gt; f.From&lt;Menu&gt;() ...
-    ///         .Select(x =&gt; new { ... })
-    ///     .UnionRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { ... }))) ...
-    /// SQL:
-    /// WITH RECURSIVE `myCteTable`(`Id`,`Name`,`ParentId`,`PageId`) AS 
-    /// (
-    /// SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION
-    /// SELECT ... FROM `sys_menu` a INNER JOIN `myCteTable` b ON a.`ParentId`=b.`Id` ...
-    /// ) ...
-    /// </summary>
-    /// <param name="subQuery">子查询，需要有Select语句，如：
-    /// <code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
-    /// </param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UnionRecursive(Func<IFromQuery, IMultiQuery<T>, IQuery<T>> subQuery);
-    /// <summary>
-    /// 递归CTE子查询中的UnionAll操作，表达式subQuery中的第二参数是自身引用，用法：
-    /// <code>
-    /// f.FromWith(f =&gt; f.From&lt;Menu&gt;() ...
-    ///         .Select(x =&gt; new { ... })
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { ... }))) ...
-    /// SQL:
-    /// WITH RECURSIVE `myCteTable`(`Id`,`Name`,`ParentId`,`PageId`) AS 
-    /// (
-    /// SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
-    /// SELECT ... FROM `sys_menu` a INNER JOIN `myCteTable` b ON a.`ParentId`=b.`Id` ...
-    /// ) ...
-    /// </summary>
-    /// <param name="subQuery">子查询，需要有Select语句，如：
-    /// <code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
-    /// </param>
-    /// <param name="cteTableName">CTE表名称</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UnionAllRecursive(Func<IFromQuery, IMultiQuery<T>, IQuery<T>> subQuery);
     #endregion
 
     #region WithTable
@@ -237,20 +196,27 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(f =&gt; f.From&lt;Menu&gt;()
-    ///         .Where(x =&gt; x.Id == 1)
-    ///         .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { ... }))) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
     /// SQL:
-    /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
     /// (
-    ///     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
-    ///     SELECT ... FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id`
-    /// ) ...
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -259,20 +225,27 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(f =&gt; f.From&lt;Menu&gt;()
-    ///         .Where(x =&gt; x.Id == 1)
-    ///         .Select(x =&gt; new { ... })
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { ... }))) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
     /// SQL:
-    /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
     /// (
-    ///     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
-    ///     SELECT ... FROM `sys_menu` a LEFT JOIN MyCte1 b ON a.`ParentId`=b.`Id`
-    /// ) ...
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -281,19 +254,27 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(f =&gt; f.From&lt;Menu&gt;() ...
-    ///         .Select(x =&gt; new { ... })
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select((a, b) =&gt; new { ... }))) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
     /// SQL:
-    /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
     /// (
-    ///     SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
-    ///     SELECT ... FROM `sys_menu` a RIGHT JOIN MyCte1 b ON a.`ParentId`=b.`Id`
-    /// ) ...
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -710,47 +691,92 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
     /// <code>
@@ -1090,47 +1116,92 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
     /// <code>
@@ -1471,47 +1542,92 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
     /// <code>
@@ -1853,47 +1969,92 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
     /// <code>
@@ -2236,47 +2397,92 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
     /// <code>
@@ -2620,47 +2826,92 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
     /// <code>
@@ -3005,47 +3256,92 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
     /// <code>
@@ -3391,47 +3687,92 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
     /// <code>
@@ -3778,47 +4119,92 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
     /// <code>
@@ -4166,47 +4552,92 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
     /// <code>
@@ -4555,47 +4986,92 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
     /// <code>
@@ -4945,47 +5421,92 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
     /// <code>
@@ -5336,47 +5857,92 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
     /// <code>
@@ -5728,47 +6294,92 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
     /// <code>
-    /// f.FromWith(...).NextWith(...)
-    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///         .Select(...)) ...
+    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
+    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
+    ///     .Where((a, b) =&gt; a.RoleId == roleId)
+    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
+    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
+    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
+    ///      .AsCteTable("MenuList");
+    /// var menuItems = await repository.From&lt;Menu&gt;()
+    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
+    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
+    ///     .ToListAsync();
+    /// SQL:
+    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// (
+    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
+    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
+    /// )
+    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(IMultiQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
     /// <code>

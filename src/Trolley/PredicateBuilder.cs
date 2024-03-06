@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq.Expressions;
 
+namespace Trolley;
+
 public class PredicateBuilder
 {
     public static PredicateBuilder<T> Create<T>() => new PredicateBuilder<T>();
