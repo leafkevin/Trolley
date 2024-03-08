@@ -619,11 +619,11 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
-    public IQuery<T> UsingSharding()
+    public IQuery<T> UseSharding()
     {
         return this;
     }
-    public IQuery<T> UsingSharding(string tableName)
+    public IQuery<T> UseShardingTable(string tableName)
     {
         return this;
     }

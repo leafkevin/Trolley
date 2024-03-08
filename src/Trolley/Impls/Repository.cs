@@ -739,7 +739,7 @@ public class Repository : IRepository
         var result = this.DbContext.QueryFirst<int>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.ormProvider, this.mapProvider, entityType, whereObj, false);
+            var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.ormProvider, this.mapProvider, entityType, whereObj, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
             f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.ormProvider, whereObj);
         });
@@ -753,7 +753,7 @@ public class Repository : IRepository
         var result = await this.DbContext.QueryFirstAsync<int>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.ormProvider, this.mapProvider, entityType, whereObj, false);
+            var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.ormProvider, this.mapProvider, entityType, whereObj, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
             f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.ormProvider, whereObj);
         }, cancellationToken);

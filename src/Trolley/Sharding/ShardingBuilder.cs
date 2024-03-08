@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 
 namespace Trolley;
 
@@ -51,11 +52,24 @@ public class ShardingBuilder
 
 public class TableShardingBuilder<TEntity>
 {
-    public FieldShardingBuilder<TEntity, TField> DependOn<TField>(Func<TEntity, TField> fieldSelector)
+    //private 
+    public TableShardingBuilder()
     {
+
+    }
+    public FieldShardingBuilder<TEntity, TField> DependOn<TField>(Expression<Func<TEntity, TField>> fieldSelector)
+    {
+        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式，单个字段分表");
+        var memberExpr = fieldSelector.Body as MemberExpression;
+        var memberName = memberExpr.Member.Name;
         return null;
     }
     public RangeShardingBuilder<TEntity, DateTime> DependOnTime()
+    {
+        return null;
+    }
+    public TimedFieldRangeShardingBuilder<TEntity, TField> DependOnTime<TField>(Func<TEntity, TField> fieldSelector)
     {
         return null;
     }
@@ -85,7 +99,18 @@ public class FieldShardingBuilder<TEntity, TField>
     {
         return this;
     }
-    public FieldShardingBuilder<TEntity, TField> UseRange<TRange>(Func<string, TRange, TRange, List<string>> tableNameGetter)
+    public FieldShardingBuilder<TEntity, TField> UseRange(Func<string, TField, TField, List<string>> tableNameGetter)
+    {
+        return this;
+    }
+}
+public class TimedFieldRangeShardingBuilder<TEntity, TTimedField>
+{
+    public TimedFieldRangeShardingBuilder<TEntity, TTimedField> Use(Func<string, TTimedField, string> tableNameGetter)
+    {
+        return this;
+    }
+    public TimedFieldRangeShardingBuilder<TEntity, TTimedField> UseRange(Func<string, TTimedField, TTimedField, List<string>> tableNameGetter)
     {
         return this;
     }

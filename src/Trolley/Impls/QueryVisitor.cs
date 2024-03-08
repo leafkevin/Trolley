@@ -956,6 +956,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
+        this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         this.LastWhereNodeType = OperationType.None;
         this.WhereSql = this.VisitConditionExpr(lambdaExpr.Body);
@@ -965,6 +966,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
+        this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         if (this.LastWhereNodeType == OperationType.Or)
         {
@@ -988,6 +990,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (lambdaExpr.Body.NodeType != ExpressionType.New && lambdaExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new Exception("不支持的表达式访问，GroupBy只支持New或MemberAccess表达式");
 
+        this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
         this.GroupFields = new();
         switch (lambdaExpr.Body.NodeType)
@@ -1051,6 +1054,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (lambdaExpr.Body.NodeType != ExpressionType.New && lambdaExpr.Body.NodeType != ExpressionType.MemberAccess)
             throw new Exception("不支持的表达式访问，OrderBy只支持New或MemberAccess表达式");
 
+        this.ClearUnionSql();
         var builder = new StringBuilder();
         if (!string.IsNullOrEmpty(this.OrderBySql))
             builder.Append(this.OrderBySql + ",");
@@ -1156,6 +1160,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (selectExpr != null)
         {
             var toTargetExpr = selectExpr as LambdaExpression;
+			this.ClearUnionSql();
             this.InitTableAlias(toTargetExpr);
             var sqlSegment = new SqlSegment { Expression = toTargetExpr.Body };
             switch (toTargetExpr.Body.NodeType)
@@ -1217,6 +1222,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (specialMemberSelector != null)
         {
             var lambdaExpr = specialMemberSelector as LambdaExpression;
+			this.ClearUnionSql();
             this.InitTableAlias(lambdaExpr);
             var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = lambdaExpr.Body });
             this.ReaderFields = sqlSegment.Value as List<ReaderField>;
@@ -1289,9 +1295,18 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (pageIndex > 0) pageIndex--;
         this.skip = pageIndex * pageSize;
         this.limit = pageSize;
+        this.ClearUnionSql();
     }
-    public virtual void Skip(int skip) => this.skip = skip;
-    public virtual void Take(int limit) => this.limit = limit;
+    public virtual void Skip(int skip)
+    {
+        this.skip = skip;
+        this.ClearUnionSql();
+    }
+    public virtual void Take(int limit)
+    {
+        this.limit = limit;
+        this.ClearUnionSql();
+    }
 
     public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
     {
@@ -1767,12 +1782,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual TableSegment AddTable(TableSegment tableSegment)
     {
         //Union后，有加新表，要把前一个UnionSql设置完整
-        if (this.UnionSql != null)
-        {
-            //有union操作的visitor，都是新New的，前面只有一个表
-            this.Tables[0].Body = $"({this.UnionSql})";
-            this.UnionSql = null;
-        }
+        this.ClearUnionSql();
         this.Tables.Add(tableSegment);
         return tableSegment;
     }
@@ -1850,6 +1860,15 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             }
         }
         return tableSegment;
+    }
+    public virtual void ClearUnionSql()
+    {
+        if (this.UnionSql == null) return;
+
+        //有union操作的visitor，都是新New的，前面只有一个表
+        this.Tables[0].Body = $"({this.UnionSql})";
+        this.Tables[0].TableType = TableType.FromQuery;
+        this.UnionSql = null;
     }
     public virtual void Clear(bool isClearReaderFields = false)
     {
