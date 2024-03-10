@@ -507,9 +507,6 @@ public class SqlVisitor : ISqlVisitor
         //两种场景：.Select((x, y) => new { Order = x, x.Seller, x.Buyer, ... }) 和 .Select((x, y) => x)
         //参数访问通常都是SELECT语句的实体访问
         if (!this.IsSelect) throw new NotSupportedException($"不支持的参数表达式访问，只支持Select语句中，{parameterExpr}");
-        if (this.IsFromQuery)
-            throw new NotSupportedException($"FROM子查询中不支持参数表达式访问，只支持基础字段访问访问,{parameterExpr}");
-
         var fromSegment = this.TableAliases[parameterExpr.Name];
         var readerField = new ReaderField
         {
