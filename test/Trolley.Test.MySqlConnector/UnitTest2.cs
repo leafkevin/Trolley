@@ -53,25 +53,7 @@ public class UnitTest2 : UnitTestBase
                 //按租户分表
                 .UseTable<Order>(t => t.DependOn(d => d.TenantId).Use((origName, tenantId) => $"{origName}_{tenantId}"))
                 //按照Id字段分表，Id字段是带有时间属性的ObjectId
-                .UseTable<Order>(t =>
-                {
-                    t.DependOn(d => d.Id)
-                    .Use((origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}")
-                    //支持时间范围
-                    .UseRange<DateTime>((origName, beginTime, endTime) =>
-                    {
-                        var shardingNames = new List<string>();
-                        var current = beginTime;
-                        while (current <= endTime)
-                        {
-                            var tableName = $"{origName}_{current:yyyyMM}";
-                            if (shardingNames.Contains(tableName))
-                                continue;
-                            shardingNames.Add(tableName);
-                        }
-                        return shardingNames;
-                    });
-                })
+                .UseTable<Order>(t => t.DependOn(d => d.Id).Use((origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}"))
                 //按照Id字段哈希取模分表
                 .UseTable<Order>(t => t.DependOn(d => d.Id).Use((origName, id) => $"{HashCode.Combine(id) % 5}"))
                 //当数据库dbKey是fengling主库时，才取模分表
