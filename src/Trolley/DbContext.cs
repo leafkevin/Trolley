@@ -433,7 +433,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     #endregion
 
     #region QueryPage
-    public IPagedList<TResult> QueryPage<TResult>(IQueryVisitor visitor, int pageIndex, int pageSize)
+    public IPagedList<TResult> QueryPage<TResult>(IQueryVisitor visitor)
     {
         using var command = this.CreateCommand();
         var result = new PagedList<TResult> { Data = new List<TResult>() };
@@ -451,8 +451,8 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             var behavior = CommandBehavior.SequentialAccess;
             reader = command.ExecuteReader(behavior);
             if (reader.Read()) result.TotalCount = reader.To<int>(this.OrmProvider);
-            result.PageIndex = pageIndex;
-            result.PageSize = pageSize;
+            result.PageIndex = visitor.PageIndex;
+            result.PageSize = visitor.PageSize;
 
             reader.NextResult();
             var entityType = typeof(TResult);
@@ -495,7 +495,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         if (exception != null) throw exception;
         return result;
     }
-    public async Task<IPagedList<TResult>> QueryPageAsync<TResult>(IQueryVisitor visitor, int pageIndex, int pageSize, CancellationToken cancellationToken = default)
+    public async Task<IPagedList<TResult>> QueryPageAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
         using var command = this.CreateDbCommand();
         var result = new PagedList<TResult> { Data = new List<TResult>() };
@@ -513,8 +513,8 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             var behavior = CommandBehavior.SequentialAccess;
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             if (await reader.ReadAsync()) result.TotalCount = reader.To<int>(this.OrmProvider);
-            result.PageIndex = pageIndex;
-            result.PageSize = pageSize;
+            result.PageIndex = visitor.PageIndex;
+            result.PageSize = visitor.PageSize;
 
             await reader.NextResultAsync(cancellationToken);
             var entityType = typeof(TResult);

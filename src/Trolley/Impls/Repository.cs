@@ -362,7 +362,7 @@ public class Repository : IRepository
 
                 foreach (var insertObj in entities)
                 {
-                    if (index > 0) sqlBuilder.Append(';');
+                    if (index > 0) sqlBuilder.Append(',');
                     commandInitializer.Invoke(command.Parameters, this.ormProvider, sqlBuilder, insertObj, index.ToString());
                     if (index >= bulkCount)
                     {

@@ -344,16 +344,22 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     {
         this.offset = offset;
         if (this.pageSize > 0)
-            this.pageIndex = (int)Math.Ceiling((double)offset / this.pageSize);
-        this.Visitor.Skip(offset);
+        {
+            var pageIndex = (int)Math.Ceiling((double)this.offset.Value / this.pageSize);
+            this.Visitor.Page(pageIndex, this.pageSize);
+        }
+        else this.Visitor.Skip(offset);
         return this;
     }
     public IMultiQuery<T> Take(int limit)
     {
         this.pageSize = limit;
         if (this.offset.HasValue)
-            this.pageIndex = (int)Math.Ceiling((double)this.offset.Value / limit);
-        this.Visitor.Take(limit);
+        {
+            var pageIndex = (int)Math.Ceiling((double)this.offset.Value / limit);
+            this.Visitor.Page(pageIndex, limit);
+        }
+        else this.Visitor.Take(limit);
         return this;
     }
     public IMultiQuery<T> Page(int pageIndex, int pageSize)

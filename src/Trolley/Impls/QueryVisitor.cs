@@ -45,6 +45,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public bool IsUseFieldAlias { get; set; } = true;
     public bool IsUseCteTable { get; set; } = true;
     public ICteQuery SelfRefQueryObj { get; set; }
+    public int PageIndex { get; set; }
+    public int PageSize { get; set; }
 
     public QueryVisitor(IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
     {
@@ -1301,7 +1303,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void Distinct() => this.IsDistinct = true;
     public virtual void Page(int pageIndex, int pageSize)
     {
-        if (pageIndex > 0) pageIndex--;
+        this.PageIndex = pageIndex;
+        this.PageSize = pageSize;
         this.skip = pageIndex * pageSize;
         this.limit = pageSize;
         this.ClearUnionSql();

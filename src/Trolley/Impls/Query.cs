@@ -420,16 +420,22 @@ public class Query<T> : QueryBase, IQuery<T>
     {
         this.offset = offset;
         if (this.pageSize > 0)
-            this.pageIndex = (int)Math.Ceiling((double)offset / this.pageSize);
-        this.Visitor.Skip(offset);
+        {
+            var pageIndex = (int)Math.Ceiling((double)this.offset.Value / this.pageSize);
+            this.Visitor.Page(pageIndex, this.pageSize);
+        }
+        else this.Visitor.Skip(offset);
         return this;
     }
     public virtual IQuery<T> Take(int limit)
     {
         this.pageSize = limit;
         if (this.offset.HasValue)
-            this.pageIndex = (int)Math.Ceiling((double)this.offset.Value / limit);
-        this.Visitor.Take(limit);
+        {
+            var pageIndex = (int)Math.Ceiling((double)this.offset.Value / limit);
+            this.Visitor.Page(pageIndex, limit);
+        }
+        else this.Visitor.Take(limit);
         return this;
     }
     public virtual IQuery<T> Page(int pageIndex, int pageSize)
@@ -572,9 +578,9 @@ public class Query<T> : QueryBase, IQuery<T>
     public virtual List<T> ToList() => this.DbContext.Query<T>(this.Visitor);
     public virtual async Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
         => await this.DbContext.QueryAsync<T>(this.Visitor, cancellationToken);
-    public virtual IPagedList<T> ToPageList() => this.DbContext.QueryPage<T>(this.Visitor, this.pageIndex, this.pageSize);
+    public virtual IPagedList<T> ToPageList() => this.DbContext.QueryPage<T>(this.Visitor);
     public virtual async Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryPageAsync<T>(this.Visitor, this.pageIndex, this.pageSize, cancellationToken);
+        => await this.DbContext.QueryPageAsync<T>(this.Visitor, cancellationToken);
     public virtual Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull
     {
         if (keySelector == null)
