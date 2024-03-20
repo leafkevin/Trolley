@@ -692,9 +692,9 @@ public class UnitTest1 : UnitTestBase
                 UpdatedAt = x.UpdatedAt
             })
             .ToSql(out var parameters);
-        Assert.True(sql == "INSERT IGNORE INTO `sys_order_detail` (`Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT 7 AS `Id`,b.`Id` AS `OrderId`,c.`Id` AS `ProductId`,c.`Price`,3 AS `Quantity`,(c.`Price`*3) AS `Amount`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_order` b,`sys_product` c WHERE b.`Id`=3 AND c.`Id`=1");
+        Assert.True(sql == "INSERT IGNORE INTO `sys_order_detail` (`Id`,`TenantId`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT '7' AS `Id`,'1' AS `TenantId`,b.`Id` AS `OrderId`,c.`Id` AS `ProductId`,c.`Price`,3 AS `Quantity`,(c.`Price`*3) AS `Amount`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_order` b,`sys_product` c WHERE b.`Id`='3' AND c.`Id`=1");
         await repository.BeginTransactionAsync();
-        repository.Delete<OrderDetail>(7);
+        repository.Delete<OrderDetail>("7");
         var result = await repository.Create<OrderDetail>()
             .IgnoreInto()
             .From<Order, Product>()
@@ -715,9 +715,9 @@ public class UnitTest1 : UnitTestBase
                 UpdatedAt = x.UpdatedAt
             })
            .ExecuteAsync();
-        var orderDetail = repository.Get<OrderDetail>(7);
-        var product = repository.Get<Product>(1);
         await repository.CommitAsync();
+        var orderDetail = repository.Get<OrderDetail>("7");
+        var product = repository.Get<Product>(1);
         Assert.NotNull(orderDetail);
         Assert.True(orderDetail.OrderId == "3");
         Assert.True(orderDetail.ProductId == 1);
@@ -780,13 +780,13 @@ public class UnitTest1 : UnitTestBase
                UpdatedBy = 1
            })
            .ToSql(out var parameters);
-        Assert.True(sql == "INSERT INTO `sys_order` (`Id`,`OrderNo`,`TotalAmount`,`BuyerId`,`BuyerSource`,`SellerId`,`ProductCount`,`Products`,`Disputes`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) VALUES(@Id,@OrderNo,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@ProductCount,@Products,@Disputes,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
-        Assert.True(parameters[4].ParameterName == "@BuyerSource");
-        Assert.True(parameters[4].Value is DBNull);
-        Assert.True(parameters[7].ParameterName == "@Products");
-        Assert.True((string)parameters[7].Value == new JsonTypeHandler().ToFieldValue(null, null, new List<int> { 1, 2 }).ToString());
-        Assert.True(parameters[8].ParameterName == "@Disputes");
-        Assert.True((string)parameters[8].Value == new JsonTypeHandler().ToFieldValue(null, null, dispute).ToString());
+        Assert.True(sql == "INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`TotalAmount`,`BuyerId`,`BuyerSource`,`SellerId`,`ProductCount`,`Products`,`Disputes`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) VALUES(@Id,@TenantId,@OrderNo,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@ProductCount,@Products,@Disputes,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
+        Assert.True(parameters[5].ParameterName == "@BuyerSource");
+        Assert.True(parameters[5].Value is DBNull);
+        Assert.True(parameters[8].ParameterName == "@Products");
+        Assert.True((string)parameters[8].Value == new JsonTypeHandler().ToFieldValue(null, null, new List<int> { 1, 2 }).ToString());
+        Assert.True(parameters[9].ParameterName == "@Disputes");
+        Assert.True((string)parameters[9].Value == new JsonTypeHandler().ToFieldValue(null, null, dispute).ToString());
 
         repository.BeginTransaction();
         repository.Delete<Order>("4");
@@ -1001,7 +1001,7 @@ public class UnitTest1 : UnitTestBase
                 .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource)
              )
             .ToSql(out _);
-        Assert.True(sql1 == "INSERT INTO `sys_order` (`Id`,`OrderNo`,`BuyerId`,`SellerId`,`TotalAmount`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@OrderNo,@BuyerId,@SellerId,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerSource`=@BuyerSource");
+        Assert.True(sql1 == "INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`TotalAmount`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@TenantId,@OrderNo,@BuyerId,@SellerId,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerSource`=@BuyerSource");
 
         var sql2 = repository.Create<Order>()
              .WithBy(new
@@ -1032,7 +1032,7 @@ public class UnitTest1 : UnitTestBase
                 .Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
                 .Set(f => f.Products, f => x.Values(f.Products)))
             .ToSql(out _);
-        Assert.True(sql2 == "INSERT INTO `sys_order` (`Id`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`TotalAmount`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@OrderNo,@BuyerId,@SellerId,@BuyerSource,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=VALUES(`TotalAmount`),`Products`=VALUES(`Products`)");
+        Assert.True(sql2 == "INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`TotalAmount`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@TenantId,@OrderNo,@BuyerId,@SellerId,@BuyerSource,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=VALUES(`TotalAmount`),`Products`=VALUES(`Products`)");
 
         await repository.BeginTransactionAsync();
         await repository.DeleteAsync<Order>("9");
@@ -1101,7 +1101,7 @@ public class UnitTest1 : UnitTestBase
                 .Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
                 .Set(true, f => f.Products, f => x.Values(f.Products)))
             .ExecuteAsync();
-        order = await repository.GetAsync<Order>(9);
+        order = await repository.GetAsync<Order>("9");
         await repository.CommitAsync();
         Assert.True(count == 2);
         Assert.True(order.TotalAmount == 600);

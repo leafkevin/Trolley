@@ -47,7 +47,7 @@ class ModelConfiguration : IModelConfiguration
         builder.Entity<Order>(f =>
         {
             f.ToTable("sys_order").Key(t => t.Id).UseSharding(d => d.TenantId, (origName, tenantId) => $"");
-            f.Member(t => t.Id).Field(nameof(Order.Id)).NativeDbType(MySqlDbType.Int32);
+            f.Member(t => t.Id).Field(nameof(Order.Id)).NativeDbType(MySqlDbType.VarChar);
             f.Member(t => t.TenantId).Field(nameof(Order.TenantId)).NativeDbType(MySqlDbType.VarChar).Required();
             f.Member(t => t.OrderNo).Field(nameof(Order.OrderNo)).NativeDbType(MySqlDbType.VarChar);
             f.Member(t => t.ProductCount).Field(nameof(Order.ProductCount)).NativeDbType(MySqlDbType.Int32);
@@ -71,9 +71,9 @@ class ModelConfiguration : IModelConfiguration
         builder.Entity<OrderDetail>(f =>
         {
             f.ToTable("sys_order_detail").Key(t => t.Id);
-            f.Member(t => t.Id).Field(nameof(OrderDetail.Id)).NativeDbType(MySqlDbType.Int32);
+            f.Member(t => t.Id).Field(nameof(OrderDetail.Id)).NativeDbType(MySqlDbType.VarChar);
             f.Member(t => t.TenantId).Field(nameof(Order.TenantId)).NativeDbType(MySqlDbType.VarChar).Required();
-            f.Member(t => t.OrderId).Field(nameof(OrderDetail.OrderId)).NativeDbType(MySqlDbType.Int32);
+            f.Member(t => t.OrderId).Field(nameof(OrderDetail.OrderId)).NativeDbType(MySqlDbType.VarChar);
             f.Member(t => t.ProductId).Field(nameof(OrderDetail.ProductId)).NativeDbType(MySqlDbType.Int32);
             f.Member(t => t.Price).Field(nameof(OrderDetail.Price)).NativeDbType(MySqlDbType.Double);
             f.Member(t => t.Quantity).Field(nameof(OrderDetail.Quantity)).NativeDbType(MySqlDbType.Int32);

@@ -121,7 +121,7 @@ DROP TABLE IF EXISTS `sys_order_detail`;
 CREATE TABLE `sys_order_detail`  (
   `Id` varchar(50) NOT NULL,
   `TenantId` varchar(50) NOT NULL,
-  `OrderId` int NULL DEFAULT NULL,
+  `OrderId` varchar(50) NULL DEFAULT NULL,
   `ProductId` int NULL DEFAULT NULL,
   `Price` double(10, 2) NULL DEFAULT NULL,
   `Quantity` int NULL DEFAULT NULL,
@@ -137,12 +137,12 @@ CREATE TABLE `sys_order_detail`  (
 -- ----------------------------
 -- Records of sys_order_detail
 -- ----------------------------
-INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('1', '1', 1, 1, 299.00, 1, 299.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('2', '2', 1, 2, 159.00, 1, 159.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('3', '3', 1, 3, 69.00, 1, 69.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('4', '1', 2, 1, 299.00, 1, 299.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('5', '2', 2, 3, 69.00, 1, 69.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('6', '3', 3, 2, 199.00, 1, 199.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('1', '1', '1', 1, 299.00, 1, 299.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('2', '2', '1', 2, 159.00, 1, 159.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('3', '3', '1', 3, 69.00, 1, 69.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('4', '1', '2', 1, 299.00, 1, 299.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('5', '2', '2', 3, 69.00, 1, 69.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('6', '3', '3', 2, 199.00, 1, 199.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
 
 -- ----------------------------
 -- Table structure for sys_page

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace Trolley.SqlServer;
@@ -210,4 +211,26 @@ public partial class SqlServerProvider : BaseOrmProvider
         => $"CAST({value} AS {castTos[type]})";
     public override bool TryGetDefaultTypeHandler(Type targetType, out ITypeHandler typeHandler)
         => defaultTypeHandlers.TryGetValue(targetType, out typeHandler);
+    public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
+    {
+        var methodInfo = methodCallExpr.Method;
+        var parameterInfos = methodInfo.GetParameters();
+        int cacheKey = 0;
+        switch (methodInfo.Name)
+        {
+            case "IfNull":
+                cacheKey = HashCode.Combine(typeof(Sql), methodInfo);
+                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                {
+                    var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                    var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                    var targetArgument = visitor.GetQuotedValue(targetSegment);
+                    var rightArgument = visitor.GetQuotedValue(rightSegment);
+                    return targetSegment.Merge(rightSegment, $"ISNULL({targetArgument},{rightArgument})", false, false, false, true);
+                });
+                break;
+        }
+        formatter = null;
+        return false;
+    }
 }

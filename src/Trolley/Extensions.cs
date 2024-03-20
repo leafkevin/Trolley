@@ -369,7 +369,7 @@ public static class Extensions
             {
                 var fieldType = reader.GetFieldType(index);
                 var readerValueExpr = GetReaderValue(ormProvider, ormProviderExpr, readerExpr, Expression.Constant(index),
-                     readerField.UnderlyingType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
+                    readerField.TargetType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
                 if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
                 else root.Arguments.Add(readerValueExpr);
                 index++;
@@ -386,10 +386,9 @@ public static class Extensions
 
                 if (readerField.FieldType == ReaderFieldType.DeferredFields)
                 {
-                    //TODO:测试
-                    if (readerField.UnderlyingType != null && readerField.UnderlyingType.IsEntityType(out _))
+                    if (readerField.TargetType.IsEntityType(out _))
                     {
-                        current = NewBuildInfo(readerField.UnderlyingType, readerField.TargetMember, parent);
+                        current = NewBuildInfo(readerField.TargetType, readerField.TargetMember, parent);
                         readerBuilders.Add(readerField, current);
                     }
 
@@ -404,7 +403,7 @@ public static class Extensions
                             //延迟的方法调用，有字段值作为方法参数就读取，没有什么也不做
                             childReaderField = readerField.ReaderFields[childIndex];
                             readerValueExpr = GetReaderValue(ormProvider, ormProviderExpr, readerExpr, Expression.Constant(index),
-                                childReaderField.UnderlyingType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
+                                childReaderField.TargetType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
                             argsExprs.Add(readerValueExpr);
                             childIndex++;
                             index++;
@@ -420,7 +419,7 @@ public static class Extensions
                 {
                     //Include导航属性引用不能单独Select，前面一定有Parameter访问
                     //Include导航属性引用单独处理，先设置默认值，在整个实体初始化完后，再设置具体值，初始化Action在成员访问的时候，已经构建好了
-                    var instanceExpr = Expression.Default(readerField.UnderlyingType);
+                    var instanceExpr = Expression.Default(readerField.TargetType);
                     if (parent.IsDefault)
                         parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
                     else parent.Arguments.Add(instanceExpr);
@@ -435,14 +434,14 @@ public static class Extensions
                         if (readerField.Parent != null)
                             parent = readerBuilders[readerField.Parent];
                         else parent = root;
-                        current = NewBuildInfo(readerField.TargetMember.GetMemberType(), readerField.TargetMember, parent);
+                        current = NewBuildInfo(readerField.TargetType, readerField.TargetMember, parent);
                     }
                     while (index < endIndex)
                     {
                         var fieldType = reader.GetFieldType(index);
                         childReaderField = readerField.ReaderFields[childIndex];
                         readerValueExpr = GetReaderValue(ormProvider, ormProviderExpr, readerExpr, Expression.Constant(index),
-                            childReaderField.UnderlyingType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
+                            childReaderField.TargetType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
 
                         if (current.IsDefault) current.Bindings.Add(Expression.Bind(childReaderField.TargetMember, readerValueExpr));
                         else current.Arguments.Add(readerValueExpr);

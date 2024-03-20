@@ -179,13 +179,13 @@ public class MethodCallUnitTest : UnitTestBase
         var sql = repository.From<Order>()
             .Select(f => new
             {
-                IntCompare = f.Id.CompareTo(1),
+                IntCompare = f.Id.CompareTo("1"),
                 StringCompare = f.OrderNo.CompareTo("OrderNo-001"),
                 DateTimeCompare = f.CreatedAt.CompareTo(DateTime.Parse("2022-12-20")),
                 BooleanCompare = f.IsEnabled.CompareTo(false)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (CASE WHEN a.`Id`=1 THEN 0 WHEN a.`Id`>1 THEN 1 ELSE -1 END) AS `IntCompare`,(CASE WHEN a.`OrderNo`='OrderNo-001' THEN 0 WHEN a.`OrderNo`>'OrderNo-001' THEN 1 ELSE -1 END) AS `StringCompare`,(CASE WHEN a.`CreatedAt`='2022-12-20 00:00:00.000' THEN 0 WHEN a.`CreatedAt`>'2022-12-20 00:00:00.000' THEN 1 ELSE -1 END) AS `DateTimeCompare`,(CASE WHEN a.`IsEnabled`=0 THEN 0 WHEN a.`IsEnabled`>0 THEN 1 ELSE -1 END) AS `BooleanCompare` FROM `sys_order` a");
+        Assert.True(sql == "SELECT (CASE WHEN a.`Id`='1' THEN 0 WHEN a.`Id`>'1' THEN 1 ELSE -1 END) AS `IntCompare`,(CASE WHEN a.`OrderNo`='OrderNo-001' THEN 0 WHEN a.`OrderNo`>'OrderNo-001' THEN 1 ELSE -1 END) AS `StringCompare`,(CASE WHEN a.`CreatedAt`='2022-12-20 00:00:00.000' THEN 0 WHEN a.`CreatedAt`>'2022-12-20 00:00:00.000' THEN 1 ELSE -1 END) AS `DateTimeCompare`,(CASE WHEN a.`IsEnabled`=0 THEN 0 WHEN a.`IsEnabled`>0 THEN 1 ELSE -1 END) AS `BooleanCompare` FROM `sys_order` a");
 
         var result = repository.From<Order>()
             .Where(f => f.Id == "1")
@@ -195,14 +195,14 @@ public class MethodCallUnitTest : UnitTestBase
                 f.OrderNo,
                 f.CreatedAt,
                 f.IsEnabled,
-                IntCompare = f.Id.CompareTo(1),
+                IntCompare = f.Id.CompareTo("1"),
                 StringCompare = f.OrderNo.CompareTo("OrderNo-001"),
                 DateTimeCompare = f.CreatedAt.CompareTo(DateTime.Parse("2022-12-20")),
                 BooleanCompare = f.IsEnabled.CompareTo(false)
             })
             .First();
         Assert.NotNull(result);
-        Assert.True(result.IntCompare == result.Id.CompareTo(1));
+        Assert.True(result.IntCompare == result.Id.CompareTo("1"));
         Assert.True(result.StringCompare == result.OrderNo.CompareTo("OrderNo-001"));
         Assert.True(result.DateTimeCompare == result.CreatedAt.CompareTo(DateTime.Parse("2022-12-20")));
         Assert.True(result.BooleanCompare == result.IsEnabled.CompareTo(false));

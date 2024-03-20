@@ -268,22 +268,11 @@ public class SqlVisitor : ISqlVisitor
                 //就是枚举类型有问题，单独处理
                 //... WHERE (int)(a.Price * a.Quartity)>500
                 //SELECT TotalAmount = (int)(amount + (a.Price + increasedPrice) * (a.Quartity + increasedCount)) ...FROM ...
-                //SELECT OrderNo = $"OrderNo-{f.CreatedAt.ToString("yyyyMMdd")}-{f.Id}"...FROM ...
-                //var leftType = leftSegment.GetExpectType(binaryExpr.Left);
-                //var rightType = rightSegment.GetExpectType(binaryExpr.Right);
-                //if (leftType.IsEnum || rightType.IsEnum || leftType != rightType)
-                //{
-                //    if ((leftType.IsEnum || rightType.IsEnum) && calcOps.Contains(operators))
-                //        throw new NotSupportedException($"枚举类成员{leftSegment.MemberMapper.MemberName}对应的数据库类型为非数字类型，不能进行{operators}操作，可以使用=、<>、IN、EXISTS等操作来代替，表达式：{binaryExpr}");
-
-                //    //在调用GetQuotedValue方法前，确保左右两侧的类型一致，并都根据MemberMapper的映射类型表生成SQL语句
-                //    if (leftType.IsEnum) leftSegment.ExpectType = leftType;
-                //    else leftSegment.ExpectType = rightType;
-                //    this.ChangeSameType(leftSegment, rightSegment);
-                //}
-                if (leftSegment.ExpectType != null || leftSegment.TypeHandler != null)
+                //SELECT OrderNo = $"OrderNo-{f.CreatedAt.ToString("yyyyMMdd")}-{f.Id}"...FROM ...               
+                if (leftSegment.ExpectType != null)
                     this.ChangeSameType(leftSegment, rightSegment);
-                else this.ChangeSameType(rightSegment, leftSegment);
+                else if (rightSegment.ExpectType != null)
+                    this.ChangeSameType(rightSegment, leftSegment);
 
                 string strLeft = this.GetQuotedValue(leftSegment);
                 string strRight = this.GetQuotedValue(rightSegment);
@@ -329,7 +318,9 @@ public class SqlVisitor : ISqlVisitor
                 //Where(f=>... && f.CreatedAt.Month<5 && ...)
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
                 var targetSegment = sqlSegment.Next(memberExpr.Expression);
-                return formatter.Invoke(this, targetSegment);
+                sqlSegment = formatter.Invoke(this, targetSegment);
+                sqlSegment.SegmentType = memberExpr.Type;
+                return sqlSegment;
             }
 
             if (memberExpr.IsParameter(out var parameterName))
@@ -366,9 +357,9 @@ public class SqlVisitor : ISqlVisitor
                         fieldName = readerField.Body;
                     }
                     sqlSegment.FromMember = readerField.TargetMember;
-                    sqlSegment.UnderlyingType = readerField.UnderlyingType;
-                    if ((readerField.UnderlyingType ?? readerField.TargetMember.GetMemberType()).IsEnum)
-                        sqlSegment.ExpectType = readerField.UnderlyingType;
+                    sqlSegment.SegmentType = readerField.TargetType;
+                    if (readerField.TargetType.IsEnumType(out var underlyingType))
+                        sqlSegment.ExpectType = underlyingType;
                     sqlSegment.NativeDbType = readerField.NativeDbType;
                     sqlSegment.TypeHandler = readerField.TypeHandler;
                     sqlSegment.Value = fieldName;
@@ -381,7 +372,7 @@ public class SqlVisitor : ISqlVisitor
                     if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                         throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
                     sqlSegment.FromMember = memberMapper.Member;
-                    sqlSegment.UnderlyingType = memberMapper.UnderlyingType;
+                    sqlSegment.SegmentType = memberMapper.MemberType;
                     if (memberMapper.UnderlyingType.IsEnum)
                         sqlSegment.ExpectType = memberMapper.UnderlyingType;
                     sqlSegment.NativeDbType = memberMapper.NativeDbType;
@@ -392,12 +383,6 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment.Value = fieldName;
                 }
                 //.NET枚举类型总是解析成对应的UnderlyingType数值类型，如：a.Gender ?? Gender.Male == Gender.Male
-                //如果枚举类型对应的数据库类型是字符串就会有问题，需要把数字变为枚举，再把枚举的名字字符串完成后续操作。
-                //if (memberMapper != null && memberMapper.MemberType.IsEnumType(out var expectType, out _) && memberMapper.DbFieldType == typeof(string))
-                //{
-                //    sqlSegment.ExpectType = expectType;
-                //    sqlSegment.TargetType = memberMapper.DbFieldType;
-                //}
                 return sqlSegment;
             }
         }
@@ -407,7 +392,11 @@ public class SqlVisitor : ISqlVisitor
 
         //各种静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
         if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
-            return formatter.Invoke(this, sqlSegment);
+        {
+            sqlSegment = formatter.Invoke(this, sqlSegment);
+            sqlSegment.SegmentType = memberExpr.Type;
+            return sqlSegment;
+        }
 
         //访问局部变量或是成员变量，当作常量处理，直接计算，后面统一做参数化处理
         //var orderIds=new List<int>{1,2,3}; Where(f=>orderIds.Contains(f.OrderId)); orderIds
@@ -418,6 +407,7 @@ public class SqlVisitor : ISqlVisitor
 
         sqlSegment.IsConstant = false;
         sqlSegment.IsVariable = true;
+        sqlSegment.SegmentType = memberExpr.Type;
         return sqlSegment;
     }
     public virtual SqlSegment VisitConstant(SqlSegment sqlSegment)
@@ -428,6 +418,7 @@ public class SqlVisitor : ISqlVisitor
 
         sqlSegment.Value = constantExpr.Value;
         sqlSegment.IsConstant = true;
+        sqlSegment.SegmentType = constantExpr.Type;
         return sqlSegment;
     }
     public virtual SqlSegment VisitMethodCall(SqlSegment sqlSegment)
@@ -435,10 +426,18 @@ public class SqlVisitor : ISqlVisitor
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
         if (methodCallExpr.Method.DeclaringType == typeof(Sql) || methodCallExpr.Method.DeclaringType == typeof(IRepository)
             || typeof(IAggregateSelect).IsAssignableFrom(methodCallExpr.Method.DeclaringType))
-            return this.VisitSqlMethodCall(sqlSegment);
+        {
+            sqlSegment = this.VisitSqlMethodCall(sqlSegment);
+            sqlSegment.SegmentType = methodCallExpr.Type;
+            return sqlSegment;
+        }
 
         if (!sqlSegment.IsDeferredFields && this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter))
-            return formatter.Invoke(this, methodCallExpr, methodCallExpr.Object, sqlSegment.DeferredExprs, methodCallExpr.Arguments.ToArray());
+        {
+            sqlSegment = formatter.Invoke(this, methodCallExpr, methodCallExpr.Object, sqlSegment.DeferredExprs, methodCallExpr.Arguments.ToArray());
+            sqlSegment.SegmentType = methodCallExpr.Type;
+            return sqlSegment;
+        }
 
         if (this.IsSelect)
         {
@@ -471,7 +470,7 @@ public class SqlVisitor : ISqlVisitor
                             FieldType = ReaderFieldType.Field,
                             FromMember = argumentSegment.FromMember,
                             TargetMember = argumentSegment.FromMember,
-                            UnderlyingType = argumentSegment.UnderlyingType,
+                            TargetType = methodCallExpr.Type,
                             NativeDbType = argumentSegment.NativeDbType,
                             TypeHandler = argumentSegment.TypeHandler,
                             Body = fieldName
@@ -499,7 +498,9 @@ public class SqlVisitor : ISqlVisitor
                 });
             }
         }
-        return this.Evaluate(sqlSegment);
+        sqlSegment = this.Evaluate(sqlSegment);
+        sqlSegment.SegmentType = methodCallExpr.Type;
+        return sqlSegment;
     }
     public virtual SqlSegment VisitParameter(SqlSegment sqlSegment)
     {
@@ -512,6 +513,7 @@ public class SqlVisitor : ISqlVisitor
         {
             FieldType = ReaderFieldType.Entity,
             TableSegment = fromSegment,
+            TargetType = fromSegment.EntityType,
             ReaderFields = this.FlattenTableFields(fromSegment),
             Path = parameterExpr.Name
         };
@@ -535,6 +537,7 @@ public class SqlVisitor : ISqlVisitor
                     TableSegment = includedSegment,
                     FromMember = includedSegment.FromMember.Member,
                     TargetMember = includedSegment.FromMember.Member,
+                    TargetType = includedSegment.EntityType,
                     Parent = parent,
                     ReaderFields = this.FlattenTableFields(includedSegment),
                     //更换path，方便后续Include成员赋值时，能够找到parent对象
@@ -575,9 +578,21 @@ public class SqlVisitor : ISqlVisitor
                     if (readerField.ReaderFields == null)
                         continue;
                     builder.Append(readerField.Body);
+                    //生成SQL的时候，才加上AS别名
+                    if (readerField.IsNeedAlias)
+                    {
+                        builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                        readerField.IsNeedAlias = false;
+                    }
                     break;
                 default:
                     builder.Append(readerField.Body);
+                    //生成SQL的时候，才加上AS别名
+                    if (readerField.IsNeedAlias)
+                    {
+                        builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                        readerField.IsNeedAlias = false;
+                    }
                     break;
             }
         }
@@ -690,11 +705,13 @@ public class SqlVisitor : ISqlVisitor
                 sqlSegment = this.VisitMethodCall(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 break;
             case "IsNull":
-                if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
-                {
-                    sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.Null });
-                    sqlSegment = this.VisitAndDeferred(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                }
+                sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.Null });
+                sqlSegment = this.VisitAndDeferred(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                break;
+            case "IfNull":
+                if (!this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var sqlFormatter))
+                    throw new NotImplementedException($"当前Provider:{this.OrmProvider.GetType().FullName}未实现方法IfNull");
+                sqlSegment = sqlFormatter.Invoke(this, sqlSegment.OriginalExpression, null, null, methodCallExpr.Arguments.ToArray());
                 break;
             case "ToParameter":
                 sqlSegment.IsParameterized = true;
@@ -1259,7 +1276,9 @@ public class SqlVisitor : ISqlVisitor
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
             if (sqlSegment.TypeHandler != null)
             {
-                var underlyingType = sqlSegment.ExpectType ?? sqlSegment.UnderlyingType;
+                //枚举类型或是有强制转换时，要取sqlSegment.ExpectType值
+                //常量、方法调用、计算表达式时，sqlSegment.FromMember没有值，只能取Expression.Type值，
+                var underlyingType = sqlSegment.ExpectType ?? sqlSegment.SegmentType?.ToUnderlyingType() ?? sqlSegment.Value.GetType();
                 var dbFieldValue = sqlSegment.TypeHandler.ToFieldValue(this.OrmProvider, underlyingType, sqlSegment.Value);
                 dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.NativeDbType, dbFieldValue));
             }
@@ -1282,7 +1301,9 @@ public class SqlVisitor : ISqlVisitor
         else if (sqlSegment.IsConstant)
         {
             var typedValue = sqlSegment.Value;
-            var underlyingType = sqlSegment.ExpectType ?? sqlSegment.UnderlyingType;
+            //枚举类型或是有强制转换时，要取sqlSegment.ExpectType值
+            //常量、方法调用、计算表达式时，sqlSegment.FromMember没有值，只能取Expression.Type值，
+            var underlyingType = sqlSegment.ExpectType ?? sqlSegment.SegmentType?.ToUnderlyingType() ?? sqlSegment.Value.GetType();
             if (sqlSegment.TypeHandler != null)
                 return sqlSegment.TypeHandler.GetQuotedValue(this.OrmProvider, underlyingType, sqlSegment.Value);
             //不能使用sqlSegment.Expression.Type，有多于1级表达式访问，sqlSegment.Expression值可以已经发生变化了
@@ -1307,7 +1328,9 @@ public class SqlVisitor : ISqlVisitor
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + dbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
-            var underlyingType = elementSegment.ExpectType ?? elementSegment.UnderlyingType;
+            //枚举类型或是有强制转换时，要取sqlSegment.ExpectType值
+            //常量、方法调用、计算表达式时，sqlSegment.FromMember没有值，只能取Expression.Type值，
+            var underlyingType = elementSegment.ExpectType ?? elementSegment.SegmentType?.ToUnderlyingType() ?? elementSegment.Value.GetType();
             if (elementSegment.TypeHandler != null)
             {
                 var dbFieldValue = elementSegment.TypeHandler.ToFieldValue(this.OrmProvider, underlyingType, elementValue);
@@ -1319,7 +1342,10 @@ public class SqlVisitor : ISqlVisitor
         }
         if (arraySegment.IsConstant)
         {
-            var underlyingType = elementSegment.ExpectType ?? elementSegment.UnderlyingType;
+            //枚举类型或是有强制转换时，要取sqlSegment.ExpectType值
+            //常量、方法调用、计算表达式时，sqlSegment.FromMember没有值，只能取Expression.Type值，
+            var underlyingType = elementSegment.ExpectType ?? elementSegment.SegmentType?.ToUnderlyingType() ?? elementSegment.Value.GetType();
+
             if (elementSegment.TypeHandler != null)
                 return elementSegment.TypeHandler.GetQuotedValue(this.OrmProvider, underlyingType, elementValue);
             return this.OrmProvider.GetQuotedValue(underlyingType, elementValue);
@@ -1397,7 +1423,7 @@ public class SqlVisitor : ISqlVisitor
                     TableSegment = tableSegment,
                     FromMember = memberMapper.Member,
                     TargetMember = memberMapper.Member,
-                    UnderlyingType = memberMapper.UnderlyingType,
+                    TargetType = memberMapper.MemberType,
                     NativeDbType = memberMapper.NativeDbType,
                     TypeHandler = memberMapper.TypeHandler,
                     Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(memberMapper.FieldName)
@@ -1492,7 +1518,7 @@ public class SqlVisitor : ISqlVisitor
             //变量时，根据MemberMapper的配置，把参数转变成真正的数据库字段类型
             rightSegment.MemberMapper = leftSegment.MemberMapper;
             rightSegment.ExpectType = leftSegment.ExpectType;
-            rightSegment.UnderlyingType = leftSegment.UnderlyingType;
+            rightSegment.SegmentType = leftSegment.SegmentType;
             rightSegment.NativeDbType = leftSegment.NativeDbType;
             rightSegment.TypeHandler = leftSegment.TypeHandler;
             return true;

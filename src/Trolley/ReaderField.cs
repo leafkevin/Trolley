@@ -24,10 +24,9 @@ public class ReaderField
     /// </summary>
     public MemberInfo FromMember { get; set; }
     /// <summary>
-    /// 当前是成员访问时，才有值，和FromMember是同一个栏位，是Mapper
+    /// 当是常量或是方法调用、表达式时，构造返回实体需要用到这个类型
     /// </summary>
-    //public MemberMap MemberMapper { get; set; }
-    public Type UnderlyingType { get; set; }
+    public Type TargetType { get; set; }
     public object NativeDbType { get; set; }
     public ITypeHandler TypeHandler { get; set; }
     /// <summary>
@@ -93,7 +92,7 @@ public class ReaderField
             HasNextInclude = this.HasNextInclude,
             IsTargetType = this.IsTargetType,
             IsNeedAlias = this.IsNeedAlias,
-            UnderlyingType = this.UnderlyingType,
+            TargetType = this.TargetType,
             NativeDbType = this.NativeDbType,
             TypeHandler = this.TypeHandler,
             Parent = this.Parent,

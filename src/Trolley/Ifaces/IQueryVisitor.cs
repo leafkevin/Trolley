@@ -26,7 +26,9 @@ public interface IQueryVisitor : IDisposable
     IDataParameterCollection NextDbParameters { get; set; }
     bool IsUseFieldAlias { get; set; }
     bool IsUseCteTable { get; set; }
-    public char TableAsStart { get; set; }
+    char TableAsStart { get; set; }
+    int PageIndex { get; set; }
+    int PageSize { get; set; }
     /// <summary>
     /// 解析子查询时，父亲查询的TableAliases
     /// </summary>

@@ -301,6 +301,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     public virtual bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
     {
         var memberInfo = memberExpr.Member;
+        var cacheKey = HashCode.Combine(memberInfo.DeclaringType, memberInfo);
+        if (memberAccessSqlFormatterCache.TryGetValue(cacheKey, out formatter))
+            return true;
+
         if (memberInfo.DeclaringType == typeof(string) && this.TryGetStringMemberAccessSqlFormatter(memberExpr, out formatter))
             return true;
         if (memberInfo.DeclaringType == typeof(DateTime) && this.TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out formatter))
@@ -322,6 +326,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     public virtual bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
         var methodInfo = methodCallExpr.Method;
+        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
+        if (methodCallSqlFormatterCache.TryGetValue(cacheKey, out formatter))
+            return true;
+
         if (methodInfo.DeclaringType == typeof(string) && this.TryGetStringMethodCallSqlFormatter(methodCallExpr, out formatter))
             return true;
         if (methodInfo.DeclaringType == typeof(DateTime) && this.TryGetDateTimeMethodCallSqlFormatter(methodCallExpr, out formatter))
@@ -342,7 +350,6 @@ public abstract partial class BaseOrmProvider : IOrmProvider
 
         //兜底函数解析
         var parameterInfos = methodInfo.GetParameters();
-        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
         switch (methodInfo.Name)
         {
             case "Equals":
@@ -442,7 +449,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                         FieldType = ReaderFieldType.Field,
                                         FromMember = targetSegment.FromMember,
                                         TargetMember = targetSegment.FromMember,
-                                        UnderlyingType = targetSegment.UnderlyingType,
+                                        TargetType = methodInfo.ReturnType,
                                         NativeDbType = targetSegment.NativeDbType,
                                         TypeHandler = targetSegment.TypeHandler,
                                         Body = fieldName
@@ -487,7 +494,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                         FieldType = ReaderFieldType.Field,
                                         FromMember = targetSegment.FromMember,
                                         TargetMember = targetSegment.FromMember,
-                                        UnderlyingType = targetSegment.UnderlyingType,
+                                        TargetType = methodInfo.ReturnType,
                                         NativeDbType = targetSegment.NativeDbType,
                                         TypeHandler = targetSegment.TypeHandler,
                                         Body = fieldName

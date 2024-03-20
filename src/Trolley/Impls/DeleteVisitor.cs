@@ -169,7 +169,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 sqlSegment.TableSegment = this.Tables[0];
                 sqlSegment.FromMember = memberMapper.Member;
                 sqlSegment.MemberMapper = memberMapper;
-                sqlSegment.UnderlyingType = memberMapper.UnderlyingType;
+                sqlSegment.SegmentType = memberMapper.MemberType;
                 if (memberMapper.UnderlyingType.IsEnum)
                     sqlSegment.ExpectType = memberMapper.UnderlyingType;
                 sqlSegment.NativeDbType = memberMapper.NativeDbType;
