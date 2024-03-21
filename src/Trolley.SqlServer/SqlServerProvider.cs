@@ -218,9 +218,9 @@ public partial class SqlServerProvider : BaseOrmProvider
         int cacheKey = 0;
         switch (methodInfo.Name)
         {
-            case "IfNull":
+            case "IsNull":
                 cacheKey = HashCode.Combine(typeof(Sql), methodInfo);
-                methodCallSqlFormatterCache.TryAdd(cacheKey, formatter = (visitor, orgExpr, target, deferExprs, args) =>
+                formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                     var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
@@ -228,7 +228,7 @@ public partial class SqlServerProvider : BaseOrmProvider
                     var rightArgument = visitor.GetQuotedValue(rightSegment);
                     return targetSegment.Merge(rightSegment, $"ISNULL({targetArgument},{rightArgument})", false, false, false, true);
                 });
-                break;
+                return true;
         }
         formatter = null;
         return false;

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Trolley.MySqlConnector;
 using Xunit;
 
@@ -430,7 +431,7 @@ public class UnitTest2 : UnitTestBase
             .Select((a, b, c) => new { Order = a, Buyer = b, OrderId = a.Id, a.BuyerId, c.TotalAmount })
             .ToSql(out _);
         Assert.True(sql2 == "SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`Id` AS `OrderId`,a.`BuyerId`,c.`TotalAmount` FROM `sys_order` a,`sys_user` b,(SELECT a.`Id` AS `OrderId`,SUM(b.`Amount`) AS `TotalAmount` FROM `sys_order` a,`sys_order_detail` b,`sys_user` c WHERE a.`Id`=b.`OrderId` AND a.`BuyerId`=c.`Id` AND c.`Age`>20 GROUP BY a.`Id`,a.`BuyerId` HAVING SUM(b.`Amount`)>500) c WHERE a.`BuyerId`=b.`Id` AND a.`Id`=c.`OrderId`");
-        
+
         var result2 = await repository
              .From<Order, User>()
              .WithTable(f => f.From<Order, OrderDetail, User>()
@@ -1345,7 +1346,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
         Assert.True(sql == "SELECT (CASE WHEN a.`OrderNo` IS NULL THEN 1 ELSE 0 END) AS `NoOrderNo`,(CASE WHEN a.`ProductCount` IS NOT NULL THEN 1 ELSE 0 END) AS `HasProduct` FROM `sys_order` a WHERE a.`ProductCount` IS NULL AND a.`ProductCount` IS NULL");
     }
     [Fact]
-    public void Query_WhereNull()
+    public async void Query_Where_IsNull()
     {
         using var repository = dbFactory.Create();
         var sql = repository.From<Order>()
@@ -1354,6 +1355,47 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
             .Select(x => x.Id)
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id` FROM `sys_order` a WHERE (a.`ProductCount` IS NULL OR a.`BuyerId` IS NULL) AND a.`ProductCount` IS NULL");
+        var result = repository.From<Order>()
+            .Where(x => x.ProductCount == null || x.BuyerId.IsNull())
+            .And(true, f => !f.ProductCount.HasValue)
+            .Select(x => x.Id)
+            .ToList();
+        Assert.True(result.Count > 0);
+
+        var sql1 = repository.From<Order>()
+           .Where(x => x.ProductCount.IsNull(0) > 0 || x.BuyerId.IsNull(0) >= 0)
+           .Select(f => new
+           {
+               f.Id,
+               f.OrderNo,
+               ProductCount = f.ProductCount.IsNull(0),
+               BuyerId = f.BuyerId.IsNull(0),
+               TotalAmount = f.TotalAmount.IsNull(0)
+           })
+           .ToSql(out _);
+        Assert.True(sql1 == "SELECT a.`Id`,a.`OrderNo`,IFNULL(a.`ProductCount`,0) AS `ProductCount`,IFNULL(a.`BuyerId`,0) AS `BuyerId`,IFNULL(a.`TotalAmount`,0) AS `TotalAmount` FROM `sys_order` a WHERE IFNULL(a.`ProductCount`,0)>0 OR IFNULL(a.`BuyerId`,0)>=0");
+
+        await repository.BeginTransactionAsync();
+        await repository.UpdateAsync<Order>(new { Id = "1", BuyerId = DBNull.Value });
+        await repository.UpdateAsync<Order>(new { Id = "2", ProductCount = DBNull.Value });
+        await repository.UpdateAsync<Order>(new { Id = "3", TotalAmount = DBNull.Value });
+        var result1 = repository.From<Order>()
+            .Where(x => x.ProductCount.IsNull(0) > 0 || x.BuyerId.IsNull(0) >= 0)
+            .Select(f => new
+            {
+                f.Id,
+                f.OrderNo,
+                ProductCount = f.ProductCount.IsNull(0),
+                BuyerId = f.BuyerId.IsNull(0),
+                f.TotalAmount
+            })
+            .ToList();
+        await repository.CommitAsync();
+        var myOrders = result1.FindAll(f => "1,2,3".Contains(f.Id)).OrderBy(f => f.Id).ToList();
+        Assert.True(result1.Count >= 3);
+        Assert.True(myOrders[0].BuyerId == 0);
+        Assert.True(myOrders[1].ProductCount == 0);
+        Assert.True(myOrders[2].TotalAmount == 0);
     }
     [Fact]
     public async void Query_Union()
