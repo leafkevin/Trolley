@@ -892,7 +892,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(x => x.Id == "2")
             .Execute();
-        var order = repository.Get<Order>("1");
+        var order = repository.Get<Order>("2");
         repository.Commit();
         if (result > 0)
         {

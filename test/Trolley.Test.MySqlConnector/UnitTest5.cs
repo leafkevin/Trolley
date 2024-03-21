@@ -58,9 +58,9 @@ public class UnitTest5 : UnitTestBase
         var groupedOrderInfo = await reader.ReadFirstAsync<dynamic>();
         Assert.NotNull(userInfo);
         Assert.True(userInfo.Id == 1);
-        Assert.True(orderInfo.Id == 1);
-        Assert.True(groupedOrderInfo.Id == 1);
-        Assert.True(groupedOrderInfo.Grouping.OrderId == 1);
+        Assert.True(orderInfo.Id == "1");
+        Assert.True(groupedOrderInfo.Id == "1");
+        Assert.True(groupedOrderInfo.Grouping.OrderId == "1");
     }
     [Fact]
     public async void MultipleCommand()

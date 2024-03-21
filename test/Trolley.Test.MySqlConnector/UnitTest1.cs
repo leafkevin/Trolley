@@ -715,9 +715,9 @@ public class UnitTest1 : UnitTestBase
                 UpdatedAt = x.UpdatedAt
             })
            .ExecuteAsync();
-        await repository.CommitAsync();
         var orderDetail = repository.Get<OrderDetail>("7");
         var product = repository.Get<Product>(1);
+        await repository.CommitAsync();
         Assert.NotNull(orderDetail);
         Assert.True(orderDetail.OrderId == "3");
         Assert.True(orderDetail.ProductId == 1);

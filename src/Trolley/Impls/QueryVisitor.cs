@@ -379,8 +379,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void From(Type targetType, IQuery subQueryObj)
     {
         var tableSegment = this.AddSubQueryTable(targetType, subQueryObj);
-        //更改现有的ReaderFields，新的ReaderFields字段名称会有更改
-        this.ReaderFields = tableSegment.ReaderFields;
+        if (this.ReaderFields != null)
+            this.ReaderFields = null;
     }
     public virtual void From(Type targetType, DbContext dbContext, Delegate subQueryGetter)
     {
@@ -432,8 +432,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsUseFieldAlias = false;
         this.IsUseCteTable = false;
         this.IsFromQuery = true;
+
+        //单独解析Union第二个子句，先设置IsUnion = false，以免解析错误
+        this.IsUnion = false;
         var fromQuery = new FromQuery(dbContext, this);
         var subQuery = subQueryGetter.DynamicInvoke(fromQuery);
+        this.IsUnion = true;
 
         if (subQuery is ICteQuery cteQuery)
         {
@@ -463,14 +467,18 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         //此时产生的queryObj是一个新的对象，只能用于解析sql，与传进来的queryObj不是同一个对象，舍弃
         //临时产生一个随机表名，在后面的AsCteTable时，再做替换
-        var tempTableName = $"__{Guid.NewGuid()}__";
+        var tempTableName = $"__CTE_TABLE_{Guid.NewGuid()}__";
         selfQueryObj.TableName = tempTableName;
         selfQueryObj.ReaderFields = readerFields;
         selfQueryObj.IsRecursive = true;
         this.SelfRefQueryObj = selfQueryObj;
 
+        //单独解析Union第二个子句，先设置IsUnion = false，以免解析错误
+        this.IsUnion = false;
         var fromQuery = new FromQuery(dbContext, this);
         var subQuery = subQueryGetter.DynamicInvoke(fromQuery, selfQueryObj) as IQuery;
+        this.IsUnion = true;
+
         rawSql += union + Environment.NewLine + subQuery.Visitor.BuildSql(out _);
         //sql解析完毕，不再需要selfQueryObj对象了，在CteQueries中删除selfQueryObj对象，防止最后扁平化CteQueries时无限循环引用
         this.RefQueries.Remove(selfQueryObj);
@@ -1011,8 +1019,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     var fieldName = sqlSegment.Value.ToString();
                     builder.Append(fieldName);
                     //此时，字段不能加别名，后面有可能还会有OrderBy操作，到最外层Select的时候用到Grouping时，再加别名
-                    //这里只判断必须加别名的情况，排除FromMember与memberInfo不相等的情况，在最外层Select时，memberInfo.Name可能又不一样了，所以这里不做判断
-                    var isNeedAlias = sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall;
+                    bool isNeedAlias = false;
+                    if (this.IsUseFieldAlias && (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression
+                        || sqlSegment.IsMethodCall || sqlSegment.FromMember == null || sqlSegment.FromMember.Name != memberInfo.Name))
+                        isNeedAlias = true;
                     this.GroupFields.Add(new ReaderField
                     {
                         FieldType = ReaderFieldType.Field,
@@ -1792,6 +1802,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //Union后，有加新表，要把前一个UnionSql设置完整
         this.ClearUnionSql();
         this.Tables.Add(tableSegment);
+        if (this.ReaderFields != null && !this.IsUnion)
+            this.ReaderFields = null;
         return tableSegment;
     }
     public virtual TableSegment AddTable(Type entityType, string joinType = "", TableType tableType = TableType.Entity, string body = null, List<ReaderField> readerFields = null)
@@ -1841,7 +1853,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         lambdaExpr.Body.GetParameterNames(out var parameterNames);
         if ((parameterNames == null || parameterNames.Count <= 0))
             return tableSegment;
-        //TODO:JOIN新表后要清空ReaderFields
+
         //为了实现Select之后，有的表达式计算、函数调用或是普通字段，都有可能改变了名字，为了之后select之后还可以OrderBy操作，
         //在解析字段的时候，如果ReaderFields有值说明已经select过了(Union除外)，就取ReaderFields中的字段，否则就取原表中的字段
         //有加新表操作或是Join操作就要清空ReaderFields，以免后续的解析字段时找不到字段
@@ -1895,7 +1907,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         this.Tables.Clear();
         if (isClearReaderFields)
-            this.ReaderFields?.Clear();
+            this.ReaderFields = null;
         this.WhereSql = null;
         this.TableAsStart = 'a';
 
