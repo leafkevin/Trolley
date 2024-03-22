@@ -2070,5 +2070,48 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             Assert.NotNull(result1.BuyerName);
         }
     }
+    [Fact]
+    public void SelectAfterOrderBy()
+    {
+        using var repository = dbFactory.Create();
+        var sql = repository.From<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
+            .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, BuyerName = b.Name, BuyerAge = b.Age })
+            .Select((x, a, b, c) => new
+            {
+                x.Grouping.BuyerId,
+                x.Grouping.OrderId,
+                x.Grouping.BuyerName,
+                x.Grouping.BuyerAge,
+                ProductCount = x.CountDistinct(c.ProductId),
+                LastBuyAt = x.Max(b.CreatedAt).IsNull(a.CreatedAt)
+            })
+            .OrderByDescending(f => f.LastBuyAt)
+            .ToSql(out _);
+        Assert.True(sql == "SELECT a.`BuyerId`,a.`Id` AS `OrderId`,b.`Name` AS `BuyerName`,b.`Age` AS `BuyerAge`,COUNT(DISTINCT c.`ProductId`) AS `ProductCount`,IFNULL(MAX(b.`CreatedAt`),a.`CreatedAt`) AS `LastBuyAt` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` LEFT JOIN `sys_order_detail` c ON a.`Id`=c.`OrderId` GROUP BY a.`BuyerId`,a.`Id`,b.`Name`,b.`Age` ORDER BY IFNULL(MAX(b.`CreatedAt`),a.`CreatedAt`) DESC");
+
+        var result = repository.From<Order>()
+           .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+           .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
+           .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, BuyerName = b.Name, BuyerAge = b.Age })
+           .Select((x, a, b, c) => new
+           {
+               x.Grouping.BuyerId,
+               x.Grouping.OrderId,
+               x.Grouping.BuyerName,
+               x.Grouping.BuyerAge,
+               ProductCount = x.CountDistinct(c.ProductId),
+               LastBuyAt = x.Max(b.CreatedAt).IsNull(a.CreatedAt)
+           })
+           .OrderByDescending(f => f.LastBuyAt)
+           .ToList();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
+        if (result.Count > 1)
+        {
+            Assert.True(result[0].LastBuyAt >= result[1].LastBuyAt);
+        }
+    }
     private string DeferInvoke() => "DeferInvoke";
 }

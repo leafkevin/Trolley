@@ -25,7 +25,11 @@ public enum TableType : byte
     /// <summary>
     /// CTE表自身引用，此时IsMaster=false
     /// </summary>
-    CteSelfRef
+    CteSelfRef,
+    /// <summary>
+    /// 临时的ReaderFields包装表，只能取ReaderFields栏位使用
+    /// </summary>
+    TempReaderFields
 }
 public class TableSegment
 {

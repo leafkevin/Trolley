@@ -1621,8 +1621,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             sqlSegment.ExpectType = underlyingType;
                         sqlSegment.NativeDbType = readerField.NativeDbType;
                         sqlSegment.TypeHandler = readerField.TypeHandler;
-                        fieldName = this.OrmProvider.GetFieldName(memberExpr.Member.Name);
-                        if (this.IsNeedTableAlias) fieldName = fromSegment.AliasName + "." + fieldName;
+                        if (fromSegment.TableType == TableType.TempReaderFields)
+                            fieldName = readerField.Body;
+                        else
+                        {
+                            fieldName = this.OrmProvider.GetFieldName(memberExpr.Member.Name);
+                            if (this.IsNeedTableAlias) fieldName = fromSegment.AliasName + "." + fieldName;
+                        }
                         sqlSegment.Value = fieldName;
                     }
                 }
@@ -1861,7 +1866,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             this.TableAliases.Add(parameterNames[0], tableSegment = new TableSegment
             {
-                TableType = TableType.FromQuery,
+                TableType = TableType.TempReaderFields,
                 ReaderFields = this.ReaderFields,
             });
             return tableSegment;
