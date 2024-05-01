@@ -119,6 +119,7 @@ public class EntityMap
         if (this.memberMaps.Count > 0)
         {
             this.KeyMembers ??= new List<MemberMap>();
+            this.memberMappers.Sort((x, y) => x.Position.CompareTo(y.Position));
             foreach (var memberMapper in this.memberMappers)
             {
                 if (!memberMapper.IsKey) continue;

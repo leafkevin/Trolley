@@ -50,19 +50,21 @@ class MySqlProvider : DbHelper
     }
     public List<ColumnInfo> GetColumnList(string database, string tableName)
     {
-        var sql = @"SELECT A.COLUMN_NAME,
-				           A.DATA_TYPE,
-					       A.COLUMN_TYPE,
-				           A.CHARACTER_MAXIMUM_LENGTH,
-				           A.NUMERIC_SCALE,
-				           A.NUMERIC_PRECISION,
-				           A.COLUMN_COMMENT,
-				           A.COLUMN_DEFAULT,
-				           A.COLUMN_KEY,
-				           A.EXTRA,
-				           A.IS_NULLABLE
-				       FROM INFORMATION_SCHEMA.COLUMNS A
-				       WHERE A.TABLE_SCHEMA='{0}' AND A.TABLE_NAME='{1}'";
+        var sql = @"SELECT a.COLUMN_NAME,
+				           a.DATA_TYPE,
+					       a.COLUMN_TYPE,
+				           a.CHARACTER_MAXIMUM_LENGTH,
+				           a.NUMERIC_SCALE,
+				           a.NUMERIC_PRECISION,
+				           a.COLUMN_COMMENT,
+				           a.COLUMN_DEFAULT,
+				           a.COLUMN_KEY,
+				           a.EXTRA,
+				           a.IS_NULLABLE,
+                           a.ORDINAL_POSITION
+				       FROM INFORMATION_SCHEMA.COLUMNS a
+				       WHERE a.TABLE_SCHEMA='{0}' AND a.TABLE_NAME='{1}'
+                       ORDER BY a.ORDINAL_POSITION";
 
         sql = String.Format(sql, database, tableName);
         var result = new List<ColumnInfo>();
@@ -84,7 +86,8 @@ class MySqlProvider : DbHelper
                 DefaultValue = this.ToValue<string>(reader[7]),
                 IsPrimaryKey = this.ToValue<string>(reader[8]) == "PRI",
                 IsIdentity = this.ToValue<string>(reader[9]).Contains("auto_increment"),
-                IsNullable = this.ToValue<string>(reader[10]) == "YES"
+                IsNullable = this.ToValue<string>(reader[10]) == "YES",
+                Position = this.ToValue<int>(reader[11])
             });
         }
         reader.Close();

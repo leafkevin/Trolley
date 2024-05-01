@@ -62,7 +62,7 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
 {
     #region Fields
     private int? offset;
-    private int pageIndex;
+    private int pageNumber;
     private int pageSize;
     #endregion
 
@@ -346,7 +346,7 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         if (this.pageSize > 0)
         {
             var pageIndex = (int)Math.Ceiling((double)this.offset.Value / this.pageSize);
-            this.Visitor.Page(pageIndex, this.pageSize);
+            this.Visitor.Page(pageIndex + 1, this.pageSize);
         }
         else this.Visitor.Skip(offset);
         return this;
@@ -357,16 +357,16 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         if (this.offset.HasValue)
         {
             var pageIndex = (int)Math.Ceiling((double)this.offset.Value / limit);
-            this.Visitor.Page(pageIndex, limit);
+            this.Visitor.Page(pageIndex + 1, limit);
         }
         else this.Visitor.Take(limit);
         return this;
     }
-    public IMultiQuery<T> Page(int pageIndex, int pageSize)
+    public IMultiQuery<T> Page(int pageNumber, int pageSize)
     {
-        this.pageIndex = pageIndex;
+        this.pageNumber = pageNumber;
         this.pageSize = pageSize;
-        this.Visitor.Page(pageIndex, pageSize);
+        this.Visitor.Page(pageNumber, pageSize);
         return this;
     }
     #endregion
@@ -462,7 +462,7 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         IQueryVisitor queryVisitor = null;
         if (this.Visitor.HasIncludeTables())
             queryVisitor = this.Visitor;
-        this.MultipleQuery.AddReader(targetType, sql, readerGetter, queryVisitor, this.pageIndex, this.pageSize);
+        this.MultipleQuery.AddReader(targetType, sql, readerGetter, queryVisitor, this.pageNumber, this.pageSize);
         return this.MultipleQuery;
     }
     #endregion

@@ -549,12 +549,12 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> Take(int limit);
     /// <summary>
-    /// 分页查询
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
     /// </summary>
-    /// <param name="pageIndex">第几页索引，从1开始</param>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
     /// <param name="pageSize">每页显示条数</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> Page(int pageIndex, int pageSize);
+    IQuery<T> Page(int pageNumber, int pageSize);
     #endregion
 
     #region Select

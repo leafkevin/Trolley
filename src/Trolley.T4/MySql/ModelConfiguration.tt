@@ -58,8 +58,9 @@ class ModelConfiguration : IModelConfiguration
     {
         var propertyName = columnInfo.ColumnName;
         var nativeDbType = dbProvider.MapNativeDbType(columnInfo);
+        var position = columnInfo.Position;
 #>
-            f.Member(t => t.<#=propertyName#>).Field(nameof(<#=className#>.<#=propertyName#>)).NativeDbType(<#=nativeDbType#>)<#
+            f.Member(t => t.<#=propertyName#>).Field(nameof(<#=className#>.<#=propertyName#>)).NativeDbType(<#=nativeDbType#>).Position(<#=position#>)<#
         if(columnInfo.IsIdentity)
         {
             #>.AutoIncrement()<#      

@@ -105,6 +105,50 @@ public class Create<TEntity> : ICreate<TEntity>
         return this.OrmProvider.NewFromCommand<TTarget>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     #endregion
+
+    #region ExecuteBulkCopy
+    public virtual int ExecuteBulkCopy(IEnumerable<TEntity> insertObjs, int? bulkCopyTimeout = null) => 0;
+    public virtual Task<int> ExecuteBulkCopyAsync(IEnumerable<TEntity> insertObjs, int? bulkCopyTimeout = null, CancellationToken cancellationToken = default) => Task.FromResult(0);
+    #endregion
+
+    #region ToDataTable
+    public DataTable ToDataTable(IEnumerable<TEntity> insertObjs)
+    {
+        var result = new DataTable();
+        var entityMapper = this.Visitor.MapProvider.GetEntityMap(typeof(TEntity));
+        result.TableName = this.Visitor.OrmProvider.GetTableName(entityMapper.TableName);
+        var colMappers = new List<MemberMap>();
+        foreach (var memberMapper in entityMapper.MemberMaps)
+        {
+            if (memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.IsAutoIncrement
+                || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                continue;
+            var nativeType = memberMapper.UnderlyingType;
+            if ((!memberMapper.MemberType.IsValueType && memberMapper.MemberType != typeof(string)
+                || memberMapper.MemberType.IsEntityType(out _)) && memberMapper.TypeHandler != null)
+                nativeType = this.Visitor.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
+            result.Columns.Add(memberMapper.FieldName, nativeType);
+            colMappers.Add(memberMapper);
+        }
+        foreach (var entity in insertObjs)
+        {
+            var row = new object[colMappers.Count];
+            for (var i = 0; i < colMappers.Count; i++)
+            {
+                var colMapper = colMappers[i];
+                var colValue = colMapper.Member.Evaluate(entity);
+                if (colValue == null && colMapper.MemberType.IsNullableType(out _))
+                    colValue = DBNull.Value;
+                else if ((!colMapper.MemberType.IsValueType && colMapper.MemberType != typeof(string)
+                    || colMapper.MemberType.IsEntityType(out _)) && colMapper.TypeHandler != null)
+                    colValue = colMapper.TypeHandler.ToFieldValue(this.Visitor.OrmProvider, colMapper.UnderlyingType, colValue);
+                row[i] = colValue;
+            }
+            result.Rows.Add(row);
+        }
+        return result;
+    }
+    #endregion
 }
 public class Created<TEntity> : ICreated<TEntity>
 {

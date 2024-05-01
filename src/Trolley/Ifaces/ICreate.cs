@@ -61,7 +61,12 @@ public interface ICreate<TEntity>
     IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>();
     IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>();
     IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>();
-    #endregion  
+    #endregion
+
+    #region ExecuteBulkCopy
+    int ExecuteBulkCopy(IEnumerable<TEntity> insertObjs, int? timeoutSeconds = null);
+    Task<int> ExecuteBulkCopyAsync(IEnumerable<TEntity> insertObjs, int? timeoutSeconds = null, CancellationToken cancellationToken = default);
+    #endregion
 }
 /// <summary>
 /// 插入数据

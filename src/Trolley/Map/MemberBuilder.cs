@@ -42,6 +42,11 @@ public class MemberBuilder<TMember>
         this.mapper.IsRequired = isRequired;
         return this;
     }
+    public virtual MemberBuilder<TMember> Position(int position)
+    {
+        this.mapper.Position = position;
+        return this;
+    }
     public virtual MemberBuilder<TMember> TypeHandler(ITypeHandler typeHandler)
     {
         if (typeHandler == null)

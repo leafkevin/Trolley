@@ -10,7 +10,7 @@ class ModelConfiguration : IModelConfiguration
     {
         builder.Entity<User>(f =>
         {
-            f.ToTable("sys_user").Key(t => t.Id).UseSharding(s => s.Id, (origName, id) => $"{origName}_{id}",true);
+            f.ToTable("sys_user").Key(t => t.Id).UseSharding(s => s.Id, (origName, id) => $"{origName}_{id}", true);
             f.Member(t => t.Id).Field(nameof(User.Id)).NativeDbType(MySqlDbType.Int32).Required();
             f.Member(t => t.Name).Field(nameof(User.Name)).NativeDbType(MySqlDbType.VarChar);
             f.Member(t => t.Gender).Field(nameof(User.Gender)).NativeDbType(MySqlDbType.UByte);

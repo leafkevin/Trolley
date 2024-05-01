@@ -45,7 +45,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public bool IsUseFieldAlias { get; set; } = true;
     public bool IsUseCteTable { get; set; } = true;
     public ICteQuery SelfRefQueryObj { get; set; }
-    public int PageIndex { get; set; }
+    public int PageNumber { get; set; }
     public int PageSize { get; set; }
 
     public QueryVisitor(IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
@@ -638,7 +638,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         reader.NextResult();
     }
-    public async Task SetIncludeValuesAsync<TTarget>(Type targetType, TTarget target, DbDataReader reader, CancellationToken cancellationToken)
+    public async Task SetIncludeValuesAsync<TTarget>(Type targetType, TTarget target, DbDataReader reader, CancellationToken cancellationToken = default)
     {
         var deferredInitializers = new List<(object IncludeValues, Action<object> SetIncludeValues)>();
         foreach (var includeSegment in this.IncludeSegments)
@@ -692,7 +692,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         reader.NextResult();
     }
-    public virtual async Task SetIncludeValueAsync<TTarget>(Type targetType, List<TTarget> targets, DbDataReader reader, CancellationToken cancellationToken)
+    public virtual async Task SetIncludeValueAsync<TTarget>(Type targetType, List<TTarget> targets, DbDataReader reader, CancellationToken cancellationToken = default)
     {
         var deferredInitializers = new List<(object IncludeValues, Action<object> SetIncludeValues)>();
         foreach (var includeSegment in this.IncludeSegments)
@@ -1314,11 +1314,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         return true;
     }
     public virtual void Distinct() => this.IsDistinct = true;
-    public virtual void Page(int pageIndex, int pageSize)
+    public virtual void Page(int pageNumber, int pageSize)
     {
-        this.PageIndex = pageIndex;
+        this.PageNumber = pageNumber;
         this.PageSize = pageSize;
-        this.skip = pageIndex * pageSize;
+        if (pageNumber > 0) pageNumber--;
+        this.skip = pageNumber * pageSize;
         this.limit = pageSize;
         this.ClearUnionSql();
     }

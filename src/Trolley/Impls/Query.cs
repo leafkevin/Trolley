@@ -97,7 +97,6 @@ public class Query<T> : QueryBase, IQuery<T>
 {
     #region Fields
     private int? offset;
-    private int pageIndex;
     private int pageSize;
     #endregion
 
@@ -422,7 +421,7 @@ public class Query<T> : QueryBase, IQuery<T>
         if (this.pageSize > 0)
         {
             var pageIndex = (int)Math.Ceiling((double)this.offset.Value / this.pageSize);
-            this.Visitor.Page(pageIndex, this.pageSize);
+            this.Visitor.Page(pageIndex + 1, this.pageSize);
         }
         else this.Visitor.Skip(offset);
         return this;
@@ -433,16 +432,15 @@ public class Query<T> : QueryBase, IQuery<T>
         if (this.offset.HasValue)
         {
             var pageIndex = (int)Math.Ceiling((double)this.offset.Value / limit);
-            this.Visitor.Page(pageIndex, limit);
+            this.Visitor.Page(pageIndex + 1, limit);
         }
         else this.Visitor.Take(limit);
         return this;
     }
-    public virtual IQuery<T> Page(int pageIndex, int pageSize)
+    public virtual IQuery<T> Page(int pageNumber, int pageSize)
     {
-        this.pageIndex = pageIndex;
         this.pageSize = pageSize;
-        this.Visitor.Page(pageIndex, pageSize);
+        this.Visitor.Page(pageNumber, pageSize);
         return this;
     }
     #endregion

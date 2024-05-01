@@ -241,7 +241,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
     #endregion
 
     #region AddReader/BuildSql
-    public void AddReader(Type targetType, string sql, Func<IDataReader, object> readerGetter, IQueryVisitor queryVisitor = null, int pageIndex = 0, int pageSize = 0)
+    public void AddReader(Type targetType, string sql, Func<IDataReader, object> readerGetter, IQueryVisitor queryVisitor = null, int pageNumber = 0, int pageSize = 0)
     {
         if (this.sqlBuilder.Length > 0)
             this.sqlBuilder.Append(';');
@@ -251,7 +251,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
             TargetType = targetType,
             ReaderGetter = readerGetter,
             QueryVisitor = queryVisitor,
-            PageIndex = pageIndex,
+            PageNumber = pageNumber,
             PageSize = pageSize
         });
     }
@@ -285,6 +285,6 @@ public class ReaderAfter
     public Type TargetType { get; set; }
     public Func<IDataReader, object> ReaderGetter { get; set; }
     public IQueryVisitor QueryVisitor { get; set; }
-    public int PageIndex { get; set; }
+    public int PageNumber { get; set; }
     public int PageSize { get; set; }
 }

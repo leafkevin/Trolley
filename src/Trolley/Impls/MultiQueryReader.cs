@@ -62,15 +62,16 @@ class MultiQueryReader : IMultiQueryReader
         {
             dataList.Add((T)readerAfter.ReaderGetter.Invoke(this.reader));
         }
-        var pageIndex = readerAfter.PageIndex;
+        var pageNumber = readerAfter.PageNumber;
         var pageSize = readerAfter.PageSize;
         this.NextReader(readerAfter, dataList);
 
         return new PagedList<T>
         {
             Data = dataList,
+            Count = dataList.Count,
             TotalCount = totalCount,
-            PageIndex = pageIndex,
+            PageNumber = pageNumber,
             PageSize = pageSize
         };
     }
@@ -119,7 +120,7 @@ class MultiQueryReader : IMultiQueryReader
         {
             Data = dataList,
             TotalCount = totalCount,
-            PageIndex = pageIndex,
+            PageNumber = pageIndex,
             PageSize = pageSize
         };
     }
@@ -151,13 +152,13 @@ class MultiQueryReader : IMultiQueryReader
         }
         if (isPaged)
         {
-            pageIndex = readerAfter.PageIndex;
+            pageIndex = readerAfter.PageNumber;
             pageSize = readerAfter.PageSize;
         }
         this.NextReader(readerAfter, dataList);
         return (pageIndex, pageSize);
     }
-    private async Task<(int, int)> ReadListAsync<T>(List<T> dataList, bool isPaged, CancellationToken cancellationToken)
+    private async Task<(int, int)> ReadListAsync<T>(List<T> dataList, bool isPaged, CancellationToken cancellationToken = default)
     {
         int pageIndex = 0;
         int pageSize = 0;
@@ -170,7 +171,7 @@ class MultiQueryReader : IMultiQueryReader
         }
         if (isPaged)
         {
-            pageIndex = readerAfter.PageIndex;
+            pageIndex = readerAfter.PageNumber;
             pageSize = readerAfter.PageSize;
         }
         await this.NextReaderAsync(readerAfter, dataList, cancellationToken);
@@ -265,7 +266,7 @@ class MultiQueryReader : IMultiQueryReader
         }
         else this.Dispose();
     }
-    private async Task NextReaderAsync(ReaderAfter readerAfter, object target, CancellationToken cancellationToken)
+    private async Task NextReaderAsync(ReaderAfter readerAfter, object target, CancellationToken cancellationToken = default)
     {
         var visitor = readerAfter.QueryVisitor;
         if (visitor != null && visitor.BuildIncludeSql(readerAfter.TargetType, target, out var sql))

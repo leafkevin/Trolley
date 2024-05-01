@@ -27,7 +27,7 @@ public interface IQueryVisitor : IDisposable
     bool IsUseFieldAlias { get; set; }
     bool IsUseCteTable { get; set; }
     char TableAsStart { get; set; }
-    int PageIndex { get; set; }
+    int PageNumber { get; set; }
     int PageSize { get; set; }
     /// <summary>
     /// 解析子查询时，父亲查询的TableAliases
@@ -72,7 +72,7 @@ public interface IQueryVisitor : IDisposable
     void SelectFlattenTo(Type targetType, Expression specialMemberSelector = null);
 
     void Distinct();
-    void Page(int pageIndex, int pageSize);
+    void Page(int pageNumber, int pageSize);
     void Skip(int skip);
     void Take(int limit);
 

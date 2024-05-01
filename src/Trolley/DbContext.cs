@@ -85,7 +85,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         if (exception != null) throw exception;
         return result;
     }
-    public async Task<TResult> QueryFirstAsync<TResult>(Action<IDbCommand> commandInitializer, CancellationToken cancellationToken)
+    public async Task<TResult> QueryFirstAsync<TResult>(Action<IDbCommand> commandInitializer, CancellationToken cancellationToken = default)
     {
         using var command = this.CreateDbCommand();
         TResult result = default;
@@ -269,7 +269,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         if (exception != null) throw exception;
         return result;
     }
-    public async Task<List<TResult>> QueryAsync<TResult>(Action<IDbCommand> commandInitializer, CancellationToken cancellationToken)
+    public async Task<List<TResult>> QueryAsync<TResult>(Action<IDbCommand> commandInitializer, CancellationToken cancellationToken = default)
     {
         using var command = this.CreateDbCommand();
         var result = new List<TResult>();
@@ -451,7 +451,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             var behavior = CommandBehavior.SequentialAccess;
             reader = command.ExecuteReader(behavior);
             if (reader.Read()) result.TotalCount = reader.To<int>(this.OrmProvider);
-            result.PageIndex = visitor.PageIndex;
+            result.PageNumber = visitor.PageNumber;
             result.PageSize = visitor.PageSize;
 
             reader.NextResult();
@@ -470,6 +470,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     result.Data.Add(reader.To<TResult>(this.OrmProvider));
                 }
             }
+            result.Count = result.Data.Count;
             if (visitor.BuildIncludeSql(entityType, result.Data, out var sql))
             {
                 reader.Dispose();
@@ -513,7 +514,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             var behavior = CommandBehavior.SequentialAccess;
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             if (await reader.ReadAsync()) result.TotalCount = reader.To<int>(this.OrmProvider);
-            result.PageIndex = visitor.PageIndex;
+            result.PageNumber = visitor.PageNumber;
             result.PageSize = visitor.PageSize;
 
             await reader.NextResultAsync(cancellationToken);
@@ -532,6 +533,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     result.Data.Add(reader.To<TResult>(this.OrmProvider));
                 }
             }
+            result.Count = result.Data.Count;
             if (visitor.BuildIncludeSql(entityType, result.Data, out var sql))
             {
                 await reader.DisposeAsync();
@@ -669,7 +671,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         if (exception != null) throw exception;
         return result;
     }
-    public async Task<TResult> CreateIdentityAsync<TResult>(Action<IDbCommand> commandInitializer, CancellationToken cancellationToken)
+    public async Task<TResult> CreateIdentityAsync<TResult>(Action<IDbCommand> commandInitializer, CancellationToken cancellationToken = default)
     {
         using var command = this.CreateDbCommand();
         TResult result = default;
@@ -728,7 +730,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         if (exception != null) throw exception;
         return result;
     }
-    public async Task<int> ExecuteAsync(Action<IDbCommand> commandInitializer, CancellationToken cancellationToken)
+    public async Task<int> ExecuteAsync(Action<IDbCommand> commandInitializer, CancellationToken cancellationToken = default)
     {
         using var command = this.CreateDbCommand();
         int result = 0;
@@ -770,7 +772,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             this.Connection.Open();
         }
     }
-    public async Task OpenAsync(CancellationToken cancellationToken)
+    public async Task OpenAsync(CancellationToken cancellationToken = default)
     {
         if (this.Connection == null)
             this.Connection = this.OrmProvider.CreateConnection(this.ConnectionString);

@@ -126,7 +126,8 @@ public class UnitTest2 : UnitTestBase
         Assert.NotNull(result);
         Assert.NotEmpty(result.Data);
         Assert.True(result.TotalCount == count);
-        Assert.True(result.Data.Count == 1);
+        Assert.True(result.Data.Count == result.Count);
+        Assert.True(result.Count == 1);
     }
     [Fact]
     public async void QueryDictionary()
@@ -730,7 +731,9 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         Assert.NotNull(result);
         Assert.NotEmpty(result.Data);
         Assert.True(result.TotalCount == count);
-        Assert.True(result.Data.Count == 1);
+        Assert.True(result.Data.Count == result.Count);
+        Assert.True(result.Count == 1);
+        Assert.NotEmpty(result.Data);
         Assert.NotNull(result.Data[0].Product);
         Assert.True(result.Data[0].Product.Id == 1);
     }

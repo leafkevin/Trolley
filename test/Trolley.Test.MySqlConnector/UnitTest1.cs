@@ -2,6 +2,7 @@
 using MySqlConnector;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Trolley.MySqlConnector;
 using Xunit;
 
@@ -15,7 +16,7 @@ public class UnitTest1 : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<MySqlProvider>("fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true)
+            .Register<MySqlProvider>("fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", true)
             .Configure<MySqlProvider, ModelConfiguration>();
             return builder.Build();
         });
@@ -1106,5 +1107,46 @@ public class UnitTest1 : UnitTestBase
         Assert.True(count == 2);
         Assert.True(order.TotalAmount == 600);
         Assert.True(new JsonTypeHandler().ToFieldValue(null, null, order.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, null, new List<int> { 1, 2 }).ToString());
+    }
+    [Fact]
+    public async void Insert_BulkCopy()
+    {
+        using var repository = dbFactory.Create();
+        var orders = new List<Order>();
+        for (int i = 1000; i < 2000; i++)
+        {
+            orders.Add(new Order
+            {
+                Id = $"ON_{i + 1}",
+                TenantId = "3",
+                OrderNo = $"ON-{i + 1}",
+                BuyerId = 1,
+                SellerId = 2,
+                TotalAmount = 500,
+                Products = new List<int> { 1, 2 },
+                Disputes = new Dispute
+                {
+                    Id = i + 1,
+                    Content = "无良商家",
+                    Result = "同意退款",
+                    Users = "Buyer2,Seller2",
+                    CreatedAt = DateTime.Now
+                },
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            });
+        }
+        var removeIds = orders.Select(f => f.Id).ToList();
+        await repository.BeginTransactionAsync();
+        await repository.Delete<Order>()
+            .Where(f => removeIds.Contains(f.Id))
+            .ExecuteAsync();
+        var count = await repository.Create<Order>()
+            .ExecuteBulkCopyAsync(orders);
+        await repository.CommitAsync();
+        Assert.True(count == orders.Count);
     }
 }
