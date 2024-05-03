@@ -119,7 +119,7 @@ public class EntityMap
         if (this.memberMaps.Count > 0)
         {
             this.KeyMembers ??= new List<MemberMap>();
-            this.memberMappers.Sort((x, y) => x.Position.CompareTo(y.Position));
+            //生成在配置代码的时候就尽力排好序，不排序也可以，此处排序反而还错了      
             foreach (var memberMapper in this.memberMappers)
             {
                 if (!memberMapper.IsKey) continue;

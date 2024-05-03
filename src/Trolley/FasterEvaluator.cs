@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
@@ -8,6 +9,9 @@ namespace Trolley;
 
 public static class FasterEvaluator
 {
+    private static ConcurrentDictionary<int, Func<object, object>> memberGetterCache = new();
+    private static ConcurrentDictionary<int, Action<object, object>> memberSetterCache = new();
+
     public static object Evaluate(this Expression expression, object target = null)
     {
         return expression switch
@@ -86,10 +90,10 @@ public static class FasterEvaluator
     {
         return member switch
         {
-            FieldInfo fieldInfo => fieldInfo.GetValue(obj),
-            PropertyInfo propertyInfo => propertyInfo.GetValue(obj),
+            FieldInfo fieldInfo => EvaluateAndCache(obj, fieldInfo),
+            PropertyInfo propertyInfo => EvaluateAndCache(obj, propertyInfo),
             MethodInfo methodInfo => methodInfo.Invoke(obj, parameters),
-            _ => null
+            _ => throw new NotSupportedException($"不支持的成员访问，只支持字段、属性、方法访问，obj:{obj}")
         };
     }
     public static object Evaluate(this MemberBinding member)
@@ -100,9 +104,79 @@ public static class FasterEvaluator
     }
     static void SetValue(this MemberInfo member, object obj, object value)
     {
-        if (member is FieldInfo fieldInfo)
-            fieldInfo.SetValue(obj, value);
-        else if (member is PropertyInfo propertyInfo)
-            propertyInfo.SetValue(obj, value);
+        if (member is not FieldInfo && member is not PropertyInfo)
+            throw new NotSupportedException($"不支持的成员访问，只支持字段、属性访问，obj:{obj}");
+        SetValueAndCache(obj, member, value);
+    }
+    public static object EvaluateAndCache(object entity, MemberInfo memberInfo)
+    {
+        var type = memberInfo.DeclaringType;
+        var cacheKey = HashCode.Combine(type, memberInfo);
+        var memberGetter = memberGetterCache.GetOrAdd(cacheKey, f =>
+        {
+            Expression valueExpr;
+            var objExpr = Expression.Parameter(typeof(object), "obj");
+            if (memberInfo is FieldInfo fieldInfo)
+            {
+                if (fieldInfo.IsStatic) valueExpr = Expression.Field(null, fieldInfo);
+                else
+                {
+                    var typedObjExpr = Expression.Convert(objExpr, type);
+                    valueExpr = Expression.Field(typedObjExpr, fieldInfo);
+                }
+            }
+            else if (memberInfo is PropertyInfo propertyInfo)
+            {
+                var methodInfo = propertyInfo.GetGetMethod();
+                if (methodInfo.IsStatic) valueExpr = Expression.Call(methodInfo);
+                else
+                {
+                    var typedObjExpr = Expression.Convert(objExpr, type);
+                    valueExpr = Expression.Call(typedObjExpr, methodInfo);
+                }
+            }
+            else throw new NotSupportedException("不支持的成员访问");
+            if (valueExpr.Type != typeof(object))
+                valueExpr = Expression.Convert(valueExpr, typeof(object));
+            return Expression.Lambda<Func<object, object>>(valueExpr, objExpr).Compile();
+        });
+        return memberGetter.Invoke(entity);
+    }
+    public static void SetValueAndCache(object entity, MemberInfo memberInfo, object value)
+    {
+        var type = memberInfo.DeclaringType;
+        var cacheKey = HashCode.Combine(type, memberInfo);
+        var memberSetter = memberSetterCache.GetOrAdd(cacheKey, f =>
+        {
+            Expression bodyExpr = null;
+            var objExpr = Expression.Parameter(typeof(object), "obj");
+            var valueExpr = Expression.Parameter(typeof(object), "value");
+            if (memberInfo is FieldInfo fieldInfo)
+            {
+                var typedValueExpr = Expression.Convert(valueExpr, fieldInfo.FieldType);
+                if (fieldInfo.IsStatic)
+                    bodyExpr = Expression.Assign(Expression.Field(null, fieldInfo), typedValueExpr);
+                else
+                {
+                    var typedObjExpr = Expression.Convert(objExpr, type);
+                    bodyExpr = Expression.Assign(Expression.Field(typedObjExpr, fieldInfo), typedValueExpr);
+                }
+            }
+            else if (memberInfo is PropertyInfo propertyInfo)
+            {
+                var methodInfo = propertyInfo.GetSetMethod();
+                var typedValueExpr = Expression.Convert(valueExpr, propertyInfo.PropertyType);
+                if (methodInfo.IsStatic)
+                    bodyExpr = Expression.Call(methodInfo, typedValueExpr);
+                else
+                {
+                    var typedObjExpr = Expression.Convert(objExpr, type);
+                    bodyExpr = Expression.Call(typedObjExpr, methodInfo, typedValueExpr);
+                }
+            }
+            else throw new NotSupportedException("不支持的成员访问");
+            return Expression.Lambda<Action<object, object>>(bodyExpr, objExpr, valueExpr).Compile();
+        });
+        memberSetter.Invoke(entity, value);
     }
 }
