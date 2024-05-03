@@ -20,7 +20,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public List<string> OnlyFieldNames { get; set; }
     public List<string> IgnoreFieldNames { get; set; }
     public List<FieldsSegment> InsertFields { get; set; } = new();
-    public bool IsBulk { get; set; }
+    public ActionMode ActionMode { get; set; }
     public bool IsReturnIdentity { get; set; }
     public bool IsUseCte { get; set; }
 
@@ -62,12 +62,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 case "WithByField":
                     this.VisitWithByField(deferredSegment.Value);
                     break;
-                case "WithBulk":
-                    this.IsBulk = true;
-                    continue;
             }
         }
-        if (this.IsBulk)
+        if (this.ActionMode == ActionMode.Bulk)
             sql = this.BuildMultiBulkSql(command);
         if (sql == null) sql = this.BuildSql();
         return sql;
@@ -132,6 +129,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual void WithBy(object insertObj)
     {
+        this.ActionMode = ActionMode.Single;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "WithBy",
@@ -140,19 +138,20 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual void WithByField(Expression fieldSelector, object fieldValue)
     {
+        this.ActionMode = ActionMode.Single;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "WithByField",
             Value = (fieldSelector, fieldValue)
         });
     }
-    public virtual void WithBulk(object insertObjs, int bulkCount)
+    public virtual void WithBulk(IEnumerable insertObjs, int bulkCount)
     {
-        this.IsBulk = true;
+        this.ActionMode = ActionMode.Bulk;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "WithBulk",
-            Value = (insertObjs as IEnumerable, bulkCount)
+            Value = (insertObjs, bulkCount)
         });
     }
     public virtual void IgnoreFields(string[] fieldNames)
@@ -266,6 +265,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             return (insertObjs, bulkCount, headSqlSetter, commandInitializer);
         }
     }
+    public virtual (IEnumerable, int?) BuildWithBulkCopy() => ((IEnumerable, int?))this.deferredSegments[0].Value;
     public virtual void VisitWithBy(object insertObj)
     {
         var entityType = this.Tables[0].EntityType;

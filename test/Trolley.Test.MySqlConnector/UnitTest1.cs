@@ -1145,7 +1145,8 @@ public class UnitTest1 : UnitTestBase
             .Where(f => removeIds.Contains(f.Id))
             .ExecuteAsync();
         var count = await repository.Create<Order>()
-            .ExecuteBulkCopyAsync(orders);
+            .WithBulkCopy(orders)
+            .ExecuteAsync();
         await repository.CommitAsync();
         Assert.True(count == orders.Count);
     }

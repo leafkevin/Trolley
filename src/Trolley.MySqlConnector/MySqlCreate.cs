@@ -1,10 +1,6 @@
-﻿using System.Collections;
-using System.Threading.Tasks;
-using System.Threading;
-using System.Data;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using MySqlConnector;
-using System;
 
 namespace Trolley.MySqlConnector;
 
@@ -45,76 +41,17 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
     }
     #endregion
 
-    #region ExecuteBulkCopy
-    public override int ExecuteBulkCopy(IEnumerable<TEntity> insertObjs, int? bulkCopyTimeout = null)
+    #region WithBulkCopy
+    public IMySqlCreated<TEntity> WithBulkCopy(IEnumerable<TEntity> insertObjs, int? timeoutSeconds = null)
     {
-        var dataTable = this.ToDataTable(insertObjs);
-        if (dataTable.Rows.Count == 0) return 0;
+        if (insertObjs == null)
+            throw new ArgumentNullException(nameof(insertObjs));
 
-        int result = 0;
-        bool isNeedClose = false;
-        Exception exception = null;
-        try
-        {
-            this.DbContext.Open();
-            var connection = this.DbContext.Connection as MySqlConnection;
-            var transaction = this.DbContext.Transaction as MySqlTransaction;
-            var bulkCopy = new MySqlBulkCopy(connection, transaction);
-            if (bulkCopyTimeout.HasValue) bulkCopy.BulkCopyTimeout = bulkCopyTimeout.Value;
-            bulkCopy.DestinationTableName = dataTable.TableName;
-            for (int i = 0; i < dataTable.Columns.Count; i++)
-            {
-                bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
-            }
-            var bulkCopyResult = bulkCopy.WriteToServer(dataTable);
-            result = bulkCopyResult.RowsInserted;
-        }
-        catch (Exception ex)
-        {
-            isNeedClose = true;
-            exception = ex;
-        }
-        finally
-        {
-            if (isNeedClose) this.DbContext.Close();
-        }
-        if (exception != null) throw exception;
-        return result;
-    }
-    public async override Task<int> ExecuteBulkCopyAsync(IEnumerable<TEntity> insertObjs, int? bulkCopyTimeout = null, CancellationToken cancellationToken = default)
-    {
-        var dataTable = this.ToDataTable(insertObjs);
-        if (dataTable.Rows.Count == 0) return 0;
+        if (insertObjs is IDictionary<string, object>)
+            throw new NotSupportedException("批量插入，单个对象类型只支持命名对象、匿名对象或是字典对象");
 
-        int result = 0;
-        Exception exception = null;
-        bool isNeedClose = this.DbContext.Transaction == null;
-        try
-        {
-            await this.DbContext.OpenAsync(cancellationToken);
-            var connection = this.DbContext.Connection as MySqlConnection;
-            var transaction = this.DbContext.Transaction as MySqlTransaction;
-            var bulkCopy = new MySqlBulkCopy(connection, transaction);
-            if (bulkCopyTimeout.HasValue) bulkCopy.BulkCopyTimeout = bulkCopyTimeout.Value;
-            bulkCopy.DestinationTableName = dataTable.TableName;
-            for (int i = 0; i < dataTable.Columns.Count; i++)
-            {
-                bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
-            }
-            var bulkCopyResult = await bulkCopy.WriteToServerAsync(dataTable);
-            result = bulkCopyResult.RowsInserted;
-        }
-        catch (Exception ex)
-        {
-            isNeedClose = true;
-            exception = ex;
-        }
-        finally
-        {
-            if (isNeedClose) await this.DbContext.CloseAsync();
-        }
-        if (exception != null) throw exception;
-        return result;
+        this.DialectVisitor.WithBulkCopy(insertObjs, timeoutSeconds);
+        return new MySqlCreated<TEntity>(this.DbContext, this.Visitor);
     }
-    #endregion
+    #endregion      
 }

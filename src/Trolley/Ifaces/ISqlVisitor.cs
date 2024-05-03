@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq.Expressions;
 
 namespace Trolley;
@@ -40,4 +42,5 @@ public interface ISqlVisitor : IDisposable
     List<Expression> SplitConcatList(Expression[] argsExprs);
     string VisitFromQuery(LambdaExpression lambdaExpr);
     bool ChangeSameType(SqlSegment leftSegment, SqlSegment rightSegment, bool isForce = false);
+    DataTable ToDataTable(IEnumerable entities);
 }

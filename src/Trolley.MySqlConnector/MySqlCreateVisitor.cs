@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
@@ -32,9 +33,6 @@ public class MySqlCreateVisitor : CreateVisitor
                 case "WithByField":
                     this.VisitWithByField(deferredSegment.Value);
                     break;
-                case "WithBulk":
-                    this.IsBulk = true;
-                    continue;
                 case "SetObject":
                     this.UpdateFields ??= new();
                     this.VisitSetObject(deferredSegment.Value);
@@ -45,7 +43,7 @@ public class MySqlCreateVisitor : CreateVisitor
                     break;
             }
         }
-        if (this.IsBulk)
+        if (this.ActionMode == ActionMode.Bulk)
             sql = this.BuildMultiBulkSql(command);
         else sql = this.BuildSql();
         return sql;
@@ -88,6 +86,15 @@ public class MySqlCreateVisitor : CreateVisitor
         fieldsBuilder.Append(valuesBuilder);
         valuesBuilder.Clear();
         return fieldsBuilder.ToString();
+    }
+    public virtual void WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds)
+    {
+        this.ActionMode = ActionMode.BulkCopy;
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "WithBulkCopy",
+            Value = (insertObjs, timeoutSeconds)
+        });
     }
     public void OnDuplicateKeyUpdate(object updateObj)
     {

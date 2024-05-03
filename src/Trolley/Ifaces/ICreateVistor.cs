@@ -11,7 +11,7 @@ public interface ICreateVisitor : IDisposable
     IDataParameterCollection DbParameters { get; set; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
-    bool IsBulk { get; set; }
+    ActionMode ActionMode { get; set; }
 
     string BuildCommand(IDbCommand command, bool isReturnIdentity);
     MultipleCommand CreateMultipleCommand();
@@ -21,10 +21,11 @@ public interface ICreateVisitor : IDisposable
     string BuildSql();
     void WithBy(object insertObj);
     void WithByField(Expression fieldSelector, object fieldValue);
-    void WithBulk(object insertObjs, int bulkCount);
+    void WithBulk(IEnumerable insertObjs, int bulkCount);
     (IEnumerable, int, Action<StringBuilder>, Action<StringBuilder, object, string>) BuildWithBulk(IDbCommand command);
     void IgnoreFields(string[] fieldNames);
     void IgnoreFields(Expression fieldsSelector);
     void OnlyFields(string[] fieldNames);
     void OnlyFields(Expression fieldsSelector);
+    DataTable ToDataTable(IEnumerable entities);
 }

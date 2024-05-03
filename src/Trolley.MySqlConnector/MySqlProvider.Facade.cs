@@ -10,6 +10,8 @@ partial class MySqlProvider
     public override ICreate<TEntity> NewCreate<TEntity>(DbContext dbContext) => new MySqlCreate<TEntity>(dbContext);
     public override IContinuedCreate<TEntity> NewContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor)
         => new MySqlContinuedCreate<TEntity>(dbContext, visitor);
+    public override ICreated<TEntity> NewCreated<TEntity>(DbContext dbContext, ICreateVisitor visitor)
+        => new MySqlCreated<TEntity>(dbContext, visitor);
     public override ICreateVisitor NewCreateVisitor(IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         => new MySqlCreateVisitor(this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
     public override IUpdateVisitor NewUpdateVisitor(IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")

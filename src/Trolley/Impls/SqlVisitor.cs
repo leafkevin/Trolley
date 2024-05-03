@@ -1577,6 +1577,50 @@ public class SqlVisitor : ISqlVisitor
                 result.Add(cteQueryObj);
         }
     }
+    public DataTable ToDataTable(IEnumerable entities)
+    {
+        Type entityType = null;
+        foreach (var entity in entities)
+        {
+            entityType = entity.GetType();
+            break;
+        }
+
+        var result = new DataTable();
+        var entityMapper = this.MapProvider.GetEntityMap(entityType);
+        result.TableName = this.OrmProvider.GetTableName(entityMapper.TableName);
+        var colMappers = new List<MemberMap>();
+        foreach (var memberMapper in entityMapper.MemberMaps)
+        {
+            if (memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.IsAutoIncrement
+                || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                continue;
+            var nativeType = memberMapper.UnderlyingType;
+            if ((!memberMapper.MemberType.IsValueType && memberMapper.MemberType != typeof(string)
+                || memberMapper.MemberType.IsEntityType(out _)) && memberMapper.TypeHandler != null)
+                nativeType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
+            result.Columns.Add(memberMapper.FieldName, nativeType);
+            colMappers.Add(memberMapper);
+        }
+
+        foreach (var entity in entities)
+        {
+            var row = new object[colMappers.Count];
+            for (var i = 0; i < colMappers.Count; i++)
+            {
+                var colMapper = colMappers[i];
+                var colValue = colMapper.Member.Evaluate(entity);
+                if (colValue == null && colMapper.MemberType.IsNullableType(out _))
+                    colValue = DBNull.Value;
+                else if ((!colMapper.MemberType.IsValueType && colMapper.MemberType != typeof(string)
+                    || colMapper.MemberType.IsEntityType(out _)) && colMapper.TypeHandler != null)
+                    colValue = colMapper.TypeHandler.ToFieldValue(this.OrmProvider, colMapper.UnderlyingType, colValue);
+                row[i] = colValue;
+            }
+            result.Rows.Add(row);
+        }
+        return result;
+    }
     public virtual void Dispose()
     {
         if (this.isDisposed)

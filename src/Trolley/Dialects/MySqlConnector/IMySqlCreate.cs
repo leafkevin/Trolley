@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 
 namespace Trolley.MySqlConnector;
 
@@ -36,7 +37,7 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
 
     #region WithBulk
     /// <summary>
-    /// 批量插入,采用多表值方式，生成的SQL:
+    /// 批量插入，采用多表值方式，生成的SQL:
     /// <code>
     /// INSERT INTO [sys_product] ([ProductNo],[Name], ...) VALUES (@ProductNo0,@Name0, ...),(@ProductNo1,@Name1, ...),(@ProductNo2,@Name2, ...)
     /// </code>
@@ -45,5 +46,15 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
     /// <returns>返回插入对象</returns>
     new IMySqlContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
+    #endregion
+
+    #region WithBulkCopy
+    /// <summary>
+    /// 批量插入，采用SqlBulkCopy方式，不生成SQL
+    /// </summary>
+    /// <param name="insertObjs">插入的对象集合</param>
+    /// <param name="timeoutSeconds">超时时间，单位秒</param>
+    /// <returns>返回插入对象</returns>
+    IMySqlCreated<TEntity> WithBulkCopy(IEnumerable<TEntity> insertObjs, int? timeoutSeconds = null);
     #endregion
 }
