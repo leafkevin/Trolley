@@ -264,8 +264,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             commandInitializer = (builder, insertObj, suffix) => typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, builder, insertObj, suffix);
             return (insertObjs, bulkCount, headSqlSetter, commandInitializer);
         }
-    }
-    public virtual (IEnumerable, int?) BuildWithBulkCopy() => ((IEnumerable, int?))this.deferredSegments[0].Value;
+    }   
     public virtual void VisitWithBy(object insertObj)
     {
         var entityType = this.Tables[0].EntityType;

@@ -87,7 +87,7 @@ public class MySqlCreateVisitor : CreateVisitor
         valuesBuilder.Clear();
         return fieldsBuilder.ToString();
     }
-    public virtual void WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds)
+    public void WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds)
     {
         this.ActionMode = ActionMode.BulkCopy;
         this.deferredSegments.Add(new CommandSegment
@@ -96,6 +96,7 @@ public class MySqlCreateVisitor : CreateVisitor
             Value = (insertObjs, timeoutSeconds)
         });
     }
+    public (IEnumerable, int?) BuildWithBulkCopy() => ((IEnumerable, int?))this.deferredSegments[0].Value;
     public void OnDuplicateKeyUpdate(object updateObj)
     {
         this.deferredSegments.Add(new CommandSegment
@@ -117,7 +118,7 @@ public class MySqlCreateVisitor : CreateVisitor
         if (this.IsUseIgnoreInto) return "INSERT IGNORE INTO";
         return "INSERT INTO";
     }
-    public virtual void VisitSetObject(object updateObj)
+    public void VisitSetObject(object updateObj)
     {
         var entityType = this.Tables[0].EntityType;
         var updateObjType = updateObj.GetType();
@@ -133,7 +134,7 @@ public class MySqlCreateVisitor : CreateVisitor
             typedSetFieldsInitializer.Invoke(this.DbParameters, this.OrmProvider, this.UpdateFields, updateObj);
         }
     }
-    public virtual void VisitSetExpression(LambdaExpression lambdaExpr)
+    public void VisitSetExpression(LambdaExpression lambdaExpr)
     {
         this.IsUpdate = true;
         var currentExpr = lambdaExpr.Body;
@@ -276,7 +277,7 @@ public class MySqlCreateVisitor : CreateVisitor
         queryVisiter.IsUseIgnoreInto = this.IsUseIgnoreInto;
         return queryVisiter;
     }
-    public virtual void InitTableAlias(LambdaExpression lambdaExpr)
+    public void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.TableAliases.Clear();
         lambdaExpr.Body.GetParameters(out var parameters);
@@ -310,14 +311,14 @@ public class MySqlCreateVisitor : CreateVisitor
         //.Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
         else this.UpdateFields.Append($"{fieldName}={sqlSegment.Value.ToString()}");
     }
-    public virtual void VisitSetFieldExpression(Expression fieldSelector, Expression fieldValueSelector)
+    public void VisitSetFieldExpression(Expression fieldSelector, Expression fieldValueSelector)
     {
         var fieldSegment = this.VisitAndDeferred(new SqlSegment { Expression = fieldSelector });
         var valueSegment = this.VisitAndDeferred(new SqlSegment { Expression = fieldValueSelector });
         if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
         this.UpdateFields.Append($"{fieldSegment}={valueSegment}");
     }
-    public virtual void VisitWithSetField(Expression fieldSelector, object fieldValue)
+    public void VisitWithSetField(Expression fieldSelector, object fieldValue)
     {
         var lambdaExpr = this.EnsureLambda(fieldSelector);
         var memberExpr = lambdaExpr.Body as MemberExpression;

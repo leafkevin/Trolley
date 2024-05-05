@@ -12,7 +12,7 @@ public class QueryAnonymousObject : IQueryAnonymousObject
 {
     #region Properties
     public virtual DbContext DbContext { get; private set; }
-    public virtual IQueryVisitor Visitor { get; private set; }
+    public virtual IQueryVisitor Visitor { get; protected set; }
     #endregion
 
     #region Constructor
@@ -33,7 +33,7 @@ public class QueryBase : IQueryBase
 {
     #region Properties
     public virtual DbContext DbContext { get; private set; }
-    public virtual IQueryVisitor Visitor { get; private set; }
+    public virtual IQueryVisitor Visitor { get; protected set; }
     public virtual IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 

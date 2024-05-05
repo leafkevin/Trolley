@@ -1,18 +1,20 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 
 namespace Trolley;
 
 public interface IUpdateVisitor : IDisposable
 {
-    //string DbKey { get; }
     IDataParameterCollection DbParameters { get; set; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
-    bool IsBulk { get; set; }
+    ActionMode ActionMode { get; set; }
+    List<TableSegment> Tables { get; }
 
     void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
     MultipleCommand CreateMultipleCommand();
@@ -35,4 +37,6 @@ public interface IUpdateVisitor : IDisposable
     IUpdateVisitor WhereWith(object whereObj);
     IUpdateVisitor Where(Expression whereExpr);
     IUpdateVisitor And(Expression whereExpr);
+    DataTable ToDataTable(Type entityType, IEnumerable entities, EntityMap fromMapper, string tableName = null);
+    List<(MemberInfo MemberInfo, MemberMap RefMemberMapper)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper);
 }

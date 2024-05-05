@@ -3,12 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace Trolley;
 
 public interface ISqlVisitor : IDisposable
 {
-    //string DbKey { get; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
     bool IsParameterized { get; set; }
@@ -42,5 +42,6 @@ public interface ISqlVisitor : IDisposable
     List<Expression> SplitConcatList(Expression[] argsExprs);
     string VisitFromQuery(LambdaExpression lambdaExpr);
     bool ChangeSameType(SqlSegment leftSegment, SqlSegment rightSegment, bool isForce = false);
-    DataTable ToDataTable(IEnumerable entities);
+    DataTable ToDataTable(Type entityType, IEnumerable entities, EntityMap fromMapper, string tableName = null);
+    List<(MemberInfo MemberInfo, MemberMap RefMemberMapper)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper);
 }

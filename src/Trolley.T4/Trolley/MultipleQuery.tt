@@ -20,7 +20,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
     #endregion
 
     #region Properties
-    public DbContext DbContext { get; private set; }
+    public DbContext DbContext { get; protected set; }
     public string DbKey => this.DbContext.DbKey;
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     public IEntityMapProvider MapProvider => this.DbContext.MapProvider;

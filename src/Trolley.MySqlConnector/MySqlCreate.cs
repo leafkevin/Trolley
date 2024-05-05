@@ -36,6 +36,14 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
     #region WithBulk
     public new IMySqlContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
     {
+        bool isEmpty = true;
+        foreach (var insertObj in insertObjs)
+        {
+            isEmpty = false;
+            break;
+        }
+        if (isEmpty) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
+
         base.WithBulk(insertObjs, bulkCount);
         return new MySqlContinuedCreate<TEntity>(this.DbContext, this.Visitor);
     }
@@ -50,8 +58,16 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
         if (insertObjs is IDictionary<string, object>)
             throw new NotSupportedException("批量插入，单个对象类型只支持命名对象、匿名对象或是字典对象");
 
+        bool isEmpty = true;
+        foreach (var insertObj in insertObjs)
+        {
+            isEmpty = false;
+            break;
+        }
+        if (isEmpty) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
+
         this.DialectVisitor.WithBulkCopy(insertObjs, timeoutSeconds);
         return new MySqlCreated<TEntity>(this.DbContext, this.Visitor);
     }
-    #endregion      
+    #endregion
 }

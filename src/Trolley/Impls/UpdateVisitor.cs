@@ -14,7 +14,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
     public List<string> OnlyFieldNames { get; set; }
     public List<string> IgnoreFieldNames { get; set; }
-    public bool IsBulk { get; set; }
+    public ActionMode ActionMode { get; set; }
     public bool IsFrom { get; set; }
     public bool IsJoin { get; set; }
     public List<string> UpdateFields { get; set; }
@@ -70,9 +70,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     this.IsNeedTableAlias = true;
                     this.VisitSetFromField(deferredSegment.Value);
                     break;
-                case "SetBulk":
-                    this.IsBulk = true;
-                    continue;
                 case "Where":
                     this.VisitWhere(deferredSegment.Value as Expression);
                     break;
@@ -84,7 +81,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     break;
             }
         }
-        if (this.IsBulk) sql = this.BuildMutilBulkSql(command);
+        if (this.ActionMode == ActionMode.Bulk)
+            sql = this.BuildMutilBulkSql(command);
         if (sql == null) sql = this.BuildSql();
         return sql;
     }
@@ -285,7 +283,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public virtual IUpdateVisitor SetBulk(IEnumerable updateObjs, int bulkCount)
     {
-        this.IsBulk = true;
+        this.ActionMode = ActionMode.Bulk;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "SetBulk",

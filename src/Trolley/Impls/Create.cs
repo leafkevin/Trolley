@@ -13,8 +13,8 @@ namespace Trolley;
 public class Create<TEntity> : ICreate<TEntity>
 {
     #region Properties
-    public DbContext DbContext { get; private set; }
-    public ICreateVisitor Visitor { get; private set; }
+    public DbContext DbContext { get; protected set; }
+    public ICreateVisitor Visitor { get; protected set; }
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
@@ -130,136 +130,136 @@ public class Created<TEntity> : ICreated<TEntity>
     public virtual int Execute()
     {
         int result = 0;
-        switch (this.Visitor.ActionMode)
+        Exception exception = null;
+        bool isNeedClose = this.DbContext.IsNeedClose;
+        using var command = this.DbContext.CreateCommand();
+        try
         {
-            case ActionMode.Single:
-                result = this.DbContext.Execute(f => f.CommandText = this.Visitor.BuildCommand(f, false));
-                this.Visitor.Dispose();
-                this.Visitor = null;
-                break;
-            case ActionMode.Bulk:
-                {
-                    using var command = this.DbContext.CreateCommand();
-                    bool isNeedClose = this.DbContext.IsNeedClose;
-                    Exception exception = null;
-                    try
-                    {
-                        int index = 0;
-                        bool isFirst = true;
-                        var sqlBuilder = new StringBuilder();
-                        (var insertObjs, var bulkCount, var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
-                        headSqlSetter.Invoke(sqlBuilder);
+            switch (this.Visitor.ActionMode)
+            {
+                case ActionMode.Bulk:
+                    int index = 0;
+                    bool isFirst = true;
+                    var sqlBuilder = new StringBuilder();
+                    (var insertObjs, var bulkCount, var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
+                    headSqlSetter.Invoke(sqlBuilder);
 
-                        foreach (var insertObj in insertObjs)
-                        {
-                            if (index > 0) sqlBuilder.Append(',');
-                            commandInitializer.Invoke(sqlBuilder, insertObj, index.ToString());
-                            if (index >= bulkCount)
-                            {
-                                command.CommandText = sqlBuilder.ToString();
-                                if (isFirst)
-                                {
-                                    this.DbContext.Open();
-                                    isFirst = false;
-                                }
-                                result += command.ExecuteNonQuery();
-                                command.Parameters.Clear();
-                                sqlBuilder.Clear();
-                                headSqlSetter.Invoke(sqlBuilder);
-                                index = 0;
-                                continue;
-                            }
-                            index++;
-                        }
-                        if (index > 0)
+                    foreach (var insertObj in insertObjs)
+                    {
+                        if (index > 0) sqlBuilder.Append(',');
+                        commandInitializer.Invoke(sqlBuilder, insertObj, index.ToString());
+                        if (index >= bulkCount)
                         {
                             command.CommandText = sqlBuilder.ToString();
-                            if (isFirst) this.DbContext.Open();
+                            if (isFirst)
+                            {
+                                this.DbContext.Open();
+                                isFirst = false;
+                            }
                             result += command.ExecuteNonQuery();
+                            command.Parameters.Clear();
+                            sqlBuilder.Clear();
+                            headSqlSetter.Invoke(sqlBuilder);
+                            index = 0;
+                            continue;
                         }
-                        sqlBuilder.Clear();
+                        index++;
                     }
-                    catch (Exception ex)
+                    if (index > 0)
                     {
-                        isNeedClose = true;
-                        exception = ex;
+                        command.CommandText = sqlBuilder.ToString();
+                        if (isFirst) this.DbContext.Open();
+                        result += command.ExecuteNonQuery();
                     }
-                    finally
-                    {
-                        command.Dispose();
-                        if (isNeedClose) this.Close();
-                    }
-                    if (exception != null) throw exception;
-                }
-                break;
+                    sqlBuilder.Clear();
+                    sqlBuilder = null;
+                    break;
+                default:
+                    //默认单条
+                    command.CommandText = this.Visitor.BuildCommand(command, false);
+                    this.DbContext.Open();
+                    result = command.ExecuteNonQuery();
+                    break;
+            }
         }
+        catch (Exception ex)
+        {
+            isNeedClose = true;
+            exception = ex;
+        }
+        finally
+        {
+            command.Dispose();
+            if (isNeedClose) this.Close();
+        }
+        if (exception != null) throw exception;
         return result;
     }
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        switch (this.Visitor.ActionMode)
+        Exception exception = null;
+        bool isNeedClose = this.DbContext.IsNeedClose;
+        using var command = this.DbContext.CreateDbCommand();
+        try
         {
-            case ActionMode.Single:
-                result = await this.DbContext.ExecuteAsync(f => f.CommandText = this.Visitor.BuildCommand(f, false), cancellationToken);
-                this.Visitor.Dispose();
-                this.Visitor = null;
-                break;
-            case ActionMode.Bulk:
-                {
-                    using var command = this.DbContext.CreateDbCommand();
-                    bool isNeedClose = this.DbContext.IsNeedClose;
-                    Exception exception = null;
-                    try
+            switch (this.Visitor.ActionMode)
+            {
+                case ActionMode.Bulk:
+                    int index = 0;
+                    bool isFirst = true;
+                    var sqlBuilder = new StringBuilder();
+                    (var insertObjs, var bulkCount, var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
+                    headSqlSetter.Invoke(sqlBuilder);
+                    foreach (var insertObj in insertObjs)
                     {
-                        int index = 0;
-                        bool isFirst = true;
-                        var sqlBuilder = new StringBuilder();
-                        (var insertObjs, var bulkCount, var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
-                        headSqlSetter.Invoke(sqlBuilder);
-                        foreach (var insertObj in insertObjs)
-                        {
-                            if (index > 0) sqlBuilder.Append(',');
-                            commandInitializer.Invoke(sqlBuilder, insertObj, index.ToString());
-                            if (index >= bulkCount)
-                            {
-                                command.CommandText = sqlBuilder.ToString();
-                                if (isFirst)
-                                {
-                                    await this.DbContext.OpenAsync(cancellationToken);
-                                    isFirst = false;
-                                }
-                                result += await command.ExecuteNonQueryAsync(cancellationToken);
-                                command.Parameters.Clear();
-                                sqlBuilder.Clear();
-                                headSqlSetter.Invoke(sqlBuilder);
-                                index = 0;
-                                continue;
-                            }
-                            index++;
-                        }
-                        if (index > 0)
+                        if (index > 0) sqlBuilder.Append(',');
+                        commandInitializer.Invoke(sqlBuilder, insertObj, index.ToString());
+                        if (index >= bulkCount)
                         {
                             command.CommandText = sqlBuilder.ToString();
-                            if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
+                            if (isFirst)
+                            {
+                                await this.DbContext.OpenAsync(cancellationToken);
+                                isFirst = false;
+                            }
                             result += await command.ExecuteNonQueryAsync(cancellationToken);
+                            command.Parameters.Clear();
+                            sqlBuilder.Clear();
+                            headSqlSetter.Invoke(sqlBuilder);
+                            index = 0;
+                            continue;
                         }
-                        sqlBuilder.Clear();
+                        index++;
                     }
-                    catch (Exception ex)
+                    if (index > 0)
                     {
-                        isNeedClose = true;
-                        exception = ex;
+                        command.CommandText = sqlBuilder.ToString();
+                        if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
+                        result += await command.ExecuteNonQueryAsync(cancellationToken);
                     }
-                    finally
-                    {
-                        await command.DisposeAsync();
-                        if (isNeedClose) await this.CloseAsync();
-                    }
-                    if (exception != null) throw exception;
-                }
-                break;
+                    sqlBuilder.Clear();
+                    sqlBuilder = null;
+                    break;
+                default:
+                    //默认单条
+                    command.CommandText = this.Visitor.BuildCommand(command, false);
+                    await this.DbContext.OpenAsync(cancellationToken);
+                    result = await command.ExecuteNonQueryAsync(cancellationToken);
+                    break;
+            }
         }
+        catch (Exception ex)
+        {
+            isNeedClose = true;
+            exception = ex;
+        }
+        finally
+        {
+            await command.DisposeAsync();
+            if (isNeedClose) await this.CloseAsync();
+        }
+        if (exception != null) throw exception;
         return result;
     }
     #endregion
@@ -344,6 +344,7 @@ public class Created<TEntity> : ICreated<TEntity>
     }
     #endregion
 
+    #region Close
     public void Close()
     {
         this.DbContext.Close();
@@ -356,6 +357,7 @@ public class Created<TEntity> : ICreated<TEntity>
         this.Visitor.Dispose();
         this.Visitor = null;
     }
+    #endregion
 }
 public class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEntity>
 {

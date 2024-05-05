@@ -13,6 +13,10 @@ public class MemberMap
     public bool IsKey { get; set; }
     public bool IsAutoIncrement { get; set; }
     public string FieldName { get; set; }
+    /// <summary>
+    /// 数据库原始类型，如：varchar(50),time(6)等
+    /// </summary>
+    public string DbColumnType { get; set; }
     public object NativeDbType { get; set; }
     public int Position { get; set; }
     public int Length { get; set; }

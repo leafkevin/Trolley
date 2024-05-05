@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 
 namespace Trolley;
@@ -12,6 +14,7 @@ public interface ICreateVisitor : IDisposable
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
     ActionMode ActionMode { get; set; }
+    List<TableSegment> Tables { get; }
 
     string BuildCommand(IDbCommand command, bool isReturnIdentity);
     MultipleCommand CreateMultipleCommand();
@@ -27,5 +30,6 @@ public interface ICreateVisitor : IDisposable
     void IgnoreFields(Expression fieldsSelector);
     void OnlyFields(string[] fieldNames);
     void OnlyFields(Expression fieldsSelector);
-    DataTable ToDataTable(IEnumerable entities);
+    DataTable ToDataTable(Type entityType, IEnumerable entities, EntityMap fromMapper, string tableName = null);
+    List<(MemberInfo MemberInfo, MemberMap RefMemberMapper)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper);
 }

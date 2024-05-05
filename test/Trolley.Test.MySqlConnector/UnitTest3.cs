@@ -19,7 +19,7 @@ public class UnitTest3 : UnitTestBase
         services.AddSingleton(t =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<MySqlProvider>("fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true)
+            .Register<MySqlProvider>("fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", true)
             .Configure<MySqlProvider, ModelConfiguration>();
             return builder.Build();
         });
@@ -903,6 +903,69 @@ public class UnitTest3 : UnitTestBase
             Assert.True(order.Products[2] == 3);
             Assert.True(order.TotalAmount == this.CalcAmount(parameter.TotalAmount, 3));
         }
+    }
+    [Fact]
+    public async void Update_BulkCopy()
+    {
+        using var repository = dbFactory.Create();
+        var orders = new List<Order>();
+        for (int i = 1000; i < 2000; i++)
+        {
+            orders.Add(new Order
+            {
+                Id = $"ON_{i + 1}",
+                TenantId = "3",
+                OrderNo = $"ON-{i + 1}",
+                BuyerId = 1,
+                SellerId = 2,
+                TotalAmount = 500,
+                Products = new List<int> { 1, 2 },
+                Disputes = new Dispute
+                {
+                    Id = i + 1,
+                    Content = "无良商家",
+                    Result = "同意退款",
+                    Users = "Buyer2,Seller2",
+                    CreatedAt = DateTime.Now
+                },
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            });
+        }
+        var removeIds = orders.Select(f => f.Id).ToList();
+        await repository.BeginTransactionAsync();
+        await repository.Delete<Order>()
+            .Where(f => removeIds.Contains(f.Id))
+            .ExecuteAsync();
+        var count = await repository.Create<Order>()
+            .WithBulkCopy(orders)
+            .ExecuteAsync();
+        await repository.CommitAsync();
+
+        var updateObjs = orders.Select(f => new
+        {
+            f.Id,
+            TenantId = "1",
+            TotalAmount = f.TotalAmount + 20,
+            Products = new List<int> { 1, 2, 3 },
+            Disputes = new Dispute
+            {
+                Id = 1,
+                Content = "无良商家",
+                Result = "同意退款",
+                Users = "Buyer1,Seller1",
+                CreatedAt = DateTime.Now
+            }
+        });
+        count = repository.Update<Order>()
+            .WithBulkCopy(updateObjs)
+            .Execute();
+
+
+        Assert.True(count == orders.Count);
     }
     private double CalcAmount(double price, double amount)
     {

@@ -103,6 +103,8 @@ public class EntityMap
                 if (!memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsIgnore && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                     memberMapper.NativeDbType = ormProvider.GetNativeDbType(memberMapper.MemberType);
             }
+            if (!memberMapper.IsNavigation && string.IsNullOrEmpty(memberMapper.DbColumnType))
+                throw new ArgumentNullException("DbColumnType栏位不能为空，必须配置");
             if (memberMapper.NativeDbType is int nativeDbType)
                 memberMapper.NativeDbType = Enum.ToObject(ormProvider.NativeDbTypeType, nativeDbType);
             if (memberMapper.TypeHandler == null && !memberMapper.IsIgnore && !memberMapper.IsNavigation)

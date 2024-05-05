@@ -94,59 +94,147 @@ class MySqlProvider : DbHelper
         connection.Close();
         return result;
     }
-    public string MapMemberType(ColumnInfo columnInfo)
+    public ClassMemberInfo MapMember(ColumnInfo columnInfo)
     {
+        var result = new ClassMemberInfo { DbColumnType = columnInfo.ColumnType };
         bool isUnsigned = columnInfo.ColumnType.Contains("unsigned");
         switch (columnInfo.DataType)
         {
             case "bit":
-            case "bool": return "bool";
+            case "bool":
+                result.NativeDbType = "MySqlDbType.Bool";
+                result.MemberType = "bool";
+                break;
 
-            case "tinyint":   
-                if(columnInfo.ColumnType == "tinyint(1)") return "bool";
-                return isUnsigned ? "byte" : "sbyte";
-            case "smallint": return isUnsigned ? "ushort" : "short";
-            case "mediumint": return isUnsigned ? "uint" : "int";
-            case "int": return isUnsigned ? "uint" : "int";
-            case "bigint": return isUnsigned ? "ulong" : "long";
-
-            case "float": return "float";
+            case "tinyint":
+                if (columnInfo.ColumnType == "tinyint(1)")
+                {
+                    result.NativeDbType = "MySqlDbType.Bool";
+                    result.MemberType = "bool";
+                }
+                else
+                {
+                    result.NativeDbType = isUnsigned ? "MySqlDbType.UByte" : "MySqlDbType.Byte";
+                    result.MemberType = isUnsigned ? "byte" : "sbyte";
+                }
+                break;
+            case "smallint":
+                result.DbColumnType = columnInfo.DataType;
+                result.NativeDbType = isUnsigned ? "MySqlDbType.UInt16" : "MySqlDbType.Int16";
+                result.MemberType = isUnsigned ? "ushort" : "short";
+                break;
+            case "mediumint":
+                result.DbColumnType = columnInfo.DataType;
+                result.NativeDbType = isUnsigned ? "MySqlDbType.UInt24" : "MySqlDbType.Int24";
+                result.MemberType = isUnsigned ? "uint" : "int";
+                break;
+            case "int":
+                result.DbColumnType = columnInfo.DataType;
+                result.NativeDbType = isUnsigned ? "MySqlDbType.UInt32" : "MySqlDbType.Int32";
+                result.MemberType = isUnsigned ? "uint" : "int";
+                break;
+            case "bigint":
+                result.DbColumnType = columnInfo.DataType;
+                result.NativeDbType = isUnsigned ? "MySqlDbType.UInt64" : "MySqlDbType.Int64";
+                result.MemberType = isUnsigned ? "ulong" : "long";
+                break;
+            case "float":
+                result.NativeDbType = "MySqlDbType.Float";
+                result.MemberType = "float";
+                break;
             case "real":
-            case "double": return "double";
-
+            case "double":
+                result.NativeDbType = "MySqlDbType.Double";
+                result.MemberType = "double";
+                break;
             case "numeric":
-            case "smallmoney":
-            case "money":
-            case "decimal": return "decimal";
+            case "decimal":
+                result.NativeDbType = "MySqlDbType.Decimal";
+                result.MemberType = "decimal";
+                break;
 
-            case "year": return "int";
-            case "time": return "TimeSpan";
-
-            case "smalldatetime":
+            case "year":
+                result.NativeDbType = "MySqlDbType.Year";
+                result.MemberType = "int";
+                break;
+            case "time":
+                result.NativeDbType = "MySqlDbType.Time";
+                result.MemberType = "TimeSpan";
+                break;
             case "date":
+                result.NativeDbType = "MySqlDbType.Date";
+                result.MemberType = "DateOnly";
+                break;
+            case "timestamp":
+                result.NativeDbType = "MySqlDbType.Timestamp";
+                result.MemberType = "DateTime";
+                break;
+            case "smalldatetime":
             case "datetime":
-            case "timestamp": return "DateTime";
+                result.NativeDbType = "MySqlDbType.DateTime";
+                result.MemberType = "DateTime";
+                break;
 
             case "tinyblob":
+                result.NativeDbType = "MySqlDbType.TinyBlob";
+                result.MemberType = "byte[]";
+                break;
             case "blob":
+                result.NativeDbType = "MySqlDbType.Blob";
+                result.MemberType = "byte[]";
+                break;
             case "mediumblob":
+                result.NativeDbType = "MySqlDbType.MediumBlob";
+                result.MemberType = "byte[]";
+                break;
             case "longblob":
-            case "image":
+                result.NativeDbType = "MySqlDbType.LongBlob";
+                result.MemberType = "byte[]";
+                break;
             case "binary":
-            case "varbinary": return "byte[]";
+                result.NativeDbType = "MySqlDbType.Binary";
+                result.MemberType = "byte[]";
+                break;
+            case "varbinary":
+                result.NativeDbType = "MySqlDbType.VarBinary";
+                result.MemberType = "byte[]";
+                break;
 
             case "tinytext":
+                result.NativeDbType = "MySqlDbType.TinyText";
+                result.MemberType = "string";
+                break;
             case "text":
+                result.NativeDbType = "MySqlDbType.Text";
+                result.MemberType = "string";
+                break;
             case "mediumtext":
-            case "longtext": return "string";
-
-            case "char": return columnInfo.Length == 36 ? "Guid" : "string";
-            case "varchar": return "string";
-
-            case "guid": return "Guid";
+                result.NativeDbType = "MySqlDbType.MediumText";
+                result.MemberType = "string";
+                break;
+            case "longtext":
+                result.NativeDbType = "MySqlDbType.LongText";
+                result.MemberType = "string";
+                break;
+            case "char":
+                result.NativeDbType = columnInfo.Length == 36 ? "MySqlDbType.Guid" : "MySqlDbType.String";
+                result.MemberType = columnInfo.Length == 36 ? "Guid" : "string";
+                result.Length = (int)columnInfo.Length;
+                break;
+            case "varchar":
+                result.NativeDbType = "MySqlDbType.VarChar";
+                result.MemberType = "string";
+                result.Length = (int)columnInfo.Length;
+                break;
 
             case "set":
-            case "enum": return "int";
+                result.NativeDbType = "MySqlDbType.Set";
+                result.MemberType = "int";
+                break;
+            case "enum":
+                result.NativeDbType = "MySqlDbType.Enum";
+                result.MemberType = "int";
+                break;
 
             case "point":
             case "linestring":
@@ -155,72 +243,16 @@ class MySqlProvider : DbHelper
             case "multipoint":
             case "multilinestring":
             case "multipolygon":
-            case "geometrycollection": return "object";
+            case "geometrycollection":
+                result.NativeDbType = "MySqlDbType.Geometry";
+                result.MemberType = "object";
+                break;
+            default:
+                result.NativeDbType = "MySqlDbType.String";
+                result.MemberType = "string";
+                break;
         }
-        return "string";
-    }
-    public string MapNativeDbType(ColumnInfo columnInfo)
-    {
-        bool isUnsigned = columnInfo.ColumnType.Contains("unsigned");
-        switch (columnInfo.DataType)
-        {
-            case "bit": return "MySqlDbType.Bit";
-
-            case "bool": return "MySqlDbType.Bool";
-
-            case "tinyint": 
-            if(columnInfo.ColumnType == "tinyint(1)") return "MySqlDbType.Bool";
-            return isUnsigned ? "MySqlDbType.UByte" : "MySqlDbType.Byte";
-
-            case "smallint": return isUnsigned ? "MySqlDbType.UInt16" : "MySqlDbType.Int16";
-            case "mediumint": return isUnsigned ? "MySqlDbType.UInt24" : "MySqlDbType.Int24";
-            case "int": return isUnsigned ? "MySqlDbType.UInt32" : "MySqlDbType.Int32";
-            case "bigint": return isUnsigned ? "MySqlDbType.UInt64" : "MySqlDbType.Int64";
-
-            case "float": return "MySqlDbType.Float";
-            case "real":
-            case "double": return "MySqlDbType.Double";
-
-            case "smallmoney":
-            case "money":
-            case "numeric":
-            case "decimal": return "MySqlDbType.Decimal";
-
-            case "year": return "MySqlDbType.Year";
-            case "time": return "MySqlDbType.Time";
-            case "date": return "MySqlDbType.Date";
-            case "timestamp": return "MySqlDbType.Timestamp";
-            case "datetime": return "MySqlDbType.DateTime";
-
-            case "tinyblob": return "MySqlDbType.TinyBlob";
-            case "blob": return "MySqlDbType.Blob";
-            case "mediumblob": return "MySqlDbType.MediumBlob";
-            case "longblob": return "MySqlDbType.LongBlob";
-
-            case "binary": return "MySqlDbType.Binary";
-            case "varbinary": return "MySqlDbType.VarBinary";
-
-            case "tinytext": return "MySqlDbType.TinyText";
-            case "text": return "MySqlDbType.Text";
-            case "mediumtext": return "MySqlDbType.MediumText";
-            case "longtext": return "MySqlDbType.LongText";
-
-            case "char": return columnInfo.Length == 36 ? "MySqlDbType.Guid" : "MySqlDbType.String";
-            case "varchar": return "MySqlDbType.VarChar";
-
-            case "set": return "MySqlDbType.Set";
-            case "enum": return "MySqlDbType.Enum";
-
-            case "point":
-            case "linestring":
-            case "polygon":
-            case "geometry":
-            case "multipoint":
-            case "multilinestring":
-            case "multipolygon":
-            case "geometrycollection": return "MySqlDbType.Geometry";
-        }
-        return "MySqlDbType.String";
+        return result;
     }
     public string MapDefaultDbType(Type memberType)
     {

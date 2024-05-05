@@ -57,17 +57,24 @@ class ModelConfiguration : IModelConfiguration
     foreach(ColumnInfo columnInfo in columnList)
     {
         var propertyName = columnInfo.ColumnName;
-        var nativeDbType = dbProvider.MapNativeDbType(columnInfo);
+        var classMemberInfo = dbProvider.MapMember(columnInfo);
+        var nativeDbType = classMemberInfo.NativeDbType;
+        var columnType = classMemberInfo.DbColumnType;
         var position = columnInfo.Position;
+        var length = classMemberInfo.Length;
 #>
-            f.Member(t => t.<#=propertyName#>).Field(nameof(<#=className#>.<#=propertyName#>)).NativeDbType(<#=nativeDbType#>).Position(<#=position#>)<#
+            f.Member(t => t.<#=propertyName#>).Field(nameof(<#=className#>.<#=propertyName#>)).DbColumnType("<#=columnType#>").NativeDbType(<#=nativeDbType#>).Position(<#=position#>)<#
+        if(classMemberInfo.MemberType == "string" && "varchar,char".Contains(columnInfo.DataType))
+        {
+            #>.Length(<#=length#>)<#
+        }
         if(columnInfo.IsIdentity)
         {
-            #>.AutoIncrement()<#      
+            #>.AutoIncrement()<#
         }
         if(!columnInfo.IsNullable)
         {
-            #>.Required()<#      
+            #>.Required()<#
         }#>;
 <#  
     }#>

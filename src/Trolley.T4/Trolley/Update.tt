@@ -19,8 +19,8 @@ namespace Trolley;
 class Update<TEntity> : IUpdate<TEntity>
 {
     #region Properties
-    public DbContext DbContext { get; private set; }
-    public IUpdateVisitor Visitor { get; private set; }
+    public DbContext DbContext { get; protected set; }
+    public IUpdateVisitor Visitor { get; protected set; }
     #endregion
 
     #region Constructor
@@ -163,8 +163,8 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>, IDisposable
     #endregion
 
     #region Properties
-    public DbContext DbContext { get; private set; }
-    public IUpdateVisitor Visitor { get; private set; }
+    public DbContext DbContext { get; protected set; }
+    public IUpdateVisitor Visitor { get; protected set; }
     #endregion
 
     #region Constructor

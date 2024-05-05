@@ -7,8 +7,8 @@ public class GroupingCommandBase<TGrouping> : IGroupingCommandBase<TGrouping>
 {
     #region Properties   
     public Type EntityType { get; private set; }
-    public DbContext DbContext { get; private set; }
-    public IQueryVisitor Visitor { get; private set; }
+    public DbContext DbContext { get; protected set; }
+    public IQueryVisitor Visitor { get; protected set; }
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 

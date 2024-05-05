@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 
 namespace Trolley;
@@ -1577,49 +1578,54 @@ public class SqlVisitor : ISqlVisitor
                 result.Add(cteQueryObj);
         }
     }
-    public DataTable ToDataTable(IEnumerable entities)
+    public DataTable ToDataTable(Type entityType, IEnumerable entities, EntityMap fromMapper, string tableName = null)
     {
-        Type entityType = null;
-        foreach (var entity in entities)
-        {
-            entityType = entity.GetType();
-            break;
-        }
-
         var result = new DataTable();
-        var entityMapper = this.MapProvider.GetEntityMap(entityType);
-        result.TableName = this.OrmProvider.GetTableName(entityMapper.TableName);
-        var colMappers = new List<MemberMap>();
-        foreach (var memberMapper in entityMapper.MemberMaps)
+        result.TableName = tableName ?? this.OrmProvider.GetTableName(fromMapper.TableName);
+        var memberMappers = this.GetRefMemberMappers(entityType, fromMapper);
+        foreach (var memberMapper in memberMappers)
         {
-            if (memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.IsAutoIncrement
-                || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
-                continue;
-            var nativeType = memberMapper.UnderlyingType;
-            if ((!memberMapper.MemberType.IsValueType && memberMapper.MemberType != typeof(string)
-                || memberMapper.MemberType.IsEntityType(out _)) && memberMapper.TypeHandler != null)
-                nativeType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
-            result.Columns.Add(memberMapper.FieldName, nativeType);
-            colMappers.Add(memberMapper);
+            var refMemberMapper = memberMapper.RefMemberMapper;
+            var nativeType = refMemberMapper.UnderlyingType;
+            if ((!refMemberMapper.MemberType.IsValueType && refMemberMapper.MemberType != typeof(string)
+                || refMemberMapper.MemberType.IsEntityType(out _)) && refMemberMapper.TypeHandler != null)
+                nativeType = this.OrmProvider.MapDefaultType(refMemberMapper.NativeDbType);
+            result.Columns.Add(refMemberMapper.FieldName, nativeType);
         }
 
         foreach (var entity in entities)
         {
-            var row = new object[colMappers.Count];
-            for (var i = 0; i < colMappers.Count; i++)
+            var row = new object[memberMappers.Count];
+            for (var i = 0; i < memberMappers.Count; i++)
             {
-                var colMapper = colMappers[i];
-                var colValue = colMapper.Member.Evaluate(entity);
-                if (colValue == null && colMapper.MemberType.IsNullableType(out _))
-                    colValue = DBNull.Value;
-                else if ((!colMapper.MemberType.IsValueType && colMapper.MemberType != typeof(string)
-                    || colMapper.MemberType.IsEntityType(out _)) && colMapper.TypeHandler != null)
-                    colValue = colMapper.TypeHandler.ToFieldValue(this.OrmProvider, colMapper.UnderlyingType, colValue);
-                row[i] = colValue;
+                var memberInfo = memberMappers[i].MemberInfo;
+                var memberMapper = memberMappers[i].RefMemberMapper;
+                var fieldValue = memberInfo.Evaluate(entity);
+                if (fieldValue == null && memberMapper.MemberType.IsNullableType(out _))
+                    fieldValue = DBNull.Value;
+                else if ((!memberMapper.MemberType.IsValueType && memberMapper.MemberType != typeof(string)
+                    || memberMapper.MemberType.IsEntityType(out _)) && memberMapper.TypeHandler != null)
+                    fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
+                row[i] = fieldValue;
             }
             result.Rows.Add(row);
         }
         return result;
+    }
+    public List<(MemberInfo MemberInfo, MemberMap RefMemberMapper)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper)
+    {
+        var memberInfos = entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+           .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+        var memberMappers = new List<(MemberInfo, MemberMap)>();
+        foreach (var memberInfo in memberInfos)
+        {
+            if (!refEntityMapper.TryGetMemberMap(memberInfo.Name, out var refMemberMapper)
+                || refMemberMapper.IsIgnore || refMemberMapper.IsNavigation || refMemberMapper.IsAutoIncrement
+                || (refMemberMapper.MemberType.IsEntityType(out _) && refMemberMapper.TypeHandler == null))
+                continue;
+            memberMappers.Add((memberInfo, refMemberMapper));
+        }
+        return memberMappers;
     }
     public virtual void Dispose()
     {

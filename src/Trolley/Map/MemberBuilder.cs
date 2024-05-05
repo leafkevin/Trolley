@@ -24,6 +24,15 @@ public class MemberBuilder<TMember>
         this.mapper.FieldName = fieldName;
         return this;
     }
+    public virtual MemberBuilder<TMember> DbColumnType(string dbColumnType)
+    {
+        if (string.IsNullOrEmpty(dbColumnType))
+            throw new ArgumentNullException(nameof(dbColumnType));
+
+        this.mapper.DbColumnType = dbColumnType;
+        return this;
+    }
+
     public virtual MemberBuilder<TMember> NativeDbType(object nativeDbType)
     {
         if (nativeDbType == null)
@@ -35,6 +44,11 @@ public class MemberBuilder<TMember>
     public virtual MemberBuilder<TMember> AutoIncrement(bool isAutoIncrement = true)
     {
         this.mapper.IsAutoIncrement = isAutoIncrement;
+        return this;
+    }
+    public virtual MemberBuilder<TMember> Length(int length)
+    {
+        this.mapper.Length = length;
         return this;
     }
     public virtual MemberBuilder<TMember> Required(bool isRequired = true)

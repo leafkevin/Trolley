@@ -20,6 +20,13 @@ class ColumnInfo
     public string DefaultValue { get; set; }
     public int Position { get; set; }    
 }
+class ClassMemberInfo
+{
+    public string MemberType { get; set; }
+    public string DbColumnType { get; set; }
+    public string NativeDbType { get; set; }
+    public int Length { get; set; }
+}
 class DbHelper
 {
     public T ToValue<T>(object obj)
