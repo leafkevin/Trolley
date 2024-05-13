@@ -15,8 +15,8 @@ public class MySqlCreateVisitor : CreateVisitor
     public bool IsSetAlias { get; set; }
     public string SetRowAlias { get; set; } = "newRow";
 
-    public MySqlCreateVisitor(IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-        : base(ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix) { }
+    public MySqlCreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix) { }
 
     public override string BuildCommand(IDbCommand command, bool isReturnIdentity)
     {
@@ -270,7 +270,7 @@ public class MySqlCreateVisitor : CreateVisitor
     }
     public override IQueryVisitor CreateQueryVisitor()
     {
-        var queryVisiter = new MySqlQueryVisitor(this.OrmProvider, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+        var queryVisiter = new MySqlQueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
         queryVisiter.IsMultiple = this.IsMultiple;
         queryVisiter.CommandIndex = this.CommandIndex;
         queryVisiter.RefQueries = this.RefQueries;

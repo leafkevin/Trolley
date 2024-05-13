@@ -57,6 +57,10 @@ public interface ICteQuery : IQuery
     /// CTE表主体SQL
     /// </summary>
     string Body { get; set; }
+    /// <summary>
+    /// 是否是递归CTE表
+    /// </summary>
+    bool IsRecursive { get; set; }
     #endregion
 }
 /// <summary>
@@ -97,9 +101,8 @@ public interface IQueryBase : IQuery
     /// <summary>
     /// 使用原始字段返回匿名查询结果，主要用在不关注结果类型的地方，比如：Sql.Exists语句，用于判断数据是否存在，用法：SelectAnonymous("*") 或是 SelectAnonymous("1")，
     /// </summary>
-    /// <param name="fields">原始字段字符串，默认值*</param>
     /// <returns>返回匿名查询对象</returns>
-    IQueryAnonymousObject SelectAnonymous(string fields = "*");
+    IQueryAnonymousObject SelectAnonymous();
     #endregion
 }
 /// <summary>
@@ -108,6 +111,45 @@ public interface IQueryBase : IQuery
 /// <typeparam name="T">实体类型</typeparam>
 public interface IQuery<T> : IQueryBase
 {
+    #region Sharding
+    /// <summary>
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，按月分表
+    /// </summary>
+    /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> UseTable(params string[] tableNames);
+    /// <summary>
+    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// </summary>
+    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> UseTable(Func<string, bool> tableNamePredicate);
+    /// <summary>
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> UseTableBy(object field1Value, object field2Value = null);
+    /// <summary>
+    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// </summary>
+    /// <param name="beginFieldValue">字段起始值</param>
+    /// <param name="endFieldValue">字段结束值</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <summary>
+    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// </summary>
+    /// <param name="fieldValue1">第一个值</param>
+    /// <param name="fieldValue2">第二个值</param>
+    /// <param name="fieldValue3">第三个值</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
     #region Union/UnionAll
     /// <summary>
     /// Union操作，去掉重复记录，用法：
@@ -187,10 +229,10 @@ public interface IQuery<T> : IQueryBase
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
     ///         .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE MyCte1(Id,Name,ParentId,PageId) AS 
+    /// WITH RECURSIVE `myCteTable`(`Id`,`Name`,`ParentId`,`PageId`) AS 
     /// (
     /// SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION
-    /// SELECT ... FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id` ...
+    /// SELECT ... FROM `sys_menu` a INNER JOIN `myCteTable` b ON a.`ParentId`=b.`Id` ...
     /// ) ...
     /// </code>
     /// </summary>
@@ -208,10 +250,10 @@ public interface IQuery<T> : IQueryBase
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
     ///         .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE MyCte1(Id,Name,ParentId,PageId) AS 
+    /// WITH RECURSIVE `myCteTable`(`Id`,`Name`,`ParentId`,`PageId`) AS 
     /// (
     /// SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
-    /// SELECT ... FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id` ...
+    /// SELECT ... FROM `sys_menu` a INNER JOIN `myCteTable` b ON a.`ParentId`=b.`Id` ...
     /// ) ...
     /// </summary>
     /// <param name="subQuery">子查询，需要有Select语句，如：
@@ -553,12 +595,12 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> Take(int limit);
     /// <summary>
-    /// 分页查询
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
     /// </summary>
-    /// <param name="pageIndex">第几页索引，从1开始</param>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
     /// <param name="pageSize">每页显示条数</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> Page(int pageIndex, int pageSize);
+    IQuery<T> Page(int pageNumber, int pageSize);
     #endregion
 
     #region Select
@@ -837,6 +879,45 @@ public interface ICteQuery<T> : ICteQuery, IQuery<T> { }
 <#      }#>
 public interface IQuery<<#=tables#>> : IQueryBase
 {
+    #region Sharding
+    /// <summary>
+    /// 使用固定表名确定<#=currentTable#>表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，按月分表
+    /// </summary>
+    /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<<#=tables#>> UseTable(params string[] tableNames);
+    /// <summary>
+    /// 使用表名断言确定<#=currentTable#>表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// </summary>
+    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<<#=tables#>> UseTable(Func<string, bool> tableNamePredicate);
+    /// <summary>
+    /// 根据字段值确定<#=currentTable#>表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<<#=tables#>> UseTableBy(object field1Value, object field2Value = null);
+    /// <summary>
+    /// 根据单个字段值范围确定T2表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// </summary>
+    /// <param name="beginFieldValue">字段起始值</param>
+    /// <param name="endFieldValue">字段结束值</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<<#=tables#>> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <summary>
+    /// 根据1个固定字段值和1个字段值范围确定T2表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// </summary>
+    /// <param name="fieldValue1">第一个值</param>
+    /// <param name="fieldValue2">第二个值</param>
+    /// <param name="fieldValue3">第三个值</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<<#=tables#>> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
 <#        
         if(i < count)
         {
@@ -1083,7 +1164,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     #endregion
-    
+
     #region GroupBy
     /// <summary>
     /// 分组查询，分组表达式groupingExpr可以是单个字段或多个字段的匿名对象，用法:
@@ -1106,7 +1187,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <returns>返回查询对象</returns>
     IGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr);
     #endregion
-    
+
     #region OrderBy
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：

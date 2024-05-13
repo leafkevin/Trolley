@@ -20,7 +20,7 @@ public class Update<TEntity> : IUpdate<TEntity>
     public Update(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(this.DbContext.MapProvider, this.DbContext.IsParameterized);
+        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(this.DbContext.DbKey, this.DbContext.MapProvider, this.DbContext.IsParameterized);
         this.Visitor.Initialize(typeof(TEntity));
     }
     #endregion

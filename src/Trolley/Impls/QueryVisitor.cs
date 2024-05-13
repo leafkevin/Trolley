@@ -48,8 +48,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
 
-    public QueryVisitor(IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
+    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
     {
+        this.DbKey = dbKey;
         this.OrmProvider = ormProvider;
         this.MapProvider = mapProvider;
         this.IsParameterized = isParameterized;
@@ -358,6 +359,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.SelfRefQueryObj = null;
         return builder.ToString();
     }
+
     public virtual void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes)
     {
         this.TableAsStart = tableAsStart;

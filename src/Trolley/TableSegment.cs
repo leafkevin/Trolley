@@ -59,6 +59,10 @@ public class TableSegment
     /// </summary>
     public EntityMap Mapper { get; set; }
     /// <summary>
+    /// 指定的分表名称
+    /// </summary>
+    public List<string> TableNames { get; set; }
+    /// <summary>
     /// 实体表名或是子查询SQL，如：sys_user或是(select * from ...)
     /// </summary>
     public string Body { get; set; }

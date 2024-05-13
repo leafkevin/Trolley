@@ -12,6 +12,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
 {
     #region Properties
     public string DbKey { get; set; }
+    public IOrmDbFactory DbFactory { get; internal set; }
     public IDbConnection Connection { get; set; }
     public string ConnectionString { get; set; }
     public IOrmProvider OrmProvider { get; set; }

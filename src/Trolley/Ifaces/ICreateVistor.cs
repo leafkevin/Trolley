@@ -22,6 +22,15 @@ public interface ICreateVisitor : IDisposable
     void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
     void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
     string BuildSql();
+
+    #region Sharding
+    void UseTable(Type entityType, params string[] tableNames);
+    void UseTable(IOrmDbFactory dbFactory, Type entityType, Func<string, bool> tableNamePredicate);
+    void UseTableBy(IOrmDbFactory dbFactory, Type entityType, object field1Value, object field2Value = null);
+    void UseTableByRange(IOrmDbFactory dbFactory, Type entityType, object beginFieldValue, object endFieldValue);
+    void UseTableByRange(IOrmDbFactory dbFactory, Type entityType, object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
     void WithBy(object insertObj);
     void WithByField(Expression fieldSelector, object fieldValue);
     void WithBulk(IEnumerable insertObjs, int bulkCount);

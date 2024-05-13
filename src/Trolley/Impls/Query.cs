@@ -51,7 +51,7 @@ public class QueryBase : IQueryBase
         this.Visitor.Select("*");
         return new QueryAnonymousObject(this.Visitor);
     }
-    #endregion   
+    #endregion
 
     #region Count
     public virtual int Count() => this.QueryFirstValue<int>("COUNT(1)");
@@ -110,6 +110,39 @@ public class Query<T> : QueryBase, IQuery<T>
     #region Constructor
     public Query(DbContext dbContext, IQueryVisitor visitor)
         : base(dbContext, visitor) { }
+    #endregion
+
+    #region Sharding
+    public IQuery<T> UseTable(params string[] tableNames)
+    {
+        var entityType = typeof(T);
+        this.Visitor.UseTable(entityType, tableNames);
+        return this;
+    }
+    public IQuery<T> UseTable(Func<string, bool> tableNamePredicate)
+    {
+        var entityType = typeof(T);
+        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        return this;
+    }
+    public IQuery<T> UseTableBy(object field1Value, object field2Value = null)
+    {
+        var entityType = typeof(T);
+        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        return this;
+    }
+    public IQuery<T> UseTableByRange(object beginFieldValue, object endFieldValue)
+    {
+        var entityType = typeof(T);
+        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        return this;
+    }
+    public IQuery<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    {
+        var entityType = typeof(T);
+        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
     #endregion
 
     #region Union/UnionAll
@@ -621,16 +654,7 @@ public class Query<T> : QueryBase, IQuery<T>
         }
         return queryObj;
     }
-    #endregion
-
-    public IQuery<T> UseSharding()
-    {
-        return this;
-    }
-    public IQuery<T> UseShardingTable(string tableName)
-    {
-        return this;
-    }
+    #endregion    
 
     #region ToSql
     public override string ToSql(out List<IDbDataParameter> dbParameters)

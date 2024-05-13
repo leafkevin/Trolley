@@ -1,0 +1,632 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
+<#@ output extension=".cs" #>
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Trolley;
+
+public class FromCommand : IFromCommand
+{
+    #region Properties
+    public Type EntityType { get; set; }
+    public DbContext DbContext { get; set; }
+    public IQueryVisitor Visitor { get; set; }
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
+    public IEntityMapProvider MapProvider => this.DbContext.MapProvider;
+    #endregion
+
+    #region Constructor
+    public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
+    {
+        this.EntityType = entityType;
+        this.DbContext = dbContext;
+        this.Visitor = visitor;
+    }
+    #endregion
+
+    #region Select
+    public IFromCommand<TTarget> Select<TTarget>(string fields = "*")
+    {
+        if (string.IsNullOrEmpty(fields))
+            throw new ArgumentNullException(nameof(fields));
+
+        this.Visitor.Select(fields);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    #endregion
+
+    #region Execute
+    public int Execute()
+    {
+        var sql = this.Visitor.BuildCommandSql(this.EntityType, out var dbParameters);
+        var result = this.DbContext.Execute(f =>
+        {
+            f.CommandText = sql;
+            dbParameters.CopyTo(f.Parameters);
+        });
+        this.Dispose();
+        return result;
+    }
+    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
+    {
+        var sql = this.Visitor.BuildCommandSql(this.EntityType, out var dbParameters);
+        var result = await this.DbContext.ExecuteAsync(f =>
+        {
+            f.CommandText = sql;
+            dbParameters.CopyTo(f.Parameters);
+        }, cancellationToken);
+        this.Dispose();
+        return result;
+    }
+    #endregion
+
+    #region ToSql
+    public string ToSql(out List<IDbDataParameter> dbParameters)
+    {
+        var sql = this.Visitor.BuildCommandSql(this.EntityType, out var dbDataParameters);
+        dbParameters = dbDataParameters.Cast<IDbDataParameter>().ToList();
+        this.Dispose();
+        return sql;
+    }
+    #endregion
+
+    #region Dispose
+    public void Dispose()
+    {
+        this.EntityType = null;
+        //DbContext自己会处理释放，此处什么也不做
+        this.DbContext = null;
+        this.Visitor.Dispose();
+        this.Visitor = null;
+    }
+    #endregion
+}
+public class FromCommand<T> : FromCommand, IFromCommand<T>
+{
+    #region Constructor
+    public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
+        : base(entityType, dbContext, visitor) { }
+    #endregion
+
+    #region Sharding
+    public IFromCommand<T> UseTable(params string[] tableNames)
+    {
+        var entityType = typeof(T);
+        this.Visitor.UseTable(entityType, tableNames);
+        return this;
+    }
+    public IFromCommand<T> UseTable(Func<string, bool> tableNamePredicate)
+    {
+        var entityType = typeof(T);
+        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        return this;
+    }
+    public IFromCommand<T> UseTableBy(object field1Value, object field2Value = null)
+    {
+        var entityType = typeof(T);
+        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        return this;
+    }
+    public IFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue)
+    {
+        var entityType = typeof(T);
+        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        return this;
+    }
+    public IFromCommand<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    {
+        var entityType = typeof(T);
+        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region Union/UnionAll
+    public IFromCommand<T> Union(IQuery<T> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        this.Visitor.Union(" UNION", typeof(T), subQuery);
+        return this;
+    }
+    public IFromCommand<T> Union(Func<IFromQuery, IQuery<T>> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        this.Visitor.Union(" UNION", typeof(T), this.DbContext, subQuery);
+        return this;
+    }
+    public IFromCommand<T> UnionAll(IQuery<T> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        this.Visitor.Union(" UNION ALL", typeof(T), subQuery);
+        return this;
+    }
+    public IFromCommand<T> UnionAll(Func<IFromQuery, IQuery<T>> subQuery)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+
+        this.Visitor.Union(" UNION ALL", typeof(T), this.DbContext, subQuery);
+        return this;
+    }
+    #endregion
+
+    #region Join   
+    public IFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("INNER JOIN", typeof(TOther), subQuery, joinOn);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), subQuery, joinOn);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), subQuery, joinOn);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("INNER JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
+        return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    #endregion
+
+    #region Where/And
+    public IFromCommand<T> Where(Expression<Func<T, bool>> predicate)
+    {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.Visitor.Where(predicate);
+        return this;
+    }
+    public IFromCommand<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+    {
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
+        return this;
+    }
+    public IFromCommand<T> And(Expression<Func<T, bool>> predicate)
+    {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.Visitor.And(predicate);
+        return this;
+    }
+    public IFromCommand<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null)
+    {
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region GroupBy
+    public IGroupingCommand<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
+    {
+        if (groupingExpr == null)
+            throw new ArgumentNullException(nameof(groupingExpr));
+
+        this.Visitor.GroupBy(groupingExpr);
+        return this.OrmProvider.NewGroupCommand<T, TGrouping>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    #endregion
+
+    #region OrderBy
+    public IFromCommand<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
+         => this.OrderBy(true, fieldsExpr);
+    public IFromCommand<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        if (condition)
+            this.Visitor.OrderBy("ASC", fieldsExpr);
+        return this;
+    }
+    public IFromCommand<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr)
+        => this.OrderByDescending(true, fieldsExpr);
+    public IFromCommand<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        if (condition)
+            this.Visitor.OrderBy("DESC", fieldsExpr);
+        return this;
+    }
+    #endregion
+
+    #region Select
+    public IFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        this.Visitor.Select(null, fieldsExpr, true);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        this.Visitor.Select(null, fieldsExpr, true);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    #endregion   
+
+    #region Distinct
+    public IFromCommand<T> Distinct()
+    {
+        this.Visitor.Distinct();
+        return this;
+    }
+    #endregion
+
+    #region Take 
+    public IFromCommand<T> Skip(int offset)
+    {
+        this.Visitor.Skip(offset);
+        return this;
+    }
+    public IFromCommand<T> Take(int limit)
+    {
+        this.Visitor.Take(limit);
+        return this;
+    }
+    #endregion      
+}
+<#
+    var count = 6;
+    var tables = "T1";
+    var currentTable = "T1";
+    for (int i = 2; i <= count; i++)
+    {
+        tables += $", T{i}";
+        currentTable = $"T{i}";
+#>
+public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
+{
+    #region Constructor
+    public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
+        : base(entityType, dbContext, visitor) { }
+    #endregion
+
+    #region Sharding
+    public IFromCommand<<#=tables#>> UseTable(params string[] tableNames)
+    {
+        var entityType = typeof(<#=currentTable#>);
+        this.Visitor.UseTable(entityType, tableNames);
+        return this;
+    }
+    public IFromCommand<<#=tables#>> UseTable(Func<string, bool> tableNamePredicate)
+    {
+        var entityType = typeof(<#=currentTable#>);
+        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        return this;
+    }
+    public IFromCommand<<#=tables#>> UseTableBy(object field1Value, object field2Value = null)
+    {
+        var entityType = typeof(<#=currentTable#>);
+        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        return this;
+    }
+    public IFromCommand<<#=tables#>> UseTableByRange(object beginFieldValue, object endFieldValue)
+    {
+        var entityType = typeof(<#=currentTable#>);
+        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        return this;
+    }
+    public IFromCommand<<#=tables#>> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    {
+        var entityType = typeof(<#=currentTable#>);
+        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region Join
+    public IFromCommand<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("INNER JOIN", joinOn);
+        return this;
+    }
+    public IFromCommand<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("LEFT JOIN", joinOn);
+        return this;
+    }
+    public IFromCommand<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("RIGHT JOIN", joinOn);
+        return this;
+    }
+    public IFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
+        return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
+        return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("INNER JOIN", typeof(TOther), subQuery, joinOn);
+        return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), subQuery, joinOn);
+        return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<<#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), subQuery, joinOn);
+        return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("INNER JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
+        return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
+        return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    {
+        if (subQuery == null)
+            throw new ArgumentNullException(nameof(subQuery));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
+        return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    #endregion
+
+    #region Where/And
+    public IFromCommand<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
+    {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.Visitor.Where(predicate);
+        return this;
+    }
+    public IFromCommand<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    {
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.Visitor.Where(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
+        return this;
+    }
+    public IFromCommand<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
+    {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.Visitor.And(predicate);
+        return this;
+    }
+    public IFromCommand<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    {
+        if (ifPredicate == null)
+            throw new ArgumentNullException(nameof(ifPredicate));
+
+        if (condition)
+            this.Visitor.And(ifPredicate);
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region GroupBy
+    public IGroupingCommand<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr)
+    {
+        if (groupingExpr == null)
+            throw new ArgumentNullException(nameof(groupingExpr));
+
+        this.Visitor.GroupBy(groupingExpr);
+        return this.OrmProvider.NewGroupCommand<<#=tables#>, TGrouping>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    #endregion
+
+    #region OrderBy
+    public IFromCommand<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+         => this.OrderBy(true, fieldsExpr);
+    public IFromCommand<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        if (condition)
+            this.Visitor.OrderBy("ASC", fieldsExpr);
+        return this;
+    }
+    public IFromCommand<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+        => this.OrderByDescending(true, fieldsExpr);
+    public IFromCommand<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        if (condition)
+            this.Visitor.OrderBy("DESC", fieldsExpr);
+        return this;
+    }
+    #endregion
+
+    #region Select
+    public IFromCommand<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        this.Visitor.Select(null, fieldsExpr);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    public IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, <#=tables#>, TTarget>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        this.Visitor.Select(null, fieldsExpr);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    #endregion
+
+    #region Take    
+    public IFromCommand<<#=tables#>> Take(int limit)
+    {
+        throw new NotImplementedException();
+    }
+    #endregion
+}
+<#  }#>

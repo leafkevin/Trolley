@@ -21,8 +21,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public string FixedSql { get; set; }
     public List<IDbDataParameter> FixedDbParameters { get; set; }
 
-    public UpdateVisitor(IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+    public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
     {
+        this.DbKey = dbKey;
         this.OrmProvider = ormProvider;
         this.MapProvider = mapProvider;
         this.IsParameterized = isParameterized;

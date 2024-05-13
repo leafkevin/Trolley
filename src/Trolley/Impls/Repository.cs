@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.IO;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
@@ -896,10 +895,10 @@ public class Repository : IRepository
                 {
                     visitor = multiCcommand.CommandType switch
                     {
-                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.mapProvider, this.isParameterized),
-                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.mapProvider, this.isParameterized),
-                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.mapProvider, this.isParameterized),
-                        _ => this.ormProvider.NewUpdateVisitor(this.mapProvider, this.isParameterized)
+                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.dbKey, this.mapProvider, this.isParameterized),
+                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.isParameterized),
+                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.dbKey, this.mapProvider, this.isParameterized),
+                        _ => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.isParameterized)
                     };
                     visitors.Add(multiCcommand.CommandType, visitor);
                     isFirst = true;
@@ -962,10 +961,10 @@ public class Repository : IRepository
                 {
                     visitor = multiCcommand.CommandType switch
                     {
-                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.mapProvider, this.isParameterized),
-                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.mapProvider, this.isParameterized),
-                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.mapProvider, this.isParameterized),
-                        _ => this.ormProvider.NewUpdateVisitor(this.mapProvider, this.isParameterized)
+                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.dbKey, this.mapProvider, this.isParameterized),
+                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.isParameterized),
+                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.dbKey, this.mapProvider, this.isParameterized),
+                        _ => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.isParameterized)
                     };
                     visitors.Add(multiCcommand.CommandType, visitor);
                     isFirst = true;
@@ -1078,6 +1077,6 @@ public class Repository : IRepository
     }
     ~Repository() => this.Dispose();
     private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
-        => this.ormProvider.NewQueryVisitor(this.mapProvider, this.isParameterized, tableAsStart);
+        => this.ormProvider.NewQueryVisitor(this.dbKey, this.mapProvider, this.isParameterized, tableAsStart);
     #endregion
 }

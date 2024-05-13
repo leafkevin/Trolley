@@ -20,7 +20,7 @@ public class UnitTest2 : UnitTestBase
             .Register<MySqlProvider>("fengling_tenant2", "Server=localhost;Database=fengling_tenant2;Uid=root;password=123456;charset=utf8mb4;", false)
             .UseSharding(s =>
             {
-                s.UseDbKey(() =>
+                s.UseDatabase(() =>
                 {
                     //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
                     var passport = f.GetService<IPassport>();
@@ -34,31 +34,31 @@ public class UnitTest2 : UnitTestBase
                 //按照租户+时间分表
                 .UseTable<Order>(t =>
                 {
-                    t.DependOn(d => d.TenantId).DependOnTime()
-                    .Use((origName, tenantId, dateTime) => $"{origName}_{tenantId}_{dateTime:yyyMM}")
+                    t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
+                    .UseRule((dbKey, origName, tenantId, dateTime) => $"{origName}_{tenantId}_{dateTime:yyyMM}")
                     //时间分表，通常都是支持范围查询
-                    .UseRange((origName, tenantId, beginTime, endTime) =>
+                    .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
                     {
-                        var shardingNames = new List<string>();
+                        var tableNames = new List<string>();
                         var current = beginTime;
                         while (current <= endTime)
                         {
-                            var tableName = $"{origName}_{current:yyyyMM}";
-                            if (shardingNames.Contains(tableName))
+                            var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
+                            if (tableNames.Contains(tableName))
                                 continue;
-                            shardingNames.Add(tableName);
+                            tableNames.Add(tableName);
                         }
-                        return shardingNames;
+                        return tableNames;
                     });
                 })
                 //按租户分表
-                .UseTable<Order>(t => t.DependOn(d => d.TenantId).Use((origName, tenantId) => $"{origName}_{tenantId}"))
+                .UseTable<Order>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}"))
                 //按照Id字段分表，Id字段是带有时间属性的ObjectId
-                .UseTable<Order>(t => t.DependOn(d => d.Id).Use((origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}"))
+                .UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}"))
                 //按照Id字段哈希取模分表
-                .UseTable<Order>(t => t.DependOn(d => d.Id).Use((origName, id) => $"{HashCode.Combine(id) % 5}"))
+                .UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}"))
                 //当数据库dbKey是fengling主库时，才取模分表
-                .UseTable<User>(dbKey => dbKey == "fengling", t => t.DependOn(d => d.Id).Use((origName, id) => $"{HashCode.Combine(id) % 5}"));
+                .UseTable<User>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}"));
             })
             .Configure<MySqlProvider, ModelConfiguration>();
             return builder.Build();
@@ -159,43 +159,43 @@ public class UnitTest2 : UnitTestBase
     {
         Initialize();
         using var repository = dbFactory.Create();
-        //var sql = repository
-        //    .From(f => f.From<OrderDetail>()
-        //        .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
-        //        .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
-        //        .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
-        //    .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
-        //    .Where((a, b) => a.ProductCount > 1)
-        //    .Select((x, y) => new
-        //    {
-        //        x.Group,
-        //        Buyer = y,
-        //        x.ProductCount
-        //    })
-        //    .ToSql(out _);
-        //Assert.True(sql == "SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail` a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1");
+        var sql = repository
+            .From(f => f.From<OrderDetail>()
+                .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+                .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
+                .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
+            .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
+            .Where((a, b) => a.ProductCount > 1)
+            .Select((x, y) => new
+            {
+                x.Group,
+                Buyer = y,
+                x.ProductCount
+            })
+            .ToSql(out _);
+        Assert.True(sql == "SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail` a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1");
 
-        //var result = repository
-        //    .From(f => f.From<OrderDetail>()
-        //        .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
-        //        .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
-        //        .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
-        //    .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
-        //    .Where((a, b) => a.ProductCount > 1)
-        //    .Select((x, y) => new
-        //    {
-        //        x.Group,
-        //        Buyer = y,
-        //        x.ProductCount
-        //    })
-        //    .ToList();
-        //if (result.Count > 0)
-        //{
-        //    Assert.NotNull(result[0]);
-        //    Assert.NotNull(result[0].Group);
-        //    Assert.NotNull(result[0].Buyer);
-        //    Assert.True(result[0].ProductCount > 1);
-        //}
+        var result = repository
+            .From(f => f.From<OrderDetail>()
+                .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+                .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
+                .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
+            .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
+            .Where((a, b) => a.ProductCount > 1)
+            .Select((x, y) => new
+            {
+                x.Group,
+                Buyer = y,
+                x.ProductCount
+            })
+            .ToList();
+        if (result.Count > 0)
+        {
+            Assert.NotNull(result[0]);
+            Assert.NotNull(result[0].Group);
+            Assert.NotNull(result[0].Buyer);
+            Assert.True(result[0].ProductCount > 1);
+        }
         var sql1 = repository
            .From(f => f.From<Order>()
                .Select(x => new { x.Id, x.OrderNo, x.BuyerId, x.SellerId }))
@@ -2115,6 +2115,64 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         {
             Assert.True(result[0].LastBuyAt >= result[1].LastBuyAt);
         }
+    }
+    [Fact]
+    public void Query_Sharding()
+    {
+        Initialize();
+        using var repository = dbFactory.Create();
+        var sql = repository
+            .From(f => f.From<OrderDetail>()
+                
+                .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+                .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
+                .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
+            .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
+            .Where((a, b) => a.ProductCount > 1)
+            .Select((x, y) => new
+            {
+                x.Group,
+                Buyer = y,
+                x.ProductCount
+            })
+            .ToSql(out _);
+        Assert.True(sql == "SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail` a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1");
+
+        var result = repository
+            .From(f => f.From<OrderDetail>()
+                .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+                .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
+                .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
+            .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
+            .Where((a, b) => a.ProductCount > 1)
+            .Select((x, y) => new
+            {
+                x.Group,
+                Buyer = y,
+                x.ProductCount
+            })
+            .ToList();
+        if (result.Count > 0)
+        {
+            Assert.NotNull(result[0]);
+            Assert.NotNull(result[0].Group);
+            Assert.NotNull(result[0].Buyer);
+            Assert.True(result[0].ProductCount > 1);
+        }
+        var sql1 = repository
+           .From(f => f.From<Order>()
+               .Select(x => new { x.Id, x.OrderNo, x.BuyerId, x.SellerId }))
+           .Select(x => new { Order = x })
+           .ToSql(out _);
+        Assert.True(sql1 == "SELECT a.`Id`,a.`OrderNo`,a.`BuyerId`,a.`SellerId` FROM (SELECT a.`Id`,a.`OrderNo`,a.`BuyerId`,a.`SellerId` FROM `sys_order` a) a");
+
+        var result1 = repository
+            .From(f => f.From<Order>()
+                .Select(x => new { x.Id, x.OrderNo, x.BuyerId, x.SellerId }))
+            .Select(x => new { Order = x })
+            .First();
+        Assert.NotNull(result1);
+        Assert.NotNull(result1.Order);
     }
     private string DeferInvoke() => "DeferInvoke";
 }

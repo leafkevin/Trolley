@@ -125,6 +125,10 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Create.cs</LastGenOutput>
     </Content>
+    <Content Include="Trolley\FromCommand.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>FromCommand.cs</LastGenOutput>
+    </Content>
     <Content Include="Trolley\FromQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>FromQuery.cs</LastGenOutput>

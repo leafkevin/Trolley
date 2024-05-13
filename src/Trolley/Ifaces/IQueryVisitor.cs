@@ -11,6 +11,7 @@ namespace Trolley;
 
 public interface IQueryVisitor : IDisposable
 {
+    string DbKey { get; }
     bool IsMultiple { get; set; }
     int CommandIndex { get; set; }
     /// <summary>
@@ -37,6 +38,13 @@ public interface IQueryVisitor : IDisposable
     string BuildSql(out List<ReaderField> readerFields);
     string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters);
     string BuildCteTableSql(string tableName, out List<ReaderField> readerFields, out bool isRecursive);
+
+    void UseTable(Type entityType, params string[] tableNames);
+    void UseTable(IOrmDbFactory dbFactory, Type entityType, Func<string, bool> tableNamePredicate);
+    void UseTableBy(IOrmDbFactory dbFactory, Type entityType, object field1Value, object field2Value = null);
+    void UseTableByRange(IOrmDbFactory dbFactory, Type entityType, object beginFieldValue, object endFieldValue);
+    void UseTableByRange(IOrmDbFactory dbFactory, Type entityType, object fieldValue1, object fieldValue2, object fieldValue3);
+
     void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes);
     void From(Type targetType, IQuery subQueryObj);
     void From(Type targetType, DbContext dbContext, Delegate subQueryGetter);

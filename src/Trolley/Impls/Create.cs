@@ -22,9 +22,42 @@ public class Create<TEntity> : ICreate<TEntity>
     public Create(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = this.DbContext.OrmProvider.NewCreateVisitor(this.DbContext.MapProvider, this.DbContext.IsParameterized);
+        this.Visitor = this.DbContext.OrmProvider.NewCreateVisitor(dbContext.DbKey, this.DbContext.MapProvider, this.DbContext.IsParameterized);
         this.Visitor.Initialize(typeof(TEntity));
         this.DbContext = dbContext;
+    }
+    #endregion
+
+    #region Sharding
+    public ICreate<TEntity> UseTable(params string[] tableNames)
+    {
+        var entityType = typeof(TEntity);
+        this.Visitor.UseTable(entityType, tableNames);
+        return this;
+    }
+    public ICreate<TEntity> UseTable(Func<string, bool> tableNamePredicate)
+    {
+        var entityType = typeof(TEntity);
+        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        return this;
+    }
+    public ICreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    {
+        var entityType = typeof(TEntity);
+        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        return this;
+    }
+    public ICreate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
+    {
+        var entityType = typeof(TEntity);
+        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        return this;
+    }
+    public ICreate<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    {
+        var entityType = typeof(TEntity);
+        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        return this;
     }
     #endregion
 
@@ -92,6 +125,7 @@ public class Create<TEntity> : ICreate<TEntity>
         queryVisitor.From('b', null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
         return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, T6>(typeof(TEntity), this.DbContext, queryVisitor);
     }
+
     public IFromCommand<TTarget> From<TTarget>(IQuery<TTarget> subQuery)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();

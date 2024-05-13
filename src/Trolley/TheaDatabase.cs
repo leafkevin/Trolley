@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Trolley;
 
-public class TenantDatabase
+public class TheaDatabase
 {
     public string DbKey { get; set; }
     public string ConnectionString { get; set; }

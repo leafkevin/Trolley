@@ -9,11 +9,18 @@ namespace Trolley;
 
 public interface ISqlVisitor : IDisposable
 {
+    string DbKey { get; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
     bool IsParameterized { get; set; }
     bool IsSelect { get; }
     bool IsWhere { get; }
+
+    void UseTable(Type entityType, params string[] tableNames);
+    void UseTable(IOrmDbFactory dbFactory, Type entityType, Func<string, bool> tableNamePredicate);
+    void UseTableBy(IOrmDbFactory dbFactory, Type entityType, object field1Value, object field2Value = null);
+    void UseTableByRange(IOrmDbFactory dbFactory, Type entityType, object beginFieldValue, object endFieldValue);
+    void UseTableByRange(IOrmDbFactory dbFactory, Type entityType, object fieldValue1, object fieldValue2, object fieldValue3);
 
     SqlSegment VisitAndDeferred(SqlSegment sqlSegment);
     SqlSegment Visit(SqlSegment sqlSegment);

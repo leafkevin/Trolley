@@ -91,6 +91,39 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         : base(entityType, dbContext, visitor) { }
     #endregion
 
+    #region Sharding
+    public IFromCommand<T> UseTable(params string[] tableNames)
+    {
+        var entityType = typeof(T);
+        this.Visitor.UseTable(entityType, tableNames);
+        return this;
+    }
+    public IFromCommand<T> UseTable(Func<string, bool> tableNamePredicate)
+    {
+        var entityType = typeof(T);
+        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        return this;
+    }
+    public IFromCommand<T> UseTableBy(object field1Value, object field2Value = null)
+    {
+        var entityType = typeof(T);
+        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        return this;
+    }
+    public IFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue)
+    {
+        var entityType = typeof(T);
+        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        return this;
+    }
+    public IFromCommand<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    {
+        var entityType = typeof(T);
+        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
     #region Union/UnionAll
     public IFromCommand<T> Union(IQuery<T> subQuery)
     {
@@ -326,18 +359,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.Take(limit);
         return this;
     }
-    #endregion
-
-    //#region AsCteTable
-    //public ICteQuery<T> AsCteTable(string tableName)
-    //{
-    //    var queryObj = new CteQuery<T>(this.DbContext, this.Visitor);
-    //    queryObj.Body = this.Visitor.BuildCteTableSql(tableName, out var isRecursive);
-    //    queryObj.TableName = tableName;
-    //    queryObj.IsRecursive = isRecursive;
-    //    return queryObj;
-    //}
-    //#endregion
+    #endregion      
 }
 public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
 {

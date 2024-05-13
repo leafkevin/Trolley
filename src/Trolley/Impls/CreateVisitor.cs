@@ -24,8 +24,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public bool IsReturnIdentity { get; set; }
     public bool IsUseCte { get; set; }
 
-    public CreateVisitor(IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+    public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
     {
+        this.DbKey = dbKey;
         this.OrmProvider = ormProvider;
         this.MapProvider = mapProvider;
         this.IsParameterized = isParameterized;
@@ -264,7 +265,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             commandInitializer = (builder, insertObj, suffix) => typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, builder, insertObj, suffix);
             return (insertObjs, bulkCount, headSqlSetter, commandInitializer);
         }
-    }   
+    }
     public virtual void VisitWithBy(object insertObj)
     {
         var entityType = this.Tables[0].EntityType;
