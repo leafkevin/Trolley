@@ -51,7 +51,7 @@ public interface IFromCommand<T> : IFromCommand
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
@@ -336,18 +336,48 @@ public interface IFromCommand<T> : IFromCommand
     #region Take
     IFromCommand<T> Take(int limit);
     #endregion
-
-    //#region AsCteTable
-    ///// <summary>
-    ///// 把当前子查询转为CTE表
-    ///// </summary>
-    ///// <param name="tableName"></param>
-    ///// <returns></returns>
-    //ICteQuery<T> AsCteTable(string tableName);
-    //#endregion
 }
 public interface IFromCommand<T1, T2> : IFromCommand
 {
+    #region Sharding
+    /// <summary>
+    /// 使用固定表名确定T2表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// </summary>
+    /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2> UseTable(params string[] tableNames);
+    /// <summary>
+    /// 使用表名断言确定T2表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// </summary>
+    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2> UseTable(Func<string, bool> tableNamePredicate);
+    /// <summary>
+    /// 根据字段值确定T2表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2> UseTableBy(object field1Value, object field2Value = null);
+    /// <summary>
+    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// </summary>
+    /// <param name="beginFieldValue">字段起始值</param>
+    /// <param name="endFieldValue">字段结束值</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <summary>
+    /// 根据1个固定字段值和1个字段值范围确定T2表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// </summary>
+    /// <param name="fieldValue1">第一个值</param>
+    /// <param name="fieldValue2">第二个值</param>
+    /// <param name="fieldValue3">第三个值</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
     #region Join
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
@@ -374,7 +404,6 @@ public interface IFromCommand<T1, T2> : IFromCommand
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2> RightJoin(Expression<Func<T1, T2, bool>> joinOn);
-
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -530,7 +559,7 @@ public interface IFromCommand<T1, T2> : IFromCommand
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
-    ///    .Select((x, a, b) =&gt; new
+    ///    .Select((x, a, b, ...) =&gt; new
     ///    {
     ///        x.Grouping, //可以直接返回分组对象，也可以返回分组对象的某个字段,如：a.Id, a.Name, b.CreatedAt.Date，也可以 x.Grouping.Id, x.Grouping.Name, x.Grouping.Date ...
     ///        OrderCount = x.Count(b.Id), //也可以返回分组后的聚合操作
@@ -587,17 +616,16 @@ public interface IFromCommand<T1, T2> : IFromCommand
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
-    /// Select((a, b) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b) =&gt; x.CreatedAt.Date)
+    /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
-    /// .SelectAggregate((x, a, b) =&gt; new
+    /// .SelectAggregate((x, a, b, ...) =&gt; new
     /// {
     ///     OrderCount = x.Count(a.Id),
     ///     TotalAmount = x.Sum(a.TotalAmount)
@@ -614,6 +642,45 @@ public interface IFromCommand<T1, T2> : IFromCommand
 }
 public interface IFromCommand<T1, T2, T3> : IFromCommand
 {
+    #region Sharding
+    /// <summary>
+    /// 使用固定表名确定T3表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// </summary>
+    /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3> UseTable(params string[] tableNames);
+    /// <summary>
+    /// 使用表名断言确定T3表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// </summary>
+    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate);
+    /// <summary>
+    /// 根据字段值确定T3表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3> UseTableBy(object field1Value, object field2Value = null);
+    /// <summary>
+    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// </summary>
+    /// <param name="beginFieldValue">字段起始值</param>
+    /// <param name="endFieldValue">字段结束值</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <summary>
+    /// 根据1个固定字段值和1个字段值范围确定T3表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// </summary>
+    /// <param name="fieldValue1">第一个值</param>
+    /// <param name="fieldValue2">第二个值</param>
+    /// <param name="fieldValue3">第三个值</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
     #region Join
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
@@ -640,7 +707,6 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3> RightJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
-
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -719,7 +785,7 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
     /// .InnerJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
     /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM `sys_order_detail` ...) d ON ...
+    /// ... INNER JOIN (SELECT ... FROM `sys_order_detail` ...) c ON ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -733,7 +799,7 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
     /// .LeftJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
     /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM `sys_order_detail` ...) d ON ...
+    /// ... LEFT JOIN (SELECT ... FROM `sys_order_detail` ...) c ON ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -747,7 +813,7 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
     /// .RightJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
     /// SQL:
-    /// ... RIGHT JOIN (SELECT ... FROM `sys_order_detail` ...) d ON ...
+    /// ... RIGHT JOIN (SELECT ... FROM `sys_order_detail` ...) c ON ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -796,7 +862,7 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
-    ///    .Select((x, a, b) =&gt; new
+    ///    .Select((x, a, b, ...) =&gt; new
     ///    {
     ///        x.Grouping, //可以直接返回分组对象，也可以返回分组对象的某个字段,如：a.Id, a.Name, b.CreatedAt.Date，也可以 x.Grouping.Id, x.Grouping.Name, x.Grouping.Date ...
     ///        OrderCount = x.Count(b.Id), //也可以返回分组后的聚合操作
@@ -853,17 +919,16 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
-    /// Select((a, b, c) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c) =&gt; x.CreatedAt.Date)
+    /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
-    /// .SelectAggregate((x, a, b, c) =&gt; new
+    /// .SelectAggregate((x, a, b, ...) =&gt; new
     /// {
     ///     OrderCount = x.Count(a.Id),
     ///     TotalAmount = x.Sum(a.TotalAmount)
@@ -880,6 +945,45 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
 }
 public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
 {
+    #region Sharding
+    /// <summary>
+    /// 使用固定表名确定T4表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// </summary>
+    /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4> UseTable(params string[] tableNames);
+    /// <summary>
+    /// 使用表名断言确定T4表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// </summary>
+    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate);
+    /// <summary>
+    /// 根据字段值确定T4表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value = null);
+    /// <summary>
+    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// </summary>
+    /// <param name="beginFieldValue">字段起始值</param>
+    /// <param name="endFieldValue">字段结束值</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <summary>
+    /// 根据1个固定字段值和1个字段值范围确定T4表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// </summary>
+    /// <param name="fieldValue1">第一个值</param>
+    /// <param name="fieldValue2">第二个值</param>
+    /// <param name="fieldValue3">第三个值</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
     #region Join
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
@@ -906,7 +1010,6 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4> RightJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
-
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -985,7 +1088,7 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
     /// .InnerJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
     /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM `sys_order_detail` ...) e ON ...
+    /// ... INNER JOIN (SELECT ... FROM `sys_order_detail` ...) c ON ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -999,7 +1102,7 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
     /// .LeftJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
     /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM `sys_order_detail` ...) e ON ...
+    /// ... LEFT JOIN (SELECT ... FROM `sys_order_detail` ...) c ON ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -1013,7 +1116,7 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
     /// .RightJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
     /// SQL:
-    /// ... RIGHT JOIN (SELECT ... FROM `sys_order_detail` ...) e ON ...
+    /// ... RIGHT JOIN (SELECT ... FROM `sys_order_detail` ...) c ON ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -1062,7 +1165,7 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
-    ///    .Select((x, a, b) =&gt; new
+    ///    .Select((x, a, b, ...) =&gt; new
     ///    {
     ///        x.Grouping, //可以直接返回分组对象，也可以返回分组对象的某个字段,如：a.Id, a.Name, b.CreatedAt.Date，也可以 x.Grouping.Id, x.Grouping.Name, x.Grouping.Date ...
     ///        OrderCount = x.Count(b.Id), //也可以返回分组后的聚合操作
@@ -1119,17 +1222,16 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
-    /// Select((a, b, c, d) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d) =&gt; x.CreatedAt.Date)
+    /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
-    /// .SelectAggregate((x, a, b, c, d) =&gt; new
+    /// .SelectAggregate((x, a, b, ...) =&gt; new
     /// {
     ///     OrderCount = x.Count(a.Id),
     ///     TotalAmount = x.Sum(a.TotalAmount)
@@ -1146,6 +1248,45 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
 }
 public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
 {
+    #region Sharding
+    /// <summary>
+    /// 使用固定表名确定T5表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// </summary>
+    /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, T5> UseTable(params string[] tableNames);
+    /// <summary>
+    /// 使用表名断言确定T5表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// </summary>
+    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate);
+    /// <summary>
+    /// 根据字段值确定T5表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value = null);
+    /// <summary>
+    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// </summary>
+    /// <param name="beginFieldValue">字段起始值</param>
+    /// <param name="endFieldValue">字段结束值</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <summary>
+    /// 根据1个固定字段值和1个字段值范围确定T5表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// </summary>
+    /// <param name="fieldValue1">第一个值</param>
+    /// <param name="fieldValue2">第二个值</param>
+    /// <param name="fieldValue3">第三个值</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
     #region Join
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
@@ -1172,7 +1313,6 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5> RightJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
-
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -1251,7 +1391,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
     /// .InnerJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
     /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM `sys_order_detail` ...) f ON ...
+    /// ... INNER JOIN (SELECT ... FROM `sys_order_detail` ...) c ON ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -1265,7 +1405,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
     /// .LeftJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
     /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM `sys_order_detail` ...) f ON ...
+    /// ... LEFT JOIN (SELECT ... FROM `sys_order_detail` ...) c ON ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -1279,7 +1419,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
     /// .RightJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
     /// SQL:
-    /// ... RIGHT JOIN (SELECT ... FROM `sys_order_detail` ...) f ON ...
+    /// ... RIGHT JOIN (SELECT ... FROM `sys_order_detail` ...) c ON ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -1328,7 +1468,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
-    ///    .Select((x, a, b) =&gt; new
+    ///    .Select((x, a, b, ...) =&gt; new
     ///    {
     ///        x.Grouping, //可以直接返回分组对象，也可以返回分组对象的某个字段,如：a.Id, a.Name, b.CreatedAt.Date，也可以 x.Grouping.Id, x.Grouping.Name, x.Grouping.Date ...
     ///        OrderCount = x.Count(b.Id), //也可以返回分组后的聚合操作
@@ -1385,17 +1525,16 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
-    /// Select((a, b, c, d, e) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e) =&gt; x.CreatedAt.Date)
+    /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e) =&gt; new
+    /// .SelectAggregate((x, a, b, ...) =&gt; new
     /// {
     ///     OrderCount = x.Count(a.Id),
     ///     TotalAmount = x.Sum(a.TotalAmount)
@@ -1412,6 +1551,45 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
 }
 public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
 {
+    #region Sharding
+    /// <summary>
+    /// 使用固定表名确定T6表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// </summary>
+    /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames);
+    /// <summary>
+    /// 使用表名断言确定T6表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// </summary>
+    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, T5, T6> UseTable(Func<string, bool> tableNamePredicate);
+    /// <summary>
+    /// 根据字段值确定T6表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, T5, T6> UseTableBy(object field1Value, object field2Value = null);
+    /// <summary>
+    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// </summary>
+    /// <param name="beginFieldValue">字段起始值</param>
+    /// <param name="endFieldValue">字段结束值</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object beginFieldValue, object endFieldValue);
+    /// <summary>
+    /// 根据1个固定字段值和1个字段值范围确定T6表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// </summary>
+    /// <param name="fieldValue1">第一个值</param>
+    /// <param name="fieldValue2">第二个值</param>
+    /// <param name="fieldValue3">第三个值</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
     #region Join
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
@@ -1479,7 +1657,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy((a, b, ...) =&gt; new { a.Id, a.Name, b.CreatedAt.Date }) //或是 .GroupBy((a, b, ...) =&gt; a.CreatedAt.Date)
-    ///    .Select((x, a, b) =&gt; new
+    ///    .Select((x, a, b, ...) =&gt; new
     ///    {
     ///        x.Grouping, //可以直接返回分组对象，也可以返回分组对象的某个字段,如：a.Id, a.Name, b.CreatedAt.Date，也可以 x.Grouping.Id, x.Grouping.Name, x.Grouping.Date ...
     ///        OrderCount = x.Count(b.Id), //也可以返回分组后的聚合操作
@@ -1536,7 +1714,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
-    /// Select((a, b, c, d, e, f) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, c, d, e, f) =&gt; x.CreatedAt.Date)
+    /// Select((a, b, ...) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b, ...) =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>
@@ -1545,7 +1723,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f) =&gt; new
+    /// .SelectAggregate((x, a, b, ...) =&gt; new
     /// {
     ///     OrderCount = x.Count(a.Id),
     ///     TotalAmount = x.Sum(a.TotalAmount)

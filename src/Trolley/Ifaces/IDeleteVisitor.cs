@@ -10,6 +10,7 @@ public interface IDeleteVisitor : IDisposable
     IDataParameterCollection DbParameters { get; set; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
+    IShardingProvider ShardingProvider { get; }
 
     void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
     MultipleCommand CreateMultipleCommand();
@@ -18,10 +19,10 @@ public interface IDeleteVisitor : IDisposable
 
     #region Sharding
     void UseTable(Type entityType, params string[] tableNames);
-    void UseTable(IOrmDbFactory dbFactory, Type entityType, Func<string, bool> tableNamePredicate);
-    void UseTableBy(IOrmDbFactory dbFactory, Type entityType, object field1Value, object field2Value = null);
-    void UseTableByRange(IOrmDbFactory dbFactory, Type entityType, object beginFieldValue, object endFieldValue);
-    void UseTableByRange(IOrmDbFactory dbFactory, Type entityType, object fieldValue1, object fieldValue2, object fieldValue3);
+    void UseTable(Type entityType, Func<string, bool> tableNamePredicate);
+    void UseTableBy(Type entityType, object field1Value, object field2Value = null);
+    void UseTableByRange(Type entityType, object beginFieldValue, object endFieldValue);
+    void UseTableByRange(Type entityType, object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
     IDeleteVisitor WhereWith(object wherKeys);

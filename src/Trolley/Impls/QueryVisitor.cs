@@ -48,11 +48,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
 
-    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
+    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
     {
         this.DbKey = dbKey;
         this.OrmProvider = ormProvider;
         this.MapProvider = mapProvider;
+        this.ShardingProvider = shardingProvider;
         this.IsParameterized = isParameterized;
         this.TableAsStart = tableAsStart;
         this.ParameterPrefix = parameterPrefix;
@@ -111,6 +112,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         string tableSql = null;
         if (this.Tables.Count > 0)
         {
+            //TODO:需要根据分表信息，多个JOIN表匹配分表
             foreach (var tableSegment in this.Tables)
             {
                 string tableName = string.Empty;
@@ -359,7 +361,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.SelfRefQueryObj = null;
         return builder.ToString();
     }
-
+    public virtual bool IsShardingTables(string tableSchema, out string sql)
+    {
+        sql = null;
+        return false;
+    }
     public virtual void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes)
     {
         this.TableAsStart = tableAsStart;

@@ -10,8 +10,6 @@ public interface IOrmDbFactory
     ICollection<IEntityMapProvider> MapProviders { get; }
 
     void UseDatabase(Func<string> dbKeySelector);
-    bool TryGetShardingTableNames(string dbKey, Type entityType, out List<string> tableNames);
-    void AddShardingTableNames(string dbKey, Type entityType, List<string> tableNames);
     bool TryGetShardingTable(Type entityType, out ShardingTable shardingTable);
     void AddShardingTable(Type entityType, ShardingTable shardingTable);
 
@@ -23,4 +21,6 @@ public interface IOrmDbFactory
     bool TryGetMapProvider(Type ormProviderType, out IEntityMapProvider mapProvider);
     TheaDatabase GetDatabase(string dbKey = null);
     IRepository CreateRepository(string dbKey = null);
+    void With(Action<OrmDbFactoryOptions> optionsInitializer);
+    void Build();
 }

@@ -4,7 +4,7 @@ namespace Trolley;
 
 public class OrmDbFactoryBuilder
 {
-    private OrmDbFactory dbFactory = new();
+    private IOrmDbFactory dbFactory = new OrmDbFactory();
 
     public OrmDbFactoryBuilder Register<TOrmProvider>(string dbKey, string connectionString, bool isDefault) where TOrmProvider : class, IOrmProvider, new()
     {
@@ -39,7 +39,8 @@ public class OrmDbFactoryBuilder
         if (shardingInitializer == null)
             throw new ArgumentNullException(nameof(shardingInitializer));
 
-        //TODO:
+        var builder = new ShardingBuilder(this.dbFactory);
+        shardingInitializer.Invoke(builder);
         return this;
     }
     public OrmDbFactoryBuilder With(Action<OrmDbFactoryOptions> optionsInitializer)
@@ -47,5 +48,9 @@ public class OrmDbFactoryBuilder
         this.dbFactory.With(optionsInitializer);
         return this;
     }
-    public IOrmDbFactory Build() => this.dbFactory.Build();
+    public IOrmDbFactory Build()
+    {
+        this.dbFactory.Build();
+        return this.dbFactory;
+    }
 }

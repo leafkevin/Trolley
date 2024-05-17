@@ -16,6 +16,7 @@ public class Repository : IRepository
     protected string dbKey => this.DbContext.DbKey;
     protected IOrmProvider ormProvider => this.DbContext.OrmProvider;
     protected IEntityMapProvider mapProvider => this.DbContext.MapProvider;
+    protected IShardingProvider shardingProvider => this.DbContext.ShardingProvider;
     protected bool isParameterized => this.DbContext.IsParameterized;
     #endregion
 
@@ -28,6 +29,11 @@ public class Repository : IRepository
     public Repository(DbContext dbContext) => this.DbContext = dbContext;
     #endregion
 
+    public virtual bool TryGetShardingTableNames(Type entityType, out List<string> tableNames)
+    {
+        tableNames = null;
+        return false;
+    }
     #region From
     public virtual IQuery<T> From<T>(char tableAsStart = 'a', string suffixRawSql = null)
     {
@@ -895,10 +901,10 @@ public class Repository : IRepository
                 {
                     visitor = multiCcommand.CommandType switch
                     {
-                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.dbKey, this.mapProvider, this.isParameterized),
-                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.isParameterized),
-                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.dbKey, this.mapProvider, this.isParameterized),
-                        _ => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.isParameterized)
+                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.dbKey, this.mapProvider, this.shardingProvider, this.isParameterized),
+                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.shardingProvider, this.isParameterized),
+                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.dbKey, this.mapProvider, this.shardingProvider, this.isParameterized),
+                        _ => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.shardingProvider, this.isParameterized)
                     };
                     visitors.Add(multiCcommand.CommandType, visitor);
                     isFirst = true;
@@ -961,10 +967,10 @@ public class Repository : IRepository
                 {
                     visitor = multiCcommand.CommandType switch
                     {
-                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.dbKey, this.mapProvider, this.isParameterized),
-                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.isParameterized),
-                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.dbKey, this.mapProvider, this.isParameterized),
-                        _ => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.isParameterized)
+                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.dbKey, this.mapProvider, this.shardingProvider, this.isParameterized),
+                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.shardingProvider, this.isParameterized),
+                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.dbKey, this.mapProvider, this.shardingProvider, this.isParameterized),
+                        _ => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.shardingProvider, this.isParameterized)
                     };
                     visitors.Add(multiCcommand.CommandType, visitor);
                     isFirst = true;
@@ -1014,11 +1020,6 @@ public class Repository : IRepository
 
         return this;
     }
-    //public IRepository UseSharding (  tenantId)
-    //{
-
-    //    return this;
-    //}
     public virtual void Close() => this.Dispose();
     public virtual async Task CloseAsync() => await this.DisposeAsync();
     public virtual IRepository Timeout(int timeout)
@@ -1077,6 +1078,6 @@ public class Repository : IRepository
     }
     ~Repository() => this.Dispose();
     private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
-        => this.ormProvider.NewQueryVisitor(this.dbKey, this.mapProvider, this.isParameterized, tableAsStart);
+        => this.ormProvider.NewQueryVisitor(this.dbKey, this.mapProvider, this.DbContext.ShardingProvider, this.isParameterized, tableAsStart);
     #endregion
 }

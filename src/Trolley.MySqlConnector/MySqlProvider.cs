@@ -162,7 +162,7 @@ public partial class MySqlProvider : BaseOrmProvider
         defaultTypeHandlers[typeof(object)] = typeHandlers[typeof(JsonTypeHandler)];
     }
     public override IDbConnection CreateConnection(string connectionString)
-       => new MySqlConnection(connectionString);
+        => new MySqlConnection(connectionString);
     public override IDbDataParameter CreateParameter(string parameterName, object value)
         => new MySqlParameter(parameterName, value);
     public override IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value)

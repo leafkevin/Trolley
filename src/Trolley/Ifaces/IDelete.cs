@@ -15,7 +15,7 @@ public interface IDelete<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定TEntity表一个或多个分表名执行删除操作，完整的表名，如：.UseTable("sys_order_202001")，按月分表
+    /// 使用固定表名确定TEntity表一个或多个分表名执行删除操作，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回删除对象</returns>

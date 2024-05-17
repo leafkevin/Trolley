@@ -12,11 +12,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
 {
     #region Properties
     public string DbKey { get; set; }
-    public IOrmDbFactory DbFactory { get; internal set; }
     public IDbConnection Connection { get; set; }
     public string ConnectionString { get; set; }
     public IOrmProvider OrmProvider { get; set; }
     public IEntityMapProvider MapProvider { get; set; }
+    public IShardingProvider ShardingProvider { get; set; }
     public IDbTransaction Transaction { get; set; }
     public bool IsParameterized { get; set; }
     public int CommandTimeout { get; set; }
@@ -132,12 +132,13 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         Exception exception = null;
         try
         {
+            var isOpened = this.BuildShardingTables(visitor, command);
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
             command.CommandText = visitor.BuildSql(out var readerFields);
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            this.Open();
+            if (!isOpened) this.Open();
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = command.ExecuteReader(behavior);
             var entityType = typeof(TResult);
@@ -181,12 +182,13 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         Exception exception = null;
         try
         {
+            var isOpened = await this.BuildShardingTablesAsync(visitor, command, cancellationToken);
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
             command.CommandText = visitor.BuildSql(out var readerFields);
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            await this.OpenAsync(cancellationToken);
+            if (!isOpened) await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             var entityType = typeof(TResult);
@@ -855,4 +857,43 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         this.Connection = null;
     }
     #endregion
+
+    private bool BuildShardingTables(IQueryVisitor visitor, IDbCommand command)
+    {
+        if (!visitor.IsShardingTables(this.Connection.Database, out var sql))
+            return false;
+
+        command.CommandText = sql;
+        this.Open();
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+        var shardingTables = new List<string>();
+        while (reader.Read())
+        {
+            shardingTables.Add(reader.To<string>(this.OrmProvider));
+        }
+        reader.Dispose();
+        command.CommandText = null;
+        command.Parameters.Clear();
+        visitor.SetShardingTables(shardingTables);
+        return true;
+    }
+    private async Task<bool> BuildShardingTablesAsync(IQueryVisitor visitor, DbCommand command, CancellationToken cancellationToken = default)
+    {
+        if (!visitor.IsShardingTables(this.Connection.Database, out var sql))
+            return false;
+
+        command.CommandText = sql;
+        await this.OpenAsync(cancellationToken);
+        var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+        var shardingTables = new List<string>();
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            shardingTables.Add(reader.To<string>(this.OrmProvider));
+        }
+        await reader.DisposeAsync();
+        command.CommandText = null;
+        command.Parameters.Clear();
+        visitor.SetShardingTables(shardingTables);
+        return true;
+    }
 }

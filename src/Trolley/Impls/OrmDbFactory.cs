@@ -12,9 +12,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
     private ConcurrentDictionary<Type, IOrmProvider> ormProviders = new();
     private ConcurrentDictionary<string, TheaDatabase> databases = new();
     private ConcurrentDictionary<Type, IEntityMapProvider> mapProviders = new();
-    private Func<string> dbKeySelector = null;
-    private ConcurrentDictionary<string, ConcurrentDictionary<Type, List<string>>> shardingDatabases = new();
-    private ConcurrentDictionary<Type, ShardingTable> shardingTables = new();
+    private IShardingProvider shardingProvider = new ShardingProvider();
 
     public ICollection<TheaDatabase> Databases => this.databases.Values;
     public ICollection<IOrmProvider> OrmProviders => this.ormProviders.Values;
@@ -90,28 +88,11 @@ public sealed class OrmDbFactory : IOrmDbFactory
         return database;
     }
 
-    public void UseDatabase(Func<string> dbKeySelector) => this.dbKeySelector = dbKeySelector;
-    public bool TryGetShardingTableNames(string dbKey, Type entityType, out List<string> tableNames)
-    {
-        if (!this.shardingDatabases.TryGetValue(dbKey, out var databases))
-        {
-            tableNames = null;
-            return false;
-        }
-        if (!databases.TryGetValue(entityType, out tableNames))
-            return false;
-        return true;
-    }
-    public void AddShardingTableNames(string dbKey, Type entityType, List<string> tableNames)
-    {
-        if (!this.shardingDatabases.TryGetValue(dbKey, out var databases))
-            this.shardingDatabases.TryAdd(dbKey, databases = new ConcurrentDictionary<Type, List<string>>());
-        databases.AddOrUpdate(entityType, k => tableNames, (k, o) => tableNames);
-    }
+    public void UseDatabase(Func<string> dbKeySelector) => this.shardingProvider.UseDatabase(dbKeySelector);
     public bool TryGetShardingTable(Type entityType, out ShardingTable shardingTable)
-        => this.shardingTables.TryGetValue(entityType, out shardingTable);
+        => this.shardingProvider.TryGetShardingTable(entityType, out shardingTable);
     public void AddShardingTable(Type entityType, ShardingTable shardingTable)
-       => this.shardingTables.TryAdd(entityType, shardingTable);
+        => this.shardingProvider.AddShardingTable(entityType, shardingTable);
     //public  IRepository Create(string dbKey = null, string tenantId = null)
     //{
     //    var database = this.GetDatabase(dbKey);
@@ -139,27 +120,26 @@ public sealed class OrmDbFactory : IOrmDbFactory
         if (!this.TryGetMapProvider(ormProviderType, out var mapProvider))
             throw new Exception($"未注册Key为{ormProviderType.FullName}的EntityMapProvider");
         var localDbKey = dbKey ?? database.DbKey;
-        this.shardingDatabases.TryGetValue(localDbKey, out var shardingDatabase);
         var dbContext = new DbContext
         {
             DbKey = localDbKey,
             ConnectionString = database.ConnectionString,
             OrmProvider = ormProvider,
             MapProvider = mapProvider,
+            ShardingProvider = this.shardingProvider,
             CommandTimeout = this.options?.Timeout ?? 30,
-            IsParameterized = this.options?.IsParameterized ?? false,
-            DbFactory = this
+            IsParameterized = this.options?.IsParameterized ?? false
         };
         return ormProvider.CreateRepository(dbContext);
     }
-    internal void With(Action<OrmDbFactoryOptions> optionsInitializer)
+    public void With(Action<OrmDbFactoryOptions> optionsInitializer)
     {
         if (optionsInitializer == null)
             throw new ArgumentNullException(nameof(optionsInitializer));
         this.options = new OrmDbFactoryOptions();
         optionsInitializer.Invoke(this.options);
     }
-    internal IOrmDbFactory Build()
+    public void Build()
     {
         foreach (var ormProviderType in this.ormProviders.Keys)
         {
@@ -167,6 +147,5 @@ public sealed class OrmDbFactory : IOrmDbFactory
                 this.AddMapProvider(ormProviderType, new EntityMapProvider { OrmProviderType = ormProviderType });
             mapProvider.Build(this.ormProviders[ormProviderType]);
         }
-        return this;
     }
 }

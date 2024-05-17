@@ -13,6 +13,7 @@ public interface IUpdateVisitor : IDisposable
     IDataParameterCollection DbParameters { get; set; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
+    IShardingProvider ShardingProvider { get; }
     ActionMode ActionMode { get; set; }
     List<TableSegment> Tables { get; }
 
@@ -21,6 +22,15 @@ public interface IUpdateVisitor : IDisposable
     string BuildCommand(IDbCommand command);
     void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
     string BuildSql();
+
+    #region Sharding
+    void UseTable(Type entityType, params string[] tableNames);
+    void UseTable(Type entityType, Func<string, bool> tableNamePredicate);
+    void UseTableBy(Type entityType, object field1Value, object field2Value = null);
+    void UseTableByRange(Type entityType, object beginFieldValue, object endFieldValue);
+    void UseTableByRange(Type entityType, object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
     IUpdateVisitor From(params Type[] entityTypes);
     IUpdateVisitor Join(string joinType, Type entityType, Expression joinOn);
     IUpdateVisitor Set(Expression fieldsAssignment);

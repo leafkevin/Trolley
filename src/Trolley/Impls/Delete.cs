@@ -19,7 +19,7 @@ public class Delete<TEntity> : IDelete<TEntity>
     public Delete(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = dbContext.OrmProvider.NewDeleteVisitor(dbContext.DbKey, dbContext.MapProvider, dbContext.IsParameterized);
+        this.Visitor = dbContext.OrmProvider.NewDeleteVisitor(dbContext.DbKey, dbContext.MapProvider, dbContext.ShardingProvider, dbContext.IsParameterized);
         this.Visitor.Initialize(typeof(TEntity));
     }
     #endregion
@@ -34,25 +34,25 @@ public class Delete<TEntity> : IDelete<TEntity>
     public IDelete<TEntity> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(TEntity);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
         return this;
     }
     public IDelete<TEntity> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(TEntity);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IDelete<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(TEntity);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IDelete<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(TEntity);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion

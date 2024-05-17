@@ -12,15 +12,17 @@ public interface ISqlVisitor : IDisposable
     string DbKey { get; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
+    IShardingProvider ShardingProvider { get; }
     bool IsParameterized { get; set; }
     bool IsSelect { get; }
     bool IsWhere { get; }
 
     void UseTable(Type entityType, params string[] tableNames);
-    void UseTable(IOrmDbFactory dbFactory, Type entityType, Func<string, bool> tableNamePredicate);
-    void UseTableBy(IOrmDbFactory dbFactory, Type entityType, object field1Value, object field2Value = null);
-    void UseTableByRange(IOrmDbFactory dbFactory, Type entityType, object beginFieldValue, object endFieldValue);
-    void UseTableByRange(IOrmDbFactory dbFactory, Type entityType, object fieldValue1, object fieldValue2, object fieldValue3);
+    void UseTable(Type entityType, Func<string, bool> tableNamePredicate);
+    void UseTable(Type entityType, Type masterEntityType, Func<string, string, string, string, string> tableNameGetter);
+    void UseTableBy(Type entityType, object field1Value, object field2Value = null);
+    void UseTableByRange(Type entityType, object beginFieldValue, object endFieldValue);
+    void UseTableByRange(Type entityType, object fieldValue1, object fieldValue2, object fieldValue3);
 
     SqlSegment VisitAndDeferred(SqlSegment sqlSegment);
     SqlSegment Visit(SqlSegment sqlSegment);

@@ -56,6 +56,7 @@ public class TableShardingBuilder<TEntity>
         var entityType = typeof(TEntity);
         if (!this.dbFactory.TryGetShardingTable(entityType, out var shardingTable))
             this.dbFactory.AddShardingTable(entityType, shardingTable = new ShardingTable());
+        shardingTable.DependOnMembers ??= new();
         shardingTable.DependOnMembers.Add(memberName);
 
         return new FieldShardingBuilder<TEntity, TField>(this.dbFactory);
@@ -79,16 +80,25 @@ public class FieldShardingBuilder<TEntity, TField>
 
         return new FieldShardingBuilder<TEntity, TField, TField2>(this.dbFactory);
     }
-    public FieldShardingBuilder<TEntity, TField> UseRule(Func<string, string, TField, string> tableNameGetter)
+    public FieldShardingBuilder<TEntity, TField> UseRule(Func<string, string, TField, string> tableNameGetter, string validateRegex)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter));
+        if (string.IsNullOrEmpty(validateRegex))
+            throw new ArgumentNullException(nameof(validateRegex));
+
         var entityType = typeof(TEntity);
         if (!this.dbFactory.TryGetShardingTable(entityType, out var shardingTable))
             this.dbFactory.AddShardingTable(entityType, shardingTable = new ShardingTable());
         shardingTable.Rule = (string dbKey, string origName, object fieldValue) => tableNameGetter(origName, dbKey, (TField)fieldValue);
+        shardingTable.ValidateRegex = validateRegex;
         return this;
     }
     public FieldShardingBuilder<TEntity, TField> UseRangeRule(Func<string, string, TField, TField, List<string>> tableNamesGetter)
     {
+        if (tableNamesGetter == null)
+            throw new ArgumentNullException(nameof(tableNamesGetter));
+
         var entityType = typeof(TEntity);
         if (!this.dbFactory.TryGetShardingTable(entityType, out var shardingTable))
             this.dbFactory.AddShardingTable(entityType, shardingTable = new ShardingTable());
@@ -100,16 +110,31 @@ public class FieldShardingBuilder<TEntity, TField1, TField2>
 {
     private IOrmDbFactory dbFactory;
     public FieldShardingBuilder(IOrmDbFactory dbFactory) => this.dbFactory = dbFactory;
-    public FieldShardingBuilder<TEntity, TField1, TField2> UseRule(Func<string, string, TField1, TField2, string> tableNameGetter)
+    /// <summary>
+    /// 设置分表名称命名规则和分表名称验证正则表达式
+    /// </summary>
+    /// <param name="tableNameGetter">分表名称获取委托</param>
+    /// <param name="validateRegex"> 分表名称验证正则表达式，用于筛选分表名称</param>
+    /// <returns></returns>
+    public FieldShardingBuilder<TEntity, TField1, TField2> UseRule(Func<string, string, TField1, TField2, string> tableNameGetter, string validateRegex)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter));
+        if (string.IsNullOrEmpty(validateRegex))
+            throw new ArgumentNullException(nameof(validateRegex));
+
         var entityType = typeof(TEntity);
         if (!this.dbFactory.TryGetShardingTable(entityType, out var shardingTable))
             this.dbFactory.AddShardingTable(entityType, shardingTable = new ShardingTable());
         shardingTable.Rule = (string dbKey, string origName, object field1Value, object field2Value) => tableNameGetter(origName, dbKey, (TField1)field1Value, (TField2)field2Value);
+        shardingTable.ValidateRegex = validateRegex;
         return this;
     }
     public FieldShardingBuilder<TEntity, TField1, TField2> UseRangeRule(Func<string, string, TField1, TField2, TField2, List<string>> tableNamesGetter)
     {
+        if (tableNamesGetter == null)
+            throw new ArgumentNullException(nameof(tableNamesGetter));
+
         var entityType = typeof(TEntity);
         if (!this.dbFactory.TryGetShardingTable(entityType, out var shardingTable))
             this.dbFactory.AddShardingTable(entityType, shardingTable = new ShardingTable());
@@ -118,6 +143,9 @@ public class FieldShardingBuilder<TEntity, TField1, TField2>
     }
     public FieldShardingBuilder<TEntity, TField1, TField2> UseRangeRule(Func<string, string, TField1, TField1, TField2, List<string>> tableNamesGetter)
     {
+        if (tableNamesGetter == null)
+            throw new ArgumentNullException(nameof(tableNamesGetter));
+
         var entityType = typeof(TEntity);
         if (!this.dbFactory.TryGetShardingTable(entityType, out var shardingTable))
             this.dbFactory.AddShardingTable(entityType, shardingTable = new ShardingTable());

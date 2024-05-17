@@ -7,6 +7,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Trolley;
 
@@ -21,6 +22,7 @@ public class SqlVisitor : ISqlVisitor
     public IDataParameterCollection NextDbParameters { get; set; }
     public IOrmProvider OrmProvider { get; set; }
     public IEntityMapProvider MapProvider { get; set; }
+    public IShardingProvider ShardingProvider { get; set; }
     public bool IsParameterized { get; set; }
     public bool IsMultiple { get; set; }
     public int CommandIndex { get; set; }
@@ -45,6 +47,7 @@ public class SqlVisitor : ISqlVisitor
     public List<ReaderField> GroupFields { get; set; }
     public List<TableSegment> IncludeSegments { get; set; }
     public List<IQuery> RefQueries { get; set; } = new();
+    public List<ShardingTableInfo> ShardingTableInfos { get; set; }
 
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
     {
@@ -57,28 +60,41 @@ public class SqlVisitor : ISqlVisitor
         var tableSegment = this.Tables.Find(f => f.EntityType == entityType);
         tableSegment.TableNames = new List<string>(tableNames);
     }
-    public void UseTable(IOrmDbFactory dbFactory, Type entityType, Func<string, bool> tableNamePredicate)
+    public void UseTable(Type entityType, Func<string, bool> tableNamePredicate)
     {
         if (tableNamePredicate == null)
             throw new ArgumentNullException(nameof(tableNamePredicate));
 
-        if (!dbFactory.TryGetShardingTable(entityType, out var shardingTable))
+        if (!this.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable))
             throw new Exception($"实体{entityType.FullName}没有配置分表");
         if (shardingTable.DependOnMembers == null || shardingTable.DependOnMembers.Count == 0)
             throw new Exception($"实体{entityType.FullName}没有配置分表依赖的字段");
 
-        if (!dbFactory.TryGetShardingTableNames(this.DbKey, entityType, out var tableNames))
+        var currentTableSegment = this.Tables.Find(f => f.EntityType == entityType);
+        this.ShardingTableInfos ??= new();
+        this.ShardingTableInfos.Add(new ShardingTableInfo
         {
-            //TODO:根据当前OrmProvider捞取数据库中的所有表，再执行规则分表规则，得到分表名称，并添加进来缓存
-
-            dbFactory.AddShardingTableNames(this.DbKey, entityType, tableNames);
-        }
-        var selectedTableNames = tableNames.FindAll(f => tableNamePredicate.Invoke(f));
-        this.UseTable(entityType, selectedTableNames.ToArray());
+            ShardingType = ShardingTableType.MasterPredicate,
+            TableSegment = currentTableSegment,
+            TableNameGetter = tableNamePredicate
+        });
     }
-    public void UseTableBy(IOrmDbFactory dbFactory, Type entityType, object field1Value, object field2Value = null)
+    public void UseTable(Type entityType, Type masterEntityType, Func<string, string, string, string, string> tableNameGetter)
     {
-        if (!dbFactory.TryGetShardingTable(entityType, out var shardingTable))
+        var currentTableSegment = this.Tables.Find(f => f.EntityType == entityType);
+        var masterTableSegment = this.Tables.Find(f => f.EntityType == masterEntityType);
+        this.ShardingTableInfos ??= new();
+        this.ShardingTableInfos.Add(new ShardingTableInfo
+        {
+            ShardingType = ShardingTableType.SubordinateGetter,
+            MasterTable = masterTableSegment,
+            TableSegment = currentTableSegment,
+            TableNameGetter = tableNameGetter
+        });
+    }
+    public void UseTableBy(Type entityType, object field1Value, object field2Value = null)
+    {
+        if (!this.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable))
             throw new Exception($"实体{entityType.FullName}没有配置分表");
         if (shardingTable.DependOnMembers == null || shardingTable.DependOnMembers.Count == 0)
             throw new Exception($"实体{entityType.FullName}没有配置分表依赖的字段");
@@ -102,9 +118,9 @@ public class SqlVisitor : ISqlVisitor
         }
         this.UseTable(entityType, tableName);
     }
-    public void UseTableByRange(IOrmDbFactory dbFactory, Type entityType, object beginFieldValue, object endFieldValue)
+    public void UseTableByRange(Type entityType, object beginFieldValue, object endFieldValue)
     {
-        if (!dbFactory.TryGetShardingTable(entityType, out var shardingTable))
+        if (!this.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable))
             throw new Exception($"实体{entityType.FullName}没有配置分表");
         if (shardingTable.DependOnMembers == null || shardingTable.DependOnMembers.Count == 0)
             throw new Exception($"实体{entityType.FullName}没有配置分表依赖的字段");
@@ -116,9 +132,9 @@ public class SqlVisitor : ISqlVisitor
         var tableNames = shardingRule.Invoke(this.DbKey, entityMapper.TableName, beginFieldValue, endFieldValue);
         this.UseTable(entityType, tableNames.ToArray());
     }
-    public void UseTableByRange(IOrmDbFactory dbFactory, Type entityType, object fieldValue1, object fieldValue2, object fieldValue3)
+    public void UseTableByRange(Type entityType, object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        if (!dbFactory.TryGetShardingTable(entityType, out var shardingTable))
+        if (!this.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable))
             throw new Exception($"实体{entityType.FullName}没有配置分表");
         if (shardingTable.DependOnMembers == null || shardingTable.DependOnMembers.Count == 0)
             throw new Exception($"实体{entityType.FullName}没有配置分表依赖的字段");
@@ -130,7 +146,64 @@ public class SqlVisitor : ISqlVisitor
         var tableNames = shardingRule.Invoke(this.DbKey, entityMapper.TableName, fieldValue1, fieldValue2, fieldValue3);
         this.UseTable(entityType, tableNames.ToArray());
     }
+    public void SetShardingTables(List<string> shardingTables)
+    {
+        if (this.ShardingTableInfos.Count > 1)
+        {
+            var completedTables = new Dictionary<Type, List<string>>();
+            this.ShardingTableInfos.Sort((x, y) => x.ShardingType.CompareTo(y.ShardingType));
+            foreach (var shardingTableInfo in this.ShardingTableInfos)
+            {
+                var tableSegment = shardingTableInfo.TableSegment;
+                var entityType = tableSegment.EntityType;
+                var tableName = tableSegment.Mapper.TableName;
+                if (!this.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable))
+                    throw new Exception($"实体{entityType.FullName}表有配置分表信息");
 
+                switch (shardingTableInfo.ShardingType)
+                {
+                    case ShardingTableType.MasterPredicate:
+                        var filter = shardingTableInfo.TableNameGetter as Func<string, bool>;
+                        tableSegment.TableNames = shardingTables.FindAll(f => Regex.IsMatch(f, shardingTable.ValidateRegex) && filter.Invoke(f));
+                        completedTables.Add(entityType, tableSegment.TableNames);
+                        break;
+                    case ShardingTableType.SubordinateGetter:
+                        var origTableName = tableSegment.Mapper.TableName;
+                        var origMasterTableName = shardingTableInfo.MasterTable.Mapper.TableName;
+                        var mapFilter = shardingTableInfo.TableNameGetter as Func<string, string, string, string, string>;
+                        var tableNames = shardingTables;
+                        if (string.IsNullOrEmpty(shardingTable.ValidateRegex))
+                            tableNames = shardingTables.FindAll(f => Regex.IsMatch(f, shardingTable.ValidateRegex));
+
+                        if (!completedTables.TryGetValue(entityType, out var masterTableNames))
+                            throw new Exception($"实体{entityType.FullName}表没有配置分表信息");
+                        var selectedTableNames = new List<string>();
+                        foreach (var masterTableName in masterTableNames)
+                        {
+                            var mapTableName = mapFilter.Invoke(this.DbKey, origMasterTableName, origTableName, masterTableName);
+                            var selectedTableName = tableNames.Find(f => f == mapTableName);
+                            if (selectedTableName == null)
+                                throw new Exception($"主表{origMasterTableName}未找到与之关联的从表{mapTableName}");
+                            selectedTableNames.Add(selectedTableName);
+                        }
+                        tableSegment.TableNames = selectedTableNames;
+                        completedTables.Add(entityType, selectedTableNames);
+                        break;
+                }
+            }
+        }
+        else
+        {
+            var shardingTableInfo = this.ShardingTableInfos[0];
+            var tableSegment = shardingTableInfo.TableSegment;
+            var entityType = tableSegment.EntityType;
+            var filter = shardingTableInfo.TableNameGetter as Func<string, bool>;
+            if (!this.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable))
+                throw new Exception($"实体{entityType.FullName}表有配置分表信息");
+
+            tableSegment.TableNames = shardingTables.FindAll(f => Regex.IsMatch(f, shardingTable.ValidateRegex) && filter.Invoke(f));
+        }
+    }
     public virtual SqlSegment VisitAndDeferred(SqlSegment sqlSegment)
     {
         sqlSegment = this.Visit(sqlSegment);
@@ -1206,7 +1279,7 @@ public class SqlVisitor : ISqlVisitor
             {
                 if (currentExpr.NodeType == ExpressionType.Parameter)
                 {
-                    queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+                    queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.ShardingProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
                     fromQuery = new FromQuery(this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
                     dbContext = fromQuery.dbContext;
                     break;
@@ -1216,7 +1289,7 @@ public class SqlVisitor : ISqlVisitor
                     var sqlSegment = this.VisitMemberAccess(new SqlSegment { Expression = memberExpr });
                     if (sqlSegment.Value is IRepository)
                     {
-                        queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+                        queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.ShardingProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
                         fromQuery = new FromQuery(this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
                         dbContext = fromQuery.dbContext;
                     }
@@ -1440,7 +1513,7 @@ public class SqlVisitor : ISqlVisitor
     }
     public virtual IQueryVisitor CreateQueryVisitor()
     {
-        var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+        var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.ShardingProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
         queryVisiter.IsMultiple = this.IsMultiple;
         queryVisiter.CommandIndex = this.CommandIndex;
         queryVisiter.RefQueries = this.RefQueries;

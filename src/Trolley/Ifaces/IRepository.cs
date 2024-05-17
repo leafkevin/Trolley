@@ -15,10 +15,9 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     DbContext DbContext { get; set; }
     #endregion
 
-    public IRepository UseShardingRule()
-    {
-        return this;
-    }
+    #region Sharding
+    bool TryGetShardingTableNames(Type entityType, out List<string> tableNames);
+    #endregion
 
     #region From
     /// <summary>
@@ -572,5 +571,5 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <param name="isParameterized">是否参数化</param>
     /// <returns>返回仓储对象</returns>
     IRepository WithParameterized(bool isParameterized = true);
-    #endregion 
+    #endregion
 }

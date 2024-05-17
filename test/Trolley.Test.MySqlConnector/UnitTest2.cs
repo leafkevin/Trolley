@@ -35,7 +35,7 @@ public class UnitTest2 : UnitTestBase
                 .UseTable<Order>(t =>
                 {
                     t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-                    .UseRule((dbKey, origName, tenantId, dateTime) => $"{origName}_{tenantId}_{dateTime:yyyMM}")
+                    .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyMM}", "^sys_order_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
                     //时间分表，通常都是支持范围查询
                     .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
                     {
@@ -52,13 +52,13 @@ public class UnitTest2 : UnitTestBase
                     });
                 })
                 //按租户分表
-                .UseTable<Order>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}"))
-                //按照Id字段分表，Id字段是带有时间属性的ObjectId
-                .UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}"))
-                //按照Id字段哈希取模分表
-                .UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}"))
+                //.UseTable<Order>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_order_\\d{1,4}$"))
+                ////按照Id字段分表，Id字段是带有时间属性的ObjectId
+                //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}", "^sys_order_\\S{24}$"))
+                ////按照Id字段哈希取模分表
+                //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
                 //当数据库dbKey是fengling主库时，才取模分表
-                .UseTable<User>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}"));
+                .UseTable<User>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"));
             })
             .Configure<MySqlProvider, ModelConfiguration>();
             return builder.Build();
@@ -2117,23 +2117,23 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         }
     }
     [Fact]
-    public void Query_Sharding()
+    public void Query_Sharding_Many_MultiTable()
     {
-        Initialize();
+        //Initialize();
         using var repository = dbFactory.Create();
-        var sql = repository
-            .From(f => f.From<OrderDetail>()
-                
-                .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
-                .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
-                .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
-            .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
+        var sql = repository.From<Order>()
+            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
+            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+            .UseTable<Order>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+            {
+                var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+                return tableName.Substring(0, tableName.Length - 7);
+            })
             .Where((a, b) => a.ProductCount > 1)
             .Select((x, y) => new
             {
-                x.Group,
-                Buyer = y,
-                x.ProductCount
+                Order = x,
+                Buyer = y
             })
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail` a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1");

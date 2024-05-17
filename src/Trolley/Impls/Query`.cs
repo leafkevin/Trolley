@@ -23,25 +23,32 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     public IQuery<T1, T2> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T2);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IQuery<T1, T2> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    {
+        var entityType = typeof(T2);
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
         return this;
     }
     public IQuery<T1, T2> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T2);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IQuery<T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T2);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IQuery<T1, T2> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T2);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -431,25 +438,32 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     public IQuery<T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T3);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    {
+        var entityType = typeof(T3);
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
         return this;
     }
     public IQuery<T1, T2, T3> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T3);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IQuery<T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T3);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IQuery<T1, T2, T3> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T3);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -839,25 +853,32 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     public IQuery<T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T4);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    {
+        var entityType = typeof(T4);
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
         return this;
     }
     public IQuery<T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T4);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IQuery<T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T4);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IQuery<T1, T2, T3, T4> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T4);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -1247,25 +1268,32 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     public IQuery<T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T5);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    {
+        var entityType = typeof(T5);
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T5);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T5);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T5);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -1655,25 +1683,32 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
     public IQuery<T1, T2, T3, T4, T5, T6> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T6);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    {
+        var entityType = typeof(T6);
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T6);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T6);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T6);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -2063,25 +2098,32 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
     public IQuery<T1, T2, T3, T4, T5, T6, T7> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T7);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    {
+        var entityType = typeof(T7);
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T7);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T7);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T7);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -2471,25 +2513,32 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T8);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    {
+        var entityType = typeof(T8);
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T8);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T8);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T8);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -2879,25 +2928,32 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T9);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    {
+        var entityType = typeof(T9);
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T9);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T9);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T9);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -3287,25 +3343,32 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T10);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    {
+        var entityType = typeof(T10);
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T10);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T10);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T10);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -3695,25 +3758,32 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T11);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    {
+        var entityType = typeof(T11);
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T11);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T11);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T11);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -4103,25 +4173,32 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T12);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    {
+        var entityType = typeof(T12);
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T12);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T12);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T12);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -4511,25 +4588,32 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T13);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    {
+        var entityType = typeof(T13);
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T13);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T13);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T13);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -4919,25 +5003,32 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T14);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    {
+        var entityType = typeof(T14);
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T14);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T14);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T14);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -5327,25 +5418,32 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T15);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    {
+        var entityType = typeof(T15);
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T15);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T15);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T15);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -5735,25 +5833,32 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T16);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    {
+        var entityType = typeof(T16);
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T16);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T16);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T16);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion

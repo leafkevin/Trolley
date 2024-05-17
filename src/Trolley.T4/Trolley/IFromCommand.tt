@@ -58,7 +58,7 @@ public interface IFromCommand<T> : IFromCommand
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，按月分表
+    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
@@ -359,7 +359,7 @@ public interface IFromCommand<<#=tables#>> : IFromCommand
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定<#=currentTable#>表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，按月分表
+    /// 使用固定表名确定<#=currentTable#>表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
@@ -422,7 +422,10 @@ public interface IFromCommand<<#=tables#>> : IFromCommand
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn);
-
+<#
+        if(i < count)
+        {
+#>
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -537,6 +540,7 @@ public interface IFromCommand<<#=tables#>> : IFromCommand
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+<#      }#>
     #endregion
 
     #region Where/And
@@ -641,7 +645,6 @@ public interface IFromCommand<<#=tables#>> : IFromCommand
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>

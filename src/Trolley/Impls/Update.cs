@@ -20,8 +20,41 @@ public class Update<TEntity> : IUpdate<TEntity>
     public Update(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(this.DbContext.DbKey, this.DbContext.MapProvider, this.DbContext.IsParameterized);
+        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(this.DbContext.DbKey, this.DbContext.MapProvider, this.DbContext.ShardingProvider, this.DbContext.IsParameterized);
         this.Visitor.Initialize(typeof(TEntity));
+    }
+    #endregion
+
+    #region Sharding
+    public IUpdate<TEntity> UseTable(params string[] tableNames)
+    {
+        var entityType = typeof(TEntity);
+        this.Visitor.UseTable(entityType, tableNames);
+        return this;
+    }
+    public IUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate)
+    {
+        var entityType = typeof(TEntity);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IUpdate<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    {
+        var entityType = typeof(TEntity);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        return this;
+    }
+    public IUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
+    {
+        var entityType = typeof(TEntity);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        return this;
+    }
+    public IUpdate<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    {
+        var entityType = typeof(TEntity);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        return this;
     }
     #endregion
 

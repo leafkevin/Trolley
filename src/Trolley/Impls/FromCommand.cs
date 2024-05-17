@@ -101,25 +101,25 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     public IFromCommand<T> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T);
-        this.Visitor.UseTable(this.DbContext.DbFactory, entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
         return this;
     }
     public IFromCommand<T> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T);
-        this.Visitor.UseTableBy(this.DbContext.DbFactory, entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
     public IFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
     public IFromCommand<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T);
-        this.Visitor.UseTableByRange(this.DbContext.DbFactory, entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -368,6 +368,39 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
         : base(entityType, dbContext, visitor) { }
     #endregion
 
+    #region Sharding
+    public IFromCommand<T1, T2> UseTable(params string[] tableNames)
+    {
+        var entityType = typeof(T2);
+        this.Visitor.UseTable(entityType, tableNames);
+        return this;
+    }
+    public IFromCommand<T1, T2> UseTable(Func<string, bool> tableNamePredicate)
+    {
+        var entityType = typeof(T2);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IFromCommand<T1, T2> UseTableBy(object field1Value, object field2Value = null)
+    {
+        var entityType = typeof(T2);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        return this;
+    }
+    public IFromCommand<T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue)
+    {
+        var entityType = typeof(T2);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        return this;
+    }
+    public IFromCommand<T1, T2> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    {
+        var entityType = typeof(T2);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
     #region Join
     public IFromCommand<T1, T2> InnerJoin(Expression<Func<T1, T2, bool>> joinOn)
     {
@@ -580,11 +613,44 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
     }
     #endregion
 }
-class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
+public class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
 {
     #region Constructor
     public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
         : base(entityType, dbContext, visitor) { }
+    #endregion
+
+    #region Sharding
+    public IFromCommand<T1, T2, T3> UseTable(params string[] tableNames)
+    {
+        var entityType = typeof(T3);
+        this.Visitor.UseTable(entityType, tableNames);
+        return this;
+    }
+    public IFromCommand<T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate)
+    {
+        var entityType = typeof(T3);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IFromCommand<T1, T2, T3> UseTableBy(object field1Value, object field2Value = null)
+    {
+        var entityType = typeof(T3);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        return this;
+    }
+    public IFromCommand<T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue)
+    {
+        var entityType = typeof(T3);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        return this;
+    }
+    public IFromCommand<T1, T2, T3> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    {
+        var entityType = typeof(T3);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
     #endregion
 
     #region Join
@@ -725,7 +791,7 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
         this.Visitor.And(predicate);
         return this;
     }
-    public IFromCommand<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
+    public IFromCommand<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -750,8 +816,7 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
 
     #region OrderBy
     public IFromCommand<T1, T2, T3> OrderBy<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
-        => this.OrderBy(true, fieldsExpr);
-
+         => this.OrderBy(true, fieldsExpr);
     public IFromCommand<T1, T2, T3> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -763,7 +828,6 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
     }
     public IFromCommand<T1, T2, T3> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public IFromCommand<T1, T2, T3> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -775,7 +839,7 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
     }
     #endregion
 
-    #region Select 
+    #region Select
     public IFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -793,12 +857,52 @@ class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
         return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
+
+    #region Take    
+    public IFromCommand<T1, T2, T3> Take(int limit)
+    {
+        throw new NotImplementedException();
+    }
+    #endregion
 }
-class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
+public class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
 {
     #region Constructor
     public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
         : base(entityType, dbContext, visitor) { }
+    #endregion
+
+    #region Sharding
+    public IFromCommand<T1, T2, T3, T4> UseTable(params string[] tableNames)
+    {
+        var entityType = typeof(T4);
+        this.Visitor.UseTable(entityType, tableNames);
+        return this;
+    }
+    public IFromCommand<T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate)
+    {
+        var entityType = typeof(T4);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IFromCommand<T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value = null)
+    {
+        var entityType = typeof(T4);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        return this;
+    }
+    public IFromCommand<T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue)
+    {
+        var entityType = typeof(T4);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        return this;
+    }
+    public IFromCommand<T1, T2, T3, T4> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    {
+        var entityType = typeof(T4);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
     #endregion
 
     #region Join
@@ -939,7 +1043,7 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
         this.Visitor.And(predicate);
         return this;
     }
-    public IFromCommand<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
+    public IFromCommand<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -964,8 +1068,7 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
 
     #region OrderBy
     public IFromCommand<T1, T2, T3, T4> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
-        => this.OrderBy(true, fieldsExpr);
-
+         => this.OrderBy(true, fieldsExpr);
     public IFromCommand<T1, T2, T3, T4> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -977,7 +1080,6 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
     }
     public IFromCommand<T1, T2, T3, T4> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public IFromCommand<T1, T2, T3, T4> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -989,7 +1091,7 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
     }
     #endregion
 
-    #region Select 
+    #region Select
     public IFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1007,12 +1109,52 @@ class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3, T4>
         return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
+
+    #region Take    
+    public IFromCommand<T1, T2, T3, T4> Take(int limit)
+    {
+        throw new NotImplementedException();
+    }
+    #endregion
 }
-class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4, T5>
+public class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4, T5>
 {
     #region Constructor
     public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
         : base(entityType, dbContext, visitor) { }
+    #endregion
+
+    #region Sharding
+    public IFromCommand<T1, T2, T3, T4, T5> UseTable(params string[] tableNames)
+    {
+        var entityType = typeof(T5);
+        this.Visitor.UseTable(entityType, tableNames);
+        return this;
+    }
+    public IFromCommand<T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate)
+    {
+        var entityType = typeof(T5);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IFromCommand<T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value = null)
+    {
+        var entityType = typeof(T5);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        return this;
+    }
+    public IFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue)
+    {
+        var entityType = typeof(T5);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        return this;
+    }
+    public IFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    {
+        var entityType = typeof(T5);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
     #endregion
 
     #region Join
@@ -1153,7 +1295,7 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
         this.Visitor.And(predicate);
         return this;
     }
-    public IFromCommand<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
+    public IFromCommand<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -1178,8 +1320,7 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
 
     #region OrderBy
     public IFromCommand<T1, T2, T3, T4, T5> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
-        => this.OrderBy(true, fieldsExpr);
-
+         => this.OrderBy(true, fieldsExpr);
     public IFromCommand<T1, T2, T3, T4, T5> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1191,7 +1332,6 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
     }
     public IFromCommand<T1, T2, T3, T4, T5> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public IFromCommand<T1, T2, T3, T4, T5> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1203,7 +1343,7 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
     }
     #endregion
 
-    #region Select 
+    #region Select
     public IFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1221,12 +1361,52 @@ class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2, T3, T4
         return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
+
+    #region Take    
+    public IFromCommand<T1, T2, T3, T4, T5> Take(int limit)
+    {
+        throw new NotImplementedException();
+    }
+    #endregion
 }
-class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1, T2, T3, T4, T5, T6>
+public class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1, T2, T3, T4, T5, T6>
 {
     #region Constructor
     public FromCommand(Type entityType, DbContext dbContext, IQueryVisitor visitor)
         : base(entityType, dbContext, visitor) { }
+    #endregion
+
+    #region Sharding
+    public IFromCommand<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames)
+    {
+        var entityType = typeof(T6);
+        this.Visitor.UseTable(entityType, tableNames);
+        return this;
+    }
+    public IFromCommand<T1, T2, T3, T4, T5, T6> UseTable(Func<string, bool> tableNamePredicate)
+    {
+        var entityType = typeof(T6);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public IFromCommand<T1, T2, T3, T4, T5, T6> UseTableBy(object field1Value, object field2Value = null)
+    {
+        var entityType = typeof(T6);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        return this;
+    }
+    public IFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object beginFieldValue, object endFieldValue)
+    {
+        var entityType = typeof(T6);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        return this;
+    }
+    public IFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    {
+        var entityType = typeof(T6);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
     #endregion
 
     #region Join
@@ -1283,7 +1463,7 @@ class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1, T2, T3
         this.Visitor.And(predicate);
         return this;
     }
-    public IFromCommand<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
+    public IFromCommand<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -1308,8 +1488,7 @@ class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1, T2, T3
 
     #region OrderBy
     public IFromCommand<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
-        => this.OrderBy(true, fieldsExpr);
-
+         => this.OrderBy(true, fieldsExpr);
     public IFromCommand<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1321,7 +1500,6 @@ class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1, T2, T3
     }
     public IFromCommand<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public IFromCommand<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1333,7 +1511,7 @@ class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1, T2, T3
     }
     #endregion
 
-    #region Select 
+    #region Select
     public IFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -1349,6 +1527,13 @@ class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1, T2, T3
 
         this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
+    }
+    #endregion
+
+    #region Take    
+    public IFromCommand<T1, T2, T3, T4, T5, T6> Take(int limit)
+    {
+        throw new NotImplementedException();
     }
     #endregion
 }

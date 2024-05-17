@@ -7,8 +7,8 @@ namespace Trolley.MySqlConnector;
 public class MySqlQueryVisitor : QueryVisitor
 {
     public bool IsUseIgnoreInto { get; set; }
-    public MySqlQueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
-        : base(dbKey, ormProvider, mapProvider, isParameterized, tableAsStart, parameterPrefix, dbParameters) { }
+    public MySqlQueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
+        : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix, dbParameters) { }
 
     public override string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters)
     {
@@ -145,5 +145,44 @@ public class MySqlQueryVisitor : QueryVisitor
             builder.Append($") a");
         }
         return builder.ToString();
+    }
+    public override bool IsShardingTables(string tableSchema, out string sql)
+    {
+        if (this.ShardingTableInfos == null || this.ShardingTableInfos.Count == 0)
+        {
+            sql = null;
+            return false;
+        }
+        var multiShardingCount = 0;
+        foreach (var tableSegment in this.Tables)
+        {
+            if (this.ShardingProvider.TryGetShardingTable(tableSegment.EntityType, out var shardingTable))
+            {
+                if ((tableSegment.TableNames == null || tableSegment.TableNames.Count == 0)
+                    && !this.ShardingTableInfos.Exists(f => f.TableSegment == tableSegment))
+                    throw new Exception($"实体{tableSegment.EntityType.FullName}表有配置分表，但未指定分表");
+
+                if (tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
+                    multiShardingCount++;
+
+                if (multiShardingCount > 1) throw new NotSupportedException($"当有多个表使用多分表查询时，主表可指定多个分表，从表使用表名映射规则委托确定分表，对应方法：UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)");
+            }
+        }
+ 
+        var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='{tableSchema}'");
+        if (this.ShardingTableInfos.Count > 1)
+        {
+            builder.Append(" AND (");
+            for (int i = 0; i < this.ShardingTableInfos.Count; i++)
+            {
+                if (i > 0) builder.Append(" OR ");
+                var tableName = this.ShardingTableInfos[i].TableSegment.Mapper.TableName;
+                builder.Append($"TABLE_NAME LIKE '{tableName}%'");
+            }
+            builder.Append(')');
+        }
+        else builder.Append($"TABLE_NAME LIKE '{this.ShardingTableInfos[0].TableSegment.Mapper.TableName}%'");
+        sql = builder.ToString();
+        return true;
     }
 }

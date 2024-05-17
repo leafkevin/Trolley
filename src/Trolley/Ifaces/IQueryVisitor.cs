@@ -34,16 +34,19 @@ public interface IQueryVisitor : IDisposable
     /// 解析子查询时，父亲查询的TableAliases
     /// </summary>
     Dictionary<string, TableSegment> RefTableAliases { get; set; }
+    List<ShardingTableInfo> ShardingTableInfos { get; }
 
     string BuildSql(out List<ReaderField> readerFields);
     string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters);
     string BuildCteTableSql(string tableName, out List<ReaderField> readerFields, out bool isRecursive);
-
+    bool IsShardingTables(string tableSchema, out string sql);
+    void SetShardingTables(List<string> shardingTables);
     void UseTable(Type entityType, params string[] tableNames);
-    void UseTable(IOrmDbFactory dbFactory, Type entityType, Func<string, bool> tableNamePredicate);
-    void UseTableBy(IOrmDbFactory dbFactory, Type entityType, object field1Value, object field2Value = null);
-    void UseTableByRange(IOrmDbFactory dbFactory, Type entityType, object beginFieldValue, object endFieldValue);
-    void UseTableByRange(IOrmDbFactory dbFactory, Type entityType, object fieldValue1, object fieldValue2, object fieldValue3);
+    void UseTable(Type entityType, Func<string, bool> tableNamePredicate);
+    void UseTable(Type entityType, Type masterEntityType, Func<string, string, string, string, string> tableNameGetter);
+    void UseTableBy(Type entityType, object field1Value, object field2Value = null);
+    void UseTableByRange(Type entityType, object beginFieldValue, object endFieldValue);
+    void UseTableByRange(Type entityType, object fieldValue1, object fieldValue2, object fieldValue3);
 
     void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes);
     void From(Type targetType, IQuery subQueryObj);
