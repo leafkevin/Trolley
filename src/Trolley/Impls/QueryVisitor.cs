@@ -110,15 +110,18 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         builder.Clear();
         string tableSql = null;
+        if (this.IsSharding && this.ShardingId == null)
+            this.ShardingId = Guid.NewGuid().ToString("N");
+
         if (this.Tables.Count > 0)
         {
-            //TODO:需要根据分表信息，多个JOIN表匹配分表
             foreach (var tableSegment in this.Tables)
             {
                 string tableName = string.Empty;
-                tableName = tableSegment.Body;
-                if (string.IsNullOrEmpty(tableName))
-                    tableName = this.OrmProvider.GetTableName(tableSegment.Mapper.TableName);
+                if (tableSegment.IsSharding)
+                    tableName = $"__SHARDING_{this.ShardingId}_{tableSegment.Mapper.TableName}";
+                else tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
+                tableName = this.OrmProvider.GetTableName(tableName);
 
                 if (builder.Length > 0)
                 {
@@ -246,15 +249,20 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else selectSql = builder.ToString();
 
         builder.Clear();
+
         string tableSql = null;
+        if (this.IsSharding && this.ShardingId == null)
+            this.ShardingId = Guid.NewGuid().ToString("N");
+
         if (this.Tables.Count > 0)
         {
             foreach (var tableSegment in this.Tables)
             {
                 string tableName = string.Empty;
-                tableName = tableSegment.Body;
-                if (string.IsNullOrEmpty(tableName))
-                    tableName = this.OrmProvider.GetTableName(tableSegment.Mapper.TableName);
+                if (tableSegment.IsSharding)
+                    tableName = $"__SHARDING_{this.ShardingId}_{tableSegment.Mapper.TableName}";
+                else tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
+                tableName = this.OrmProvider.GetTableName(tableName);
 
                 if (builder.Length > 0)
                 {
@@ -361,9 +369,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.SelfRefQueryObj = null;
         return builder.ToString();
     }
-    public virtual bool IsShardingTables(string tableSchema, out string sql)
+    public virtual bool IsNeedFetchShardingTables(string tableSchema, out string fetchSql)
     {
-        sql = null;
+        fetchSql = null;
         return false;
     }
     public virtual void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes)
@@ -1851,12 +1859,21 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             body = this.OrmProvider.GetTableName(cteQuery.TableName);
         }
         else body = $"({subQuery.Visitor.BuildSql(out readerFields)})";
+
         //TODO:CTE表和子查询都要添加到当前的CteQueries中，用于判断参数是否添加，避免重复添加参数
         if (!this.RefQueries.Contains(subQuery))
             subQuery.CopyTo(this);
         tableSegment = this.AddTable(targetType, joinType, tableType, body, readerFields);
         //因为表别名发生变化，需要更新ReaderField的body栏位
         this.InitFromQueryReaderFields(tableSegment, readerFields);
+
+        //子查询中引用了分表，最外层也需要设置分表信息IsSharding、ShardingId
+        if (!this.IsSharding && subQuery.Visitor.IsSharding)
+        {
+            this.IsSharding = subQuery.Visitor.IsSharding;
+            tableSegment.IsSharding = subQuery.Visitor.IsSharding;
+            this.ShardingId = subQuery.Visitor.ShardingId;
+        }
         return tableSegment;
     }
     public void RemoveTable(TableSegment tableSegment) => this.Tables.Remove(tableSegment);

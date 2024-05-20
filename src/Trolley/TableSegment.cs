@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using System.Reflection;
 
 namespace Trolley;
@@ -59,7 +58,7 @@ public class TableSegment
     /// </summary>
     public EntityMap Mapper { get; set; }
     /// <summary>
-    /// 指定的分表名称
+    /// 指定的分表名称，多个分表时才有值，单个分表直接当作不分表处理
     /// </summary>
     public List<string> TableNames { get; set; }
     /// <summary>
@@ -98,6 +97,31 @@ public class TableSegment
     /// Include 1:N关系表时，从最外层Select参数访问到Include成员的父亲路径所有成员访问列表，方便最后赋值
     /// </summary>
     public List<MemberInfo> ParentMemberVisits { get; set; }
+
+    /// <summary>
+    /// 是否使用分表，使用分表此值为true
+    /// </summary>
+    public bool IsSharding { get; set; }
+    /// <summary>
+    /// 当前表分表类型
+    /// </summary>
+    public ShardingTableType ShardingType { get; set; }
+    /// <summary>
+    /// 当前分表所依赖的主表
+    /// </summary>
+    public TableSegment ShardingDependent { get; set; }
+    /// <summary>
+    /// 主表ShardingDependent中的每一个分表名映射的当前表的分表名
+    /// </summary>
+    public Dictionary<string, string> ShardingMaps { get; set; }
+    /// <summary>
+    /// 当前表的分表名筛选委托
+    /// </summary>
+    public Func<string, bool> ShardingFilter { get; set; }
+    /// <summary>
+    /// 当前表分表与主表的表名映射委托
+    /// </summary>
+    public Func<string, string, string, string, string> ShardingMapGetter { get; set; }
 
     /// <summary>
     /// 生成一个自身引用的副本，主要用在cte表的自身引用

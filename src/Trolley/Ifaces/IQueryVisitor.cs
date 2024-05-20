@@ -34,12 +34,14 @@ public interface IQueryVisitor : IDisposable
     /// 解析子查询时，父亲查询的TableAliases
     /// </summary>
     Dictionary<string, TableSegment> RefTableAliases { get; set; }
-    List<ShardingTableInfo> ShardingTableInfos { get; }
+    bool IsSharding { get; set; }
+    string ShardingId { get; set; }
+    List<TableSegment> ShardingTables { get; set; }
 
     string BuildSql(out List<ReaderField> readerFields);
     string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters);
     string BuildCteTableSql(string tableName, out List<ReaderField> readerFields, out bool isRecursive);
-    bool IsShardingTables(string tableSchema, out string sql);
+    bool IsNeedFetchShardingTables(string tableSchema, out string fetchSql);
     void SetShardingTables(List<string> shardingTables);
     void UseTable(Type entityType, params string[] tableNames);
     void UseTable(Type entityType, Func<string, bool> tableNamePredicate);

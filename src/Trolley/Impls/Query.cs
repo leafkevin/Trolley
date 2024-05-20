@@ -661,8 +661,9 @@ public class Query<T> : QueryBase, IQuery<T>
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.SelectDefault(defaultExpr);
+        var command = this.DbContext.CreateCommand();
+        (_, var sql, _) = this.DbContext.BuildSql(Visitor, command);
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
-        var sql = this.Visitor.BuildSql(out _);
         this.Visitor.Dispose();
         return sql;
     }

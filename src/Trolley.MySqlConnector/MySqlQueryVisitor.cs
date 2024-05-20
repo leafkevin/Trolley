@@ -146,43 +146,34 @@ public class MySqlQueryVisitor : QueryVisitor
         }
         return builder.ToString();
     }
-    public override bool IsShardingTables(string tableSchema, out string sql)
-    {
-        if (this.ShardingTableInfos == null || this.ShardingTableInfos.Count == 0)
-        {
-            sql = null;
-            return false;
-        }
-        var multiShardingCount = 0;
+    public override bool IsNeedFetchShardingTables(string tableSchema, out string fetchSql)
+    {        
+        var count = 0;
         foreach (var tableSegment in this.Tables)
         {
-            if (this.ShardingProvider.TryGetShardingTable(tableSegment.EntityType, out var shardingTable))
-            {
-                if ((tableSegment.TableNames == null || tableSegment.TableNames.Count == 0)
-                    && !this.ShardingTableInfos.Exists(f => f.TableSegment == tableSegment))
-                    throw new Exception($"实体{tableSegment.EntityType.FullName}表有配置分表，但未指定分表");
-
-                if (tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
-                    multiShardingCount++;
-
-                if (multiShardingCount > 1) throw new NotSupportedException($"当有多个表使用多分表查询时，主表可指定多个分表，从表使用表名映射规则委托确定分表，对应方法：UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)");
-            }
+            if (!this.ShardingProvider.TryGetShardingTable(tableSegment.EntityType, out var shardingTable))
+                continue;
+            if (tableSegment.ShardingType < ShardingTableType.MasterFilter && tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
+                count++;
+            if (tableSegment.ShardingType == ShardingTableType.MasterFilter)
+                count++;
         }
- 
+        if (count > 1)
+            throw new NotSupportedException($"当有多个表使用多分表查询时，主表可指定多个分表，从表使用方法UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)指定主从表名映射委托获取从表分表名称");
         var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='{tableSchema}'");
-        if (this.ShardingTableInfos.Count > 1)
+        if (this.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.TableName))
         {
             builder.Append(" AND (");
-            for (int i = 0; i < this.ShardingTableInfos.Count; i++)
+            for (int i = 0; i < this.ShardingTables.Count; i++)
             {
                 if (i > 0) builder.Append(" OR ");
-                var tableName = this.ShardingTableInfos[i].TableSegment.Mapper.TableName;
+                var tableName = this.ShardingTables[i].Mapper.TableName;
                 builder.Append($"TABLE_NAME LIKE '{tableName}%'");
             }
             builder.Append(')');
         }
-        else builder.Append($"TABLE_NAME LIKE '{this.ShardingTableInfos[0].TableSegment.Mapper.TableName}%'");
-        sql = builder.ToString();
+        else builder.Append($"TABLE_NAME LIKE '{this.ShardingTables[0].Mapper.TableName}%'");
+        fetchSql = builder.ToString();
         return true;
     }
 }

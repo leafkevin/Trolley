@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq.Expressions;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -132,10 +133,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         Exception exception = null;
         try
         {
-            var isOpened = this.BuildShardingTables(visitor, command);
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
-            command.CommandText = visitor.BuildSql(out var readerFields);
+            (var isOpened, var sql, var readerFields) = this.BuildSql(visitor, command);
+            command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
             if (!isOpened) this.Open();
@@ -148,7 +149,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     result = reader.To<TResult>(this.OrmProvider, readerFields);
                 else result = reader.To<TResult>(this.OrmProvider);
             }
-            if (visitor.BuildIncludeSql(entityType, result, out var sql))
+            if (visitor.BuildIncludeSql(entityType, result, out sql))
             {
                 reader.Dispose();
                 command.CommandText = sql;
@@ -182,10 +183,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         Exception exception = null;
         try
         {
-            var isOpened = await this.BuildShardingTablesAsync(visitor, command, cancellationToken);
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
-            command.CommandText = visitor.BuildSql(out var readerFields);
+            (var isOpened, var sql, var readerFields) = await this.BuildSqlAsync(visitor, command, cancellationToken);
+            command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
             if (!isOpened) await this.OpenAsync(cancellationToken);
@@ -198,7 +199,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     result = reader.To<TResult>(this.OrmProvider, readerFields);
                 else result = reader.To<TResult>(this.OrmProvider);
             }
-            if (visitor.BuildIncludeSql(entityType, result, out var sql))
+            if (visitor.BuildIncludeSql(entityType, result, out sql))
             {
                 await reader.DisposeAsync();
                 command.CommandText = sql;
@@ -327,10 +328,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
-            command.CommandText = visitor.BuildSql(out var readerFields);
+            (var isOpened, var sql, var readerFields) = this.BuildSql(visitor, command);
+            command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            this.Open();
+            if (!isOpened) this.Open();
             var behavior = CommandBehavior.SequentialAccess;
             reader = command.ExecuteReader(behavior);
 
@@ -349,7 +351,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     result.Add(reader.To<TResult>(this.OrmProvider));
                 }
             }
-            if (visitor.BuildIncludeSql(entityType, result, out var sql))
+            if (visitor.BuildIncludeSql(entityType, result, out sql))
             {
                 reader.Dispose();
                 command.CommandText = sql;
@@ -385,10 +387,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
-            command.CommandText = visitor.BuildSql(out var readerFields);
+            (var isOpened, var sql, var readerFields) = await this.BuildSqlAsync(visitor, command, cancellationToken);
+            command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            await this.OpenAsync(cancellationToken);
+            if (!isOpened) await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess;
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
 
@@ -407,7 +410,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     result.Add(reader.To<TResult>(this.OrmProvider));
                 }
             }
-            if (visitor.BuildIncludeSql(entityType, result, out var sql))
+            if (visitor.BuildIncludeSql(entityType, result, out sql))
             {
                 await reader.DisposeAsync();
                 command.CommandText = sql;
@@ -858,42 +861,115 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     #endregion
 
-    private bool BuildShardingTables(IQueryVisitor visitor, IDbCommand command)
+    public (bool, string, List<ReaderField>) BuildSql(IQueryVisitor visitor, IDbCommand command)
     {
-        if (!visitor.IsShardingTables(this.Connection.Database, out var sql))
-            return false;
-
-        command.CommandText = sql;
-        this.Open();
-        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-        var shardingTables = new List<string>();
-        while (reader.Read())
+        bool isNeedFetch = false;
+        var sql = visitor.BuildSql(out var readerFields);
+        if (visitor.IsSharding && visitor.ShardingTables != null)
         {
-            shardingTables.Add(reader.To<string>(this.OrmProvider));
+            isNeedFetch = visitor.IsNeedFetchShardingTables(this.Connection.Database, out var fetchSql);
+            if (isNeedFetch)
+            {
+                command.CommandText = fetchSql;
+                command.Parameters.Clear();
+                this.Open();
+                var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+                var shardingTables = new List<string>();
+                while (reader.Read())
+                {
+                    shardingTables.Add(reader.To<string>(this.OrmProvider));
+                }
+                reader.Dispose();
+                command.CommandText = null;
+                command.Parameters.Clear();
+                visitor.SetShardingTables(shardingTables);
+            }
+            if (visitor.IsSharding && visitor.ShardingTables.Count > 0 && visitor.ShardingTables[0].TableNames.Count > 1)
+                sql = this.BuildShardingTablesUnionSql(visitor, sql);
         }
-        reader.Dispose();
-        command.CommandText = null;
-        command.Parameters.Clear();
-        visitor.SetShardingTables(shardingTables);
-        return true;
+        return (isNeedFetch, sql, readerFields);
     }
-    private async Task<bool> BuildShardingTablesAsync(IQueryVisitor visitor, DbCommand command, CancellationToken cancellationToken = default)
+    public async Task<(bool, string, List<ReaderField>)> BuildSqlAsync(IQueryVisitor visitor, DbCommand command, CancellationToken cancellationToken = default)
     {
-        if (!visitor.IsShardingTables(this.Connection.Database, out var sql))
-            return false;
-
-        command.CommandText = sql;
-        await this.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-        var shardingTables = new List<string>();
-        while (await reader.ReadAsync(cancellationToken))
+        bool isNeedFetch = false;
+        var sql = visitor.BuildSql(out var readerFields);
+        if (visitor.IsSharding && visitor.ShardingTables != null)
         {
-            shardingTables.Add(reader.To<string>(this.OrmProvider));
+            isNeedFetch = visitor.IsNeedFetchShardingTables(this.Connection.Database, out var fetchSql);
+            if (isNeedFetch)
+            {
+                command.CommandText = fetchSql;
+                command.Parameters.Clear();
+                await this.OpenAsync(cancellationToken);
+                var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+                var shardingTables = new List<string>();
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    shardingTables.Add(reader.To<string>(this.OrmProvider));
+                }
+                await reader.DisposeAsync();
+                command.CommandText = null;
+                command.Parameters.Clear();
+                visitor.SetShardingTables(shardingTables);
+            }
+            if (visitor.IsSharding && visitor.ShardingTables.Count > 0 && visitor.ShardingTables[0].TableNames.Count > 1)
+                sql = this.BuildShardingTablesUnionSql(visitor, sql);
         }
-        await reader.DisposeAsync();
-        command.CommandText = null;
-        command.Parameters.Clear();
-        visitor.SetShardingTables(shardingTables);
-        return true;
+        return (isNeedFetch, sql, readerFields);
+    }
+    private string BuildShardingTablesUnionSql(IQueryVisitor visitor, string formatSql)
+    {
+        var firstTableSegment = visitor.ShardingTables[0];
+        var shardingId = visitor.ShardingId;
+        var loopCount = firstTableSegment.TableNames.Count;
+        string tableName = null;
+        var tableNameMap = new Dictionary<Type, string>();
+        var builder = new StringBuilder();
+
+        if (visitor.ShardingTables.Count > 1)
+            visitor.ShardingTables.Sort((x, y) => x.ShardingType.CompareTo(y.ShardingType));
+        for (int i = 0; i < loopCount; i++)
+        {
+            if (i > 0)
+            {
+                tableNameMap.Clear();
+                builder.AppendLine();
+                builder.AppendLine("UNION ALL");
+            }
+            var sql = formatSql;
+            foreach (var tableSegment in visitor.ShardingTables)
+            {
+                var origTableName = tableSegment.Mapper.TableName;
+                switch (tableSegment.ShardingType)
+                {
+                    case ShardingTableType.TableName:
+                    case ShardingTableType.TableRange:
+                    case ShardingTableType.MasterFilter:
+                        tableName = tableSegment.TableNames[i];
+                        sql = sql.Replace($"__SHARDING_{visitor.ShardingId}_{origTableName}", tableName);
+                        tableNameMap.Add(tableSegment.EntityType, tableName);
+                        break;
+                    case ShardingTableType.SubordinateMap:
+                        var origMasterTableName = tableSegment.ShardingDependent.Mapper.TableName;
+                        //如果主表分表名不存在，直接忽略本次关联
+                        //TOTO:此处需要记录日志
+                        if (!tableNameMap.TryGetValue(tableSegment.ShardingDependent.EntityType, out var masterTableName))
+                            continue;
+
+                        tableName = tableSegment.ShardingMapGetter.Invoke(this.DbKey, origMasterTableName, origTableName, masterTableName);
+                        //主表存在分表，但从表不存在分表，直接忽略本次关联
+                        //TOTO:此处需要记录日志
+                        if (!tableSegment.TableNames.Exists(f => f == tableName))
+                            continue;
+
+                        sql = sql.Replace($"__SHARDING_{visitor.ShardingId}_{origTableName}", tableName);
+                        tableNameMap.Add(tableSegment.EntityType, tableName);
+                        break;
+                }
+            }
+            builder.Append(sql);
+        }
+        tableNameMap = null;
+        return builder.ToString();
     }
 }
