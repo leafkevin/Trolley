@@ -9,6 +9,7 @@ public class ShardingProvider : IShardingProvider
     private Func<string> dbKeySelector = null;
     private ConcurrentDictionary<Type, ShardingTable> shardingTables = new();
 
+    public string UseDefaultDatabase(string defaultDbKey) => this.dbKeySelector?.Invoke() ?? defaultDbKey;
     public void UseDatabase(Func<string> dbKeySelector) => this.dbKeySelector = dbKeySelector;
     public List<string> GetShardingTableNames(string dbKey, params string[] origTableNames)
     {

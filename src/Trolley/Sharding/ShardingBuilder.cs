@@ -10,7 +10,7 @@ public class ShardingBuilder
     public ShardingBuilder(IOrmDbFactory dbFactory) => this.dbFactory = dbFactory;
 
     /// <summary>
-    /// 配置获取dbKey委托，可以使用租户，也可以映射表，或是指定的规则，如：
+    /// 配置分库dbKey获取委托，配置此委托后，使用未指定dbKey的IOrmDbFactory.CreateRepository方法创建每个Repository对象，都将调用此委托。如：
     /// <code>
     /// .UseDatabase(() =&gt;
     /// {

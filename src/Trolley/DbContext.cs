@@ -920,9 +920,8 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     private string BuildShardingTablesUnionSql(IQueryVisitor visitor, string formatSql)
     {
         var firstTableSegment = visitor.ShardingTables[0];
-        var shardingId = visitor.ShardingId;
         var loopCount = firstTableSegment.TableNames.Count;
-        string tableName = null;
+        string tableName = null, shardingId = null;
         var tableNameMap = new Dictionary<Type, string>();
         var builder = new StringBuilder();
 
@@ -946,7 +945,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     case ShardingTableType.TableRange:
                     case ShardingTableType.MasterFilter:
                         tableName = tableSegment.TableNames[i];
-                        sql = sql.Replace($"__SHARDING_{visitor.ShardingId}_{origTableName}", tableName);
+                        if (!visitor.ShardingIds.TryGetValue(tableSegment.EntityType, out shardingId))
+                            visitor.ShardingIds.TryAdd(tableSegment.EntityType, shardingId = Guid.NewGuid().ToString("N"));
+
+                        sql = sql.Replace($"__SHARDING_{shardingId}_{origTableName}", tableName);
                         tableNameMap.Add(tableSegment.EntityType, tableName);
                         break;
                     case ShardingTableType.SubordinateMap:
@@ -962,7 +964,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                         if (!tableSegment.TableNames.Exists(f => f == tableName))
                             continue;
 
-                        sql = sql.Replace($"__SHARDING_{visitor.ShardingId}_{origTableName}", tableName);
+                        if (!visitor.ShardingIds.TryGetValue(tableSegment.EntityType, out shardingId))
+                            visitor.ShardingIds.TryAdd(tableSegment.EntityType, shardingId = Guid.NewGuid().ToString("N"));
+                        sql = sql.Replace($"__SHARDING_{shardingId}_{origTableName}", tableName);
                         tableNameMap.Add(tableSegment.EntityType, tableName);
                         break;
                 }

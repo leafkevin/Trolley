@@ -49,7 +49,7 @@ public class SqlVisitor : ISqlVisitor
     public List<IQuery> RefQueries { get; set; } = new();
 
     public bool IsSharding { get; set; }
-    public string ShardingId { get; set; }
+    public Dictionary<Type, string> ShardingIds { get; set; }
     public List<TableSegment> ShardingTables { get; set; } = new();
 
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
@@ -229,7 +229,13 @@ public class SqlVisitor : ISqlVisitor
             if (!this.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable))
                 throw new Exception($"实体{entityType.FullName}表有配置分表信息");
 
-            tableSegment.TableNames = shardingTables.FindAll(f => Regex.IsMatch(f, shardingTable.ValidateRegex) && tableSegment.ShardingFilter.Invoke(f));
+            tableSegment.TableNames = shardingTables.FindAll(f =>
+            {
+                var result = Regex.IsMatch(f, shardingTable.ValidateRegex);
+                if (tableSegment.ShardingType == ShardingTableType.MasterFilter)
+                    result = result && tableSegment.ShardingFilter.Invoke(f);
+                return result;
+            });
         }
     }
     public virtual SqlSegment VisitAndDeferred(SqlSegment sqlSegment)
@@ -1545,7 +1551,7 @@ public class SqlVisitor : ISqlVisitor
         queryVisiter.IsMultiple = this.IsMultiple;
         queryVisiter.CommandIndex = this.CommandIndex;
         queryVisiter.RefQueries = this.RefQueries;
-        queryVisiter.ShardingId = this.ShardingId;
+        queryVisiter.ShardingIds = this.ShardingIds;
         return queryVisiter;
     }
     /// <summary>

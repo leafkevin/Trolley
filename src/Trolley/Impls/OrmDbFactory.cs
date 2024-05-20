@@ -113,13 +113,13 @@ public sealed class OrmDbFactory : IOrmDbFactory
 
     public IRepository CreateRepository(string dbKey = null)
     {
-        var database = this.GetDatabase(dbKey);
+        var localDbKey = dbKey ?? this.shardingProvider.UseDefaultDatabase(this.defaultDatabase?.DbKey);
+        var database = this.GetDatabase(localDbKey);
         var ormProviderType = database.OrmProviderType;
         if (!this.TryGetOrmProvider(ormProviderType, out var ormProvider))
             throw new Exception($"未注册类型为{ormProviderType.FullName}的OrmProvider");
         if (!this.TryGetMapProvider(ormProviderType, out var mapProvider))
             throw new Exception($"未注册Key为{ormProviderType.FullName}的EntityMapProvider");
-        var localDbKey = dbKey ?? database.DbKey;
         var dbContext = new DbContext
         {
             DbKey = localDbKey,
@@ -130,6 +130,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
             CommandTimeout = this.options?.Timeout ?? 30,
             IsParameterized = this.options?.IsParameterized ?? false
         };
+
         return ormProvider.CreateRepository(dbContext);
     }
     public void With(Action<OrmDbFactoryOptions> optionsInitializer)

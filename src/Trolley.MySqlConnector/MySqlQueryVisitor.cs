@@ -172,7 +172,7 @@ public class MySqlQueryVisitor : QueryVisitor
             }
             builder.Append(')');
         }
-        else builder.Append($"TABLE_NAME LIKE '{this.ShardingTables[0].Mapper.TableName}%'");
+        else builder.Append($" AND TABLE_NAME LIKE '{this.ShardingTables[0].Mapper.TableName}%'");
         fetchSql = builder.ToString();
         return true;
     }

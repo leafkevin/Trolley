@@ -110,16 +110,21 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         builder.Clear();
         string tableSql = null;
-        if (this.IsSharding && this.ShardingId == null)
-            this.ShardingId = Guid.NewGuid().ToString("N");
+        if (this.IsSharding && this.ShardingIds == null)
+            this.ShardingIds = new();
 
         if (this.Tables.Count > 0)
         {
+            //TODO:每个表都要有单独的GUID值，否则有类似的表前缀名，也会被替换导致表名替换错误
             foreach (var tableSegment in this.Tables)
             {
                 string tableName = string.Empty;
                 if (tableSegment.IsSharding)
-                    tableName = $"__SHARDING_{this.ShardingId}_{tableSegment.Mapper.TableName}";
+                {
+                    if (!this.ShardingIds.TryGetValue(tableSegment.EntityType, out var shardingId))
+                        this.ShardingIds.TryAdd(tableSegment.EntityType, shardingId = Guid.NewGuid().ToString("N"));
+                    tableName = $"__SHARDING_{shardingId}_{tableSegment.Mapper.TableName}";
+                }
                 else tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
                 tableName = this.OrmProvider.GetTableName(tableName);
 
@@ -251,8 +256,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         builder.Clear();
 
         string tableSql = null;
-        if (this.IsSharding && this.ShardingId == null)
-            this.ShardingId = Guid.NewGuid().ToString("N");
+        if (this.IsSharding && this.ShardingIds == null)
+            this.ShardingIds = new();
 
         if (this.Tables.Count > 0)
         {
@@ -260,7 +265,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 string tableName = string.Empty;
                 if (tableSegment.IsSharding)
-                    tableName = $"__SHARDING_{this.ShardingId}_{tableSegment.Mapper.TableName}";
+                {
+                    if (!this.ShardingIds.TryGetValue(tableSegment.EntityType, out var shardingId))
+                        this.ShardingIds.TryAdd(tableSegment.EntityType, shardingId = Guid.NewGuid().ToString("N"));
+                    tableName = $"__SHARDING_{shardingId}_{tableSegment.Mapper.TableName}";
+                }
                 else tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
                 tableName = this.OrmProvider.GetTableName(tableName);
 
@@ -1867,12 +1876,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //因为表别名发生变化，需要更新ReaderField的body栏位
         this.InitFromQueryReaderFields(tableSegment, readerFields);
 
-        //子查询中引用了分表，最外层也需要设置分表信息IsSharding、ShardingId
+        //子查询中引用了分表，最外层也需要设置分表信息IsSharding、ShardingIds
         if (!this.IsSharding && subQuery.Visitor.IsSharding)
         {
             this.IsSharding = subQuery.Visitor.IsSharding;
             tableSegment.IsSharding = subQuery.Visitor.IsSharding;
-            this.ShardingId = subQuery.Visitor.ShardingId;
+            this.ShardingIds = subQuery.Visitor.ShardingIds;
         }
         return tableSegment;
     }
