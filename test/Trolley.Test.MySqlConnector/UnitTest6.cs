@@ -122,6 +122,62 @@ namespace Trolley.Test.MySqlConnector
             }
         }
         [Fact]
+        public void Query_ManySharding_SingleTable_SubQuery()
+        {
+            //Initialize();
+            using var repository = dbFactory.Create();
+            var sql = repository
+                .From(f => f.From<OrderDetail>()
+                    .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
+                    .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+                    .UseTable<OrderDetail>((dbKey, orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
+                    .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
+                    .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
+                .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
+                .UseTable<OrderDetail>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+                {
+                    var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+                    return tableName.Substring(0, tableName.Length - 7);
+                })
+                .Where((a, b) => a.ProductCount > 1)
+                .Select((x, y) => new
+                {
+                    x.Group,
+                    Buyer = y,
+                    x.ProductCount
+                })
+                .ToSql(out _);
+            Assert.True(sql == "SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail` a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1");
+
+            var result = repository
+                .From(f => f.From<OrderDetail>()
+                    .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+                    .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
+                    .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
+                .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
+                .Where((a, b) => a.ProductCount > 1)
+                .Select((x, y) => new
+                {
+                    x.Group,
+                    Buyer = y,
+                    x.ProductCount
+                })
+                .ToList();
+            if (result.Count > 0)
+            {
+                Assert.NotNull(result[0]);
+                Assert.NotNull(result[0].Group);
+                Assert.NotNull(result[0].Buyer);
+                Assert.True(result[0].ProductCount > 1);
+            }
+            //if (result.Count > 0)
+            //{
+            //    var tenantIds = result.Select(f => f.TenantId).ToList();
+            //    Assert.True(tenantIds.Exists(f => f == "104" || f == "105"));
+            //    Assert.True(!tenantIds.Exists(f => f != "104" && f != "105"));
+            //}
+        }
+        [Fact]
         public void Query_ManySharding_MultiTable1()
         {
             //Initialize();

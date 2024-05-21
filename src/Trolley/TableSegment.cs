@@ -103,6 +103,10 @@ public class TableSegment
     /// </summary>
     public bool IsSharding { get; set; }
     /// <summary>
+    /// 区分不同表的临时唯一ID，用作分表替换
+    /// </summary>
+    public string ShardingId { get; set; }
+    /// <summary>
     /// 当前表分表类型
     /// </summary>
     public ShardingTableType ShardingType { get; set; }

@@ -274,6 +274,7 @@ public class MySqlCreateVisitor : CreateVisitor
         queryVisiter.IsMultiple = this.IsMultiple;
         queryVisiter.CommandIndex = this.CommandIndex;
         queryVisiter.RefQueries = this.RefQueries;
+        queryVisiter.ShardingTables = this.ShardingTables;
         queryVisiter.IsUseIgnoreInto = this.IsUseIgnoreInto;
         return queryVisiter;
     }

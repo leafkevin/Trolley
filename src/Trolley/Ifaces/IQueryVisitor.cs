@@ -35,7 +35,6 @@ public interface IQueryVisitor : IDisposable
     /// </summary>
     Dictionary<string, TableSegment> RefTableAliases { get; set; }
     bool IsSharding { get; set; }
-    Dictionary<Type, string> ShardingIds { get; set; }
     List<TableSegment> ShardingTables { get; set; }
 
     string BuildSql(out List<ReaderField> readerFields);

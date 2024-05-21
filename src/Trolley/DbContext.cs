@@ -921,7 +921,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     {
         var firstTableSegment = visitor.ShardingTables[0];
         var loopCount = firstTableSegment.TableNames.Count;
-        string tableName = null, shardingId = null;
+        string tableName = null;
         var tableNameMap = new Dictionary<Type, string>();
         var builder = new StringBuilder();
 
@@ -945,10 +945,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     case ShardingTableType.TableRange:
                     case ShardingTableType.MasterFilter:
                         tableName = tableSegment.TableNames[i];
-                        if (!visitor.ShardingIds.TryGetValue(tableSegment.EntityType, out shardingId))
-                            visitor.ShardingIds.TryAdd(tableSegment.EntityType, shardingId = Guid.NewGuid().ToString("N"));
-
-                        sql = sql.Replace($"__SHARDING_{shardingId}_{origTableName}", tableName);
+                        sql = sql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origTableName}", tableName);
                         tableNameMap.Add(tableSegment.EntityType, tableName);
                         break;
                     case ShardingTableType.SubordinateMap:
@@ -964,9 +961,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                         if (!tableSegment.TableNames.Exists(f => f == tableName))
                             continue;
 
-                        if (!visitor.ShardingIds.TryGetValue(tableSegment.EntityType, out shardingId))
-                            visitor.ShardingIds.TryAdd(tableSegment.EntityType, shardingId = Guid.NewGuid().ToString("N"));
-                        sql = sql.Replace($"__SHARDING_{shardingId}_{origTableName}", tableName);
+                        sql = sql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origTableName}", tableName);
                         tableNameMap.Add(tableSegment.EntityType, tableName);
                         break;
                 }

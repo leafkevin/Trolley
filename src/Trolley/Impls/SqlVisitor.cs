@@ -49,7 +49,7 @@ public class SqlVisitor : ISqlVisitor
     public List<IQuery> RefQueries { get; set; } = new();
 
     public bool IsSharding { get; set; }
-    public Dictionary<Type, string> ShardingIds { get; set; }
+    //public Dictionary<Type, string> ShardingIds { get; set; }
     public List<TableSegment> ShardingTables { get; set; } = new();
 
     public virtual string BuildSql(out List<IDbDataParameter> dbParameters)
@@ -70,7 +70,11 @@ public class SqlVisitor : ISqlVisitor
         if (tableNames.Length > 1)
         {
             tableSegment.TableNames = new List<string>(tableNames);
-            this.ShardingTables.Add(tableSegment);
+            if (!this.ShardingTables.Exists(f => f.EntityType == tableSegment.EntityType))
+            {
+                tableSegment.ShardingId = Guid.NewGuid().ToString("N");
+                this.ShardingTables.Add(tableSegment);
+            }
         }
         //一个分表的，当作不分表处理
         else tableSegment.Body = tableNames[0];
@@ -90,7 +94,11 @@ public class SqlVisitor : ISqlVisitor
         tableSegment.IsSharding = true;
         tableSegment.ShardingType = ShardingTableType.MasterFilter;
         tableSegment.ShardingFilter = tableNamePredicate;
-        this.ShardingTables.Add(tableSegment);
+        if (!this.ShardingTables.Exists(f => f.EntityType == tableSegment.EntityType))
+        {
+            tableSegment.ShardingId = Guid.NewGuid().ToString("N");
+            this.ShardingTables.Add(tableSegment);
+        }
     }
     public void UseTable(Type entityType, Type masterEntityType, Func<string, string, string, string, string> tableNameGetter)
     {
@@ -103,9 +111,13 @@ public class SqlVisitor : ISqlVisitor
         var tableSegment = this.Tables.Find(f => f.EntityType == entityType);
         tableSegment.IsSharding = true;
         tableSegment.ShardingType = ShardingTableType.SubordinateMap;
-        tableSegment.ShardingDependent = this.Tables.Find(f => f.EntityType == masterEntityType);
+        tableSegment.ShardingDependent = this.ShardingTables.Find(f => f.EntityType == masterEntityType);
         tableSegment.ShardingMapGetter = tableNameGetter;
-        this.ShardingTables.Add(tableSegment);
+        if (!this.ShardingTables.Exists(f => f.EntityType == tableSegment.EntityType))
+        {
+            tableSegment.ShardingId = Guid.NewGuid().ToString("N");
+            this.ShardingTables.Add(tableSegment);
+        }
     }
     public void UseTableBy(Type entityType, object field1Value, object field2Value = null)
     {
@@ -157,7 +169,11 @@ public class SqlVisitor : ISqlVisitor
         {
             tableSegment.ShardingType = ShardingTableType.TableRange;
             tableSegment.TableNames = new List<string>(tableNames);
-            this.ShardingTables.Add(tableSegment);
+            if (!this.ShardingTables.Exists(f => f.EntityType == tableSegment.EntityType))
+            {
+                tableSegment.ShardingId = Guid.NewGuid().ToString("N");
+                this.ShardingTables.Add(tableSegment);
+            }
         }
         //一个分表的，当作不分表处理
         else tableSegment.Body = tableNames[0];
@@ -181,7 +197,11 @@ public class SqlVisitor : ISqlVisitor
         {
             tableSegment.ShardingType = ShardingTableType.TableRange;
             tableSegment.TableNames = new List<string>(tableNames);
-            this.ShardingTables.Add(tableSegment);
+            if (!this.ShardingTables.Exists(f => f.EntityType == tableSegment.EntityType))
+            {
+                tableSegment.ShardingId = Guid.NewGuid().ToString("N");
+                this.ShardingTables.Add(tableSegment);
+            }
         }
         //一个分表的，当作不分表处理
         else tableSegment.Body = tableNames[0];
@@ -1551,7 +1571,7 @@ public class SqlVisitor : ISqlVisitor
         queryVisiter.IsMultiple = this.IsMultiple;
         queryVisiter.CommandIndex = this.CommandIndex;
         queryVisiter.RefQueries = this.RefQueries;
-        queryVisiter.ShardingIds = this.ShardingIds;
+        queryVisiter.ShardingTables = this.ShardingTables;
         return queryVisiter;
     }
     /// <summary>
