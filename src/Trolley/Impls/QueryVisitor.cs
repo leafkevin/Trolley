@@ -133,7 +133,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     tableName = $"__SHARDING_{shardingTable.ShardingId}_{shardingTable.Mapper.TableName}";
                 }
                 else tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
-                tableName = this.OrmProvider.GetTableName(tableName);
+                if (tableSegment.TableType != TableType.FromQuery)
+                    tableName = this.OrmProvider.GetTableName(tableName);
 
                 if (builder.Length > 0)
                 {
